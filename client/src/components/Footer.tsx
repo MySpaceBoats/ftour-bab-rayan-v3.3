@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Heart, Facebook, Instagram, Youtube, Mail, Phone, MapPin } from "lucide-react";
+import { Heart, Facebook, Instagram, Linkedin, Mail, Phone, MapPin } from "lucide-react";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -16,11 +16,11 @@ export default function Footer() {
               </div>
               <div className="flex flex-col">
                 <span className="text-lg font-bold leading-none">Ftour Bab Rayan</span>
-                <span className="text-xs opacity-80">Solidarité & Partage</span>
+                <span className="text-xs opacity-80">Depuis 2015</span>
               </div>
             </div>
             <p className="text-sm opacity-80 leading-relaxed">
-              Un événement humanitaire organisé pendant le mois de Ramadan par l'association Bab Rayan pour partager des moments de solidarité et de générosité.
+              L'association Bab Rayan organise chaque année depuis 2015 le Ftour Bab Rayan. Cette action apporte convivialité et chaleur pendant le mois sacré du Ramadan.
             </p>
             <div className="flex gap-3">
               <a href="https://facebook.com/babrayan" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
@@ -29,8 +29,8 @@ export default function Footer() {
               <a href="https://instagram.com/babrayan" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
                 <Instagram className="h-4 w-4" />
               </a>
-              <a href="https://youtube.com/babrayan" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
-                <Youtube className="h-4 w-4" />
+              <a href="https://linkedin.com/company/babrayan" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
+                <Linkedin className="h-4 w-4" />
               </a>
             </div>
           </div>
@@ -77,6 +77,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <a href="https://www.babrayan.ma" target="_blank" rel="noopener noreferrer" className="opacity-80 hover:opacity-100 transition-opacity">
+                  Site officiel
+                </a>
+              </li>
+              <li>
                 <Link href="/faq" className="opacity-80 hover:opacity-100 transition-opacity">
                   FAQ
                 </Link>
@@ -91,11 +96,6 @@ export default function Footer() {
                   Mentions légales
                 </Link>
               </li>
-              <li>
-                <Link href="/confidentialite" className="opacity-80 hover:opacity-100 transition-opacity">
-                  Politique de confidentialité
-                </Link>
-              </li>
             </ul>
           </div>
 
@@ -105,12 +105,12 @@ export default function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-3">
                 <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0 opacity-80" />
-                <span className="opacity-80">Casablanca, Maroc</span>
+                <span className="opacity-80">4 rue Bayt Lham, quartier Palmier, Casablanca</span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="h-4 w-4 flex-shrink-0 opacity-80" />
-                <a href="tel:+212500000000" className="opacity-80 hover:opacity-100 transition-opacity">
-                  +212 5 00 00 00 00
+                <a href="tel:+212610023555" className="opacity-80 hover:opacity-100 transition-opacity">
+                  +212 610 023 555
                 </a>
               </li>
               <li className="flex items-center gap-3">
@@ -126,7 +126,7 @@ export default function Footer() {
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-white/10">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm opacity-80">
-            <p>© {currentYear} Association Bab Rayan. Tous droits réservés.</p>
+            <p>© {currentYear} Association Bab Rayan - Reconnue d'utilité publique. Tous droits réservés.</p>
             <p className="flex items-center gap-1">
               Fait avec <Heart className="h-4 w-4 text-red-400" /> au Maroc
             </p>

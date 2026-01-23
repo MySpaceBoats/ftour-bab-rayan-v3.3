@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Heart, Users, Calendar, ShoppingBag, ArrowRight, Star, Clock, MapPin, HandHeart, Sparkles } from "lucide-react";
+import { Heart, Users, Calendar, ShoppingBag, ArrowRight, Star, Clock, MapPin, HandHeart, Sparkles, Utensils, GraduationCap, Home as HomeIcon, Baby } from "lucide-react";
 
 export default function Home() {
   const { data: stats } = trpc.public.stats.useQuery();
@@ -24,7 +24,7 @@ export default function Home() {
             <div className="max-w-4xl mx-auto space-y-8">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
                 <Sparkles className="h-4 w-4 text-secondary" />
-                <span className="text-sm font-medium">Ramadan 2025</span>
+                <span className="text-sm font-medium">Ramadan 2025 - Depuis 2015</span>
               </div>
               
               <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">
@@ -32,7 +32,7 @@ export default function Home() {
               </h1>
               
               <p className="text-lg sm:text-xl md:text-2xl text-white/90 max-w-2xl mx-auto leading-relaxed">
-                Partageons ensemble des moments de solidarité et de générosité pendant ce mois sacré du Ramadan
+                Parce que chaque enfant mérite un bon départ dans la vie. Partageons ensemble des moments de solidarité pendant ce mois sacré.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
@@ -61,9 +61,39 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Stats Section */}
+        {/* Chiffres Clés Section - Données réelles Bab Rayan */}
+        <section className="py-16 bg-primary text-white">
+          <div className="container">
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-10">Chiffres clés annuels</h2>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+              <div className="text-center">
+                <div className="text-3xl md:text-4xl font-bold mb-2">+450</div>
+                <div className="text-sm text-white/80">Enfants pris en charge</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl md:text-4xl font-bold mb-2">+6 000</div>
+                <div className="text-sm text-white/80">Bénévoles</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl md:text-4xl font-bold mb-2">+1 500</div>
+                <div className="text-sm text-white/80">Familles bénéficiaires</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl md:text-4xl font-bold mb-2">+230 000</div>
+                <div className="text-sm text-white/80">Repas offerts à la cantine</div>
+              </div>
+              <div className="text-center col-span-2 md:col-span-1">
+                <div className="text-3xl md:text-4xl font-bold mb-2">+31 200</div>
+                <div className="text-sm text-white/80">Ftours servis</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Stats Section - Données dynamiques de l'événement */}
         <section className="py-16 bg-muted/50">
           <div className="container">
+            <h2 className="text-2xl font-bold text-center mb-8">Cette année</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <Card className="card-hover border-none shadow-md">
                 <CardContent className="p-6 text-center">
@@ -110,20 +140,23 @@ export default function Home() {
           </div>
         </section>
 
-        {/* About Section */}
+        {/* About Ftour Bab Rayan Section */}
         <section className="py-20">
           <div className="container">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               <div className="space-y-6">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                  <Star className="h-4 w-4" />
-                  Notre mission
+                  <Utensils className="h-4 w-4" />
+                  Actions Solidaires
                 </div>
                 <h2 className="text-3xl md:text-4xl font-bold text-foreground">
-                  Un Ramadan solidaire avec <span className="text-primary">Bab Rayan</span>
+                  Les Ftours <span className="text-primary">Bab Rayan</span>
                 </h2>
                 <p className="text-lg text-muted-foreground leading-relaxed">
-                  Chaque soir du mois de Ramadan, nous organisons des Ftours solidaires pour les personnes dans le besoin. Rejoignez-nous dans cette aventure humaine et partagez des moments de générosité.
+                  L'association Bab Rayan organise chaque année depuis 2015 le Ftour Bab Rayan. Pendant ce mois sacré, la plupart n'ont pas la chance de rompre leur jeûne autour d'une table garnie.
+                </p>
+                <p className="text-lg text-muted-foreground leading-relaxed">
+                  Cette action apporte beaucoup de convivialité et de chaleur à leur environnement ; l'esprit de solidarité du Ramadan est alors au rendez-vous, grâce à vos dons !
                 </p>
                 <ul className="space-y-4">
                   <li className="flex items-start gap-3">
@@ -131,8 +164,8 @@ export default function Home() {
                       <Clock className="h-3 w-3 text-primary" />
                     </div>
                     <div>
-                      <span className="font-medium">30 jours de partage</span>
-                      <p className="text-sm text-muted-foreground">Tout au long du mois sacré</p>
+                      <span className="font-medium">Depuis 2015</span>
+                      <p className="text-sm text-muted-foreground">10 ans d'engagement solidaire</p>
                     </div>
                   </li>
                   <li className="flex items-start gap-3">
@@ -141,7 +174,7 @@ export default function Home() {
                     </div>
                     <div>
                       <span className="font-medium">Casablanca</span>
-                      <p className="text-sm text-muted-foreground">Au cœur de la ville</p>
+                      <p className="text-sm text-muted-foreground">4 rue Bayt Lham, quartier Palmier</p>
                     </div>
                   </li>
                   <li className="flex items-start gap-3">
@@ -149,8 +182,8 @@ export default function Home() {
                       <Users className="h-3 w-3 text-primary" />
                     </div>
                     <div>
-                      <span className="font-medium">Équipe encadrée</span>
-                      <p className="text-sm text-muted-foreground">Formation et accompagnement</p>
+                      <span className="font-medium">+6 000 bénévoles</span>
+                      <p className="text-sm text-muted-foreground">Une communauté engagée</p>
                     </div>
                   </li>
                 </ul>
@@ -166,19 +199,19 @@ export default function Home() {
                 <div className="aspect-square rounded-2xl bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20 p-8">
                   <div className="w-full h-full rounded-xl bg-muted flex items-center justify-center">
                     <div className="text-center space-y-4">
-                      <Heart className="h-20 w-20 mx-auto text-primary/30" />
-                      <p className="text-muted-foreground">Image de l'événement</p>
+                      <Utensils className="h-20 w-20 mx-auto text-primary/30" />
+                      <p className="text-muted-foreground">Ftour Bab Rayan</p>
                     </div>
                   </div>
                 </div>
                 <div className="absolute -bottom-6 -left-6 bg-card rounded-xl shadow-lg p-4 border">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Users className="h-5 w-5 text-primary" />
+                      <Utensils className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <div className="font-bold">{stats?.presentVolunteers || 0}+</div>
-                      <div className="text-xs text-muted-foreground">Bénévoles actifs</div>
+                      <div className="font-bold">+31 200</div>
+                      <div className="text-xs text-muted-foreground">Ftours servis</div>
                     </div>
                   </div>
                 </div>
@@ -187,15 +220,88 @@ export default function Home() {
           </div>
         </section>
 
-        {/* CTA Cards Section */}
+        {/* Missions Bab Rayan Section */}
         <section className="py-20 bg-muted/30">
+          <div className="container">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+                Nos Missions
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+                Notre mission est de protéger, d'éduquer et de former les enfants et jeunes en difficulté pour leur offrir un avenir digne, autonome et enrichissant.
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-8">
+              <Card className="card-hover border-none shadow-lg overflow-hidden group">
+                <div className="h-2 bg-red-500" />
+                <CardContent className="p-8 space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <HomeIcon className="h-7 w-7 text-red-500" />
+                  </div>
+                  <h3 className="text-xl font-bold">Protection de l'enfance</h3>
+                  <p className="text-muted-foreground">
+                    Depuis 2014, Bab Rayan se consacre à la protection de l'enfance, assurant un environnement sûr et bienveillant pour les enfants vulnérables.
+                  </p>
+                  <Link href="/association">
+                    <Button variant="outline" className="w-full mt-4">
+                      Découvrir le foyer
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+
+              <Card className="card-hover border-none shadow-lg overflow-hidden group">
+                <div className="h-2 bg-yellow-500" />
+                <CardContent className="p-8 space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-yellow-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <GraduationCap className="h-7 w-7 text-yellow-600" />
+                  </div>
+                  <h3 className="text-xl font-bold">Éducation et scolarité</h3>
+                  <p className="text-muted-foreground">
+                    En intégrant ces jeunes dans un parcours éducatif adapté à leurs besoins, nous leur donnons les outils nécessaires pour construire leur avenir.
+                  </p>
+                  <Link href="/association">
+                    <Button variant="outline" className="w-full mt-4">
+                      Découvrir l'école Palmier
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+
+              <Card className="card-hover border-none shadow-lg overflow-hidden group">
+                <div className="h-2 bg-primary" />
+                <CardContent className="p-8 space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Baby className="h-7 w-7 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-bold">Formation et insertion</h3>
+                  <p className="text-muted-foreground">
+                    Des formations offertes dans des secteurs variés tels que l'hôtellerie-restauration et les métiers du digital pour une insertion professionnelle réussie.
+                  </p>
+                  <Link href="/association">
+                    <Button variant="outline" className="w-full mt-4">
+                      Découvrir le CFI
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Cards Section */}
+        <section className="py-20">
           <div className="container">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
                 Comment participer ?
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Plusieurs façons de contribuer à cette belle aventure solidaire
+                Rejoignez le combat pour la protection de l'enfance, engagez-vous en devenant donateur, partenaire ou bénévole.
               </p>
             </div>
             
@@ -209,7 +315,7 @@ export default function Home() {
                   </div>
                   <h3 className="text-xl font-bold">Devenir bénévole</h3>
                   <p className="text-muted-foreground">
-                    Rejoignez notre équipe et participez à l'organisation des Ftours solidaires. Choisissez vos jours de disponibilité.
+                    Rejoignez notre équipe de +6 000 bénévoles et participez à l'organisation des Ftours solidaires. Choisissez vos jours de disponibilité.
                   </p>
                   <Link href="/benevole">
                     <Button className="w-full mt-4 bg-primary hover:bg-primary/90">
@@ -229,7 +335,7 @@ export default function Home() {
                   </div>
                   <h3 className="text-xl font-bold">Boutique solidaire</h3>
                   <p className="text-muted-foreground">
-                    Découvrez nos goodies exclusifs édition Ramadan. Tous les bénéfices soutiennent nos actions humanitaires.
+                    Découvrez nos goodies exclusifs édition Ramadan. Tous les bénéfices soutiennent nos actions pour les enfants en difficulté.
                   </p>
                   <Link href="/goodies">
                     <Button variant="outline" className="w-full mt-4">
@@ -249,7 +355,7 @@ export default function Home() {
                   </div>
                   <h3 className="text-xl font-bold">Faire un don</h3>
                   <p className="text-muted-foreground">
-                    Soutenez notre action par un don. Chaque contribution compte pour offrir des repas aux plus démunis.
+                    Soutenez notre action par un don. Chaque contribution compte pour offrir des repas et un avenir meilleur aux enfants.
                   </p>
                   <Link href="/dons">
                     <Button variant="outline" className="w-full mt-4">
@@ -265,7 +371,7 @@ export default function Home() {
 
         {/* Testimonials Section */}
         {testimonials && testimonials.length > 0 && (
-          <section className="py-20">
+          <section className="py-20 bg-muted/30">
             <div className="container">
               <div className="text-center mb-12">
                 <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
@@ -307,7 +413,7 @@ export default function Home() {
 
         {/* Partners Section */}
         {partners && partners.length > 0 && (
-          <section className="py-16 bg-muted/30">
+          <section className="py-16">
             <div className="container">
               <div className="text-center mb-10">
                 <h2 className="text-2xl font-bold text-foreground mb-2">Nos partenaires</h2>
@@ -338,7 +444,7 @@ export default function Home() {
               Prêt à rejoindre l'aventure ?
             </h2>
             <p className="text-lg opacity-90 max-w-2xl mx-auto mb-8">
-              Inscrivez-vous dès maintenant et faites partie de cette belle initiative solidaire
+              Inscrivez-vous dès maintenant et faites partie de cette belle initiative solidaire pour les enfants en difficulté
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/benevole">
@@ -348,7 +454,7 @@ export default function Home() {
                 </Button>
               </Link>
               <Link href="/programme">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg px-8 bg-transparent border-white text-white hover:bg-white/10">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg px-8 border-white/30 text-white hover:bg-white/10">
                   <Calendar className="h-5 w-5 mr-2" />
                   Voir le programme
                 </Button>

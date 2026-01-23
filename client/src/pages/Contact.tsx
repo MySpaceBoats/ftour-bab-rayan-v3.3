@@ -110,9 +110,10 @@ export default function Contact() {
                       </div>
                       <div>
                         <h3 className="font-semibold">Téléphone</h3>
-                        <a href="tel:+212522000000" className="text-muted-foreground hover:text-primary">
-                          +212 5 22 00 00 00
+                        <a href="tel:+212610023555" className="text-muted-foreground hover:text-primary">
+                          +212 610 023 555
                         </a>
+                        <p className="text-xs text-muted-foreground mt-1">Direction Générale</p>
                       </div>
                     </div>
 
@@ -123,7 +124,7 @@ export default function Contact() {
                       <div>
                         <h3 className="font-semibold">Adresse</h3>
                         <p className="text-muted-foreground">
-                          Casablanca, Maroc
+                          4 rue Bayt Lham, quartier Palmier<br />Casablanca, Maroc
                         </p>
                       </div>
                     </div>

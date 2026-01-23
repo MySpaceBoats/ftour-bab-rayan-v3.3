@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Heart, Users, Calendar, Clock, MapPin, Star, ArrowRight, Target, Sparkles, HandHeart } from "lucide-react";
+import { Heart, Users, Calendar, MapPin, Star, ArrowRight, Target, Sparkles, HandHeart, Utensils, Baby, GraduationCap } from "lucide-react";
 
 export default function Evenement() {
   return (
@@ -17,13 +17,13 @@ export default function Evenement() {
             <div className="max-w-4xl mx-auto text-center space-y-6">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
                 <Sparkles className="h-4 w-4" />
-                Ramadan 2025
+                Depuis 2015 - 10ème édition
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground">
                 L'événement <span className="text-primary">Ftour Bab Rayan</span>
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-                Un mois de partage, de solidarité et de générosité au cœur de Casablanca
+                Un mois de partage, de solidarité et de générosité au cœur de Casablanca. Plus de 31 200 Ftours servis chaque année.
               </p>
             </div>
           </div>
@@ -36,26 +36,67 @@ export default function Evenement() {
               <div className="space-y-6">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
                   <Target className="h-4 w-4" />
-                  Notre mission
+                  Actions Solidaires
                 </div>
                 <h2 className="text-3xl md:text-4xl font-bold">
-                  Offrir un Ftour digne à ceux qui en ont besoin
+                  Les Ftours Bab Rayan
                 </h2>
                 <p className="text-lg text-muted-foreground leading-relaxed">
-                  Chaque soir du mois sacré de Ramadan, nous organisons des Ftours solidaires pour les personnes 
-                  dans le besoin. Notre objectif est simple : permettre à chacun de rompre le jeûne dans la dignité, 
-                  entouré de chaleur humaine et de générosité.
+                  L'association Bab Rayan organise chaque année depuis 2015 le Ftour Bab Rayan. Pendant ce mois sacré, la plupart n'ont pas la chance de rompre leur jeûne autour d'une table garnie.
                 </p>
                 <p className="text-lg text-muted-foreground leading-relaxed">
-                  Ftour Bab Rayan est bien plus qu'un simple repas. C'est un moment de partage, de rencontre 
-                  et de solidarité qui réunit bénévoles, donateurs et bénéficiaires autour des valeurs 
-                  fondamentales du Ramadan.
+                  Cette action apporte beaucoup de convivialité et de chaleur à leur environnement ; l'esprit de solidarité du Ramadan est alors au rendez-vous, grâce à vos dons !
                 </p>
+                <div className="bg-primary/5 rounded-xl p-6 border-l-4 border-primary">
+                  <p className="text-muted-foreground italic">
+                    "Parce que chaque enfant mérite un bon départ dans la vie"
+                  </p>
+                  <p className="text-sm text-primary mt-2 font-medium">— Vision de Bab Rayan</p>
+                </div>
               </div>
               <div className="relative">
                 <div className="aspect-video rounded-2xl bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20 flex items-center justify-center">
-                  <Heart className="h-24 w-24 text-primary/30" />
+                  <Utensils className="h-24 w-24 text-primary/30" />
                 </div>
+                <div className="absolute -bottom-6 -right-6 bg-card rounded-xl shadow-lg p-4 border">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-primary">+31 200</div>
+                    <div className="text-xs text-muted-foreground">Ftours servis/an</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Chiffres clés */}
+        <section className="py-16 bg-primary text-white">
+          <div className="container">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-bold mb-4">L'impact de Bab Rayan</h2>
+              <p className="text-white/80">Chiffres clés annuels de l'association</p>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+              <div className="text-center">
+                <div className="text-3xl md:text-4xl font-bold mb-2">+450</div>
+                <p className="text-white/80 text-sm">Enfants pris en charge</p>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl md:text-4xl font-bold mb-2">+6 000</div>
+                <p className="text-white/80 text-sm">Bénévoles</p>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl md:text-4xl font-bold mb-2">+1 500</div>
+                <p className="text-white/80 text-sm">Familles bénéficiaires</p>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl md:text-4xl font-bold mb-2">+230 000</div>
+                <p className="text-white/80 text-sm">Repas à la cantine</p>
+              </div>
+              <div className="text-center col-span-2 md:col-span-1">
+                <div className="text-3xl md:text-4xl font-bold mb-2">+31 200</div>
+                <p className="text-white/80 text-sm">Ftours servis</p>
               </div>
             </div>
           </div>
@@ -65,45 +106,45 @@ export default function Evenement() {
         <section className="py-16 bg-muted/30">
           <div className="container">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold mb-4">Nos valeurs</h2>
+              <h2 className="text-3xl font-bold mb-4">Les piliers de Bab Rayan</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Les principes qui guident notre action au quotidien
+                Protéger, Éduquer, Accompagner - Notre mission au quotidien
               </p>
             </div>
             
             <div className="grid md:grid-cols-3 gap-8">
               <Card className="border-none shadow-md">
                 <CardContent className="p-8 text-center space-y-4">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-red-500/10 flex items-center justify-center">
+                    <Baby className="h-8 w-8 text-red-500" />
+                  </div>
+                  <h3 className="text-xl font-bold">Protection</h3>
+                  <p className="text-muted-foreground">
+                    Depuis 2014, Bab Rayan se consacre à la protection de l'enfance, assurant un environnement sûr et bienveillant pour les enfants vulnérables.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-md">
+                <CardContent className="p-8 text-center space-y-4">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-yellow-500/10 flex items-center justify-center">
+                    <GraduationCap className="h-8 w-8 text-yellow-600" />
+                  </div>
+                  <h3 className="text-xl font-bold">Éducation</h3>
+                  <p className="text-muted-foreground">
+                    En intégrant ces jeunes dans un parcours éducatif adapté à leurs besoins, nous leur donnons les outils nécessaires pour construire leur avenir.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-md">
+                <CardContent className="p-8 text-center space-y-4">
                   <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
-                    <Heart className="h-8 w-8 text-primary" />
+                    <HandHeart className="h-8 w-8 text-primary" />
                   </div>
-                  <h3 className="text-xl font-bold">Solidarité</h3>
+                  <h3 className="text-xl font-bold">Accompagnement</h3>
                   <p className="text-muted-foreground">
-                    Nous croyons en la force du collectif et en la capacité de chacun à contribuer au bien commun.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-none shadow-md">
-                <CardContent className="p-8 text-center space-y-4">
-                  <div className="w-16 h-16 mx-auto rounded-full bg-secondary/20 flex items-center justify-center">
-                    <Star className="h-8 w-8 text-secondary-foreground" />
-                  </div>
-                  <h3 className="text-xl font-bold">Dignité</h3>
-                  <p className="text-muted-foreground">
-                    Chaque personne mérite d'être traitée avec respect et considération, quelle que soit sa situation.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-none shadow-md">
-                <CardContent className="p-8 text-center space-y-4">
-                  <div className="w-16 h-16 mx-auto rounded-full bg-accent/10 flex items-center justify-center">
-                    <HandHeart className="h-8 w-8 text-accent" />
-                  </div>
-                  <h3 className="text-xl font-bold">Transparence</h3>
-                  <p className="text-muted-foreground">
-                    Nous rendons compte de l'utilisation de chaque don et de l'impact de nos actions.
+                    Des formations offertes dans des secteurs variés pour accompagner ces jeunes vers une insertion professionnelle réussie.
                   </p>
                 </CardContent>
               </Card>
@@ -193,7 +234,7 @@ export default function Evenement() {
                     <h3 className="font-semibold">Dates</h3>
                   </div>
                   <p className="text-muted-foreground">
-                    Du 1er au 30 Ramadan 2025, soit 30 jours de Ftours solidaires consécutifs.
+                    Du 1er au 30 Ramadan 2025, soit 30 jours de Ftours solidaires consécutifs. 10ème édition depuis 2015.
                   </p>
                 </CardContent>
               </Card>
@@ -207,7 +248,7 @@ export default function Evenement() {
                     <h3 className="font-semibold">Lieu</h3>
                   </div>
                   <p className="text-muted-foreground">
-                    Casablanca, Maroc. L'adresse exacte est communiquée aux bénévoles inscrits.
+                    4 rue Bayt Lham, quartier Palmier, Casablanca. L'adresse exacte est communiquée aux bénévoles inscrits.
                   </p>
                 </CardContent>
               </Card>
@@ -218,10 +259,10 @@ export default function Evenement() {
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <Users className="h-5 w-5 text-primary" />
                     </div>
-                    <h3 className="font-semibold">Capacité</h3>
+                    <h3 className="font-semibold">Bénévoles</h3>
                   </div>
                   <p className="text-muted-foreground">
-                    Jusqu'à 500 personnes servies chaque soir grâce à nos équipes de bénévoles.
+                    Plus de 6 000 bénévoles mobilisés chaque année pour servir plus de 31 200 Ftours.
                   </p>
                 </CardContent>
               </Card>
@@ -236,8 +277,7 @@ export default function Evenement() {
               Rejoignez l'aventure
             </h2>
             <p className="text-lg opacity-90 max-w-2xl mx-auto mb-8">
-              Que vous souhaitiez donner de votre temps ou soutenir financièrement, 
-              chaque contribution compte.
+              Rejoignez le combat pour la protection de l'enfance, engagez-vous en devenant donateur, partenaire ou bénévole.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/benevole">
