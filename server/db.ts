@@ -226,12 +226,17 @@ export async function getVolunteerStats() {
   if (!db) return { total: 0, present: 0, absent: 0 };
   
   const result = await db.select({
-    total: sql<number>`COUNT(*)`,
-    present: sql<number>`SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END)`,
-    absent: sql<number>`SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END)`,
+    total: sql<number>`COUNT(*)`.as('total'),
+    present: sql<number>`SUM(CASE WHEN ${volunteers.status} = 'present' THEN 1 ELSE 0 END)`.as('present'),
+    absent: sql<number>`SUM(CASE WHEN ${volunteers.status} = 'absent' THEN 1 ELSE 0 END)`.as('absent'),
   }).from(volunteers);
   
-  return result[0] || { total: 0, present: 0, absent: 0 };
+  const stats = result[0];
+  return {
+    total: Number(stats?.total) || 0,
+    present: Number(stats?.present) || 0,
+    absent: Number(stats?.absent) || 0,
+  };
 }
 
 // ============================================

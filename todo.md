@@ -84,3 +84,13 @@
 - [ ] Ajouter les vraies images et logos si disponibles
 - [ ] Mettre à jour les mentions légales avec les informations juridiques
 
+
+## Phase 12 : Documentation Google Drive
+- [x] Explorer le dossier Google Drive DOSSIER DIGITAUX -> DOSSIER BENEV -> FTOUR BAB RAYAN
+- [x] Créer le document de contenu du site (.docx)
+- [x] Créer la wireframe du site (Google Slides)
+- [x] Télécharger les fichiers dans le dossier Drive
+
+
+## Bugs à corriger
+- [x] Erreur SQL dans la requête de statistiques bénévoles (COUNT/SUM sans alias)
