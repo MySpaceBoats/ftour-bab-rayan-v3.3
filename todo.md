@@ -94,3 +94,5 @@
 
 ## Bugs à corriger
 - [x] Erreur SQL dans la requête de statistiques bénévoles (COUNT/SUM sans alias)
+- [x] Erreur SQL dans getDonationStats (COUNT/SUM sans alias)
+- [x] Erreur SQL dans getOrderStats (COUNT/SUM sans alias)

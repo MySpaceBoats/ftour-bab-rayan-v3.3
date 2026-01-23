@@ -378,17 +378,24 @@ export async function updateOrderStatus(id: number, status: Order['status'], pro
 
 export async function getOrderStats() {
   const db = await getDb();
-  if (!db) return { total: 0, reserved: 0, paid: 0, delivered: 0 };
+  if (!db) return { total: 0, reserved: 0, paid: 0, delivered: 0, totalAmount: 0 };
   
   const result = await db.select({
-    total: sql<number>`COUNT(*)`,
-    reserved: sql<number>`SUM(CASE WHEN status = 'reserved' THEN 1 ELSE 0 END)`,
-    paid: sql<number>`SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END)`,
-    delivered: sql<number>`SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END)`,
-    totalAmount: sql<number>`SUM(CAST(totalAmount AS DECIMAL(10,2)))`,
+    total: sql<number>`COUNT(*)`.as('total'),
+    reserved: sql<number>`SUM(CASE WHEN ${orders.status} = 'reserved' THEN 1 ELSE 0 END)`.as('reserved'),
+    paid: sql<number>`SUM(CASE WHEN ${orders.status} = 'paid' THEN 1 ELSE 0 END)`.as('paid'),
+    delivered: sql<number>`SUM(CASE WHEN ${orders.status} = 'delivered' THEN 1 ELSE 0 END)`.as('delivered'),
+    totalAmount: sql<number>`SUM(CAST(${orders.totalAmount} AS DECIMAL(10,2)))`.as('totalAmount'),
   }).from(orders);
   
-  return result[0] || { total: 0, reserved: 0, paid: 0, delivered: 0, totalAmount: 0 };
+  const stats = result[0];
+  return {
+    total: Number(stats?.total) || 0,
+    reserved: Number(stats?.reserved) || 0,
+    paid: Number(stats?.paid) || 0,
+    delivered: Number(stats?.delivered) || 0,
+    totalAmount: Number(stats?.totalAmount) || 0,
+  };
 }
 
 // ============================================
@@ -441,14 +448,21 @@ export async function getDonationStats() {
   if (!db) return { total: 0, promised: 0, received: 0, totalAmount: 0, receivedAmount: 0 };
   
   const result = await db.select({
-    total: sql<number>`COUNT(*)`,
-    promised: sql<number>`SUM(CASE WHEN status = 'promised' THEN 1 ELSE 0 END)`,
-    received: sql<number>`SUM(CASE WHEN status = 'received' THEN 1 ELSE 0 END)`,
-    totalAmount: sql<number>`SUM(CAST(amount AS DECIMAL(10,2)))`,
-    receivedAmount: sql<number>`SUM(CASE WHEN status = 'received' THEN CAST(amount AS DECIMAL(10,2)) ELSE 0 END)`,
+    total: sql<number>`COUNT(*)`.as('total'),
+    promised: sql<number>`SUM(CASE WHEN ${donations.status} = 'promised' THEN 1 ELSE 0 END)`.as('promised'),
+    received: sql<number>`SUM(CASE WHEN ${donations.status} = 'received' THEN 1 ELSE 0 END)`.as('received'),
+    totalAmount: sql<number>`SUM(CAST(${donations.amount} AS DECIMAL(10,2)))`.as('totalAmount'),
+    receivedAmount: sql<number>`SUM(CASE WHEN ${donations.status} = 'received' THEN CAST(${donations.amount} AS DECIMAL(10,2)) ELSE 0 END)`.as('receivedAmount'),
   }).from(donations);
   
-  return result[0] || { total: 0, promised: 0, received: 0, totalAmount: 0, receivedAmount: 0 };
+  const stats = result[0];
+  return {
+    total: Number(stats?.total) || 0,
+    promised: Number(stats?.promised) || 0,
+    received: Number(stats?.received) || 0,
+    totalAmount: Number(stats?.totalAmount) || 0,
+    receivedAmount: Number(stats?.receivedAmount) || 0,
+  };
 }
 
 // ============================================
