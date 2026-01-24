@@ -116,3 +116,16 @@
 - [x] Template email promesse de don (avec RIB)
 - [x] Intégrer l'envoi dans les flux existants
 - [x] Tests unitaires (31 tests passés)
+
+## Phase 15 : Migration vers Supabase (Postgres)
+- [x] Configurer les variables d'environnement Supabase (URL, ANON_KEY, SERVICE_ROLE_KEY)
+- [x] Installer @supabase/supabase-js
+- [x] Créer le schéma de base de données Postgres avec tables et contraintes
+- [x] Configurer RLS (Row Level Security) sur les tables
+- [x] Créer les clients Supabase (public et admin)
+- [x] Créer les services de données (volunteers, goodies, donations, checkins)
+- [x] Refactorer les routers tRPC pour utiliser Supabase
+- [x] Créer l'interface admin scan web avec caméra (/admin/scan)
+- [x] Créer la page admin validation manuelle et exports CSV
+- [ ] Migrer les données existantes vers Supabase (si nécessaire)
+- [x] Tests unitaires (26 tests passés)

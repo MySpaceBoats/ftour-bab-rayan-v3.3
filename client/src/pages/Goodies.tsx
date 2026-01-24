@@ -30,7 +30,7 @@ export default function Goodies() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [selectedGoodie, setSelectedGoodie] = useState<number | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<string>("");
-  const [orderSuccess, setOrderSuccess] = useState<{ reference: string; total: string } | null>(null);
+  const [orderSuccess, setOrderSuccess] = useState<{ reference: string; total: number } | null>(null);
   
   const [checkoutForm, setCheckoutForm] = useState({
     customerName: "",
@@ -51,8 +51,8 @@ export default function Goodies() {
   });
 
   const addToCart = (goodie: NonNullable<typeof goodies>[number]) => {
-    const variant = goodie.variants?.find(v => v.id.toString() === selectedVariant);
-    const price = parseFloat(goodie.price) + (variant?.priceModifier ? parseFloat(variant.priceModifier) : 0);
+    const variant = goodie.variants?.find((v: { id: number }) => v.id.toString() === selectedVariant);
+    const price = goodie.price + (variant?.priceModifier ? Number(variant.priceModifier) : 0);
     
     const existingIndex = cart.findIndex(
       item => item.goodieId === goodie.id && item.variantId === (variant?.id || undefined)
@@ -108,6 +108,7 @@ export default function Goodies() {
         goodieId: item.goodieId,
         variantId: item.variantId,
         quantity: item.quantity,
+        unitPrice: item.price,
       })),
     });
   };
@@ -228,27 +229,7 @@ export default function Goodies() {
                         </div>
                       )}
                       
-                      {/* Badges */}
-                      <div className="absolute top-3 left-3 flex flex-col gap-2">
-                        {goodie.isBestSeller && (
-                          <Badge className="bg-amber-500 hover:bg-amber-500">
-                            <Star className="h-3 w-3 mr-1" />
-                            Best-seller
-                          </Badge>
-                        )}
-                        {goodie.isNew && (
-                          <Badge className="bg-blue-500 hover:bg-blue-500">
-                            <Sparkles className="h-3 w-3 mr-1" />
-                            Nouveau
-                          </Badge>
-                        )}
-                        {goodie.isRamadanEdition && (
-                          <Badge className="bg-primary hover:bg-primary">
-                            <Tag className="h-3 w-3 mr-1" />
-                            Édition Ramadan
-                          </Badge>
-                        )}
-                      </div>
+
                     </div>
 
                     {/* Content */}
@@ -264,7 +245,7 @@ export default function Goodies() {
                       
                       <div className="flex items-center justify-between">
                         <span className="text-xl font-bold text-primary">
-                          {parseFloat(goodie.price).toFixed(0)} DH
+                          {goodie.price.toFixed(0)} DH
                         </span>
                         <Button 
                           size="sm"
@@ -365,12 +346,12 @@ export default function Goodies() {
                   <SelectValue placeholder="Sélectionnez une option" />
                 </SelectTrigger>
                 <SelectContent>
-                  {currentGoodie.variants?.map((variant) => (
+                  {currentGoodie.variants?.map((variant: { id: number; size?: string; color?: string; priceModifier?: number; stock?: number }) => (
                     <SelectItem key={variant.id} value={variant.id.toString()}>
                       {variant.size} {variant.color} 
-                      {variant.priceModifier && parseFloat(variant.priceModifier) !== 0 && (
+                      {variant.priceModifier && variant.priceModifier !== 0 && (
                         <span className="text-muted-foreground ml-2">
-                          ({parseFloat(variant.priceModifier) > 0 ? '+' : ''}{variant.priceModifier} DH)
+                          ({variant.priceModifier > 0 ? '+' : ''}{variant.priceModifier} DH)
                         </span>
                       )}
                       {variant.stock !== undefined && variant.stock <= 5 && (

@@ -4,15 +4,15 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import * as db from "./db";
 import { sendEmail, generateVolunteerConfirmationEmail, generateOrderConfirmationEmail, generateDonationConfirmationEmail, generateContactNotificationEmail } from "./email";
+import * as supabaseServices from "./supabase-services";
 
 // ============================================
 // ROLE-BASED PROCEDURES
 // ============================================
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons'];
+  const allowedRoles = ['admin', 'super_admin', 'admin_operations', 'admin_boutique', 'admin_dons'];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès administrateur requis' });
   }
@@ -27,7 +27,7 @@ const superAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 const scannerProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_ops', 'scanner'];
+  const allowedRoles = ['admin', 'super_admin', 'admin_operations', 'scanner'];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès scanner requis' });
   }
@@ -35,7 +35,7 @@ const scannerProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 const adminOpsProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_ops'];
+  const allowedRoles = ['admin', 'super_admin', 'admin_operations'];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès opérations requis' });
   }
@@ -64,46 +64,58 @@ const adminDonsProcedure = protectedProcedure.use(({ ctx, next }) => {
 
 const daysRouter = router({
   list: publicProcedure.query(async () => {
-    return db.getRamadanDays();
+    return supabaseServices.getAllRamadanDaysSupabase();
   }),
   
   getById: publicProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
-      return db.getRamadanDayById(input.id);
+      return supabaseServices.getRamadanDayByIdSupabase(input.id);
     }),
   
   create: superAdminProcedure
     .input(z.object({
       date: z.string(),
       dayNumber: z.number().min(1).max(30),
-      maxCapacity: z.number().min(1).default(50),
+      capacity: z.number().min(1).default(50),
       location: z.string().optional(),
-      startTime: z.string().optional(),
-      endTime: z.string().optional(),
-      instructions: z.string().optional(),
+      iftarTime: z.string().optional(),
+      hijriDate: z.string().optional(),
+      notes: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
-      const id = await db.createRamadanDay({
-        ...input,
-        date: new Date(input.date),
+      const day = await supabaseServices.createRamadanDaySupabase({
+        dayNumber: input.dayNumber,
+        date: input.date,
+        capacity: input.capacity,
+        location: input.location,
+        iftarTime: input.iftarTime,
+        hijriDate: input.hijriDate,
+        notes: input.notes,
       });
-      return { id };
+      return { id: day.id };
     }),
   
   update: superAdminProcedure
     .input(z.object({
       id: z.number(),
-      maxCapacity: z.number().min(1).optional(),
-      isClosed: z.boolean().optional(),
+      capacity: z.number().min(1).optional(),
+      isOpen: z.boolean().optional(),
       location: z.string().optional(),
-      startTime: z.string().optional(),
-      endTime: z.string().optional(),
-      instructions: z.string().optional(),
+      iftarTime: z.string().optional(),
+      hijriDate: z.string().optional(),
+      notes: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
       const { id, ...data } = input;
-      await db.updateRamadanDay(id, data);
+      await supabaseServices.updateRamadanDaySupabase(id, data);
+      return { success: true };
+    }),
+  
+  delete: superAdminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      await supabaseServices.deleteRamadanDaySupabase(input.id);
       return { success: true };
     }),
   
@@ -111,11 +123,9 @@ const daysRouter = router({
     .input(z.object({
       startDate: z.string(),
       daysCount: z.number().min(1).max(30).default(30),
-      maxCapacity: z.number().min(1).default(50),
+      capacity: z.number().min(1).default(50),
       location: z.string().optional(),
-      startTime: z.string().optional(),
-      endTime: z.string().optional(),
-      instructions: z.string().optional(),
+      iftarTime: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
       const startDate = new Date(input.startDate);
@@ -125,16 +135,14 @@ const daysRouter = router({
         const date = new Date(startDate);
         date.setDate(date.getDate() + i);
         
-        const id = await db.createRamadanDay({
-          date,
+        const day = await supabaseServices.createRamadanDaySupabase({
+          date: date.toISOString().split('T')[0],
           dayNumber: i + 1,
-          maxCapacity: input.maxCapacity,
+          capacity: input.capacity,
           location: input.location,
-          startTime: input.startTime,
-          endTime: input.endTime,
-          instructions: input.instructions,
+          iftarTime: input.iftarTime,
         });
-        createdIds.push(id);
+        createdIds.push(day.id);
       }
       
       return { createdIds, count: createdIds.length };
@@ -162,30 +170,28 @@ const volunteersRouter = router({
       }
       
       // Check day availability
-      const day = await db.getRamadanDayById(input.dayId);
+      const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
       if (!day) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Jour non trouvé' });
       }
-      if (day.isClosed || day.currentCount >= day.maxCapacity) {
+      if (!day.isOpen || day.registeredCount >= day.capacity) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ce jour est complet' });
       }
       
-      // Generate unique QR token (128 bits, cryptographically secure)
-      const qrToken = db.generateQrToken();
-      
-      // Create volunteer
-      const id = await db.createVolunteer({
-        ...input,
-        qrToken,
-        status: 'registered',
+      // Create volunteer with QR token
+      const volunteer = await supabaseServices.createVolunteerShiftSupabase({
+        firstName: input.firstName,
+        lastName: input.lastName,
+        email: input.email,
+        phone: input.phone,
+        city: input.city,
+        dayId: input.dayId,
+        acceptedTerms: input.acceptedTerms,
       });
       
-      // Increment day count
-      await db.incrementDayCount(input.dayId);
-      
-      // Check if day is now full
-      if (day.currentCount + 1 >= day.maxCapacity) {
-        await db.updateRamadanDay(input.dayId, { isClosed: true });
+      // Check if day is now full and close it
+      if (day.registeredCount + 1 >= day.capacity) {
+        await supabaseServices.updateRamadanDaySupabase(input.dayId, { isOpen: false });
       }
       
       // Send confirmation email with QR code
@@ -206,147 +212,148 @@ const volunteersRouter = router({
             day: 'numeric' 
           }),
           location: day.location || 'Association Bab Rayan, Casablanca',
-          startTime: day.startTime || '18h00',
-          qrToken,
+          startTime: day.iftarTime || '18h00',
+          qrToken: volunteer.qrToken,
           baseUrl,
         });
         
-        const emailResult = await sendEmail({
+        await sendEmail({
           to: input.email,
           subject: emailData.subject,
           html: emailData.html,
         });
-        
-        if (emailResult.success) {
-          await db.updateVolunteer(id, { emailSent: true });
-        }
       } catch (error) {
         console.error('[Volunteer Registration] Email send failed:', error);
-        // Don't fail the registration if email fails
       }
       
-      return { id, qrToken };
+      return { id: volunteer.id, qrToken: volunteer.qrToken };
     }),
   
   getByQrCode: scannerProcedure
     .input(z.object({ qrCode: z.string() }))
     .query(async ({ input }) => {
-      const volunteer = await db.getVolunteerByQrCode(input.qrCode);
+      const volunteer = await supabaseServices.getVolunteerByTokenSupabase(input.qrCode);
       if (!volunteer) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Bénévole non trouvé' });
       }
-      
-      const day = await db.getRamadanDayById(volunteer.dayId);
-      
-      return { volunteer, day };
+      return { volunteer, day: volunteer.day };
     }),
   
   checkIn: scannerProcedure
     .input(z.object({ qrCode: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const volunteer = await db.getVolunteerByQrCode(input.qrCode);
-      if (!volunteer) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Bénévole non trouvé' });
-      }
+      const result = await supabaseServices.scanAndValidateTokenSupabase(
+        input.qrCode,
+        ctx.user?.id
+      );
       
-      // Check if already scanned
-      if (volunteer.status === 'present') {
-        await db.createScanHistory({
-          volunteerId: volunteer.id,
-          scannedBy: ctx.user!.id,
-          action: 'duplicate_attempt',
-          success: false,
-          errorMessage: 'Déjà enregistré',
-        });
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ce bénévole est déjà enregistré comme présent' });
-      }
-      
-      // Check if correct day
-      const day = await db.getRamadanDayById(volunteer.dayId);
-      if (!day) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Jour non trouvé' });
-      }
-      
-      const today = new Date();
-      const dayDate = new Date(day.date);
-      if (today.toDateString() !== dayDate.toDateString()) {
-        await db.createScanHistory({
-          volunteerId: volunteer.id,
-          scannedBy: ctx.user!.id,
-          action: 'wrong_day',
-          success: false,
-          errorMessage: `QR code valide pour le ${dayDate.toLocaleDateString('fr-FR')}`,
-        });
+      if (!result.success) {
         throw new TRPCError({ 
           code: 'BAD_REQUEST', 
-          message: `Ce QR code est valide pour le ${dayDate.toLocaleDateString('fr-FR')}, pas aujourd'hui` 
+          message: result.error || 'Erreur de validation' 
         });
       }
       
-      // Mark as present
-      await db.markVolunteerPresent(volunteer.id, ctx.user!.id);
-      
-      // Log scan
-      await db.createScanHistory({
-        volunteerId: volunteer.id,
-        scannedBy: ctx.user!.id,
-        action: 'check_in',
-        success: true,
-      });
-      
-      return { success: true, volunteer: { ...volunteer, status: 'present' } };
+      return { success: true, volunteer: result.volunteer };
+    }),
+  
+  manualValidate: scannerProcedure
+    .input(z.object({ volunteerId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      await supabaseServices.manualValidateSupabase(input.volunteerId, ctx.user!.id);
+      return { success: true };
     }),
   
   listByDay: adminOpsProcedure
     .input(z.object({ dayId: z.number().optional() }))
     .query(async ({ input }) => {
-      if (input.dayId) {
-        const volunteers = await db.getVolunteersByDay(input.dayId);
-        const day = await db.getRamadanDayById(input.dayId);
-        return volunteers.map(v => ({ ...v, day }));
-      }
-      const volunteers = await db.getAllVolunteers();
-      const days = await db.getRamadanDays();
-      return volunteers.map(v => ({
-        ...v,
-        day: days.find(d => d.id === v.dayId),
-      }));
+      return supabaseServices.getVolunteersByDaySupabase(input.dayId);
     }),
-  
-  listAll: adminOpsProcedure.query(async () => {
-    return db.getAllVolunteers();
-  }),
-  
-  getStats: adminOpsProcedure.query(async () => {
-    return db.getVolunteerStats();
-  }),
   
   updateStatus: adminOpsProcedure
     .input(z.object({
-      id: z.number(),
+      volunteerId: z.number(),
       status: z.enum(['registered', 'confirmed', 'present', 'absent', 'cancelled']),
     }))
     .mutation(async ({ input }) => {
-      await db.updateVolunteer(input.id, { status: input.status });
+      await supabaseServices.updateVolunteerStatusSupabase(input.volunteerId, input.status);
       return { success: true };
     }),
   
-  cancel: publicProcedure
-    .input(z.object({ qrCode: z.string(), email: z.string().email() }))
-    .mutation(async ({ input }) => {
-      const volunteer = await db.getVolunteerByQrCode(input.qrCode);
-      if (!volunteer || volunteer.email !== input.email) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Inscription non trouvée' });
+  stats: adminOpsProcedure.query(async () => {
+    return supabaseServices.getVolunteerStatsSupabase();
+  }),
+});
+
+// ============================================
+// CHECKIN ROUTER (PUBLIC QR VALIDATION)
+// ============================================
+
+const checkinRouter = router({
+  verify: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .query(async ({ input }) => {
+      const volunteer = await supabaseServices.getVolunteerByTokenSupabase(input.token);
+      
+      if (!volunteer) {
+        return { valid: false, error: 'Token invalide', code: 'INVALID_TOKEN', status: 'invalid' as const };
       }
       
-      if (volunteer.status === 'cancelled') {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Inscription déjà annulée' });
+      if (volunteer.qrStatus === 'validated') {
+        return { 
+          valid: false, 
+          error: 'QR code déjà validé', 
+          code: 'ALREADY_VALIDATED',
+          status: 'already_validated' as const,
+          volunteer: {
+            firstName: volunteer.firstName,
+            lastName: volunteer.lastName,
+            scannedAt: volunteer.scannedAt,
+          },
+        };
       }
       
-      await db.updateVolunteer(volunteer.id, { status: 'cancelled' });
-      await db.decrementDayCount(volunteer.dayId);
+      const today = new Date().toISOString().split('T')[0];
+      if (volunteer.day?.date !== today) {
+        return { 
+          valid: false, 
+          error: 'Ce QR code n\'est pas valide pour aujourd\'hui', 
+          code: 'WRONG_DAY',
+          status: 'wrong_date' as const,
+          volunteer: {
+            firstName: volunteer.firstName,
+            lastName: volunteer.lastName,
+            expectedDate: volunteer.day?.date,
+          },
+          day: volunteer.day,
+        };
+      }
       
-      return { success: true };
+      return { 
+        valid: true, 
+        status: 'valid' as const,
+        volunteer: {
+          id: volunteer.id,
+          firstName: volunteer.firstName,
+          lastName: volunteer.lastName,
+          email: volunteer.email,
+          phone: volunteer.phone,
+        },
+        day: volunteer.day,
+      };
+    }),
+  
+  validate: scannerProcedure
+    .input(z.object({ token: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await supabaseServices.scanAndValidateTokenSupabase(
+        input.token,
+        ctx.user?.id,
+        ctx.req.ip,
+        ctx.req.headers['user-agent'] as string
+      );
+      
+      return result;
     }),
 });
 
@@ -356,50 +363,26 @@ const volunteersRouter = router({
 
 const goodiesRouter = router({
   list: publicProcedure.query(async () => {
-    const items = await db.getActiveGoodies();
-    const result = await Promise.all(items.map(async (item) => {
-      const variants = await db.getVariantsByGoodie(item.id);
-      return { ...item, variants };
-    }));
-    return result;
+    return supabaseServices.getAllGoodiesSupabase(true); // Active only for public
   }),
   
   listAll: adminBoutiqueProcedure.query(async () => {
-    const items = await db.getAllGoodies();
-    const result = await Promise.all(items.map(async (item) => {
-      const variants = await db.getVariantsByGoodie(item.id);
-      return { ...item, variants };
-    }));
-    return result;
+    return supabaseServices.getAllGoodiesSupabase(false); // All for admin
   }),
-  
-  getById: publicProcedure
-    .input(z.object({ id: z.number() }))
-    .query(async ({ input }) => {
-      const goodie = await db.getGoodieById(input.id);
-      if (!goodie) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Produit non trouvé' });
-      }
-      const variants = await db.getVariantsByGoodie(input.id);
-      return { ...goodie, variants };
-    }),
   
   create: adminBoutiqueProcedure
     .input(z.object({
       name: z.string().min(2),
       description: z.string().optional(),
-      price: z.string(),
+      price: z.number().min(0),
       imageUrl: z.string().optional(),
       category: z.string().optional(),
-      isBestSeller: z.boolean().optional(),
-      isNew: z.boolean().optional(),
-      isRamadanEdition: z.boolean().optional(),
-      totalStock: z.number().optional(),
-      sortOrder: z.number().optional(),
+      isActive: z.boolean().default(true),
+      sortOrder: z.number().default(0),
     }))
     .mutation(async ({ input }) => {
-      const id = await db.createGoodie(input);
-      return { id };
+      const goodie = await supabaseServices.createGoodieSupabase(input);
+      return { id: goodie.id };
     }),
   
   update: adminBoutiqueProcedure
@@ -407,34 +390,23 @@ const goodiesRouter = router({
       id: z.number(),
       name: z.string().min(2).optional(),
       description: z.string().optional(),
-      price: z.string().optional(),
+      price: z.number().min(0).optional(),
       imageUrl: z.string().optional(),
       category: z.string().optional(),
-      isBestSeller: z.boolean().optional(),
-      isNew: z.boolean().optional(),
-      isRamadanEdition: z.boolean().optional(),
-      totalStock: z.number().optional(),
       isActive: z.boolean().optional(),
       sortOrder: z.number().optional(),
     }))
     .mutation(async ({ input }) => {
       const { id, ...data } = input;
-      await db.updateGoodie(id, data);
+      await supabaseServices.updateGoodieSupabase(id, data);
       return { success: true };
     }),
   
-  createVariant: adminBoutiqueProcedure
-    .input(z.object({
-      goodieId: z.number(),
-      size: z.string().optional(),
-      color: z.string().optional(),
-      sku: z.string().optional(),
-      stock: z.number().min(0).default(0),
-      priceModifier: z.string().optional(),
-    }))
+  delete: adminBoutiqueProcedure
+    .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
-      const id = await db.createGoodieVariant(input);
-      return { id };
+      await supabaseServices.deleteGoodieSupabase(input.id);
+      return { success: true };
     }),
 });
 
@@ -452,98 +424,31 @@ const ordersRouter = router({
         goodieId: z.number(),
         variantId: z.number().optional(),
         quantity: z.number().min(1),
+        unitPrice: z.number().min(0),
       })),
       pickupDate: z.string().optional(),
       pickupLocation: z.string().optional(),
+      notes: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
-      // Calculate total
-      let totalAmount = 0;
-      const itemsWithPrices = await Promise.all(input.items.map(async (item) => {
-        const goodie = await db.getGoodieById(item.goodieId);
-        if (!goodie) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: `Produit ${item.goodieId} non trouvé` });
-        }
-        
-        let unitPrice = parseFloat(goodie.price);
-        
-        if (item.variantId) {
-          const variant = await db.getVariantById(item.variantId);
-          if (variant && variant.priceModifier) {
-            unitPrice += parseFloat(variant.priceModifier);
-          }
-        }
-        
-        const totalPrice = unitPrice * item.quantity;
-        totalAmount += totalPrice;
-        
-        return { ...item, unitPrice: unitPrice.toFixed(2), totalPrice: totalPrice.toFixed(2) };
-      }));
-      
-      // Generate reference
-      const orderReference = db.generateOrderReference();
-      
-      // Create order
-      const orderId = await db.createOrder({
-        orderReference,
-        customerName: input.customerName,
-        customerEmail: input.customerEmail,
-        customerPhone: input.customerPhone,
-        totalAmount: totalAmount.toFixed(2),
-        pickupDate: input.pickupDate ? new Date(input.pickupDate) : undefined,
-        pickupLocation: input.pickupLocation,
-      });
-      
-      // Create order items and collect details for email
-      const emailItems: Array<{ name: string; variant?: string; quantity: number; price: number }> = [];
-      
-      for (const item of itemsWithPrices) {
-        await db.createOrderItem({
-          orderId,
-          goodieId: item.goodieId,
-          variantId: item.variantId,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          totalPrice: item.totalPrice,
-        });
-        
-        // Get goodie details for email
-        const goodie = await db.getGoodieById(item.goodieId);
-        let variantName = '';
-        if (item.variantId) {
-          const variant = await db.getVariantById(item.variantId);
-          if (variant) {
-            variantName = `${variant.size || ''} ${variant.color || ''}`.trim();
-          }
-          await db.updateVariantStock(item.variantId, item.quantity);
-        }
-        
-        emailItems.push({
-          name: goodie?.name || 'Produit',
-          variant: variantName || undefined,
-          quantity: item.quantity,
-          price: parseFloat(item.totalPrice),
-        });
-      }
+      const order = await supabaseServices.createGoodieOrderSupabase(input);
       
       // Send confirmation email
       try {
-        const baseUrl = process.env.NODE_ENV === 'production' 
-          ? 'https://ftourbabrayan.ma' 
-          : 'http://localhost:3000';
-        
-        const [firstName, ...lastNameParts] = input.customerName.split(' ');
-        const lastName = lastNameParts.join(' ') || '';
-        
+        const nameParts = input.customerName.split(' ');
         const emailData = generateOrderConfirmationEmail({
-          firstName,
-          lastName,
+          firstName: nameParts[0] || input.customerName,
+          lastName: nameParts.slice(1).join(' ') || '',
           email: input.customerEmail,
           phone: input.customerPhone,
-          orderId: orderReference,
-          items: emailItems,
-          totalAmount,
-          baseUrl,
+          orderId: order.orderReference,
+          totalAmount: order.totalAmount,
+          items: input.items.map(item => ({
+            name: `Article #${item.goodieId}`,
+            quantity: item.quantity,
+            price: item.unitPrice,
+          })),
+          baseUrl: process.env.NODE_ENV === 'production' ? 'https://ftourbabrayan.ma' : 'http://localhost:3000',
         });
         
         await sendEmail({
@@ -553,45 +458,28 @@ const ordersRouter = router({
         });
       } catch (error) {
         console.error('[Order] Email send failed:', error);
-        // Don't fail the order if email fails
       }
       
-      return { orderId, orderReference, totalAmount: totalAmount.toFixed(2) };
-    }),
-  
-  getByReference: publicProcedure
-    .input(z.object({ reference: z.string() }))
-    .query(async ({ input }) => {
-      const order = await db.getOrderByReference(input.reference);
-      if (!order) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Commande non trouvée' });
-      }
-      const items = await db.getOrderItems(order.id);
-      return { ...order, items };
+      return order;
     }),
   
   listAll: adminBoutiqueProcedure.query(async () => {
-    const orders = await db.getAllOrders();
-    const result = await Promise.all(orders.map(async (order) => {
-      const items = await db.getOrderItems(order.id);
-      return { ...order, items };
-    }));
-    return result;
-  }),
-  
-  getStats: adminBoutiqueProcedure.query(async () => {
-    return db.getOrderStats();
+    return supabaseServices.getAllOrdersSupabase();
   }),
   
   updateStatus: adminBoutiqueProcedure
     .input(z.object({
-      id: z.number(),
+      orderId: z.number(),
       status: z.enum(['reserved', 'confirmed', 'paid', 'delivered', 'cancelled']),
     }))
     .mutation(async ({ input, ctx }) => {
-      await db.updateOrderStatus(input.id, input.status, ctx.user!.id);
+      await supabaseServices.updateGoodieOrderStatusSupabase(input.orderId, input.status, ctx.user?.id);
       return { success: true };
     }),
+  
+  stats: adminBoutiqueProcedure.query(async () => {
+    return supabaseServices.getOrderStatsSupabase();
+  }),
 });
 
 // ============================================
@@ -604,37 +492,26 @@ const donationsRouter = router({
       donorName: z.string().min(2),
       donorEmail: z.string().email(),
       donorPhone: z.string().optional(),
-      amount: z.string(),
+      amount: z.number().min(1),
       paymentMethod: z.enum(['transfer', 'on_site']),
       message: z.string().optional(),
-      isAnonymous: z.boolean().optional(),
-      acceptsUpdates: z.boolean().optional(),
+      isAnonymous: z.boolean().default(false),
+      acceptsUpdates: z.boolean().default(false),
     }))
     .mutation(async ({ input }) => {
-      const donationReference = db.generateDonationReference();
+      const donation = await supabaseServices.createDonationPledgeSupabase(input);
       
-      const id = await db.createDonation({
-        ...input,
-        donationReference,
-      });
-      
-      // Send confirmation email with bank details (for transfer) or instructions
+      // Send confirmation email
       try {
-        const baseUrl = process.env.NODE_ENV === 'production' 
-          ? 'https://ftourbabrayan.ma' 
-          : 'http://localhost:3000';
-        
-        const [firstName, ...lastNameParts] = input.donorName.split(' ');
-        const lastName = lastNameParts.join(' ') || '';
-        
+        const nameParts = input.donorName.split(' ');
         const emailData = generateDonationConfirmationEmail({
-          firstName,
-          lastName,
+          firstName: nameParts[0] || input.donorName,
+          lastName: nameParts.slice(1).join(' ') || '',
           email: input.donorEmail,
-          amount: parseFloat(input.amount),
+          amount: donation.amount,
           paymentMethod: input.paymentMethod,
-          donationId: donationReference,
-          baseUrl,
+          donationId: donation.donationReference,
+          baseUrl: process.env.NODE_ENV === 'production' ? 'https://ftourbabrayan.ma' : 'http://localhost:3000',
         });
         
         await sendEmail({
@@ -644,39 +521,35 @@ const donationsRouter = router({
         });
       } catch (error) {
         console.error('[Donation] Email send failed:', error);
-        // Don't fail the donation if email fails
       }
       
-      return { id, donationReference };
-    }),
-  
-  getByReference: publicProcedure
-    .input(z.object({ reference: z.string() }))
-    .query(async ({ input }) => {
-      const donation = await db.getDonationByReference(input.reference);
-      if (!donation) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Promesse de don non trouvée' });
-      }
       return donation;
     }),
   
   listAll: adminDonsProcedure.query(async () => {
-    return db.getAllDonations();
-  }),
-  
-  getStats: adminDonsProcedure.query(async () => {
-    return db.getDonationStats();
+    return supabaseServices.getAllDonationsSupabase();
   }),
   
   updateStatus: adminDonsProcedure
     .input(z.object({
-      id: z.number(),
+      donationId: z.number(),
       status: z.enum(['promised', 'pending', 'received', 'cancelled']),
     }))
     .mutation(async ({ input, ctx }) => {
-      await db.updateDonationStatus(input.id, input.status, ctx.user!.id);
+      await supabaseServices.updateDonationStatusSupabase(input.donationId, input.status, ctx.user?.id);
       return { success: true };
     }),
+  
+  markReceived: adminDonsProcedure
+    .input(z.object({ donationId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      await supabaseServices.markDonationReceivedSupabase(input.donationId, ctx.user?.id);
+      return { success: true };
+    }),
+  
+  stats: adminDonsProcedure.query(async () => {
+    return supabaseServices.getDonationStatsSupabase();
+  }),
 });
 
 // ============================================
@@ -693,9 +566,10 @@ const contactRouter = router({
       message: z.string().min(10),
     }))
     .mutation(async ({ input }) => {
-      const id = await db.createContactMessage(input);
+      // Save to database
+      await supabaseServices.createContactMessageSupabase(input);
       
-      // Send notification email to admin
+      // Send notification email
       try {
         const emailData = generateContactNotificationEmail({
           name: input.name,
@@ -705,320 +579,76 @@ const contactRouter = router({
           message: input.message,
         });
         
-        // Send to admin email
         await sendEmail({
           to: 'contact@babrayan.ma',
           subject: emailData.subject,
           html: emailData.html,
         });
       } catch (error) {
-        console.error('[Contact] Email notification failed:', error);
-        // Don't fail the contact form if email fails
+        console.error('[Contact] Email send failed:', error);
       }
       
-      return { id, success: true };
-    }),
-  
-  listAll: adminProcedure.query(async () => {
-    return db.getAllContactMessages();
-  }),
-  
-  markAsRead: adminProcedure
-    .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
-      await db.markMessageAsRead(input.id);
-      return { success: true };
-    }),
-});
-
-// ============================================
-// PUBLIC DATA ROUTER (for vitrine)
-// ============================================
-
-const publicDataRouter = router({
-  partners: publicProcedure.query(async () => {
-    return db.getActivePartners();
-  }),
-  
-  testimonials: publicProcedure.query(async () => {
-    return db.getApprovedTestimonials();
-  }),
-  
-  gallery: publicProcedure.query(async () => {
-    return db.getActiveMediaItems();
-  }),
-  
-  faq: publicProcedure
-    .input(z.object({ category: z.string().optional() }).optional())
-    .query(async ({ input }) => {
-      if (input?.category) {
-        return db.getFaqItemsByCategory(input.category);
-      }
-      return db.getActiveFaqItems();
-    }),
-  
-  stats: publicProcedure.query(async () => {
-    const volunteerStats = await db.getVolunteerStats();
-    const donationStats = await db.getDonationStats();
-    const days = await db.getRamadanDays();
-    
-    return {
-      totalVolunteers: volunteerStats.total,
-      presentVolunteers: volunteerStats.present,
-      totalDonations: donationStats.total,
-      receivedDonations: donationStats.received,
-      totalDonationAmount: donationStats.totalAmount,
-      receivedDonationAmount: donationStats.receivedAmount,
-      totalDays: days.length,
-      activeDays: days.filter(d => !d.isClosed).length,
-    };
-  }),
-});
-
-// ============================================
-// ADMIN CONTENT ROUTER
-// ============================================
-
-const adminContentRouter = router({
-  // Partners
-  createPartner: superAdminProcedure
-    .input(z.object({
-      name: z.string().min(2),
-      logoUrl: z.string().optional(),
-      websiteUrl: z.string().optional(),
-      description: z.string().optional(),
-      category: z.string().optional(),
-      sortOrder: z.number().optional(),
-    }))
-    .mutation(async ({ input }) => {
-      const id = await db.createPartner(input);
-      return { id };
-    }),
-  
-  listPartners: adminProcedure.query(async () => {
-    return db.getAllPartners();
-  }),
-  
-  // Testimonials
-  createTestimonial: superAdminProcedure
-    .input(z.object({
-      authorName: z.string().min(2),
-      authorRole: z.string().optional(),
-      content: z.string().min(10),
-      avatarUrl: z.string().optional(),
-      rating: z.number().min(1).max(5).optional(),
-      isApproved: z.boolean().optional(),
-      sortOrder: z.number().optional(),
-    }))
-    .mutation(async ({ input }) => {
-      const id = await db.createTestimonial(input);
-      return { id };
-    }),
-  
-  listTestimonials: adminProcedure.query(async () => {
-    return db.getAllTestimonials();
-  }),
-  
-  // Media
-  createMediaItem: superAdminProcedure
-    .input(z.object({
-      title: z.string().optional(),
-      description: z.string().optional(),
-      mediaUrl: z.string(),
-      mediaType: z.string(),
-      thumbnailUrl: z.string().optional(),
-      year: z.number().optional(),
-      sortOrder: z.number().optional(),
-    }))
-    .mutation(async ({ input }) => {
-      const id = await db.createMediaItem(input);
-      return { id };
-    }),
-  
-  listMediaItems: adminProcedure.query(async () => {
-    return db.getAllMediaItems();
-  }),
-  
-  // FAQ
-  createFaqItem: superAdminProcedure
-    .input(z.object({
-      question: z.string().min(5),
-      answer: z.string().min(10),
-      category: z.string().optional(),
-      sortOrder: z.number().optional(),
-    }))
-    .mutation(async ({ input }) => {
-      const id = await db.createFaqItem(input);
-      return { id };
-    }),
-  
-  listFaqItems: adminProcedure.query(async () => {
-    return db.getAllFaqItems();
-  }),
-  
-  // Settings
-  getSetting: adminProcedure
-    .input(z.object({ key: z.string() }))
-    .query(async ({ input }) => {
-      return db.getSetting(input.key);
-    }),
-  
-  setSetting: superAdminProcedure
-    .input(z.object({
-      key: z.string(),
-      value: z.string(),
-      description: z.string().optional(),
-    }))
-    .mutation(async ({ input }) => {
-      await db.setSetting(input.key, input.value, input.description);
       return { success: true };
     }),
   
-  listSettings: adminProcedure.query(async () => {
-    return db.getAllSettings();
+  list: adminProcedure.query(async () => {
+    return supabaseServices.getAllContactMessagesSupabase();
   }),
 });
 
 // ============================================
-// USERS ADMIN ROUTER
+// USERS ROUTER
 // ============================================
 
-const usersAdminRouter = router({
+const usersRouter = router({
   list: superAdminProcedure.query(async () => {
-    return db.getAllUsers();
+    return supabaseServices.getAllUsersSupabase();
   }),
   
   updateRole: superAdminProcedure
     .input(z.object({
       userId: z.number(),
-      role: z.enum(['user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner']),
+      role: z.enum(['user', 'admin', 'super_admin', 'admin_operations', 'admin_boutique', 'admin_dons', 'scanner']),
     }))
     .mutation(async ({ input }) => {
-      await db.updateUserRole(input.userId, input.role);
+      await supabaseServices.updateUserRoleSupabase(input.userId, input.role);
       return { success: true };
     }),
 });
 
 // ============================================
-// CHECKIN ROUTER (Public QR validation)
+// PUBLIC DATA ROUTER
 // ============================================
 
-const checkinRouter = router({
-  /**
-   * Vérifie un token QR et retourne le statut de validation
-   * Endpoint public accessible sans authentification
-   */
-  verify: publicProcedure
-    .input(z.object({ token: z.string().min(1) }))
-    .query(async ({ input }) => {
-      // Valider le format du token (32 caractères hexadécimaux)
-      if (!/^[a-f0-9]{32}$/i.test(input.token)) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Format de token invalide' });
-      }
-      
-      const volunteer = await db.getVolunteerByQrToken(input.token);
-      if (!volunteer) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'QR code non trouvé' });
-      }
-      
-      const day = await db.getRamadanDayById(volunteer.dayId);
-      
-      // Vérifier si déjà validé
-      if (volunteer.status === 'present') {
-        return {
-          status: 'already_validated' as const,
-          volunteer: {
-            firstName: volunteer.firstName,
-            lastName: volunteer.lastName,
-            scannedAt: volunteer.scannedAt,
-          },
-          day,
-        };
-      }
-      
-      // Vérifier la date (optionnel - peut être désactivé pour les tests)
-      if (day) {
-        const today = new Date();
-        const dayDate = new Date(day.date);
-        const isSameDay = today.toDateString() === dayDate.toDateString();
-        
-        // Si ce n'est pas le bon jour, retourner un avertissement mais permettre quand même
-        if (!isSameDay) {
-          return {
-            status: 'wrong_date' as const,
-            volunteer: {
-              firstName: volunteer.firstName,
-              lastName: volunteer.lastName,
-            },
-            day,
-          };
-        }
-      }
-      
-      // Token valide et prêt pour validation
-      return {
-        status: 'valid' as const,
-        volunteer: {
-          id: volunteer.id,
-          firstName: volunteer.firstName,
-          lastName: volunteer.lastName,
-          email: volunteer.email,
-          phone: volunteer.phone,
-          city: volunteer.city,
-        },
-        day,
-      };
-    }),
+const publicRouter = router({
+  stats: publicProcedure.query(async () => {
+    const stats = await supabaseServices.getPublicStatsSupabase();
+    return {
+      ...stats,
+      totalDays: 30, // Fixed for Ramadan
+    };
+  }),
   
-  /**
-   * Valide la présence d'un bénévole via son token QR
-   * Endpoint protégé - nécessite un rôle scanner ou admin
-   */
-  validate: scannerProcedure
-    .input(z.object({ token: z.string().min(1) }))
-    .mutation(async ({ input, ctx }) => {
-      // Valider le format du token
-      if (!/^[a-f0-9]{32}$/i.test(input.token)) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Format de token invalide' });
-      }
-      
-      const volunteer = await db.getVolunteerByQrToken(input.token);
-      if (!volunteer) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'QR code non trouvé' });
-      }
-      
-      // Vérifier si déjà validé (anti-doublon)
-      if (volunteer.status === 'present') {
-        // Enregistrer la tentative de doublon
-        await db.createScanHistory({
-          volunteerId: volunteer.id,
-          scannedBy: ctx.user!.id,
-          action: 'duplicate_attempt',
-          success: false,
-        });
-        throw new TRPCError({ code: 'CONFLICT', message: 'Ce QR code a déjà été validé' });
-      }
-      
-      // Marquer comme présent
-      await db.markVolunteerPresent(volunteer.id, ctx.user!.id);
-      
-      // Mettre à jour le statut QR
-      await db.updateVolunteer(volunteer.id, { qrStatus: 'validated' });
-      
-      // Enregistrer dans l'historique
-      await db.createScanHistory({
-        volunteerId: volunteer.id,
-        scannedBy: ctx.user!.id,
-        action: 'checkin',
-        success: true,
-      });
-      
-      return { success: true, volunteerId: volunteer.id };
-    }),
+  days: publicProcedure.query(async () => {
+    const days = await supabaseServices.getAllRamadanDaysSupabase();
+    return days.filter(d => d.isOpen);
+  }),
+  
+  goodies: publicProcedure.query(async () => {
+    return supabaseServices.getAllGoodiesSupabase(true);
+  }),
+  
+  testimonials: publicProcedure.query(async () => {
+    return supabaseServices.getAllTestimonialsSupabase();
+  }),
+  
+  partners: publicProcedure.query(async () => {
+    return supabaseServices.getAllPartnersSupabase();
+  }),
 });
 
 // ============================================
-// MAIN ROUTER
+// MAIN APP ROUTER
 // ============================================
 
 export const appRouter = router({
@@ -1032,17 +662,15 @@ export const appRouter = router({
     }),
   }),
   
-  // Feature routers
   days: daysRouter,
   volunteers: volunteersRouter,
+  checkin: checkinRouter,
   goodies: goodiesRouter,
   orders: ordersRouter,
   donations: donationsRouter,
   contact: contactRouter,
-  public: publicDataRouter,
-  adminContent: adminContentRouter,
-  usersAdmin: usersAdminRouter,
-  checkin: checkinRouter,
+  users: usersRouter,
+  public: publicRouter,
 });
 
 export type AppRouter = typeof appRouter;

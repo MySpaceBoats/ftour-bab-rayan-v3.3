@@ -115,7 +115,7 @@ export default function AdminJours() {
   };
 
   const toggleDayClosed = (dayId: number, currentState: boolean) => {
-    updateMutation.mutate({ id: dayId, isClosed: !currentState });
+    updateMutation.mutate({ id: dayId, isOpen: !currentState });
   };
 
   return (

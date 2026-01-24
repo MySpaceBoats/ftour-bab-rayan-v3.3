@@ -230,7 +230,7 @@ export default function AdminCommandes() {
                                 size="sm"
                                 variant="outline"
                                 className="text-green-600"
-                                onClick={() => updateStatusMutation.mutate({ id: order.id, status: 'paid' })}
+                                onClick={() => updateStatusMutation.mutate({ orderId: order.id, status: 'paid' })}
                               >
                                 <CreditCard className="h-4 w-4" />
                               </Button>
@@ -240,7 +240,7 @@ export default function AdminCommandes() {
                                 size="sm"
                                 variant="outline"
                                 className="text-emerald-600"
-                                onClick={() => updateStatusMutation.mutate({ id: order.id, status: 'delivered' })}
+                                onClick={() => updateStatusMutation.mutate({ orderId: order.id, status: 'delivered' })}
                               >
                                 <CheckCircle className="h-4 w-4" />
                               </Button>
@@ -250,7 +250,7 @@ export default function AdminCommandes() {
                                 size="sm"
                                 variant="outline"
                                 className="text-red-600"
-                                onClick={() => updateStatusMutation.mutate({ id: order.id, status: 'cancelled' })}
+                                onClick={() => updateStatusMutation.mutate({ orderId: order.id, status: 'cancelled' })}
                               >
                                 <XCircle className="h-4 w-4" />
                               </Button>

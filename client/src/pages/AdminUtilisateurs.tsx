@@ -35,9 +35,9 @@ const roleColors: Record<string, string> = {
 export default function AdminUtilisateurs() {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: users, isLoading, refetch } = trpc.usersAdmin.list.useQuery();
+  const { data: users, isLoading, refetch } = trpc.users.list.useQuery();
 
-  const updateRoleMutation = trpc.usersAdmin.updateRole.useMutation({
+  const updateRoleMutation = trpc.users.updateRole.useMutation({
     onSuccess: () => {
       toast.success("Rôle mis à jour");
       refetch();

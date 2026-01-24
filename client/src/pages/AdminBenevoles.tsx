@@ -36,7 +36,8 @@ export default function AdminBenevoles() {
     },
   });
 
-  const filteredVolunteers = volunteers?.filter(v => {
+  const volunteersList = volunteers?.volunteers || [];
+  const filteredVolunteers = volunteersList.filter((v: any) => {
     const matchesSearch = searchQuery === "" || 
       v.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       v.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -92,7 +93,7 @@ export default function AdminBenevoles() {
     toast.success("Export CSV téléchargé");
   };
 
-  const currentVolunteer = volunteers?.find(v => v.id === selectedVolunteer);
+  const currentVolunteer = volunteersList.find((v: any) => v.id === selectedVolunteer);
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -167,14 +168,14 @@ export default function AdminBenevoles() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">{volunteers?.length || 0}</div>
+              <div className="text-2xl font-bold">{volunteersList.length || 0}</div>
               <div className="text-xs text-muted-foreground">Total</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {volunteers?.filter(v => v.status === 'registered').length || 0}
+                {volunteersList.filter((v: any) => v.status === 'registered').length || 0}
               </div>
               <div className="text-xs text-muted-foreground">Inscrits</div>
             </CardContent>
@@ -182,7 +183,7 @@ export default function AdminBenevoles() {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-green-600">
-                {volunteers?.filter(v => v.status === 'confirmed').length || 0}
+                {volunteersList.filter((v: any) => v.status === 'confirmed').length || 0}
               </div>
               <div className="text-xs text-muted-foreground">Confirmés</div>
             </CardContent>
@@ -190,7 +191,7 @@ export default function AdminBenevoles() {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-emerald-600">
-                {volunteers?.filter(v => v.status === 'present').length || 0}
+                {volunteersList.filter((v: any) => v.status === 'present').length || 0}
               </div>
               <div className="text-xs text-muted-foreground">Présents</div>
             </CardContent>
@@ -198,7 +199,7 @@ export default function AdminBenevoles() {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-red-600">
-                {volunteers?.filter(v => v.status === 'absent').length || 0}
+                {volunteersList.filter((v: any) => v.status === 'absent').length || 0}
               </div>
               <div className="text-xs text-muted-foreground">Absents</div>
             </CardContent>
@@ -266,7 +267,7 @@ export default function AdminBenevoles() {
                                 size="sm"
                                 variant="outline"
                                 className="text-green-600"
-                                onClick={() => updateStatusMutation.mutate({ id: volunteer.id, status: 'present' })}
+                                onClick={() => updateStatusMutation.mutate({ volunteerId: volunteer.id, status: 'present' })}
                               >
                                 <CheckCircle className="h-4 w-4" />
                               </Button>
@@ -276,7 +277,7 @@ export default function AdminBenevoles() {
                                 size="sm"
                                 variant="outline"
                                 className="text-red-600"
-                                onClick={() => updateStatusMutation.mutate({ id: volunteer.id, status: 'absent' })}
+                                onClick={() => updateStatusMutation.mutate({ volunteerId: volunteer.id, status: 'absent' })}
                               >
                                 <XCircle className="h-4 w-4" />
                               </Button>

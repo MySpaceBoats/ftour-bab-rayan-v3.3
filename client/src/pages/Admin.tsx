@@ -15,15 +15,15 @@ export default function Admin() {
   const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
   const [, navigate] = useLocation();
   
-  const { data: volunteerStats } = trpc.volunteers.getStats.useQuery(undefined, {
+  const { data: volunteerStats } = trpc.volunteers.stats.useQuery(undefined, {
     enabled: isAuthenticated && !!user?.role && ['admin', 'super_admin', 'admin_ops'].includes(user.role),
   });
   
-  const { data: orderStats } = trpc.orders.getStats.useQuery(undefined, {
+  const { data: orderStats } = trpc.orders.stats.useQuery(undefined, {
     enabled: isAuthenticated && !!user?.role && ['admin', 'super_admin', 'admin_boutique'].includes(user.role),
   });
   
-  const { data: donationStats } = trpc.donations.getStats.useQuery(undefined, {
+  const { data: donationStats } = trpc.donations.stats.useQuery(undefined, {
     enabled: isAuthenticated && !!user?.role && ['admin', 'super_admin', 'admin_dons'].includes(user.role),
   });
   
@@ -76,7 +76,7 @@ export default function Admin() {
     );
   }
 
-  const activeDays = days?.filter(d => !d.isClosed).length || 0;
+  const activeDays = days?.filter(d => d.isOpen).length || 0;
   const totalDays = days?.length || 0;
 
   return (

@@ -21,7 +21,7 @@ export default function AdminDons() {
   const [selectedDonation, setSelectedDonation] = useState<number | null>(null);
 
   const { data: donations, isLoading, refetch } = trpc.donations.listAll.useQuery();
-  const { data: stats } = trpc.donations.getStats.useQuery();
+  const { data: stats } = trpc.donations.stats.useQuery();
 
   const updateStatusMutation = trpc.donations.updateStatus.useMutation({
     onSuccess: () => {
@@ -259,7 +259,7 @@ export default function AdminDons() {
                                 size="sm"
                                 variant="outline"
                                 className="text-green-600"
-                                onClick={() => updateStatusMutation.mutate({ id: donation.id, status: 'received' })}
+                                onClick={() => updateStatusMutation.mutate({ donationId: donation.id, status: 'received' })}
                               >
                                 <CheckCircle className="h-4 w-4" />
                               </Button>
@@ -269,7 +269,7 @@ export default function AdminDons() {
                                 size="sm"
                                 variant="outline"
                                 className="text-red-600"
-                                onClick={() => updateStatusMutation.mutate({ id: donation.id, status: 'cancelled' })}
+                                onClick={() => updateStatusMutation.mutate({ donationId: donation.id, status: 'cancelled' })}
                               >
                                 <XCircle className="h-4 w-4" />
                               </Button>

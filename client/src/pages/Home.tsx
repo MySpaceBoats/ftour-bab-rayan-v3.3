@@ -383,7 +383,7 @@ export default function Home() {
               </div>
               
               <div className="grid md:grid-cols-3 gap-8">
-                {testimonials.slice(0, 3).map((testimonial) => (
+                {testimonials.slice(0, 3).map((testimonial: { id: number; content: string; authorName: string; authorRole?: string; rating?: number }) => (
                   <Card key={testimonial.id} className="border-none shadow-md">
                     <CardContent className="p-6 space-y-4">
                       <div className="flex gap-1">
@@ -421,7 +421,7 @@ export default function Home() {
               </div>
               
               <div className="flex flex-wrap justify-center items-center gap-8">
-                {partners.map((partner) => (
+                {partners.map((partner: { id: number; name: string; logoUrl?: string; websiteUrl?: string }) => (
                   <div key={partner.id} className="grayscale hover:grayscale-0 transition-all opacity-60 hover:opacity-100">
                     {partner.logoUrl ? (
                       <img src={partner.logoUrl} alt={partner.name} className="h-12 object-contain" />

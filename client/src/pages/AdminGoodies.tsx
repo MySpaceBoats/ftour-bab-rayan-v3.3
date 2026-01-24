@@ -22,13 +22,11 @@ export default function AdminGoodies() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    price: "",
+    price: 0,
     imageUrl: "",
     category: "",
-    isBestSeller: false,
-    isNew: false,
-    isRamadanEdition: false,
-    totalStock: 0,
+    isActive: true,
+    sortOrder: 0,
   });
 
   const { data: goodies, isLoading, refetch } = trpc.goodies.listAll.useQuery();
@@ -61,13 +59,11 @@ export default function AdminGoodies() {
     setFormData({
       name: "",
       description: "",
-      price: "",
+      price: 0,
       imageUrl: "",
       category: "",
-      isBestSeller: false,
-      isNew: false,
-      isRamadanEdition: false,
-      totalStock: 0,
+      isActive: true,
+      sortOrder: 0,
     });
   };
 
@@ -92,13 +88,11 @@ export default function AdminGoodies() {
     setFormData({
       name: goodie.name,
       description: goodie.description || "",
-      price: goodie.price,
+      price: goodie.price || 0,
       imageUrl: goodie.imageUrl || "",
       category: goodie.category || "",
-      isBestSeller: goodie.isBestSeller || false,
-      isNew: goodie.isNew || false,
-      isRamadanEdition: goodie.isRamadanEdition || false,
-      totalStock: goodie.totalStock || 0,
+      isActive: goodie.isActive ?? true,
+      sortOrder: goodie.sortOrder || 0,
     });
   };
 
@@ -165,17 +159,17 @@ export default function AdminGoodies() {
                     <Input
                       type="number"
                       value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
                       placeholder="100"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Stock total</Label>
+                    <Label>Ordre d'affichage</Label>
                     <Input
                       type="number"
-                      value={formData.totalStock}
-                      onChange={(e) => setFormData({ ...formData, totalStock: parseInt(e.target.value) || 0 })}
-                      placeholder="50"
+                      value={formData.sortOrder}
+                      onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
+                      placeholder="0"
                     />
                   </div>
                 </div>
@@ -200,24 +194,10 @@ export default function AdminGoodies() {
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label>Best-seller</Label>
+                    <Label>Actif</Label>
                     <Switch
-                      checked={formData.isBestSeller}
-                      onCheckedChange={(checked) => setFormData({ ...formData, isBestSeller: checked })}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label>Nouveau</Label>
-                    <Switch
-                      checked={formData.isNew}
-                      onCheckedChange={(checked) => setFormData({ ...formData, isNew: checked })}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label>Édition Ramadan</Label>
-                    <Switch
-                      checked={formData.isRamadanEdition}
-                      onCheckedChange={(checked) => setFormData({ ...formData, isRamadanEdition: checked })}
+                      checked={formData.isActive}
+                      onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
                     />
                   </div>
                 </div>
@@ -417,15 +397,15 @@ export default function AdminGoodies() {
                 <Input
                   type="number"
                   value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Stock total</Label>
+                <Label>Ordre d'affichage</Label>
                 <Input
                   type="number"
-                  value={formData.totalStock}
-                  onChange={(e) => setFormData({ ...formData, totalStock: parseInt(e.target.value) || 0 })}
+                  value={formData.sortOrder}
+                  onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
                 />
               </div>
             </div>
@@ -448,24 +428,10 @@ export default function AdminGoodies() {
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label>Best-seller</Label>
+                <Label>Actif</Label>
                 <Switch
-                  checked={formData.isBestSeller}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isBestSeller: checked })}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label>Nouveau</Label>
-                <Switch
-                  checked={formData.isNew}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isNew: checked })}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label>Édition Ramadan</Label>
-                <Switch
-                  checked={formData.isRamadanEdition}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isRamadanEdition: checked })}
+                  checked={formData.isActive}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
                 />
               </div>
             </div>

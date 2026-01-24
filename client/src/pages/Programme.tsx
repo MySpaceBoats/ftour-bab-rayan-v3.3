@@ -23,16 +23,16 @@ export default function Programme() {
   type DayType = NonNullable<typeof days>[number];
 
   const getAvailabilityColor = (day: DayType) => {
-    if (day.isClosed) return "bg-red-100 text-red-800 border-red-200";
-    const percentage = (day.currentCount / day.maxCapacity) * 100;
+    if (!day.isOpen) return "bg-red-100 text-red-800 border-red-200";
+    const percentage = (day.registeredCount / day.capacity) * 100;
     if (percentage >= 90) return "bg-orange-100 text-orange-800 border-orange-200";
     if (percentage >= 70) return "bg-yellow-100 text-yellow-800 border-yellow-200";
     return "bg-green-100 text-green-800 border-green-200";
   };
 
   const getAvailabilityText = (day: DayType) => {
-    if (day.isClosed) return "Complet";
-    const remaining = day.maxCapacity - day.currentCount;
+    if (!day.isOpen) return "Complet";
+    const remaining = day.capacity - day.registeredCount;
     if (remaining <= 5) return `${remaining} places`;
     return "Disponible";
   };
@@ -96,8 +96,8 @@ export default function Programme() {
             ) : days && days.length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {weekDays.map((day) => (
-                  <Card key={day.id} className={`card-hover overflow-hidden ${day.isClosed ? 'opacity-75' : ''}`}>
-                    <div className={`h-1 ${day.isClosed ? 'bg-red-500' : 'bg-primary'}`} />
+                  <Card key={day.id} className={`card-hover overflow-hidden ${!day.isOpen ? 'opacity-75' : ''}`}>
+                    <div className={`h-1 ${!day.isOpen ? 'bg-red-500' : 'bg-primary'}`} />
                     <CardContent className="p-6 space-y-4">
                       {/* Header */}
                       <div className="flex items-start justify-between">
@@ -108,7 +108,7 @@ export default function Programme() {
                           </div>
                         </div>
                         <Badge variant="outline" className={getAvailabilityColor(day)}>
-                          {day.isClosed ? (
+                          {!day.isOpen ? (
                             <XCircle className="h-3 w-3 mr-1" />
                           ) : (
                             <CheckCircle className="h-3 w-3 mr-1" />
@@ -119,10 +119,10 @@ export default function Programme() {
 
                       {/* Info */}
                       <div className="space-y-2 text-sm">
-                        {day.startTime && day.endTime && (
+                        {day.iftarTime && (
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Clock className="h-4 w-4" />
-                            <span>{day.startTime} - {day.endTime}</span>
+                            <span>{day.iftarTime}</span>
                           </div>
                         )}
                         {day.location && (
@@ -133,15 +133,15 @@ export default function Programme() {
                         )}
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Users className="h-4 w-4" />
-                          <span>{day.currentCount} / {day.maxCapacity} inscrits</span>
+                          <span>{day.registeredCount} / {day.capacity} inscrits</span>
                         </div>
                       </div>
 
                       {/* Progress bar */}
                       <div className="w-full bg-muted rounded-full h-2">
                         <div 
-                          className={`h-2 rounded-full transition-all ${day.isClosed ? 'bg-red-500' : 'bg-primary'}`}
-                          style={{ width: `${Math.min((day.currentCount / day.maxCapacity) * 100, 100)}%` }}
+                          className={`h-2 rounded-full transition-all ${!day.isOpen ? 'bg-red-500' : 'bg-primary'}`}
+                          style={{ width: `${Math.min((day.registeredCount / day.capacity) * 100, 100)}%` }}
                         />
                       </div>
 
@@ -149,11 +149,11 @@ export default function Programme() {
                       <Link href={`/benevole?day=${day.id}`}>
                         <Button 
                           className="w-full" 
-                          disabled={day.isClosed}
-                          variant={day.isClosed ? "outline" : "default"}
+                          disabled={!day.isOpen}
+                          variant={!day.isOpen ? "outline" : "default"}
                         >
-                          {day.isClosed ? "Complet" : "S'inscrire"}
-                          {!day.isClosed && <ArrowRight className="h-4 w-4 ml-2" />}
+                          {!day.isOpen ? "Complet" : "S'inscrire"}
+                          {day.isOpen && <ArrowRight className="h-4 w-4 ml-2" />}
                         </Button>
                       </Link>
                     </CardContent>

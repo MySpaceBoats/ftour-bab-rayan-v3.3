@@ -37,11 +37,11 @@ export default function Scanner() {
     onSuccess: (data) => {
       setScanResult({
         success: true,
-        volunteer: {
+        volunteer: data.volunteer ? {
           firstName: data.volunteer.firstName,
           lastName: data.volunteer.lastName,
           status: data.volunteer.status,
-        },
+        } : undefined,
       });
       toast.success("Présence validée !");
     },

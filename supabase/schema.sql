@@ -1,0 +1,329 @@
+-- ============================================
+-- FTOUR BAB RAYAN - SUPABASE SCHEMA
+-- ============================================
+
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ============================================
+-- USERS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  open_id VARCHAR(64) NOT NULL UNIQUE,
+  name TEXT,
+  email VARCHAR(320),
+  phone VARCHAR(20),
+  login_method VARCHAR(64),
+  role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin', 'super_admin', 'admin_operations', 'admin_boutique', 'admin_dons', 'scanner')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_signed_in TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_users_open_id ON users(open_id);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_role ON users(role);
+
+-- ============================================
+-- RAMADAN DAYS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS ramadan_days (
+  id SERIAL PRIMARY KEY,
+  day_number INTEGER NOT NULL UNIQUE,
+  date DATE NOT NULL UNIQUE,
+  hijri_date VARCHAR(50),
+  capacity INTEGER NOT NULL DEFAULT 100,
+  registered_count INTEGER NOT NULL DEFAULT 0,
+  is_open BOOLEAN NOT NULL DEFAULT true,
+  iftar_time TIME,
+  location TEXT,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_ramadan_days_date ON ramadan_days(date);
+CREATE INDEX idx_ramadan_days_is_open ON ramadan_days(is_open);
+
+-- ============================================
+-- VOLUNTEERS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS volunteers (
+  id SERIAL PRIMARY KEY,
+  first_name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(100) NOT NULL,
+  email VARCHAR(320) NOT NULL,
+  phone VARCHAR(20) NOT NULL,
+  city VARCHAR(100),
+  day_id INTEGER NOT NULL REFERENCES ramadan_days(id) ON DELETE CASCADE,
+  qr_token VARCHAR(64) NOT NULL UNIQUE,
+  qr_status VARCHAR(20) NOT NULL DEFAULT 'generated' CHECK (qr_status IN ('generated', 'validated', 'expired', 'invalid')),
+  status VARCHAR(20) NOT NULL DEFAULT 'registered' CHECK (status IN ('registered', 'confirmed', 'present', 'absent', 'cancelled')),
+  scanned_at TIMESTAMPTZ,
+  scanned_by INTEGER REFERENCES users(id),
+  accepted_terms BOOLEAN NOT NULL DEFAULT false,
+  email_sent BOOLEAN NOT NULL DEFAULT false,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_volunteers_day_id ON volunteers(day_id);
+CREATE INDEX idx_volunteers_email ON volunteers(email);
+CREATE INDEX idx_volunteers_qr_token ON volunteers(qr_token);
+CREATE INDEX idx_volunteers_status ON volunteers(status);
+CREATE INDEX idx_volunteers_qr_status ON volunteers(qr_status);
+
+-- ============================================
+-- CHECKINS TABLE (for audit trail)
+-- ============================================
+CREATE TABLE IF NOT EXISTS checkins (
+  id SERIAL PRIMARY KEY,
+  volunteer_id INTEGER NOT NULL REFERENCES volunteers(id) ON DELETE CASCADE,
+  token VARCHAR(64) NOT NULL,
+  scanned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  validated_by INTEGER REFERENCES users(id),
+  validation_mode VARCHAR(10) NOT NULL DEFAULT 'scan' CHECK (validation_mode IN ('scan', 'manual')),
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_checkins_volunteer_id ON checkins(volunteer_id);
+CREATE INDEX idx_checkins_token ON checkins(token);
+CREATE INDEX idx_checkins_scanned_at ON checkins(scanned_at);
+
+-- ============================================
+-- GOODIES TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS goodies (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(200) NOT NULL,
+  description TEXT,
+  price DECIMAL(10,2) NOT NULL DEFAULT 0,
+  image_url TEXT,
+  category VARCHAR(100),
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_goodies_is_active ON goodies(is_active);
+CREATE INDEX idx_goodies_category ON goodies(category);
+
+-- ============================================
+-- GOODIE VARIANTS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS goodie_variants (
+  id SERIAL PRIMARY KEY,
+  goodie_id INTEGER NOT NULL REFERENCES goodies(id) ON DELETE CASCADE,
+  size VARCHAR(20),
+  color VARCHAR(50),
+  stock INTEGER NOT NULL DEFAULT 0,
+  price_modifier DECIMAL(10,2) NOT NULL DEFAULT 0,
+  is_available BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_goodie_variants_goodie_id ON goodie_variants(goodie_id);
+CREATE INDEX idx_goodie_variants_is_available ON goodie_variants(is_available);
+
+-- ============================================
+-- ORDERS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS orders (
+  id SERIAL PRIMARY KEY,
+  order_reference VARCHAR(20) NOT NULL UNIQUE,
+  customer_name VARCHAR(200) NOT NULL,
+  customer_email VARCHAR(320) NOT NULL,
+  customer_phone VARCHAR(20) NOT NULL,
+  total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  status VARCHAR(20) NOT NULL DEFAULT 'reserved' CHECK (status IN ('reserved', 'confirmed', 'paid', 'delivered', 'cancelled')),
+  pickup_date DATE,
+  pickup_location TEXT,
+  notes TEXT,
+  processed_by INTEGER REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_orders_reference ON orders(order_reference);
+CREATE INDEX idx_orders_status ON orders(status);
+CREATE INDEX idx_orders_customer_email ON orders(customer_email);
+
+-- ============================================
+-- ORDER ITEMS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS order_items (
+  id SERIAL PRIMARY KEY,
+  order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  goodie_id INTEGER NOT NULL REFERENCES goodies(id),
+  variant_id INTEGER REFERENCES goodie_variants(id),
+  quantity INTEGER NOT NULL DEFAULT 1,
+  unit_price DECIMAL(10,2) NOT NULL,
+  total_price DECIMAL(10,2) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_order_items_order_id ON order_items(order_id);
+
+-- ============================================
+-- DONATIONS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS donations (
+  id SERIAL PRIMARY KEY,
+  donation_reference VARCHAR(20) NOT NULL UNIQUE,
+  donor_name VARCHAR(200) NOT NULL,
+  donor_email VARCHAR(320) NOT NULL,
+  donor_phone VARCHAR(20),
+  amount DECIMAL(10,2) NOT NULL,
+  payment_method VARCHAR(20) NOT NULL CHECK (payment_method IN ('transfer', 'on_site')),
+  status VARCHAR(20) NOT NULL DEFAULT 'promised' CHECK (status IN ('promised', 'pending', 'received', 'cancelled')),
+  message TEXT,
+  is_anonymous BOOLEAN NOT NULL DEFAULT false,
+  accepts_updates BOOLEAN NOT NULL DEFAULT false,
+  processed_by INTEGER REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_donations_reference ON donations(donation_reference);
+CREATE INDEX idx_donations_status ON donations(status);
+CREATE INDEX idx_donations_donor_email ON donations(donor_email);
+
+-- ============================================
+-- CONTACT MESSAGES TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS contact_messages (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(200) NOT NULL,
+  email VARCHAR(320) NOT NULL,
+  phone VARCHAR(20),
+  subject VARCHAR(200),
+  message TEXT NOT NULL,
+  is_read BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_contact_messages_is_read ON contact_messages(is_read);
+
+-- ============================================
+-- ROW LEVEL SECURITY (RLS) POLICIES
+-- ============================================
+
+-- Enable RLS on all tables
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ramadan_days ENABLE ROW LEVEL SECURITY;
+ALTER TABLE volunteers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE checkins ENABLE ROW LEVEL SECURITY;
+ALTER TABLE goodies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE goodie_variants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE donations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contact_messages ENABLE ROW LEVEL SECURITY;
+
+-- Public read access for ramadan_days and goodies (for public pages)
+CREATE POLICY "Public can read open ramadan days" ON ramadan_days
+  FOR SELECT USING (is_open = true);
+
+CREATE POLICY "Public can read active goodies" ON goodies
+  FOR SELECT USING (is_active = true);
+
+CREATE POLICY "Public can read available variants" ON goodie_variants
+  FOR SELECT USING (is_available = true);
+
+-- Public can create volunteers (registration)
+CREATE POLICY "Public can register as volunteer" ON volunteers
+  FOR INSERT WITH CHECK (true);
+
+-- Public can read their own volunteer record by qr_token
+CREATE POLICY "Public can read volunteer by token" ON volunteers
+  FOR SELECT USING (true);
+
+-- Public can create orders
+CREATE POLICY "Public can create orders" ON orders
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Public can read orders" ON orders
+  FOR SELECT USING (true);
+
+CREATE POLICY "Public can create order items" ON order_items
+  FOR INSERT WITH CHECK (true);
+
+-- Public can create donations
+CREATE POLICY "Public can create donations" ON donations
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Public can read donations" ON donations
+  FOR SELECT USING (true);
+
+-- Public can create contact messages
+CREATE POLICY "Public can send contact messages" ON contact_messages
+  FOR INSERT WITH CHECK (true);
+
+-- Service role (admin) has full access - these policies allow service_role to bypass RLS
+-- Note: service_role key automatically bypasses RLS, but we add explicit policies for clarity
+
+CREATE POLICY "Service role full access users" ON users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access ramadan_days" ON ramadan_days FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access volunteers" ON volunteers FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access checkins" ON checkins FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access goodies" ON goodies FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access goodie_variants" ON goodie_variants FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access orders" ON orders FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access order_items" ON order_items FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access donations" ON donations FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access contact_messages" ON contact_messages FOR ALL USING (true) WITH CHECK (true);
+
+-- ============================================
+-- TRIGGERS FOR updated_at
+-- ============================================
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_ramadan_days_updated_at BEFORE UPDATE ON ramadan_days
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_volunteers_updated_at BEFORE UPDATE ON volunteers
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_goodies_updated_at BEFORE UPDATE ON goodies
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON orders
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_donations_updated_at BEFORE UPDATE ON donations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- TRIGGER TO UPDATE registered_count
+-- ============================================
+CREATE OR REPLACE FUNCTION update_registered_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    UPDATE ramadan_days SET registered_count = registered_count + 1 WHERE id = NEW.day_id;
+  ELSIF TG_OP = 'DELETE' THEN
+    UPDATE ramadan_days SET registered_count = registered_count - 1 WHERE id = OLD.day_id;
+  ELSIF TG_OP = 'UPDATE' AND OLD.day_id != NEW.day_id THEN
+    UPDATE ramadan_days SET registered_count = registered_count - 1 WHERE id = OLD.day_id;
+    UPDATE ramadan_days SET registered_count = registered_count + 1 WHERE id = NEW.day_id;
+  END IF;
+  RETURN NULL;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_volunteer_count AFTER INSERT OR DELETE OR UPDATE OF day_id ON volunteers
+  FOR EACH ROW EXECUTE FUNCTION update_registered_count();

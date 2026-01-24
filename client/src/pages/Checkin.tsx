@@ -108,6 +108,23 @@ export default function Checkin() {
   
   const { volunteer, day, status } = data;
   
+  // Guard against missing volunteer data
+  if (!volunteer) {
+    return (
+      <div className="min-h-screen bg-red-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md border-red-200">
+          <CardContent className="pt-8 pb-8 text-center">
+            <div className="w-24 h-24 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+              <XCircle className="h-14 w-14 text-red-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-red-700 mb-2">Erreur</h1>
+            <p className="text-red-600">Données du bénévole non disponibles.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
   // Already validated state
   if (status === 'already_validated') {
     return (
@@ -265,12 +282,12 @@ export default function Checkin() {
                   </div>
                 </div>
                 
-                {day.startTime && (
+                {day.iftarTime && (
                   <div className="flex items-center gap-3">
                     <Clock className="h-5 w-5 text-green-600" />
                     <div>
-                      <p className="text-xs text-muted-foreground">Horaire</p>
-                      <p className="font-medium">{day.startTime} - {day.endTime || 'Fin'}</p>
+                      <p className="text-xs text-muted-foreground">Heure d'Iftar</p>
+                      <p className="font-medium">{day.iftarTime}</p>
                     </div>
                   </div>
                 )}

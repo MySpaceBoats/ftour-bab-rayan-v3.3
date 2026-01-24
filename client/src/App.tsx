@@ -29,6 +29,7 @@ import AdminDons from "./pages/AdminDons";
 import AdminJours from "./pages/AdminJours";
 import AdminUtilisateurs from "./pages/AdminUtilisateurs";
 import AdminGoodies from "./pages/AdminGoodies";
+import AdminScan from "./pages/AdminScan";
 
 function Router() {
   return (
@@ -59,6 +60,7 @@ function Router() {
       <Route path="/admin/jours" component={AdminJours} />
       <Route path="/admin/utilisateurs" component={AdminUtilisateurs} />
       <Route path="/admin/goodies" component={AdminGoodies} />
+      <Route path="/admin/scan" component={AdminScan} />
       
       {/* 404 */}
       <Route path="/404" component={NotFound} />

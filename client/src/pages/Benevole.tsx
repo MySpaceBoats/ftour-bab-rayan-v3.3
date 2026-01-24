@@ -82,7 +82,7 @@ export default function Benevole() {
     });
   };
 
-  const availableDays = days?.filter(d => !d.isClosed && d.currentCount < d.maxCapacity) || [];
+  const availableDays = days?.filter(d => d.isOpen && d.registeredCount < d.capacity) || [];
 
   if (registrationSuccess) {
     return (
@@ -269,7 +269,7 @@ export default function Benevole() {
                               availableDays.map((day) => (
                                 <SelectItem key={day.id} value={day.id.toString()}>
                                   Jour {day.dayNumber} - {new Date(day.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
-                                  {' '}({day.maxCapacity - day.currentCount} places)
+                                  {' '}({day.capacity - day.registeredCount} places)
                                 </SelectItem>
                               ))
                             ) : (

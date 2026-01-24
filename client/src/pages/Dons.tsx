@@ -53,8 +53,8 @@ export default function Dons() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const amount = formData.customAmount || formData.amount;
-    if (!amount || parseFloat(amount) <= 0) {
+    const amountStr = formData.customAmount || formData.amount;
+    if (!amountStr || parseFloat(amountStr) <= 0) {
       toast.error("Veuillez entrer un montant valide");
       return;
     }
@@ -63,7 +63,7 @@ export default function Dons() {
       donorName: formData.donorName,
       donorEmail: formData.donorEmail,
       donorPhone: formData.donorPhone || undefined,
-      amount,
+      amount: parseFloat(amountStr),
       paymentMethod: formData.paymentMethod,
       message: formData.message || undefined,
       isAnonymous: formData.isAnonymous,

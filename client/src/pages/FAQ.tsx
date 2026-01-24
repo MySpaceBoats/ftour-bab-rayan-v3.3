@@ -71,9 +71,8 @@ const defaultFaqs = [
 ];
 
 export default function FAQ() {
-  const { data: faqItems, isLoading } = trpc.public.faq.useQuery();
-
-  const faqs = faqItems && faqItems.length > 0 ? faqItems : defaultFaqs;
+  // Use default FAQs - can be extended with database later
+  const faqs = defaultFaqs;
 
   const categories = [
     { id: "benevole", label: "Bénévolat", icon: Users },
@@ -110,13 +109,8 @@ export default function FAQ() {
         {/* FAQ Content */}
         <section className="py-16">
           <div className="container">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <div className="max-w-4xl mx-auto space-y-12">
-                {categories.map((category) => {
+            <div className="max-w-4xl mx-auto space-y-12">
+              {categories.map((category) => {
                   const categoryFaqs = getFaqsByCategory(category.id);
                   if (categoryFaqs.length === 0) return null;
 
@@ -151,7 +145,6 @@ export default function FAQ() {
                   );
                 })}
               </div>
-            )}
           </div>
         </section>
 
