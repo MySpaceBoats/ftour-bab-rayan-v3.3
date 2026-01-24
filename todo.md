@@ -107,3 +107,12 @@
 - [x] Mettre à jour back-office avec affichage QR réel et lien de test
 - [x] Router checkin avec endpoints verify (public) et validate (scanner)
 - [x] Tests unitaires (26 tests passés)
+
+## Phase 14 : Intégration Resend pour emails automatiques
+- [x] Configurer la clé API Resend
+- [x] Créer le module d'envoi d'emails
+- [x] Template email confirmation inscription bénévole (avec QR code)
+- [x] Template email confirmation commande goodies
+- [x] Template email promesse de don (avec RIB)
+- [x] Intégrer l'envoi dans les flux existants
+- [x] Tests unitaires (31 tests passés)

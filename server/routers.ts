@@ -5,6 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import * as db from "./db";
+import { sendEmail, generateVolunteerConfirmationEmail, generateOrderConfirmationEmail, generateDonationConfirmationEmail, generateContactNotificationEmail } from "./email";
 
 // ============================================
 // ROLE-BASED PROCEDURES
@@ -185,6 +186,43 @@ const volunteersRouter = router({
       // Check if day is now full
       if (day.currentCount + 1 >= day.maxCapacity) {
         await db.updateRamadanDay(input.dayId, { isClosed: true });
+      }
+      
+      // Send confirmation email with QR code
+      try {
+        const baseUrl = process.env.NODE_ENV === 'production' 
+          ? 'https://ftourbabrayan.ma' 
+          : 'http://localhost:3000';
+        
+        const emailData = generateVolunteerConfirmationEmail({
+          firstName: input.firstName,
+          lastName: input.lastName,
+          email: input.email,
+          dayNumber: day.dayNumber,
+          dayDate: new Date(day.date).toLocaleDateString('fr-FR', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          }),
+          location: day.location || 'Association Bab Rayan, Casablanca',
+          startTime: day.startTime || '18h00',
+          qrToken,
+          baseUrl,
+        });
+        
+        const emailResult = await sendEmail({
+          to: input.email,
+          subject: emailData.subject,
+          html: emailData.html,
+        });
+        
+        if (emailResult.success) {
+          await db.updateVolunteer(id, { emailSent: true });
+        }
+      } catch (error) {
+        console.error('[Volunteer Registration] Email send failed:', error);
+        // Don't fail the registration if email fails
       }
       
       return { id, qrToken };
@@ -456,7 +494,9 @@ const ordersRouter = router({
         pickupLocation: input.pickupLocation,
       });
       
-      // Create order items
+      // Create order items and collect details for email
+      const emailItems: Array<{ name: string; variant?: string; quantity: number; price: number }> = [];
+      
       for (const item of itemsWithPrices) {
         await db.createOrderItem({
           orderId,
@@ -467,10 +507,53 @@ const ordersRouter = router({
           totalPrice: item.totalPrice,
         });
         
-        // Update stock if variant
+        // Get goodie details for email
+        const goodie = await db.getGoodieById(item.goodieId);
+        let variantName = '';
         if (item.variantId) {
+          const variant = await db.getVariantById(item.variantId);
+          if (variant) {
+            variantName = `${variant.size || ''} ${variant.color || ''}`.trim();
+          }
           await db.updateVariantStock(item.variantId, item.quantity);
         }
+        
+        emailItems.push({
+          name: goodie?.name || 'Produit',
+          variant: variantName || undefined,
+          quantity: item.quantity,
+          price: parseFloat(item.totalPrice),
+        });
+      }
+      
+      // Send confirmation email
+      try {
+        const baseUrl = process.env.NODE_ENV === 'production' 
+          ? 'https://ftourbabrayan.ma' 
+          : 'http://localhost:3000';
+        
+        const [firstName, ...lastNameParts] = input.customerName.split(' ');
+        const lastName = lastNameParts.join(' ') || '';
+        
+        const emailData = generateOrderConfirmationEmail({
+          firstName,
+          lastName,
+          email: input.customerEmail,
+          phone: input.customerPhone,
+          orderId: orderReference,
+          items: emailItems,
+          totalAmount,
+          baseUrl,
+        });
+        
+        await sendEmail({
+          to: input.customerEmail,
+          subject: emailData.subject,
+          html: emailData.html,
+        });
+      } catch (error) {
+        console.error('[Order] Email send failed:', error);
+        // Don't fail the order if email fails
       }
       
       return { orderId, orderReference, totalAmount: totalAmount.toFixed(2) };
@@ -535,6 +618,35 @@ const donationsRouter = router({
         donationReference,
       });
       
+      // Send confirmation email with bank details (for transfer) or instructions
+      try {
+        const baseUrl = process.env.NODE_ENV === 'production' 
+          ? 'https://ftourbabrayan.ma' 
+          : 'http://localhost:3000';
+        
+        const [firstName, ...lastNameParts] = input.donorName.split(' ');
+        const lastName = lastNameParts.join(' ') || '';
+        
+        const emailData = generateDonationConfirmationEmail({
+          firstName,
+          lastName,
+          email: input.donorEmail,
+          amount: parseFloat(input.amount),
+          paymentMethod: input.paymentMethod,
+          donationId: donationReference,
+          baseUrl,
+        });
+        
+        await sendEmail({
+          to: input.donorEmail,
+          subject: emailData.subject,
+          html: emailData.html,
+        });
+      } catch (error) {
+        console.error('[Donation] Email send failed:', error);
+        // Don't fail the donation if email fails
+      }
+      
       return { id, donationReference };
     }),
   
@@ -582,6 +694,28 @@ const contactRouter = router({
     }))
     .mutation(async ({ input }) => {
       const id = await db.createContactMessage(input);
+      
+      // Send notification email to admin
+      try {
+        const emailData = generateContactNotificationEmail({
+          name: input.name,
+          email: input.email,
+          phone: input.phone,
+          subject: input.subject,
+          message: input.message,
+        });
+        
+        // Send to admin email
+        await sendEmail({
+          to: 'contact@babrayan.ma',
+          subject: emailData.subject,
+          html: emailData.html,
+        });
+      } catch (error) {
+        console.error('[Contact] Email notification failed:', error);
+        // Don't fail the contact form if email fails
+      }
+      
       return { id, success: true };
     }),
   
