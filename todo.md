@@ -129,3 +129,15 @@
 - [x] Créer la page admin validation manuelle et exports CSV
 - [ ] Migrer les données existantes vers Supabase (si nécessaire)
 - [x] Tests unitaires (26 tests passés)
+
+## Phase 16 : Implémentation Supabase Auth
+- [x] Configurer Supabase Auth dans le projet
+- [x] Créer le service d'authentification Supabase (server/supabase-auth.ts)
+- [x] Créer la page de connexion (email/mot de passe) (/connexion)
+- [x] Créer la page d'inscription (/inscription)
+- [x] Mettre à jour le hook useAuth pour Supabase (nettoyage token)
+- [x] Mettre à jour la Navbar avec les nouveaux boutons
+- [x] Créer l'administrateur rsebbani@myspace.boats (super_admin)
+- [x] Ajouter les endpoints login/signup dans le router auth
+- [x] Configurer le client tRPC pour envoyer le token Supabase
+- [ ] Tester la connexion sur ftourbabrayan.ma (en production)

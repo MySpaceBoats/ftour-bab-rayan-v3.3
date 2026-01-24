@@ -18,7 +18,7 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
 
   if (!isUnauthorized) return;
 
-  window.location.href = getLoginUrl();
+  window.location.href = '/connexion';
 };
 
 queryClient.getQueryCache().subscribe(event => {
@@ -42,6 +42,14 @@ const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
+      headers() {
+        // Ajouter le token Supabase si disponible
+        const token = localStorage.getItem('supabase_token');
+        if (token) {
+          return { Authorization: `Bearer ${token}` };
+        }
+        return {};
+      },
       fetch(input, init) {
         return globalThis.fetch(input, {
           ...(init ?? {}),

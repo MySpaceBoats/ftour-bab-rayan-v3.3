@@ -16,6 +16,8 @@ import Association from "./pages/Association";
 import Contact from "./pages/Contact";
 import FAQ from "./pages/FAQ";
 import MentionsLegales from "./pages/MentionsLegales";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 
 // Scanner
 import Scanner from "./pages/Scanner";
@@ -45,6 +47,8 @@ function Router() {
       <Route path="/contact" component={Contact} />
       <Route path="/faq" component={FAQ} />
       <Route path="/mentions-legales" component={MentionsLegales} />
+      <Route path="/connexion" component={Login} />
+      <Route path="/inscription" component={Signup} />
       
       {/* Scanner (mobile-first) */}
       <Route path="/scanner" component={Scanner} />

@@ -5,6 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { sendEmail, generateVolunteerConfirmationEmail, generateOrderConfirmationEmail, generateDonationConfirmationEmail, generateContactNotificationEmail } from "./email";
+import { signInUser, signUpUser, getUserFromToken, signOutUser } from "./supabase-auth";
 import * as supabaseServices from "./supabase-services";
 
 // ============================================
@@ -654,10 +655,53 @@ const publicRouter = router({
 export const appRouter = router({
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
+    me: publicProcedure.query(async ({ ctx }) => {
+      // Essayer de récupérer le token depuis le header Authorization
+      const authHeader = ctx.req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        const user = await getUserFromToken(token);
+        if (user) {
+          return user;
+        }
+      }
+      return ctx.user;
+    }),
+    
+    login: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string().min(6),
+      }))
+      .mutation(async ({ input }) => {
+        const result = await signInUser(input);
+        if (result.error) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: result.error });
+        }
+        return { user: result.user, session: result.session };
+      }),
+    
+    signup: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string().min(6),
+        name: z.string().optional(),
+        phone: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const result = await signUpUser(input);
+        if (result.error) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: result.error });
+        }
+        return { user: result.user };
+      }),
+    
+    logout: publicProcedure.mutation(async ({ ctx }) => {
+      // Nettoyer le cookie Manus OAuth si présent
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      // Déconnexion Supabase
+      await signOutUser();
       return { success: true } as const;
     }),
   }),

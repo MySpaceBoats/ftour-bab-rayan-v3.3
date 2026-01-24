@@ -80,11 +80,11 @@ export default function Navbar() {
               </Button>
             </>
           ) : (
-            <a href={getLoginUrl()}>
+            <Link href="/connexion">
               <Button variant="outline" size="sm">
                 Connexion
               </Button>
-            </a>
+            </Link>
           )}
           <Link href="/benevole">
             <Button size="sm" className="bg-primary hover:bg-primary/90">
@@ -162,11 +162,11 @@ export default function Navbar() {
                     </Button>
                   </>
                 ) : (
-                  <a href={getLoginUrl()}>
+                  <Link href="/connexion" onClick={() => setIsOpen(false)}>
                     <Button variant="outline" className="w-full">
                       Connexion
                     </Button>
-                  </a>
+                  </Link>
                 )}
                 <Link href="/benevole" onClick={() => setIsOpen(false)}>
                   <Button className="w-full bg-primary hover:bg-primary/90">
