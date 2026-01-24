@@ -169,13 +169,13 @@ const volunteersRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ce jour est complet' });
       }
       
-      // Generate unique QR code
-      const qrCode = db.generateQrCode();
+      // Generate unique QR token (128 bits, cryptographically secure)
+      const qrToken = db.generateQrToken();
       
       // Create volunteer
       const id = await db.createVolunteer({
         ...input,
-        qrCode,
+        qrToken,
         status: 'registered',
       });
       
@@ -187,7 +187,7 @@ const volunteersRouter = router({
         await db.updateRamadanDay(input.dayId, { isClosed: true });
       }
       
-      return { id, qrCode };
+      return { id, qrToken };
     }),
   
   getByQrCode: scannerProcedure
@@ -766,6 +766,124 @@ const usersAdminRouter = router({
 });
 
 // ============================================
+// CHECKIN ROUTER (Public QR validation)
+// ============================================
+
+const checkinRouter = router({
+  /**
+   * Vérifie un token QR et retourne le statut de validation
+   * Endpoint public accessible sans authentification
+   */
+  verify: publicProcedure
+    .input(z.object({ token: z.string().min(1) }))
+    .query(async ({ input }) => {
+      // Valider le format du token (32 caractères hexadécimaux)
+      if (!/^[a-f0-9]{32}$/i.test(input.token)) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Format de token invalide' });
+      }
+      
+      const volunteer = await db.getVolunteerByQrToken(input.token);
+      if (!volunteer) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'QR code non trouvé' });
+      }
+      
+      const day = await db.getRamadanDayById(volunteer.dayId);
+      
+      // Vérifier si déjà validé
+      if (volunteer.status === 'present') {
+        return {
+          status: 'already_validated' as const,
+          volunteer: {
+            firstName: volunteer.firstName,
+            lastName: volunteer.lastName,
+            scannedAt: volunteer.scannedAt,
+          },
+          day,
+        };
+      }
+      
+      // Vérifier la date (optionnel - peut être désactivé pour les tests)
+      if (day) {
+        const today = new Date();
+        const dayDate = new Date(day.date);
+        const isSameDay = today.toDateString() === dayDate.toDateString();
+        
+        // Si ce n'est pas le bon jour, retourner un avertissement mais permettre quand même
+        if (!isSameDay) {
+          return {
+            status: 'wrong_date' as const,
+            volunteer: {
+              firstName: volunteer.firstName,
+              lastName: volunteer.lastName,
+            },
+            day,
+          };
+        }
+      }
+      
+      // Token valide et prêt pour validation
+      return {
+        status: 'valid' as const,
+        volunteer: {
+          id: volunteer.id,
+          firstName: volunteer.firstName,
+          lastName: volunteer.lastName,
+          email: volunteer.email,
+          phone: volunteer.phone,
+          city: volunteer.city,
+        },
+        day,
+      };
+    }),
+  
+  /**
+   * Valide la présence d'un bénévole via son token QR
+   * Endpoint protégé - nécessite un rôle scanner ou admin
+   */
+  validate: scannerProcedure
+    .input(z.object({ token: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      // Valider le format du token
+      if (!/^[a-f0-9]{32}$/i.test(input.token)) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Format de token invalide' });
+      }
+      
+      const volunteer = await db.getVolunteerByQrToken(input.token);
+      if (!volunteer) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'QR code non trouvé' });
+      }
+      
+      // Vérifier si déjà validé (anti-doublon)
+      if (volunteer.status === 'present') {
+        // Enregistrer la tentative de doublon
+        await db.createScanHistory({
+          volunteerId: volunteer.id,
+          scannedBy: ctx.user!.id,
+          action: 'duplicate_attempt',
+          success: false,
+        });
+        throw new TRPCError({ code: 'CONFLICT', message: 'Ce QR code a déjà été validé' });
+      }
+      
+      // Marquer comme présent
+      await db.markVolunteerPresent(volunteer.id, ctx.user!.id);
+      
+      // Mettre à jour le statut QR
+      await db.updateVolunteer(volunteer.id, { qrStatus: 'validated' });
+      
+      // Enregistrer dans l'historique
+      await db.createScanHistory({
+        volunteerId: volunteer.id,
+        scannedBy: ctx.user!.id,
+        action: 'checkin',
+        success: true,
+      });
+      
+      return { success: true, volunteerId: volunteer.id };
+    }),
+});
+
+// ============================================
 // MAIN ROUTER
 // ============================================
 
@@ -790,6 +908,7 @@ export const appRouter = router({
   public: publicDataRouter,
   adminContent: adminContentRouter,
   usersAdmin: usersAdminRouter,
+  checkin: checkinRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -19,6 +19,7 @@ import MentionsLegales from "./pages/MentionsLegales";
 
 // Scanner
 import Scanner from "./pages/Scanner";
+import Checkin from "./pages/Checkin";
 
 // Admin pages
 import Admin from "./pages/Admin";
@@ -46,6 +47,9 @@ function Router() {
       
       {/* Scanner (mobile-first) */}
       <Route path="/scanner" component={Scanner} />
+      
+      {/* Public QR Check-in page */}
+      <Route path="/checkin/:token" component={Checkin} />
       
       {/* Admin pages */}
       <Route path="/admin" component={Admin} />

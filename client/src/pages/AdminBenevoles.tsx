@@ -345,10 +345,21 @@ export default function AdminBenevoles() {
               <div className="bg-muted/50 rounded-lg p-4 text-center">
                 <p className="text-xs text-muted-foreground mb-2">Code QR</p>
                 <div className="bg-white p-3 rounded inline-block">
-                  <QrCode className="h-24 w-24 text-muted-foreground/50" />
+                  <img 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${window.location.origin}/checkin/${currentVolunteer.qrToken}`)}`}
+                    alt="QR Code"
+                    className="w-24 h-24"
+                  />
                 </div>
-                <p className="text-xs font-mono mt-2 text-muted-foreground">
-                  {currentVolunteer.qrCode}
+                <p className="text-xs mt-2 text-muted-foreground">
+                  <a 
+                    href={`${window.location.origin}/checkin/${currentVolunteer.qrToken}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    Tester le lien
+                  </a>
                 </p>
               </div>
             </div>

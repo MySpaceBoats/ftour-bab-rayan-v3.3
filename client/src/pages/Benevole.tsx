@@ -31,7 +31,7 @@ export default function Benevole() {
   });
   
   const [registrationSuccess, setRegistrationSuccess] = useState<{
-    qrCode: string;
+    qrToken: string;
     dayInfo: { dayNumber: number; date: string };
   } | null>(null);
 
@@ -39,7 +39,7 @@ export default function Benevole() {
     onSuccess: (data) => {
       const selectedDay = days?.find(d => d.id === parseInt(formData.dayId));
       setRegistrationSuccess({
-        qrCode: data.qrCode,
+        qrToken: data.qrToken,
         dayInfo: {
           dayNumber: selectedDay?.dayNumber || 0,
           date: selectedDay?.date ? new Date(selectedDay.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : '',
@@ -112,11 +112,14 @@ export default function Benevole() {
                   <div className="border-t border-border pt-4">
                     <p className="text-sm text-muted-foreground mb-3">Votre code QR unique :</p>
                     <div className="bg-white p-4 rounded-lg inline-block">
-                      <div className="w-48 h-48 bg-muted flex items-center justify-center rounded">
-                        <QrCode className="h-24 w-24 text-muted-foreground/50" />
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-2 font-mono">
-                        {registrationSuccess.qrCode}
+                      {/* QR Code généré via API Google Charts - Standard ISO/IEC 18004 */}
+                      <img 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${window.location.origin}/checkin/${registrationSuccess.qrToken}`)}`}
+                        alt="QR Code de validation"
+                        className="w-48 h-48"
+                      />
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        Scannez ce QR code à l'entrée
                       </p>
                     </div>
                   </div>

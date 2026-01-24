@@ -1,5 +1,6 @@
 import { eq, and, gte, lte, desc, asc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import crypto from 'crypto';
 import { 
   InsertUser, users, 
   ramadanDays, InsertRamadanDay, RamadanDay,
@@ -179,12 +180,15 @@ export async function createVolunteer(volunteer: InsertVolunteer) {
   return result[0].insertId;
 }
 
-export async function getVolunteerByQrCode(qrCode: string) {
+export async function getVolunteerByQrToken(qrToken: string) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(volunteers).where(eq(volunteers.qrCode, qrCode)).limit(1);
+  const result = await db.select().from(volunteers).where(eq(volunteers.qrToken, qrToken)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
+
+// Alias pour compatibilité
+export const getVolunteerByQrCode = getVolunteerByQrToken;
 
 export async function getVolunteerById(id: number) {
   const db = await getDb();
@@ -636,11 +640,13 @@ export function generateDonationReference(): string {
   return result;
 }
 
-export function generateQrCode(): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < 32; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+/**
+ * Génère un token sécurisé de 128 bits pour le QR code
+ * Utilise crypto.randomBytes pour une génération cryptographiquement sûre
+ */
+export function generateQrToken(): string {
+  return crypto.randomBytes(16).toString('hex'); // 128 bits = 16 bytes = 32 hex chars
 }
+
+// Alias pour compatibilité avec l'ancien code
+export const generateQrCode = generateQrToken;

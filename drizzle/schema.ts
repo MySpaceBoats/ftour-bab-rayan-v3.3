@@ -63,8 +63,9 @@ export const volunteers = mysqlTable("volunteers", {
   // Lien avec le jour
   dayId: int("dayId").notNull(),
   
-  // QR Code et statut
-  qrCode: varchar("qrCode", { length: 64 }).notNull().unique(), // Token unique pour le QR
+  // QR Code et statut - Token sécurisé 128 bits (32 caractères hex)
+  qrToken: varchar("qrToken", { length: 64 }).notNull().unique(), // Token sécurisé pour URL /checkin/{token}
+  qrStatus: mysqlEnum("qrStatus", ["generated", "validated", "expired", "invalid"]).default("generated").notNull(),
   status: volunteerStatusEnum.default("registered").notNull(),
   
   // Scan info

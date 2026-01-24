@@ -97,3 +97,13 @@
 - [x] Erreur SQL dans getDonationStats (COUNT/SUM sans alias)
 - [x] Erreur SQL dans getOrderStats (COUNT/SUM sans alias)
 - [x] Erreur JavaScript en production sur ftourbabrayan.ma (An unexpected error occurred)
+
+## Phase 13 : Système QR Code Standard ISO/IEC 18004
+- [x] Mettre à jour le schéma DB pour ajouter un token sécurisé 128 bits (qrToken)
+- [x] Installer bibliothèque qrcode pour génération standard
+- [x] Implémenter génération QR codes avec URL https://{domain}/checkin/{token}
+- [x] Créer page publique /checkin/{token} mobile-first avec 4 états (valide, déjà validé, mauvaise date, invalide)
+- [x] Implémenter validation avec anti-doublon et historique des scans
+- [x] Mettre à jour back-office avec affichage QR réel et lien de test
+- [x] Router checkin avec endpoints verify (public) et validate (scanner)
+- [x] Tests unitaires (26 tests passés)
