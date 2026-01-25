@@ -141,3 +141,11 @@
 - [x] Ajouter les endpoints login/signup dans le router auth
 - [x] Configurer le client tRPC pour envoyer le token Supabase
 - [ ] Tester la connexion sur ftourbabrayan.ma (en production)
+
+## Phase 17 : Configuration Cloudflare Workers pour le backend
+- [x] Analyser la configuration actuelle du projet
+- [x] Configurer Cloudflare Workers/Pages Functions (wrangler.toml)
+- [x] Adapter le code serveur pour Cloudflare Workers (worker/)
+- [x] Créer les scripts de build (build:worker, build:cloudflare)
+- [ ] Déployer sur Cloudflare avec les secrets
+- [ ] Tester la connexion en production
