@@ -13,7 +13,7 @@ command = "pnpm build:worker"
 NODE_ENV = "production"
 
 routes = [
-  { pattern = "www.ftourbabrayan.ma/api/*", zone_name = "www.ftourbabrayan.ma" }
+  { pattern = "ftourbabrayan.ma/api/*", zone_name = "ftourbabrayan.ma" }
 ]
 
 [dev]
