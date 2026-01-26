@@ -30,13 +30,13 @@ export default {
     const allowOrigin = allowed.has(origin) ? origin : 'https://ftourbabrayan.ma';
 
     const baseCorsHeaders: Record<string, string> = {
-      'Access-Control-Allow-Origin': allowOrigin,
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Access-Control-Max-Age': '86400',
-      // Optionnel (utile si tu envoies un header Authorization côté client)
-      'Vary': 'Origin',
-    };
+  'Access-Control-Allow-Origin': allowOrigin,
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Credentials': 'true',
+  'Access-Control-Max-Age': '86400',
+  'Vary': 'Origin',
+};
 
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
