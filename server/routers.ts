@@ -7,6 +7,7 @@ import { z } from "zod";
 import { sendEmail, generateVolunteerConfirmationEmail, generateOrderConfirmationEmail, generateDonationConfirmationEmail, generateContactNotificationEmail } from "./email";
 import { signInUser, signUpUser, getUserFromToken, signOutUser } from "./supabase-auth";
 import * as supabaseServices from "./supabase-services";
+import { getSupabaseAdminClient } from "./supabase";
 
 // ============================================
 // ROLE-BASED PROCEDURES
@@ -649,6 +650,59 @@ const publicRouter = router({
 });
 
 // ============================================
+// UPLOAD ROUTER (Supabase Storage)
+// ============================================
+
+const uploadRouter = router({
+  image: adminProcedure
+    .input(z.object({
+      fileName: z.string(),
+      fileType: z.string(),
+      fileData: z.string(), // Base64 encoded
+      folder: z.string().default('goodies'),
+    }))
+    .mutation(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      }
+
+      // Extract base64 data
+      const base64Data = input.fileData.replace(/^data:image\/\w+;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      // Generate unique filename
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(2, 8);
+      const extension = input.fileName.split('.').pop() || 'png';
+      const uniqueFileName = `${input.folder}/${timestamp}-${randomId}.${extension}`;
+
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('images')
+        .upload(uniqueFileName, buffer, {
+          contentType: input.fileType,
+          upsert: false,
+        });
+
+      if (error) {
+        console.error('[Upload] Supabase Storage error:', error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Erreur lors de l\'upload: ' + error.message });
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('images')
+        .getPublicUrl(uniqueFileName);
+
+      return {
+        url: urlData.publicUrl,
+        path: data.path,
+      };
+    }),
+});
+
+// ============================================
 // MAIN APP ROUTER
 // ============================================
 
@@ -715,6 +769,7 @@ export const appRouter = router({
   contact: contactRouter,
   users: usersRouter,
   public: publicRouter,
+  upload: uploadRouter,
 });
 
 export type AppRouter = typeof appRouter;

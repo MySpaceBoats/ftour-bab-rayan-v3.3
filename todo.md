@@ -170,3 +170,13 @@
 ## Bug : Gestion des bénévoles
 - [x] Les bénévoles inscrits n'apparaissent pas dans la liste admin
 - [x] Corriger le format de retour de volunteers.listByDay (ajouter days[])
+
+## Fonctionnalité : Upload d'images pour les goodies
+- [x] Créer l'endpoint d'upload d'images vers Supabase Storage
+- [x] Modifier le formulaire d'ajout de goodies pour télécharger des images PNG/JPEG
+- [x] Afficher un aperçu de l'image avant l'envoi
+
+## Tables manquantes Supabase
+- [x] Créer la table testimonials
+- [x] Créer la table partners
+- [x] Créer le bucket de stockage 'images' (public)

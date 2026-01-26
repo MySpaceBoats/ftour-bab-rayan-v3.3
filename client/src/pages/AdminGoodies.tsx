@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -12,12 +12,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { 
-  ArrowLeft, Plus, Loader2, ShoppingBag, Package, Edit, Star, Sparkles
+  ArrowLeft, Plus, Loader2, Package, Edit, Star, Sparkles, Upload, X, Image as ImageIcon
 } from "lucide-react";
 
 export default function AdminGoodies() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingGoodie, setEditingGoodie] = useState<any>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -30,6 +33,13 @@ export default function AdminGoodies() {
   });
 
   const { data: goodies, isLoading, refetch } = trpc.goodies.listAll.useQuery();
+
+  const uploadMutation = trpc.upload.image.useMutation({
+    onError: (error: any) => {
+      toast.error("Erreur upload: " + error.message);
+      setIsUploading(false);
+    },
+  });
 
   const createMutation = trpc.goodies.create.useMutation({
     onSuccess: () => {
@@ -65,6 +75,59 @@ export default function AdminGoodies() {
       isActive: true,
       sortOrder: 0,
     });
+    setImagePreview(null);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Type de fichier non autorisé. Utilisez PNG, JPEG ou WebP.");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Le fichier est trop volumineux. Maximum 5 Mo.");
+      return;
+    }
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64 = event.target?.result as string;
+      setImagePreview(base64);
+      
+      // Upload to Supabase
+      setIsUploading(true);
+      try {
+        const result = await uploadMutation.mutateAsync({
+          fileName: file.name,
+          fileType: file.type,
+          fileData: base64,
+          folder: 'goodies',
+        });
+        
+        setFormData(prev => ({ ...prev, imageUrl: result.url }));
+        toast.success("Image téléchargée avec succès");
+      } catch (error) {
+        // Error handled by mutation
+      } finally {
+        setIsUploading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImagePreview(null);
+    setFormData(prev => ({ ...prev, imageUrl: "" }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleCreate = () => {
@@ -94,6 +157,7 @@ export default function AdminGoodies() {
       isActive: goodie.isActive ?? true,
       sortOrder: goodie.sortOrder || 0,
     });
+    setImagePreview(goodie.imageUrl || null);
   };
 
   const toggleActive = (goodie: any) => {
@@ -102,6 +166,80 @@ export default function AdminGoodies() {
       isActive: !goodie.isActive,
     });
   };
+
+  const ImageUploadField = () => (
+    <div className="space-y-2">
+      <Label>Image du produit</Label>
+      <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
+        {imagePreview || formData.imageUrl ? (
+          <div className="relative inline-block">
+            <img 
+              src={imagePreview || formData.imageUrl} 
+              alt="Aperçu" 
+              className="max-h-40 rounded-lg mx-auto"
+            />
+            <Button
+              type="button"
+              variant="destructive"
+              size="icon"
+              className="absolute -top-2 -right-2 h-6 w-6"
+              onClick={removeImage}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+            {isUploading && (
+              <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-white" />
+              </div>
+            )}
+          </div>
+        ) : (
+          <div 
+            className="cursor-pointer py-6"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <div className="w-12 h-12 mx-auto rounded-full bg-muted flex items-center justify-center mb-3">
+              {isUploading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              ) : (
+                <Upload className="h-6 w-6 text-muted-foreground" />
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Cliquez pour télécharger une image
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              PNG, JPEG ou WebP (max 5 Mo)
+            </p>
+          </div>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/jpg,image/webp"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+      </div>
+      {!imagePreview && !formData.imageUrl && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+        >
+          {isUploading ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <ImageIcon className="h-4 w-4 mr-2" />
+          )}
+          Choisir une image
+        </Button>
+      )}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -121,14 +259,17 @@ export default function AdminGoodies() {
               </p>
             </div>
           </div>
-          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <Dialog open={showCreateDialog} onOpenChange={(open) => {
+            setShowCreateDialog(open);
+            if (!open) resetForm();
+          }}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
                 Ajouter un produit
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Nouveau produit</DialogTitle>
               </DialogHeader>
@@ -174,14 +315,7 @@ export default function AdminGoodies() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>URL de l'image</Label>
-                  <Input
-                    value={formData.imageUrl}
-                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                    placeholder="https://..."
-                  />
-                </div>
+                <ImageUploadField />
 
                 <div className="space-y-2">
                   <Label>Catégorie</Label>
@@ -205,7 +339,7 @@ export default function AdminGoodies() {
                 <Button 
                   onClick={handleCreate} 
                   className="w-full"
-                  disabled={createMutation.isPending}
+                  disabled={createMutation.isPending || isUploading}
                 >
                   {createMutation.isPending ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -269,7 +403,7 @@ export default function AdminGoodies() {
                     <TableRow>
                       <TableHead>Produit</TableHead>
                       <TableHead>Prix</TableHead>
-                      <TableHead>Stock</TableHead>
+                      <TableHead>Catégorie</TableHead>
                       <TableHead>Tags</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Actions</TableHead>
@@ -280,42 +414,33 @@ export default function AdminGoodies() {
                       <TableRow key={goodie.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded bg-muted flex items-center justify-center">
+                            <div className="w-12 h-12 rounded bg-muted flex items-center justify-center overflow-hidden">
                               {goodie.imageUrl ? (
-                                <img src={goodie.imageUrl} alt={goodie.name} className="w-full h-full object-cover rounded" />
+                                <img src={goodie.imageUrl} alt={goodie.name} className="w-full h-full object-cover" />
                               ) : (
                                 <Package className="h-6 w-6 text-muted-foreground" />
                               )}
                             </div>
                             <div>
                               <div className="font-medium">{goodie.name}</div>
-                              <div className="text-xs text-muted-foreground">{goodie.category || "Sans catégorie"}</div>
+                              <div className="text-xs text-muted-foreground line-clamp-1">
+                                {goodie.description || "Pas de description"}
+                              </div>
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <span className="font-bold">{goodie.price} DH</span>
-                        </TableCell>
-                        <TableCell>
-                          <span className={goodie.totalStock <= 5 ? "text-red-600 font-bold" : ""}>
-                            {goodie.totalStock || 0}
-                          </span>
-                        </TableCell>
+                        <TableCell className="font-medium">{goodie.price} DH</TableCell>
+                        <TableCell>{goodie.category || "-"}</TableCell>
                         <TableCell>
                           <div className="flex gap-1 flex-wrap">
                             {goodie.isBestSeller && (
-                              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                              <Badge variant="secondary" className="text-xs">
                                 <Star className="h-3 w-3 mr-1" />
                                 Best-seller
                               </Badge>
                             )}
-                            {goodie.isNew && (
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                Nouveau
-                              </Badge>
-                            )}
                             {goodie.isRamadanEdition && (
-                              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                              <Badge variant="secondary" className="text-xs">
                                 <Sparkles className="h-3 w-3 mr-1" />
                                 Ramadan
                               </Badge>
@@ -323,24 +448,101 @@ export default function AdminGoodies() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {goodie.isActive ? (
-                            <Badge className="bg-green-500">Actif</Badge>
-                          ) : (
-                            <Badge variant="secondary">Inactif</Badge>
-                          )}
+                          <Badge variant={goodie.isActive ? "default" : "secondary"}>
+                            {goodie.isActive ? "Actif" : "Inactif"}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button
+                            <Dialog open={editingGoodie?.id === goodie.id} onOpenChange={(open) => {
+                              if (!open) {
+                                setEditingGoodie(null);
+                                resetForm();
+                              }
+                            }}>
+                              <DialogTrigger asChild>
+                                <Button variant="outline" size="sm" onClick={() => openEditDialog(goodie)}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                                <DialogHeader>
+                                  <DialogTitle>Modifier le produit</DialogTitle>
+                                </DialogHeader>
+                                
+                                <div className="space-y-4">
+                                  <div className="space-y-2">
+                                    <Label>Nom du produit *</Label>
+                                    <Input
+                                      value={formData.name}
+                                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    />
+                                  </div>
+                                  
+                                  <div className="space-y-2">
+                                    <Label>Description</Label>
+                                    <Textarea
+                                      value={formData.description}
+                                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                      rows={3}
+                                    />
+                                  </div>
+
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <Label>Prix (DH) *</Label>
+                                      <Input
+                                        type="number"
+                                        value={formData.price}
+                                        onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label>Ordre d'affichage</Label>
+                                      <Input
+                                        type="number"
+                                        value={formData.sortOrder}
+                                        onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <ImageUploadField />
+
+                                  <div className="space-y-2">
+                                    <Label>Catégorie</Label>
+                                    <Input
+                                      value={formData.category}
+                                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                    />
+                                  </div>
+
+                                  <div className="flex items-center justify-between">
+                                    <Label>Actif</Label>
+                                    <Switch
+                                      checked={formData.isActive}
+                                      onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                                    />
+                                  </div>
+
+                                  <Button 
+                                    onClick={handleUpdate} 
+                                    className="w-full"
+                                    disabled={updateMutation.isPending || isUploading}
+                                  >
+                                    {updateMutation.isPending ? (
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <Edit className="h-4 w-4 mr-2" />
+                                    )}
+                                    Enregistrer les modifications
+                                  </Button>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                            <Button 
+                              variant={goodie.isActive ? "outline" : "default"} 
                               size="sm"
-                              variant="outline"
-                              onClick={() => openEditDialog(goodie)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
                               onClick={() => toggleActive(goodie)}
                             >
                               {goodie.isActive ? "Désactiver" : "Activer"}
@@ -353,104 +555,15 @@ export default function AdminGoodies() {
                 </Table>
               </div>
             ) : (
-              <div className="text-center py-12">
-                <ShoppingBag className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                <p className="text-muted-foreground mb-4">Aucun produit dans le catalogue</p>
-                <Button onClick={() => setShowCreateDialog(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Ajouter un produit
-                </Button>
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <Package className="h-12 w-12 mb-4" />
+                <p>Aucun produit trouvé</p>
+                <p className="text-sm">Créez votre premier produit pour commencer</p>
               </div>
             )}
           </CardContent>
         </Card>
       </main>
-
-      {/* Edit Dialog */}
-      <Dialog open={editingGoodie !== null} onOpenChange={() => { setEditingGoodie(null); resetForm(); }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Modifier le produit</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nom du produit *</Label>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={3}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Prix (DH) *</Label>
-                <Input
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Ordre d'affichage</Label>
-                <Input
-                  type="number"
-                  value={formData.sortOrder}
-                  onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>URL de l'image</Label>
-              <Input
-                value={formData.imageUrl}
-                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Catégorie</Label>
-              <Input
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Actif</Label>
-                <Switch
-                  checked={formData.isActive}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-                />
-              </div>
-            </div>
-
-            <Button 
-              onClick={handleUpdate} 
-              className="w-full"
-              disabled={updateMutation.isPending}
-            >
-              {updateMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Edit className="h-4 w-4 mr-2" />
-              )}
-              Enregistrer les modifications
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

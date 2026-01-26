@@ -1281,6 +1281,67 @@ const usersRouter = router({
 });
 
 // ============================================
+// UPLOAD ROUTER
+// ============================================
+
+const uploadRouter = router({
+  // Upload image to Supabase Storage
+  image: adminProcedure
+    .input(z.object({
+      fileName: z.string(),
+      fileType: z.string(),
+      fileData: z.string(), // Base64 encoded
+      folder: z.string().default('goodies'),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      
+      // Validate file type
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+      if (!allowedTypes.includes(input.fileType)) {
+        throw new TRPCError({ 
+          code: 'BAD_REQUEST', 
+          message: 'Type de fichier non autorisé. Utilisez PNG, JPEG ou WebP.' 
+        });
+      }
+
+      // Decode base64
+      const base64Data = input.fileData.replace(/^data:image\/\w+;base64,/, '');
+      const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+
+      // Generate unique filename
+      const ext = input.fileName.split('.').pop() || 'png';
+      const uniqueName = `${input.folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('images')
+        .upload(uniqueName, buffer, {
+          contentType: input.fileType,
+          upsert: false,
+        });
+
+      if (error) {
+        console.error('[Worker] Upload error:', error);
+        throw new TRPCError({ 
+          code: 'INTERNAL_SERVER_ERROR', 
+          message: 'Erreur lors du téléchargement: ' + error.message 
+        });
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('images')
+        .getPublicUrl(uniqueName);
+
+      return {
+        url: urlData.publicUrl,
+        path: uniqueName,
+      };
+    }),
+});
+
+// ============================================
 // SYSTEM ROUTER
 // ============================================
 
@@ -1306,6 +1367,7 @@ export const appRouter = router({
   contact: contactRouter,
   users: usersRouter,
   public: publicRouter,
+  upload: uploadRouter,
 });
 
 export type AppRouter = typeof appRouter;
