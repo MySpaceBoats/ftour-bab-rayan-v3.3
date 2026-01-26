@@ -149,4 +149,5 @@
 - [x] Créer les scripts de build (build:worker, build:cloudflare)
 - [x] Déployer sur Cloudflare avec les secrets
 - [x] Configurer le frontend pour utiliser api.ftourbabrayan.ma
+- [x] Corriger l'URL API avec variable d'environnement VITE_API_URL
 - [ ] Tester la connexion en production
