@@ -37,10 +37,15 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+// Utiliser l'API externe en production, locale en développement
+const API_URL = import.meta.env.PROD 
+  ? 'https://api.ftourbabrayan.ma/api/trpc' 
+  : '/api/trpc';
+
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: "/api/trpc",
+      url: API_URL,
       transformer: superjson,
       headers() {
         // Ajouter le token Supabase si disponible

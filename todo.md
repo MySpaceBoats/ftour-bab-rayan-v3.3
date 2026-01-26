@@ -147,5 +147,6 @@
 - [x] Configurer Cloudflare Workers/Pages Functions (wrangler.toml)
 - [x] Adapter le code serveur pour Cloudflare Workers (worker/)
 - [x] Créer les scripts de build (build:worker, build:cloudflare)
-- [ ] Déployer sur Cloudflare avec les secrets
+- [x] Déployer sur Cloudflare avec les secrets
+- [x] Configurer le frontend pour utiliser api.ftourbabrayan.ma
 - [ ] Tester la connexion en production
