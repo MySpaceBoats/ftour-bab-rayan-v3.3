@@ -119,7 +119,7 @@ export default function MentionsLegales() {
               </ul>
 
               <p className="text-sm text-muted-foreground mt-8">
-                Dernière mise à jour : Janvier 2025
+                Dernière mise à jour : Janvier 2026
               </p>
             </div>
           </div>

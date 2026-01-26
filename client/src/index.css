@@ -40,154 +40,162 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  
+  /* Ftour Bab Rayan - Custom Colors */
+  --color-olive: var(--bg-olive);
+  --color-olive-dark: var(--bg-olive-dark);
+  --color-olive-soft: var(--bg-olive-soft);
+  --color-cream: var(--ink-cream);
+  --color-cream-soft: var(--ink-cream-soft);
+  --color-sand: var(--accent-sand);
 }
 
-/* Ftour Bab Rayan - Couleurs inspirées du Ramadan et de la solidarité */
-/* Palette: Vert émeraude (Islam/espoir), Or/Doré (générosité), Bleu nuit (spiritualité) */
+/* ============================================
+   Ftour Bab Rayan 2026 - 12e édition
+   Palette: Olive mat + Crème/Ivoire
+   Esprit: Humanitaire, sobre, chaleureux, artisanal
+   ============================================ */
 
-@font-face {
-  font-family: "Geist";
-  src: url("https://cdn.jsdelivr.net/npm/@fontsource/geist-sans@5.0.1/files/geist-sans-latin-400-normal.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Geist";
-  src: url("https://cdn.jsdelivr.net/npm/@fontsource/geist-sans@5.0.1/files/geist-sans-latin-500-normal.woff2") format("woff2");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Geist";
-  src: url("https://cdn.jsdelivr.net/npm/@fontsource/geist-sans@5.0.1/files/geist-sans-latin-600-normal.woff2") format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Geist";
-  src: url("https://cdn.jsdelivr.net/npm/@fontsource/geist-sans@5.0.1/files/geist-sans-latin-700-normal.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
+/* Google Fonts - Manuscrites + Sans-serif */
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Aref+Ruqaa:wght@400;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.5rem;
   
-  /* Couleurs principales - Vert émeraude */
-  --primary: oklch(0.55 0.18 155);
-  --primary-foreground: oklch(0.99 0.005 90);
+  /* ============================================
+     PALETTE FTOUR BAB RAYAN 2026
+     ============================================ */
   
-  /* Couleur secondaire - Or/Doré */
-  --secondary: oklch(0.85 0.12 85);
-  --secondary-foreground: oklch(0.25 0.05 85);
+  /* Fonds olive */
+  --bg-olive: #5E5B34;
+  --bg-olive-dark: #4A4829;
+  --bg-olive-soft: #6F6C3F;
   
-  /* Background et foreground */
-  --background: oklch(0.99 0.005 90);
-  --foreground: oklch(0.15 0.02 250);
+  /* Textes crème/ivoire */
+  --ink-cream: #F2E9D3;
+  --ink-cream-soft: #E6DCC3;
+  
+  /* Accent sable */
+  --accent-sand: #CDBB8A;
+  
+  /* ============================================
+     MAPPING VERS VARIABLES SHADCN/UI
+     ============================================ */
+  
+  /* Background et foreground - Olive comme fond principal */
+  --background: #5E5B34;
+  --foreground: #F2E9D3;
+  
+  /* Primary - Crème sur olive */
+  --primary: #F2E9D3;
+  --primary-foreground: #4A4829;
+  
+  /* Secondary - Sable */
+  --secondary: #CDBB8A;
+  --secondary-foreground: #4A4829;
   
   /* Cartes et surfaces */
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0.02 250);
+  --card: #4A4829;
+  --card-foreground: #F2E9D3;
   
   /* Popover */
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0.02 250);
+  --popover: #4A4829;
+  --popover-foreground: #F2E9D3;
   
   /* Muted */
-  --muted: oklch(0.95 0.01 90);
-  --muted-foreground: oklch(0.45 0.02 250);
+  --muted: #6F6C3F;
+  --muted-foreground: #E6DCC3;
   
-  /* Accent - Bleu nuit */
-  --accent: oklch(0.35 0.12 260);
-  --accent-foreground: oklch(0.99 0.005 90);
+  /* Accent */
+  --accent: #6F6C3F;
+  --accent-foreground: #F2E9D3;
   
   /* Destructive */
-  --destructive: oklch(0.55 0.2 25);
-  --destructive-foreground: oklch(0.99 0.005 90);
+  --destructive: #A85454;
+  --destructive-foreground: #F2E9D3;
   
   /* Bordures et inputs */
-  --border: oklch(0.88 0.02 90);
-  --input: oklch(0.88 0.02 90);
-  --ring: oklch(0.55 0.18 155);
+  --border: rgba(242, 233, 211, 0.2);
+  --input: rgba(242, 233, 211, 0.15);
+  --ring: #CDBB8A;
   
-  /* Chart colors */
-  --chart-1: oklch(0.55 0.18 155);
-  --chart-2: oklch(0.75 0.15 85);
-  --chart-3: oklch(0.35 0.12 260);
-  --chart-4: oklch(0.65 0.15 180);
-  --chart-5: oklch(0.60 0.18 30);
+  /* Chart colors - Variations olive/crème */
+  --chart-1: #F2E9D3;
+  --chart-2: #CDBB8A;
+  --chart-3: #6F6C3F;
+  --chart-4: #E6DCC3;
+  --chart-5: #8A8555;
   
   /* Sidebar */
-  --sidebar: oklch(0.98 0.005 90);
-  --sidebar-foreground: oklch(0.15 0.02 250);
-  --sidebar-primary: oklch(0.55 0.18 155);
-  --sidebar-primary-foreground: oklch(0.99 0.005 90);
-  --sidebar-accent: oklch(0.94 0.02 90);
-  --sidebar-accent-foreground: oklch(0.15 0.02 250);
-  --sidebar-border: oklch(0.88 0.02 90);
-  --sidebar-ring: oklch(0.55 0.18 155);
+  --sidebar: #4A4829;
+  --sidebar-foreground: #F2E9D3;
+  --sidebar-primary: #F2E9D3;
+  --sidebar-primary-foreground: #4A4829;
+  --sidebar-accent: #6F6C3F;
+  --sidebar-accent-foreground: #F2E9D3;
+  --sidebar-border: rgba(242, 233, 211, 0.15);
+  --sidebar-ring: #CDBB8A;
 }
 
-.dark {
-  --background: oklch(0.15 0.02 250);
-  --foreground: oklch(0.95 0.005 90);
+/* Mode clair pour les pages admin/formulaires */
+.light, [data-theme="light"] {
+  --background: #F2E9D3;
+  --foreground: #4A4829;
   
-  --card: oklch(0.18 0.02 250);
-  --card-foreground: oklch(0.95 0.005 90);
+  --card: #FFFFFF;
+  --card-foreground: #4A4829;
   
-  --popover: oklch(0.18 0.02 250);
-  --popover-foreground: oklch(0.95 0.005 90);
+  --popover: #FFFFFF;
+  --popover-foreground: #4A4829;
   
-  --primary: oklch(0.65 0.18 155);
-  --primary-foreground: oklch(0.15 0.02 250);
+  --primary: #5E5B34;
+  --primary-foreground: #F2E9D3;
   
-  --secondary: oklch(0.70 0.15 85);
-  --secondary-foreground: oklch(0.15 0.02 250);
+  --secondary: #E6DCC3;
+  --secondary-foreground: #4A4829;
   
-  --muted: oklch(0.25 0.02 250);
-  --muted-foreground: oklch(0.65 0.02 90);
+  --muted: #E6DCC3;
+  --muted-foreground: #6F6C3F;
   
-  --accent: oklch(0.45 0.12 260);
-  --accent-foreground: oklch(0.95 0.005 90);
+  --accent: #CDBB8A;
+  --accent-foreground: #4A4829;
   
-  --destructive: oklch(0.55 0.2 25);
-  --destructive-foreground: oklch(0.95 0.005 90);
+  --border: rgba(74, 72, 41, 0.2);
+  --input: rgba(74, 72, 41, 0.1);
+  --ring: #5E5B34;
   
-  --border: oklch(0.28 0.02 250);
-  --input: oklch(0.28 0.02 250);
-  --ring: oklch(0.65 0.18 155);
-  
-  --chart-1: oklch(0.65 0.18 155);
-  --chart-2: oklch(0.70 0.15 85);
-  --chart-3: oklch(0.45 0.12 260);
-  --chart-4: oklch(0.65 0.15 180);
-  --chart-5: oklch(0.60 0.18 30);
-  
-  --sidebar: oklch(0.18 0.02 250);
-  --sidebar-foreground: oklch(0.95 0.005 90);
-  --sidebar-primary: oklch(0.65 0.18 155);
-  --sidebar-primary-foreground: oklch(0.15 0.02 250);
-  --sidebar-accent: oklch(0.25 0.02 250);
-  --sidebar-accent-foreground: oklch(0.95 0.005 90);
-  --sidebar-border: oklch(0.28 0.02 250);
-  --sidebar-ring: oklch(0.65 0.18 155);
+  --sidebar: #4A4829;
+  --sidebar-foreground: #F2E9D3;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  
   body {
     @apply bg-background text-foreground;
-    font-family: "Geist", ui-sans-serif, system-ui, sans-serif;
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+  
+  /* Typographie manuscrite pour les titres */
+  h1, .font-handwritten {
+    font-family: "Caveat", cursive;
+  }
+  
+  /* Typographie arabe calligraphique */
+  .font-arabic {
+    font-family: "Aref Ruqaa", serif;
+  }
+  
+  /* Typographie serif élégante pour "12e édition" */
+  .font-edition {
+    font-family: "Cormorant Garamond", serif;
+    font-style: italic;
+  }
+  
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
   [type="button"]:not(:disabled),
@@ -200,48 +208,30 @@
     @apply cursor-pointer;
   }
   
-  /* Scrollbar styling */
+  /* Scrollbar styling - Olive theme */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   ::-webkit-scrollbar-track {
-    background: transparent;
+    background: var(--bg-olive-dark);
   }
   ::-webkit-scrollbar-thumb {
-    background: oklch(0.75 0.02 90);
+    background: var(--ink-cream-soft);
     border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: oklch(0.65 0.02 90);
-  }
-  .dark ::-webkit-scrollbar-thumb {
-    background: oklch(0.35 0.02 250);
-  }
-  .dark ::-webkit-scrollbar-thumb:hover {
-    background: oklch(0.45 0.02 250);
+    background: var(--ink-cream);
   }
 }
 
 @layer components {
-  /**
-   * Custom container utility that centers content and adds responsive padding.
-   *
-   * This overrides Tailwind's default container behavior to:
-   * - Auto-center content (mx-auto)
-   * - Add responsive horizontal padding
-   * - Set max-width for large screens
-   *
-   * Usage: <div className="container">...</div>
-   *
-   * For custom widths, use max-w-* utilities directly:
-   * <div className="max-w-6xl mx-auto px-4">...</div>
-   */
+  /* Container */
   .container {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1rem; /* 16px - mobile padding */
+    padding-left: 1rem;
     padding-right: 1rem;
   }
 
@@ -252,46 +242,112 @@
 
   @media (min-width: 640px) {
     .container {
-      padding-left: 1.5rem; /* 24px - tablet padding */
+      padding-left: 1.5rem;
       padding-right: 1.5rem;
     }
   }
 
   @media (min-width: 1024px) {
     .container {
-      padding-left: 2rem; /* 32px - desktop padding */
+      padding-left: 2rem;
       padding-right: 2rem;
-      max-width: 1280px; /* Standard content width */
+      max-width: 1280px;
     }
   }
   
+  /* ============================================
+     COMPOSANTS FTOUR BAB RAYAN
+     ============================================ */
+  
+  /* Fond olive principal */
+  .bg-olive {
+    background-color: var(--bg-olive);
+  }
+  
+  .bg-olive-dark {
+    background-color: var(--bg-olive-dark);
+  }
+  
+  .bg-olive-soft {
+    background-color: var(--bg-olive-soft);
+  }
+  
+  /* Texte crème */
+  .text-cream {
+    color: var(--ink-cream);
+  }
+  
+  .text-cream-soft {
+    color: var(--ink-cream-soft);
+  }
+  
+  /* Accent sable */
+  .text-sand {
+    color: var(--accent-sand);
+  }
+  
+  .bg-sand {
+    background-color: var(--accent-sand);
+  }
+  
+  /* Bordures crème */
+  .border-cream {
+    border-color: var(--ink-cream);
+  }
+  
+  .border-cream-soft {
+    border-color: rgba(242, 233, 211, 0.3);
+  }
+  
+  /* Boutons style Ftour */
+  .btn-ftour {
+    @apply px-6 py-3 rounded-md font-medium transition-all duration-200;
+    background-color: transparent;
+    color: var(--ink-cream);
+    border: 2px solid var(--ink-cream);
+  }
+  
+  .btn-ftour:hover {
+    background-color: var(--ink-cream);
+    color: var(--bg-olive-dark);
+  }
+  
+  .btn-ftour-filled {
+    @apply px-6 py-3 rounded-md font-medium transition-all duration-200;
+    background-color: var(--ink-cream);
+    color: var(--bg-olive-dark);
+    border: 2px solid var(--ink-cream);
+  }
+  
+  .btn-ftour-filled:hover {
+    background-color: var(--ink-cream-soft);
+  }
+  
+  /* Cartes style Ftour */
+  .card-ftour {
+    background-color: var(--bg-olive-dark);
+    border: 1px solid rgba(242, 233, 211, 0.15);
+    border-radius: 0.5rem;
+  }
+  
+  /* Séparateurs crème */
+  .separator-cream {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--ink-cream-soft), transparent);
+  }
+  
   /* Gradient backgrounds */
-  .gradient-primary {
-    background: linear-gradient(135deg, oklch(0.55 0.18 155) 0%, oklch(0.45 0.15 165) 100%);
-  }
-  
-  .gradient-secondary {
-    background: linear-gradient(135deg, oklch(0.75 0.15 85) 0%, oklch(0.65 0.12 75) 100%);
-  }
-  
-  .gradient-accent {
-    background: linear-gradient(135deg, oklch(0.35 0.12 260) 0%, oklch(0.25 0.10 270) 100%);
+  .gradient-olive {
+    background: linear-gradient(180deg, var(--bg-olive) 0%, var(--bg-olive-dark) 100%);
   }
   
   .gradient-hero {
-    background: linear-gradient(180deg, oklch(0.15 0.05 260) 0%, oklch(0.25 0.08 250) 50%, oklch(0.35 0.10 155) 100%);
+    background: linear-gradient(180deg, var(--bg-olive-dark) 0%, var(--bg-olive) 50%, var(--bg-olive-soft) 100%);
   }
   
   /* Text gradients */
-  .text-gradient-primary {
-    background: linear-gradient(135deg, oklch(0.55 0.18 155) 0%, oklch(0.65 0.15 165) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  
-  .text-gradient-secondary {
-    background: linear-gradient(135deg, oklch(0.75 0.15 85) 0%, oklch(0.85 0.12 80) 100%);
+  .text-gradient-cream {
+    background: linear-gradient(135deg, var(--ink-cream) 0%, var(--accent-sand) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -303,11 +359,19 @@
   }
   .card-hover:hover {
     @apply shadow-lg -translate-y-1;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   }
   
-  /* Islamic pattern overlay */
+  /* Pattern overlay - Motif subtil */
   .pattern-overlay {
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23F2E9D3' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+  
+  /* Style pour les icônes en trait */
+  .icon-stroke {
+    stroke: var(--ink-cream);
+    stroke-width: 1.5;
+    fill: none;
   }
 }
 
@@ -324,5 +388,10 @@
   
   .animate-pulse-slow {
     animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  /* Hover subtil pour les liens */
+  .hover-cream:hover {
+    color: var(--accent-sand);
   }
 }

@@ -183,3 +183,15 @@
 
 ## Bug : Erreur de type sur le champ price des goodies
 - [x] Corriger le type du champ price (expected string, received number)
+
+## Rebranding 2026 - Nouvelle identité visuelle olive/crème
+- [x] Mettre à jour les design tokens CSS (palette olive/crème)
+- [x] Ajouter les polices manuscrites (Caveat, Aref Ruqaa, Cormorant Garamond)
+- [x] Rebrander le Header (fond olive-dark, texte crème)
+- [x] Rebrander le Footer (fond olive-dark, texte crème)
+- [x] Rebrander le Hero (fond olive, titre bilingue, 12e édition)
+- [x] Rebrander les composants (Cards, Buttons, Sections)
+- [x] Remplacer toutes les occurrences 2025 → 2026
+- [ ] Vérifier le contraste et l'accessibilité
+- [ ] Tester le responsive mobile
+- [ ] Rebrander les autres pages (Evenement, Programme, Benevole, Goodies, Dons, etc.)

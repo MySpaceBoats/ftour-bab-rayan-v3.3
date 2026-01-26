@@ -34,16 +34,31 @@ export default function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full bg-[#4A4829] border-b border-[#F2E9D3]/20">
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <Heart className="h-5 w-5 text-primary-foreground" />
+        <Link href="/" className="flex items-center gap-3">
+          {/* Logo mains + cœur hachuré */}
+          <div className="flex h-10 w-10 items-center justify-center">
+            <svg viewBox="0 0 40 40" className="h-10 w-10">
+              {/* Mains stylisées */}
+              <path 
+                d="M20 8c-2 0-4 1-5 3-1-2-3-3-5-3-4 0-7 3-7 7 0 8 12 16 12 16s12-8 12-16c0-4-3-7-7-7z" 
+                fill="none" 
+                stroke="#F2E9D3" 
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              {/* Lignes hachurées dans le cœur */}
+              <line x1="12" y1="14" x2="16" y2="18" stroke="#F2E9D3" strokeWidth="1" opacity="0.6"/>
+              <line x1="14" y1="12" x2="18" y2="16" stroke="#F2E9D3" strokeWidth="1" opacity="0.6"/>
+              <line x1="16" y1="14" x2="20" y2="18" stroke="#F2E9D3" strokeWidth="1" opacity="0.6"/>
+            </svg>
           </div>
           <div className="flex flex-col">
-            <span className="text-lg font-bold leading-none text-foreground">Ftour</span>
-            <span className="text-xs text-muted-foreground">Bab Rayan</span>
+            <span className="text-lg font-bold leading-none text-[#F2E9D3]" style={{ fontFamily: 'Caveat, cursive' }}>Ftour Bab Rayan</span>
+            <span className="text-xs text-[#CDBB8A]" style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic' }}>12e édition — 2026</span>
           </div>
         </Link>
 
@@ -52,9 +67,11 @@ export default function Navbar() {
           {publicLinks.map((link) => (
             <Link key={link.href} href={link.href}>
               <Button
-                variant={location === link.href ? "secondary" : "ghost"}
+                variant="ghost"
                 size="sm"
-                className="text-sm"
+                className={`text-sm text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#5E5B34] ${
+                  location === link.href ? 'bg-[#5E5B34] text-[#CDBB8A]' : ''
+                }`}
               >
                 {link.label}
               </Button>
@@ -68,28 +85,44 @@ export default function Navbar() {
             <>
               {isAdmin && (
                 <Link href="/admin">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
+                  >
                     <LayoutDashboard className="h-4 w-4 mr-2" />
                     Admin
                   </Button>
                 </Link>
               )}
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleLogout}
+                className="text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#5E5B34]"
+              >
                 <LogOut className="h-4 w-4 mr-2" />
                 Déconnexion
               </Button>
             </>
           ) : (
             <Link href="/connexion">
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
+              >
                 Connexion
               </Button>
             </Link>
           )}
           <Link href="/benevole">
-            <Button size="sm" className="bg-primary hover:bg-primary/90">
+            <Button 
+              size="sm" 
+              className="bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3] border-2 border-[#F2E9D3]"
+            >
               <Users className="h-4 w-4 mr-2" />
-              S'inscrire
+              Devenir bénévole
             </Button>
           </Link>
         </div>
@@ -97,12 +130,12 @@ export default function Navbar() {
         {/* Mobile Menu */}
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild className="lg:hidden">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="text-[#F2E9D3] hover:bg-[#5E5B34]">
               <Menu className="h-5 w-5" />
               <span className="sr-only">Menu</span>
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-[300px] sm:w-[350px]">
+          <SheetContent side="right" className="w-[300px] sm:w-[350px] bg-[#4A4829] border-l border-[#F2E9D3]/20">
             <div className="flex flex-col gap-6 mt-6">
               {/* Main Links */}
               <nav className="flex flex-col gap-1">
@@ -111,8 +144,10 @@ export default function Navbar() {
                   return (
                     <Link key={link.href} href={link.href} onClick={() => setIsOpen(false)}>
                       <Button
-                        variant={location === link.href ? "secondary" : "ghost"}
-                        className="w-full justify-start"
+                        variant="ghost"
+                        className={`w-full justify-start text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#5E5B34] ${
+                          location === link.href ? 'bg-[#5E5B34] text-[#CDBB8A]' : ''
+                        }`}
                       >
                         <Icon className="h-4 w-4 mr-3" />
                         {link.label}
@@ -122,7 +157,7 @@ export default function Navbar() {
                 })}
               </nav>
 
-              <div className="border-t border-border" />
+              <div className="border-t border-[#F2E9D3]/20" />
 
               {/* Secondary Links */}
               <nav className="flex flex-col gap-1">
@@ -131,8 +166,10 @@ export default function Navbar() {
                   return (
                     <Link key={link.href} href={link.href} onClick={() => setIsOpen(false)}>
                       <Button
-                        variant={location === link.href ? "secondary" : "ghost"}
-                        className="w-full justify-start"
+                        variant="ghost"
+                        className={`w-full justify-start text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#5E5B34] ${
+                          location === link.href ? 'bg-[#5E5B34] text-[#CDBB8A]' : ''
+                        }`}
                       >
                         <Icon className="h-4 w-4 mr-3" />
                         {link.label}
@@ -142,7 +179,7 @@ export default function Navbar() {
                 })}
               </nav>
 
-              <div className="border-t border-border" />
+              <div className="border-t border-[#F2E9D3]/20" />
 
               {/* Auth Actions */}
               <div className="flex flex-col gap-2">
@@ -150,26 +187,36 @@ export default function Navbar() {
                   <>
                     {isAdmin && (
                       <Link href="/admin" onClick={() => setIsOpen(false)}>
-                        <Button variant="outline" className="w-full">
+                        <Button 
+                          variant="outline" 
+                          className="w-full border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
+                        >
                           <LayoutDashboard className="h-4 w-4 mr-2" />
                           Administration
                         </Button>
                       </Link>
                     )}
-                    <Button variant="ghost" className="w-full" onClick={handleLogout}>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#5E5B34]" 
+                      onClick={handleLogout}
+                    >
                       <LogOut className="h-4 w-4 mr-2" />
                       Déconnexion
                     </Button>
                   </>
                 ) : (
                   <Link href="/connexion" onClick={() => setIsOpen(false)}>
-                    <Button variant="outline" className="w-full">
+                    <Button 
+                      variant="outline" 
+                      className="w-full border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
+                    >
                       Connexion
                     </Button>
                   </Link>
                 )}
                 <Link href="/benevole" onClick={() => setIsOpen(false)}>
-                  <Button className="w-full bg-primary hover:bg-primary/90">
+                  <Button className="w-full bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3] border-2 border-[#F2E9D3]">
                     <Users className="h-4 w-4 mr-2" />
                     Devenir bénévole
                   </Button>

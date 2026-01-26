@@ -312,13 +312,13 @@ export default function Association() {
 
               <div className="flex gap-6">
                 <div className="flex-shrink-0 w-24 text-right">
-                  <span className="font-bold text-primary">2025</span>
+                  <span className="font-bold text-primary">2026</span>
                 </div>
                 <div className="flex-shrink-0 w-4 h-4 rounded-full bg-primary mt-1"></div>
                 <div>
-                  <h3 className="font-semibold">10ème édition du Ftour</h3>
+                  <h3 className="font-semibold">12ème édition du Ftour</h3>
                   <p className="text-muted-foreground text-sm">
-                    Célébration de 10 ans de Ftours solidaires avec plus de 31 200 repas servis annuellement.
+                    Célébration de 11 ans de Ftours solidaires avec plus de 31 200 repas servis annuellement.
                   </p>
                 </div>
               </div>

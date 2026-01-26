@@ -17,7 +17,7 @@ export default function Evenement() {
             <div className="max-w-4xl mx-auto text-center space-y-6">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
                 <Sparkles className="h-4 w-4" />
-                Depuis 2015 - 10ème édition
+                Depuis 2015 - 12ème édition
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground">
                 L'événement <span className="text-primary">Ftour Bab Rayan</span>
@@ -234,7 +234,7 @@ export default function Evenement() {
                     <h3 className="font-semibold">Dates</h3>
                   </div>
                   <p className="text-muted-foreground">
-                    Du 1er au 30 Ramadan 2025, soit 30 jours de Ftours solidaires consécutifs. 10ème édition depuis 2015.
+                    Du 1er au 30 Ramadan 2026, soit 30 jours de Ftours solidaires consécutifs. 12ème édition depuis 2015.
                   </p>
                 </CardContent>
               </Card>
