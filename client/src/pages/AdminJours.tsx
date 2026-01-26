@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { 
-  ArrowLeft, Calendar, Plus, Loader2, Users, CheckCircle, XCircle, Edit
+  ArrowLeft, Calendar, Plus, Loader2, Users, CheckCircle, XCircle, Edit, Trash2
 } from "lucide-react";
 
 export default function AdminJours() {
@@ -77,6 +77,16 @@ export default function AdminJours() {
     },
   });
 
+  const deleteMutation = trpc.days.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Jour supprimé");
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(error.message);
+    },
+  });
+
   const resetForm = () => {
     setFormData({
       date: "",
@@ -114,8 +124,14 @@ export default function AdminJours() {
     }
   };
 
-  const toggleDayClosed = (dayId: number, currentState: boolean) => {
-    updateMutation.mutate({ id: dayId, isOpen: !currentState });
+  const toggleDayOpen = (dayId: number, currentIsOpen: boolean) => {
+    updateMutation.mutate({ id: dayId, isOpen: !currentIsOpen });
+  };
+
+  const handleDeleteDay = (dayId: number) => {
+    if (confirm("\u00cates-vous s\u00fbr de vouloir supprimer ce jour ? Cette action est irr\u00e9versible.")) {
+      deleteMutation.mutate({ id: dayId });
+    }
   };
 
   return (
@@ -305,7 +321,7 @@ export default function AdminJours() {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-green-600">
-                {days?.filter((d: any) => !d.isClosed).length || 0}
+                {days?.filter((d: any) => d.isOpen).length || 0}
               </div>
               <div className="text-xs text-muted-foreground">Ouverts</div>
             </CardContent>
@@ -313,7 +329,7 @@ export default function AdminJours() {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-red-600">
-                {days?.filter((d: any) => d.isClosed).length || 0}
+                {days?.filter((d: any) => !d.isOpen).length || 0}
               </div>
               <div className="text-xs text-muted-foreground">Fermés</div>
             </CardContent>
@@ -371,15 +387,15 @@ export default function AdminJours() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {day.isClosed ? (
-                            <Badge variant="destructive">
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Fermé
-                            </Badge>
-                          ) : (
+                          {day.isOpen ? (
                             <Badge className="bg-green-500">
                               <CheckCircle className="h-3 w-3 mr-1" />
                               Ouvert
+                            </Badge>
+                          ) : (
+                            <Badge variant="destructive">
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Fermé
                             </Badge>
                           )}
                         </TableCell>
@@ -388,9 +404,18 @@ export default function AdminJours() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => toggleDayClosed(day.id, day.isClosed)}
+                              onClick={() => toggleDayOpen(day.id, day.isOpen)}
+                              disabled={updateMutation.isPending}
                             >
-                              {day.isClosed ? "Ouvrir" : "Fermer"}
+                              {day.isOpen ? "Fermer" : "Ouvrir"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteDay(day.id)}
+                              disabled={deleteMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>

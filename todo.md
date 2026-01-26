@@ -151,3 +151,8 @@
 - [x] Configurer le frontend pour utiliser api.ftourbabrayan.ma
 - [x] Corriger l'URL API avec variable d'environnement VITE_API_URL
 - [ ] Tester la connexion en production
+
+## Fonctionnalité : Suppression des jours du calendrier
+- [x] Ajouter l'endpoint de suppression dans le router (déjà existant)
+- [x] Ajouter le bouton Supprimer dans l'interface admin
+- [x] Corriger la fonction "Fermer" qui ne fonctionne pas (problème isOpen vs isClosed)
