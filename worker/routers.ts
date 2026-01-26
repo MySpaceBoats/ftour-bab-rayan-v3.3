@@ -560,6 +560,39 @@ const volunteersRouter = router({
           .eq('id', input.dayId);
       }
 
+      // Send confirmation email
+      try {
+        const { sendEmail, generateVolunteerConfirmationEmail } = await import('./email');
+        const emailData = generateVolunteerConfirmationEmail({
+          firstName: input.firstName,
+          lastName: input.lastName,
+          email: input.email,
+          dayNumber: day.day_number,
+          dayDate: new Date(day.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+          location: day.location || 'Association Bab Rayan, Casablanca',
+          startTime: day.iftar_time || '18h00',
+          qrToken: qrToken,
+          baseUrl: 'https://www.ftourbabrayan.ma',
+        });
+
+        const emailResult = await sendEmail({
+          to: input.email,
+          subject: emailData.subject,
+          html: emailData.html,
+          apiKey: ctx.env.RESEND_API_KEY,
+        });
+
+        if (emailResult.success) {
+          await supabase
+            .from('volunteers')
+            .update({ email_sent: true })
+            .eq('id', volunteer.id);
+        }
+      } catch (emailError) {
+        console.error('[Worker] Error sending email:', emailError);
+        // Don't throw - registration is still successful
+      }
+
       return { id: volunteer.id, qrToken };
     }),
 
@@ -580,10 +613,16 @@ const volunteersRouter = router({
 
       if (error) {
         console.error('[Worker] Error fetching volunteers:', error);
-        return [];
+        return { volunteers: [], days: [] };
       }
 
-      return (data || []).map(v => ({
+      // Get all days for the dropdown
+      const { data: daysData } = await supabase
+        .from('ramadan_days')
+        .select('*')
+        .order('day_number', { ascending: true });
+
+      const volunteers = (data || []).map(v => ({
         id: v.id,
         firstName: v.first_name,
         lastName: v.last_name,
@@ -604,6 +643,14 @@ const volunteersRouter = router({
           date: v.ramadan_days.date,
         } : null,
       }));
+
+      const days = (daysData || []).map(d => ({
+        id: d.id,
+        dayNumber: d.day_number,
+        date: d.date,
+      }));
+
+      return { volunteers, days };
     }),
 
   stats: adminProcedure.query(async ({ ctx }) => {

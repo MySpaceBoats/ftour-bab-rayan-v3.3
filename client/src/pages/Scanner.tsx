@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { toast } from "sonner";
 import { QrCode, CheckCircle, XCircle, AlertTriangle, Camera, Keyboard, ArrowLeft, User, Calendar, Clock, Loader2 } from "lucide-react";
+import jsQR from "jsqr";
 
 export default function Scanner() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -15,6 +16,7 @@ export default function Scanner() {
   const [mode, setMode] = useState<'camera' | 'manual'>('camera');
   const [manualCode, setManualCode] = useState("");
   const [isScanning, setIsScanning] = useState(false);
+  const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<{
     success: boolean;
     volunteer?: {
@@ -32,6 +34,7 @@ export default function Scanner() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   const checkInMutation = trpc.volunteers.checkIn.useMutation({
     onSuccess: (data) => {
@@ -44,6 +47,7 @@ export default function Scanner() {
         } : undefined,
       });
       toast.success("Présence validée !");
+      stopCamera();
     },
     onError: (error) => {
       setScanResult({
@@ -51,13 +55,9 @@ export default function Scanner() {
         message: error.message,
       });
       toast.error(error.message);
+      stopCamera();
     },
   });
-
-  const volunteerQuery = trpc.volunteers.getByQrCode.useQuery(
-    { qrCode: manualCode },
-    { enabled: false }
-  );
 
   // Check authorization
   const isAuthorized = user?.role && ['admin', 'super_admin', 'admin_ops', 'scanner'].includes(user.role);
@@ -69,23 +69,129 @@ export default function Scanner() {
   }, [authLoading, isAuthenticated]);
 
   useEffect(() => {
-    if (mode === 'camera' && isAuthorized) {
+    if (mode === 'camera' && isAuthorized && !scanResult) {
       startCamera();
     }
     return () => {
       stopCamera();
     };
-  }, [mode, isAuthorized]);
+  }, [mode, isAuthorized, scanResult]);
+
+  // Extract QR code from URL if it's a validation URL
+  const extractQrCodeFromUrl = (url: string): string | null => {
+    try {
+      // Check if it's a ftourbabrayan.ma validation URL
+      if (url.includes('ftourbabrayan.ma/validation/') || url.includes('ftourbabrayan.ma/v/')) {
+        const parts = url.split('/');
+        return parts[parts.length - 1];
+      }
+      // Check if it's just a token
+      if (url.match(/^[a-zA-Z0-9_-]{20,}$/)) {
+        return url;
+      }
+      return url;
+    } catch {
+      return url;
+    }
+  };
+
+  // QR Code scanning function
+  const scanQRCode = useCallback(() => {
+    if (!videoRef.current || !canvasRef.current || !isScanning || scanResult) {
+      return;
+    }
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx || video.readyState !== video.HAVE_ENOUGH_DATA) {
+      animationFrameRef.current = requestAnimationFrame(scanQRCode);
+      return;
+    }
+
+    // Set canvas size to match video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    // Draw video frame to canvas
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Get image data for QR detection
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    // Detect QR code
+    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: "dontInvert",
+    });
+
+    if (code && code.data) {
+      const qrData = code.data;
+      const qrCode = extractQrCodeFromUrl(qrData);
+      
+      // Avoid scanning the same code multiple times
+      if (qrCode && qrCode !== lastScannedCode) {
+        setLastScannedCode(qrCode);
+        setIsScanning(false);
+        
+        // Vibrate on successful scan (if supported)
+        if (navigator.vibrate) {
+          navigator.vibrate(200);
+        }
+        
+        // Play a success sound
+        try {
+          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          oscillator.frequency.value = 800;
+          oscillator.type = 'sine';
+          gainNode.gain.value = 0.3;
+          oscillator.start();
+          oscillator.stop(audioContext.currentTime + 0.1);
+        } catch (e) {
+          // Audio not supported
+        }
+
+        toast.info("QR code détecté, vérification...");
+        checkInMutation.mutate({ qrCode });
+        return;
+      }
+    }
+
+    // Continue scanning
+    animationFrameRef.current = requestAnimationFrame(scanQRCode);
+  }, [isScanning, scanResult, lastScannedCode, checkInMutation]);
+
+  // Start scanning loop when camera is ready
+  useEffect(() => {
+    if (isScanning && mode === 'camera' && !scanResult) {
+      animationFrameRef.current = requestAnimationFrame(scanQRCode);
+    }
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [isScanning, mode, scanResult, scanQRCode]);
 
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
       });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        setIsScanning(true);
+        videoRef.current.onloadedmetadata = () => {
+          setIsScanning(true);
+        };
       }
     } catch (error) {
       console.error('Camera error:', error);
@@ -95,6 +201,10 @@ export default function Scanner() {
   };
 
   const stopCamera = () => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -108,12 +218,16 @@ export default function Scanner() {
       toast.error("Veuillez entrer un code QR");
       return;
     }
-    checkInMutation.mutate({ qrCode: manualCode.trim() });
+    const qrCode = extractQrCodeFromUrl(manualCode.trim());
+    if (qrCode) {
+      checkInMutation.mutate({ qrCode });
+    }
   };
 
   const handleNewScan = () => {
     setScanResult(null);
     setManualCode("");
+    setLastScannedCode(null);
     if (mode === 'camera') {
       startCamera();
     }
@@ -231,6 +345,7 @@ export default function Scanner() {
                   ref={videoRef}
                   autoPlay
                   playsInline
+                  muted
                   className="w-full h-full object-cover"
                 />
                 <canvas ref={canvasRef} className="hidden" />
@@ -242,22 +357,43 @@ export default function Scanner() {
                     <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-lg" />
                     <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-lg" />
                     <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg" />
+                    
+                    {/* Scanning animation */}
+                    {isScanning && (
+                      <div className="absolute inset-0 overflow-hidden rounded-xl">
+                        <div className="absolute w-full h-1 bg-primary/70 animate-scan-line" />
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Scanning indicator */}
                 {isScanning && (
                   <div className="absolute bottom-4 left-0 right-0 text-center">
-                    <span className="bg-black/50 text-white px-4 py-2 rounded-full text-sm">
-                      Placez le QR code dans le cadre
+                    <span className="bg-black/50 text-white px-4 py-2 rounded-full text-sm flex items-center justify-center gap-2 mx-auto w-fit">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Recherche du QR code...
                     </span>
+                  </div>
+                )}
+
+                {/* Loading indicator */}
+                {checkInMutation.isPending && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <div className="bg-white rounded-lg p-4 flex items-center gap-3">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      <span>Vérification...</span>
+                    </div>
                   </div>
                 )}
               </div>
               
               <div className="p-4 text-center text-sm text-muted-foreground">
-                <p>La détection automatique du QR code est en cours de développement.</p>
-                <p>Utilisez le mode manuel pour l'instant.</p>
+                <p className="flex items-center justify-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  Détection automatique activée
+                </p>
+                <p className="mt-1">Placez le QR code dans le cadre</p>
               </div>
             </CardContent>
           </Card>
@@ -273,7 +409,7 @@ export default function Scanner() {
                 </div>
                 <h2 className="font-semibold">Saisie manuelle</h2>
                 <p className="text-sm text-muted-foreground">
-                  Entrez le code QR du bénévole
+                  Entrez le code QR ou l'URL de validation du bénévole
                 </p>
               </div>
 
@@ -281,7 +417,7 @@ export default function Scanner() {
                 <Input
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value)}
-                  placeholder="Code QR (ex: abc123xyz...)"
+                  placeholder="Code QR ou URL de validation"
                   className="text-center font-mono"
                   autoFocus
                 />
@@ -323,6 +459,18 @@ export default function Scanner() {
           </CardContent>
         </Card>
       </main>
+
+      {/* CSS for scan line animation */}
+      <style>{`
+        @keyframes scan-line {
+          0% { transform: translateY(0); }
+          50% { transform: translateY(250px); }
+          100% { transform: translateY(0); }
+        }
+        .animate-scan-line {
+          animation: scan-line 2s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 }

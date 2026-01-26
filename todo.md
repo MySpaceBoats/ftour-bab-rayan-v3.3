@@ -156,3 +156,17 @@
 - [x] Ajouter l'endpoint de suppression dans le router (déjà existant)
 - [x] Ajouter le bouton Supprimer dans l'interface admin
 - [x] Corriger la fonction "Fermer" qui ne fonctionne pas (problème isOpen vs isClosed)
+
+## Fonctionnalité : Détection automatique QR code
+- [x] Implémenter la détection automatique avec jsQR
+- [ ] Tester sur mobile
+
+## Fonctionnalité : Correction envoi emails
+- [x] Corriger l'envoi du mail avec QR code au bénévole (worker/email.ts)
+- [x] Ajouter copie cachée (BCC) à rsebbani@myspace.boats
+- [x] Inclure le rappel des jours inscrits dans l'email
+- [x] Ajouter l'envoi d'email dans le worker Cloudflare
+
+## Bug : Gestion des bénévoles
+- [x] Les bénévoles inscrits n'apparaissent pas dans la liste admin
+- [x] Corriger le format de retour de volunteers.listByDay (ajouter days[])

