@@ -544,7 +544,7 @@ export async function createGoodieSupabase(data: GoodieData) {
     .insert({
       name: data.name,
       description: data.description,
-      price: data.price,
+      price: String(data.price), // Convert number to string for Supabase
       image_url: data.imageUrl,
       category: data.category,
       is_active: data.isActive ?? true,
@@ -598,7 +598,7 @@ export async function updateGoodieSupabase(id: number, updates: Partial<GoodieDa
   const updateData: Record<string, unknown> = {};
   if (updates.name !== undefined) updateData.name = updates.name;
   if (updates.description !== undefined) updateData.description = updates.description;
-  if (updates.price !== undefined) updateData.price = updates.price;
+  if (updates.price !== undefined) updateData.price = String(updates.price);
   if (updates.imageUrl !== undefined) updateData.image_url = updates.imageUrl;
   if (updates.category !== undefined) updateData.category = updates.category;
   if (updates.isActive !== undefined) updateData.is_active = updates.isActive;

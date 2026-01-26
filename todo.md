@@ -180,3 +180,6 @@
 - [x] Créer la table testimonials
 - [x] Créer la table partners
 - [x] Créer le bucket de stockage 'images' (public)
+
+## Bug : Erreur de type sur le champ price des goodies
+- [x] Corriger le type du champ price (expected string, received number)
