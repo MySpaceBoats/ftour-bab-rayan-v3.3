@@ -677,6 +677,81 @@ const volunteersRouter = router({
       absent: (total || 0) - (present || 0) - (registered || 0),
     };
   }),
+
+  // Check-in d'un bénévole via QR code
+  checkIn: scannerProcedure
+    .input(z.object({ qrCode: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      // Get volunteer by QR token
+      const { data: volunteer, error } = await supabase
+        .from('volunteers')
+        .select('*, ramadan_days(*)')
+        .eq('qr_token', input.qrCode)
+        .single();
+
+      if (error || !volunteer) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'QR code invalide' });
+      }
+
+      if (volunteer.qr_status === 'validated') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'QR code déjà validé' });
+      }
+
+      // Update volunteer status
+      await supabase
+        .from('volunteers')
+        .update({
+          qr_status: 'validated',
+          status: 'present',
+          scanned_at: new Date().toISOString(),
+          scanned_by: ctx.user?.id,
+        })
+        .eq('id', volunteer.id);
+
+      // Create checkin record
+      await supabase
+        .from('checkins')
+        .insert({
+          volunteer_id: volunteer.id,
+          day_id: volunteer.day_id,
+          scanned_by: ctx.user?.id,
+          scan_method: 'qr_code',
+          is_valid: true,
+        });
+
+      return {
+        success: true,
+        volunteer: {
+          id: volunteer.id,
+          firstName: volunteer.first_name,
+          lastName: volunteer.last_name,
+          dayNumber: volunteer.ramadan_days?.day_number,
+        },
+      };
+    }),
+
+  // Mise à jour du statut d'un bénévole
+  updateStatus: adminProcedure
+    .input(z.object({
+      volunteerId: z.number(),
+      status: z.enum(['registered', 'confirmed', 'present', 'absent', 'cancelled']),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const { error } = await supabase
+        .from('volunteers')
+        .update({ status: input.status })
+        .eq('id', input.volunteerId);
+
+      if (error) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      }
+
+      return { success: true };
+    }),
 });
 
 // ============================================
@@ -803,10 +878,11 @@ const goodiesRouter = router({
     .input(z.object({
       name: z.string().min(2),
       description: z.string().optional(),
-      price: z.string(),
+      price: z.number().min(0),
       imageUrl: z.string().optional(),
       category: z.string().optional(),
       isActive: z.boolean().default(true),
+      sortOrder: z.number().default(0),
     }))
     .mutation(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
@@ -816,7 +892,7 @@ const goodiesRouter = router({
         .insert({
           name: input.name,
           description: input.description,
-          price: input.price,
+          price: String(input.price),
           image_url: input.imageUrl,
           category: input.category,
           is_active: input.isActive,
@@ -837,7 +913,7 @@ const goodiesRouter = router({
       id: z.number(),
       name: z.string().min(2).optional(),
       description: z.string().optional(),
-      price: z.string().optional(),
+      price: z.number().min(0).optional(),
       imageUrl: z.string().optional(),
       category: z.string().optional(),
       isActive: z.boolean().optional(),
@@ -850,7 +926,7 @@ const goodiesRouter = router({
       const dbData: Record<string, any> = {};
       if (updateData.name !== undefined) dbData.name = updateData.name;
       if (updateData.description !== undefined) dbData.description = updateData.description;
-      if (updateData.price !== undefined) dbData.price = updateData.price;
+      if (updateData.price !== undefined) dbData.price = String(updateData.price);
       if (updateData.imageUrl !== undefined) dbData.image_url = updateData.imageUrl;
       if (updateData.category !== undefined) dbData.category = updateData.category;
       if (updateData.isActive !== undefined) dbData.is_active = updateData.isActive;

@@ -195,3 +195,8 @@
 - [ ] Vérifier le contraste et l'accessibilité
 - [ ] Tester le responsive mobile
 - [ ] Rebrander les autres pages (Evenement, Programme, Benevole, Goodies, Dons, etc.)
+
+## Bugs de production (ftourbabrayan.ma) - 27/01/2026
+- [x] Erreur price type sur ajout goodies (worker corrigé pour accepter number)
+- [x] Procédure volunteers.updateStatus ajoutée dans le worker
+- [x] Procédure volunteers.checkIn ajoutée dans le worker
