@@ -103,20 +103,18 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Admin Link */}
-          {isAdmin && (
-            <Link href="/admin" className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors">
-              {t.nav.admin}
-            </Link>
-          )}
+          {/* Admin Link - pointe vers la page de connexion */}
+          <Link href={localizedHref('/connexion')} className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors">
+            {t.nav.admin}
+          </Link>
 
           {/* Téléphone */}
           <a 
-            href="tel:+212522000000" 
+            href="tel:+212610023555" 
             className="hidden sm:flex items-center gap-1 text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors"
           >
             <Phone className="h-3 w-3" />
-            <span>{t.topMenu.phone}</span>
+            <span>+212 610 023 555</span>
           </a>
 
           {/* Sélecteur de langue */}
@@ -286,11 +284,11 @@ export default function Navbar() {
 
                 {/* Phone */}
                 <a 
-                  href="tel:+212522000000" 
+                  href="tel:+212610023555" 
                   className="flex items-center gap-2 text-[#CDBB8A] hover:text-[#F2E9D3] px-4"
                 >
                   <Phone className="h-4 w-4" />
-                  <span>{t.topMenu.phone}</span>
+                  <span>+212 610 023 555</span>
                 </a>
 
                 <div className="border-t border-[#F2E9D3]/20" />

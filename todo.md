@@ -235,3 +235,8 @@
 ## Bug : Les onglets de menu ne fonctionnent pas
 - [x] Diagnostiquer le problème des liens de navigation
 - [x] Corriger les liens dans la Navbar pour le routing multilingue
+
+## Corrections demandées - 27/01/2026
+- [x] Lien Admin doit pointer vers la page de connexion (/connexion)
+- [x] Mettre à jour le numéro de téléphone : +212 610 023 555
+- [x] Corriger l'erreur DialogTitle sur la page bénévole (accessibilité)
