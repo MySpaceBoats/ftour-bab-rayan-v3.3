@@ -329,3 +329,12 @@
 
 ## Corrections CMS - 27/01/2026
 - [x] Configurer le CMS sur /cms avec les bons endpoints API (même serveur que Supabase)
+
+## Vérification API Resend - 27/01/2026
+- [ ] Vérifier la configuration de l'API Resend pour l'envoi des emails
+- [ ] Tester l'envoi des formulaires (contact, bénévole, commandes, dons)
+
+
+## Bugs Scanner QR - 27/01/2026
+- [x] Scanner QR embarqué affiche "QR code invalide" alors que le QR est valide (corrigé - ajout support URLs /checkin/)
+- [x] Mettre à jour le statut du bénévole sur "Présent" après validation du QR code (déjà implémenté dans le backend)

@@ -80,9 +80,14 @@ export default function Scanner() {
   // Extract QR code from URL if it's a validation URL
   const extractQrCodeFromUrl = (url: string): string | null => {
     try {
-      // Check if it's a ftourbabrayan.ma validation URL
-      if (url.includes('ftourbabrayan.ma/validation/') || url.includes('ftourbabrayan.ma/v/')) {
+      // Check if it's a ftourbabrayan.ma validation URL (supports /checkin/, /validation/, /v/)
+      if (url.includes('ftourbabrayan.ma/checkin/') || url.includes('ftourbabrayan.ma/validation/') || url.includes('ftourbabrayan.ma/v/')) {
         const parts = url.split('/');
+        return parts[parts.length - 1];
+      }
+      // Check if it's a localhost or dev URL with /checkin/
+      if (url.includes('/checkin/')) {
+        const parts = url.split('/checkin/');
         return parts[parts.length - 1];
       }
       // Check if it's just a token
