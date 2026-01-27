@@ -320,3 +320,4 @@
 - [x] Changer l'email de contact vers contact@ftourbabrayan.ma
 - [x] Ajouter scroll automatique vers le haut à chaque changement de page
 - [x] Lien Support doit diriger vers /contact au lieu de /connexion (déjà correct)
+- [x] Lien Support doit diriger vers /connexion (pour les admins)

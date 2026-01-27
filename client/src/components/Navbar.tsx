@@ -103,8 +103,8 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Support Link - pointe vers la page de contact */}
-          <Link href={localizedHref('/contact')} className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors">
+          {/* Support Link - pointe vers la page de connexion pour les admins */}
+          <Link href={localizedHref('/connexion')} className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors">
             {t.nav.support}
           </Link>
           
