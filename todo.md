@@ -304,3 +304,8 @@
 - [ ] Traduire page Mentions légales
 - [ ] Traduire formulaires et messages dynamiques
 - [ ] Vérifier RTL pour l'arabe
+
+## Bugs à corriger - 27/01/2026 (après-midi)
+- [x] Sélecteur de langue ne fonctionne pas après chargement de la page (déjà implémenté avec window.location.href)
+- [x] Bouton d'accès à l'interface admin manquant pour les utilisateurs connectés (ajouté dans Navbar)
+- [x] Renommer "Admin" en "Support" dans le top menu (traductions ajoutées)

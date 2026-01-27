@@ -103,10 +103,18 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Admin Link - pointe vers la page de connexion */}
-          <Link href={localizedHref('/connexion')} className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors">
-            {t.nav.admin}
+          {/* Support Link - pointe vers la page de contact */}
+          <Link href={localizedHref('/contact')} className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors">
+            {t.nav.support}
           </Link>
+          
+          {/* Admin Link - visible uniquement pour les admins connectés */}
+          {isAuthenticated && isAdmin && (
+            <Link href="/admin" className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors font-semibold">
+              <LayoutDashboard className="h-3 w-3 inline mr-1" />
+              {t.nav.administration}
+            </Link>
+          )}
 
           {/* Téléphone */}
           <a 
@@ -303,7 +311,7 @@ export default function Navbar() {
                             className="w-full border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
                           >
                             <LayoutDashboard className="h-4 w-4 mr-2" />
-                            {t.nav.admin}
+                            {t.nav.administration}
                           </Button>
                         </Link>
                       )}

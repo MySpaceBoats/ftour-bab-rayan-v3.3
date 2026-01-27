@@ -16,6 +16,8 @@ export const en: Translations = {
     association: 'Association',
     contact: 'Contact',
     admin: 'Admin',
+    support: 'Support',
+    administration: 'Administration',
     search: 'Search...',
     searchPlaceholder: 'Search the site...',
   },

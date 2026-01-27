@@ -14,6 +14,8 @@ export const fr = {
     association: 'Association',
     contact: 'Contact',
     admin: 'Admin',
+    support: 'Support',
+    administration: 'Administration',
     search: 'Rechercher...',
     searchPlaceholder: 'Rechercher sur le site...',
   },

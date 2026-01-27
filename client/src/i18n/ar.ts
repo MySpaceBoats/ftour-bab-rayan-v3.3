@@ -16,6 +16,8 @@ export const ar: Translations = {
     association: 'الجمعية',
     contact: 'اتصل بنا',
     admin: 'الإدارة',
+    support: 'الدعم',
+    administration: 'لوحة التحكم',
     search: 'بحث...',
     searchPlaceholder: 'البحث في الموقع...',
   },

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { fr, Translations } from './fr';
 import { ar } from './ar';
 import { en } from './en';
@@ -58,14 +58,32 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const t = translations[lang];
   const dir = t.dir as 'ltr' | 'rtl';
 
-  const setLang = (newLang: Language) => {
+  const setLang = useCallback((newLang: Language) => {
     setLangState(newLang);
     localStorage.setItem(STORAGE_KEY, newLang);
     
     // Update document direction and lang
     document.documentElement.dir = translations[newLang].dir;
     document.documentElement.lang = newLang;
-  };
+    
+    // Navigate to the same page with the new language prefix
+    const currentPath = window.location.pathname;
+    const pathParts = currentPath.split('/').filter(Boolean);
+    
+    // Check if first part is a language code
+    if (pathParts.length > 0 && SUPPORTED_LOCALES.includes(pathParts[0] as Language)) {
+      // Replace the language prefix
+      pathParts[0] = newLang;
+    } else {
+      // Add language prefix
+      pathParts.unshift(newLang);
+    }
+    
+    const newPath = '/' + pathParts.join('/');
+    if (newPath !== currentPath) {
+      window.location.href = newPath;
+    }
+  }, []);
 
   useEffect(() => {
     // Set initial direction and lang

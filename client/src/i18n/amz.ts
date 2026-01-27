@@ -16,6 +16,8 @@ export const amz: Translations = {
     association: 'ⵜⴰⵎⵙⵎⵓⵏⵜ',
     contact: 'ⴰⵎⵢⴰⵡⴰⴹ',
     admin: 'ⴰⵎⵙⵙⵓⴳⵓⵔ',
+    support: 'ⴰⵎⵄⵉⵡⵉ',
+    administration: 'ⴰⵎⵙⵙⵓⴳⵓⵔ',
     search: 'ⵔⵣⵓ...',
     searchPlaceholder: 'ⵔⵣⵓ ⴳ ⵓⵙⵉⵜ...',
   },
