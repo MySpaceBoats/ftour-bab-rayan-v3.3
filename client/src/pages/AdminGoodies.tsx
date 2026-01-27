@@ -12,8 +12,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { 
-  ArrowLeft, Plus, Loader2, Package, Edit, Star, Sparkles, Upload, X, Image as ImageIcon
+  ArrowLeft, Plus, Loader2, Package, Edit, Star, Sparkles, Upload, X, Image as ImageIcon, Trash2
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function AdminGoodies() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -58,6 +69,16 @@ export default function AdminGoodies() {
       toast.success("Produit mis à jour");
       setEditingGoodie(null);
       resetForm();
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(error.message);
+    },
+  });
+
+  const deleteMutation = trpc.goodies.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Produit supprimé");
       refetch();
     },
     onError: (error: any) => {
@@ -299,18 +320,21 @@ export default function AdminGoodies() {
                     <Label>Prix (DH) *</Label>
                     <Input
                       type="number"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                      value={formData.price === 0 ? '' : formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
                       placeholder="100"
+                      min="0"
+                      step="0.01"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>Ordre d'affichage</Label>
                     <Input
                       type="number"
-                      value={formData.sortOrder}
-                      onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
+                      value={formData.sortOrder === 0 ? '' : formData.sortOrder}
+                      onChange={(e) => setFormData({ ...formData, sortOrder: e.target.value === '' ? 0 : parseInt(e.target.value) })}
                       placeholder="0"
+                      min="0"
                     />
                   </div>
                 </div>
@@ -493,16 +517,19 @@ export default function AdminGoodies() {
                                       <Label>Prix (DH) *</Label>
                                       <Input
                                         type="number"
-                                        value={formData.price}
-                                        onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                                        value={formData.price === 0 ? '' : formData.price}
+                                        onChange={(e) => setFormData({ ...formData, price: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                                        min="0"
+                                        step="0.01"
                                       />
                                     </div>
                                     <div className="space-y-2">
                                       <Label>Ordre d'affichage</Label>
                                       <Input
                                         type="number"
-                                        value={formData.sortOrder}
-                                        onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
+                                        value={formData.sortOrder === 0 ? '' : formData.sortOrder}
+                                        onChange={(e) => setFormData({ ...formData, sortOrder: e.target.value === '' ? 0 : parseInt(e.target.value) })}
+                                        min="0"
                                       />
                                     </div>
                                   </div>
@@ -547,6 +574,35 @@ export default function AdminGoodies() {
                             >
                               {goodie.isActive ? "Désactiver" : "Activer"}
                             </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Supprimer ce produit ?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Êtes-vous sûr de vouloir supprimer "{goodie.name}" ?
+                                    Cette action est irréversible.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-red-600 hover:bg-red-700"
+                                    onClick={() => deleteMutation.mutate({ id: goodie.id })}
+                                  >
+                                    Supprimer
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </TableCell>
                       </TableRow>
