@@ -200,3 +200,34 @@
 - [x] Erreur price type sur ajout goodies (worker corrigé pour accepter number)
 - [x] Procédure volunteers.updateStatus ajoutée dans le worker
 - [x] Procédure volunteers.checkIn ajoutée dans le worker
+
+## Phase 18 : Refonte menu et multilingue (Cahier des charges #369)
+### Étape 1 - Menu principal
+- [x] Supprimer l'onglet "Faire un don" du menu principal
+- [x] Ajouter l'onglet "Contact" à la place
+- [x] Nouveau menu : Accueil, L'événement, Devenir bénévole, Goodies solidaires, Association, Contact
+
+### Étape 2 - Boutons CTA
+- [x] Ajouter bouton "Devenir Bénévole" (CTA principal) à droite du menu
+- [x] Ajouter bouton "Faire un don" (CTA secondaire) collé au premier
+- [x] Boutons visibles sur desktop et mobile
+
+### Étape 3 - Page Contact
+- [x] Créer la page Contact avec formulaire (nom, email, téléphone, sujet, message)
+- [x] Afficher les coordonnées de l'association
+- [x] Message de confirmation après envoi
+
+### Étape 4 - Menu supérieur (niveau 0)
+- [x] Ajouter un menu fin au-dessus du menu principal
+- [x] Icône loupe (recherche inline comme cloudflare.com)
+- [x] Lien Admin vers la page de connexion
+- [x] Numéro de téléphone cliquable
+- [x] Icône globe pour les langues
+
+### Étape 5 - Multilingue
+- [x] Créer le système i18n avec contexte React
+- [x] Fichiers de traduction : FR (défaut), AR (RTL), AMAZIGH, EN
+- [x] Traduire menus, pages, boutons, formulaires
+- [x] URLs dédiées (/fr, /ar, /amz, /en)
+- [x] Mémoriser la langue sélectionnée (localStorage)
+- [x] Support RTL pour l'arabe

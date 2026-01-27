@@ -4,15 +4,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useI18n } from "@/i18n";
 import { Heart, Users, Calendar, ShoppingBag, ArrowRight, Star, Clock, MapPin, HandHeart, Sparkles, Utensils, GraduationCap, Home as HomeIcon, Baby } from "lucide-react";
 
 export default function Home() {
+  const { t, dir } = useI18n();
   const { data: stats } = trpc.public.stats.useQuery();
   const { data: testimonials } = trpc.public.testimonials.useQuery();
   const { data: partners } = trpc.public.partners.useQuery();
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#5E5B34]">
+    <div className="min-h-screen flex flex-col bg-[#5E5B34]" dir={dir}>
       <Navbar />
       
       <main className="flex-1">
@@ -34,18 +36,18 @@ export default function Home() {
               
               {/* Titre principal manuscrit */}
               <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-[#F2E9D3] leading-tight" style={{ fontFamily: 'Caveat, cursive' }}>
-                Ftour Bab Rayan
+                {t.home.heroTitle}
               </h1>
               
               {/* Badge édition */}
               <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full border border-[#F2E9D3]/30 bg-[#F2E9D3]/5">
                 <span className="text-[#CDBB8A] text-lg" style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic' }}>
-                  12e édition — 2026
+                  {t.home.heroSubtitle}
                 </span>
               </div>
               
               <p className="text-lg sm:text-xl md:text-2xl text-[#E6DCC3] max-w-2xl mx-auto leading-relaxed">
-                Parce que chaque enfant mérite un bon départ dans la vie. Partageons ensemble des moments de solidarité pendant ce mois sacré.
+                {t.home.heroDescription}
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
@@ -55,7 +57,7 @@ export default function Home() {
                     className="w-full sm:w-auto text-lg px-8 py-6 bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3] border-2 border-[#F2E9D3]"
                   >
                     <Users className="h-5 w-5 mr-2" />
-                    Devenir bénévole
+                    {t.cta.volunteer}
                     <ArrowRight className="h-5 w-5 ml-2" />
                   </Button>
                 </Link>
@@ -66,7 +68,7 @@ export default function Home() {
                     className="w-full sm:w-auto text-lg px-8 py-6 bg-transparent border-2 border-[#F2E9D3] text-[#F2E9D3] hover:bg-[#F2E9D3] hover:text-[#4A4829]"
                   >
                     <Heart className="h-5 w-5 mr-2" />
-                    Faire un don
+                    {t.cta.donate}
                   </Button>
                 </Link>
               </div>
@@ -84,27 +86,27 @@ export default function Home() {
         {/* Chiffres Clés Section - Style olive foncé */}
         <section className="py-16 bg-[#4A4829]">
           <div className="container">
-            <h2 className="text-2xl md:text-3xl font-bold text-center mb-10 text-[#F2E9D3]">Chiffres clés annuels</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-10 text-[#F2E9D3]">{t.home.statsTitle}</h2>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
               <div className="text-center">
                 <div className="text-3xl md:text-4xl font-bold mb-2 text-[#F2E9D3]">+450</div>
-                <div className="text-sm text-[#E6DCC3]">Enfants pris en charge</div>
+                <div className="text-sm text-[#E6DCC3]">{t.home.childrenCaredFor}</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl md:text-4xl font-bold mb-2 text-[#F2E9D3]">+6 000</div>
-                <div className="text-sm text-[#E6DCC3]">Bénévoles</div>
+                <div className="text-sm text-[#E6DCC3]">{t.home.volunteersCount}</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl md:text-4xl font-bold mb-2 text-[#F2E9D3]">+1 500</div>
-                <div className="text-sm text-[#E6DCC3]">Familles bénéficiaires</div>
+                <div className="text-sm text-[#E6DCC3]">{t.home.familiesBenefited}</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl md:text-4xl font-bold mb-2 text-[#F2E9D3]">+230 000</div>
-                <div className="text-sm text-[#E6DCC3]">Repas offerts à la cantine</div>
+                <div className="text-sm text-[#E6DCC3]">{t.home.mealsServed}</div>
               </div>
               <div className="text-center col-span-2 md:col-span-1">
                 <div className="text-3xl md:text-4xl font-bold mb-2 text-[#F2E9D3]">+31 200</div>
-                <div className="text-sm text-[#E6DCC3]">Ftours servis</div>
+                <div className="text-sm text-[#E6DCC3]">{t.home.ftoursServed}</div>
               </div>
             </div>
           </div>

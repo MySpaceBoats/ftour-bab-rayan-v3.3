@@ -1,9 +1,11 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation, Redirect } from "wouter";
+import { useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { useI18n, SUPPORTED_LOCALES, type Locale } from "./i18n";
 
 // Public pages
 import Home from "./pages/Home";
@@ -33,30 +35,51 @@ import AdminUtilisateurs from "./pages/AdminUtilisateurs";
 import AdminGoodies from "./pages/AdminGoodies";
 import AdminScan from "./pages/AdminScan";
 
-function Router() {
+// Language-aware route wrapper
+function LocalizedRoutes() {
+  const [location, setLocation] = useLocation();
+  const { lang, setLang } = useI18n();
+  
+  // Extract locale from URL path
+  useEffect(() => {
+    const pathParts = location.split('/').filter(Boolean);
+    const urlLocale = pathParts[0] as Locale;
+    
+    if (SUPPORTED_LOCALES.includes(urlLocale)) {
+      if (urlLocale !== lang) {
+        setLang(urlLocale);
+      }
+    }
+  }, [location, lang, setLang]);
+  
   return (
     <Switch>
-      {/* Public pages */}
-      <Route path="/" component={Home} />
-      <Route path="/programme" component={Programme} />
-      <Route path="/benevole" component={Benevole} />
-      <Route path="/goodies" component={Goodies} />
-      <Route path="/dons" component={Dons} />
-      <Route path="/evenement" component={Evenement} />
-      <Route path="/association" component={Association} />
-      <Route path="/contact" component={Contact} />
-      <Route path="/faq" component={FAQ} />
-      <Route path="/mentions-legales" component={MentionsLegales} />
-      <Route path="/connexion" component={Login} />
-      <Route path="/inscription" component={Signup} />
+      {/* Redirect root to default locale */}
+      <Route path="/">
+        {() => <Redirect to={`/${lang}`} />}
+      </Route>
       
-      {/* Scanner (mobile-first) */}
+      {/* Localized public pages */}
+      <Route path="/:lang" component={Home} />
+      <Route path="/:lang/programme" component={Programme} />
+      <Route path="/:lang/benevole" component={Benevole} />
+      <Route path="/:lang/goodies" component={Goodies} />
+      <Route path="/:lang/dons" component={Dons} />
+      <Route path="/:lang/evenement" component={Evenement} />
+      <Route path="/:lang/association" component={Association} />
+      <Route path="/:lang/contact" component={Contact} />
+      <Route path="/:lang/faq" component={FAQ} />
+      <Route path="/:lang/mentions-legales" component={MentionsLegales} />
+      <Route path="/:lang/connexion" component={Login} />
+      <Route path="/:lang/inscription" component={Signup} />
+      
+      {/* Scanner (mobile-first) - no locale prefix */}
       <Route path="/scanner" component={Scanner} />
       
-      {/* Public QR Check-in page */}
+      {/* Public QR Check-in page - no locale prefix */}
       <Route path="/checkin/:token" component={Checkin} />
       
-      {/* Admin pages */}
+      {/* Admin pages - no locale prefix */}
       <Route path="/admin" component={Admin} />
       <Route path="/admin/benevoles" component={AdminBenevoles} />
       <Route path="/admin/commandes" component={AdminCommandes} />
@@ -65,6 +88,41 @@ function Router() {
       <Route path="/admin/utilisateurs" component={AdminUtilisateurs} />
       <Route path="/admin/goodies" component={AdminGoodies} />
       <Route path="/admin/scan" component={AdminScan} />
+      
+      {/* Legacy routes - redirect to localized versions */}
+      <Route path="/programme">
+        {() => <Redirect to={`/${lang}/programme`} />}
+      </Route>
+      <Route path="/benevole">
+        {() => <Redirect to={`/${lang}/benevole`} />}
+      </Route>
+      <Route path="/goodies">
+        {() => <Redirect to={`/${lang}/goodies`} />}
+      </Route>
+      <Route path="/dons">
+        {() => <Redirect to={`/${lang}/dons`} />}
+      </Route>
+      <Route path="/evenement">
+        {() => <Redirect to={`/${lang}/evenement`} />}
+      </Route>
+      <Route path="/association">
+        {() => <Redirect to={`/${lang}/association`} />}
+      </Route>
+      <Route path="/contact">
+        {() => <Redirect to={`/${lang}/contact`} />}
+      </Route>
+      <Route path="/faq">
+        {() => <Redirect to={`/${lang}/faq`} />}
+      </Route>
+      <Route path="/mentions-legales">
+        {() => <Redirect to={`/${lang}/mentions-legales`} />}
+      </Route>
+      <Route path="/connexion">
+        {() => <Redirect to={`/${lang}/connexion`} />}
+      </Route>
+      <Route path="/inscription">
+        {() => <Redirect to={`/${lang}/inscription`} />}
+      </Route>
       
       {/* 404 */}
       <Route path="/404" component={NotFound} />
@@ -79,7 +137,7 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
-          <Router />
+          <LocalizedRoutes />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

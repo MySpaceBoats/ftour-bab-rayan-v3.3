@@ -9,9 +9,11 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { useI18n } from "@/i18n";
 import { Mail, Phone, MapPin, Send, Loader2, MessageSquare, Clock, CheckCircle } from "lucide-react";
 
 export default function Contact() {
+  const { t, dir } = useI18n();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -42,20 +44,17 @@ export default function Contact() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col" dir={dir}>
         <Navbar />
-        <main className="flex-1 flex items-center justify-center py-20">
-          <Card className="max-w-md w-full mx-4">
+        <main className="flex-1 flex items-center justify-center py-20 bg-[#5E5B34]">
+          <Card className="max-w-md w-full mx-4 bg-[#4A4829] border-[#F2E9D3]/20">
             <CardContent className="p-8 text-center space-y-4">
-              <div className="w-16 h-16 mx-auto rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle className="h-8 w-8 text-green-600" />
+              <div className="w-16 h-16 mx-auto rounded-full bg-green-500/20 flex items-center justify-center">
+                <CheckCircle className="h-8 w-8 text-green-500" />
               </div>
-              <h2 className="text-2xl font-bold">Message envoyé !</h2>
-              <p className="text-muted-foreground">
-                Merci de nous avoir contactés. Nous vous répondrons dans les plus brefs délais.
-              </p>
-              <Button onClick={() => setSubmitted(false)} variant="outline">
-                Envoyer un autre message
+              <h2 className="text-2xl font-bold text-[#F2E9D3]">{t.contact.submitSuccess}</h2>
+              <Button onClick={() => setSubmitted(false)} variant="outline" className="border-[#F2E9D3] text-[#F2E9D3] hover:bg-[#F2E9D3] hover:text-[#4A4829]">
+                {t.cta.back}
               </Button>
             </CardContent>
           </Card>
@@ -66,17 +65,17 @@ export default function Contact() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col" dir={dir}>
       <Navbar />
       
-      <main className="flex-1">
+      <main className="flex-1 bg-[#5E5B34]">
         {/* Hero */}
-        <section className="py-16 bg-gradient-to-b from-primary/5 to-background">
+        <section className="py-16 bg-[#4A4829]">
           <div className="container">
             <div className="max-w-3xl mx-auto text-center space-y-4">
-              <h1 className="text-4xl md:text-5xl font-bold">Contactez-nous</h1>
-              <p className="text-lg text-muted-foreground">
-                Une question ? Une suggestion ? N'hésitez pas à nous écrire.
+              <h1 className="text-4xl md:text-5xl font-bold text-[#F2E9D3]" style={{ fontFamily: 'Caveat, cursive' }}>{t.contact.title}</h1>
+              <p className="text-lg text-[#CDBB8A]" style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic' }}>
+                {t.contact.subtitle}
               </p>
             </div>
           </div>
@@ -88,68 +87,67 @@ export default function Contact() {
             <div className="grid lg:grid-cols-3 gap-12">
               {/* Contact Info */}
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold">Informations de contact</h2>
+                <h2 className="text-2xl font-bold text-[#F2E9D3]">{t.contact.infoTitle}</h2>
                 
-                <Card>
+                <Card className="bg-[#4A4829] border-[#F2E9D3]/20">
                   <CardContent className="p-6 space-y-6">
                     <div className="flex gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Mail className="h-5 w-5 text-primary" />
+                      <div className="w-10 h-10 rounded-full bg-[#5E5B34] flex items-center justify-center flex-shrink-0">
+                        <Mail className="h-5 w-5 text-[#F2E9D3]" />
                       </div>
                       <div>
-                        <h3 className="font-semibold">Email</h3>
-                        <a href="mailto:contact@babrayan.ma" className="text-muted-foreground hover:text-primary">
+                        <h3 className="font-semibold text-[#F2E9D3]">{t.contact.emailLabel}</h3>
+                        <a href="mailto:contact@babrayan.ma" className="text-[#CDBB8A] hover:text-[#F2E9D3]">
                           contact@babrayan.ma
                         </a>
                       </div>
                     </div>
 
                     <div className="flex gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Phone className="h-5 w-5 text-primary" />
+                      <div className="w-10 h-10 rounded-full bg-[#5E5B34] flex items-center justify-center flex-shrink-0">
+                        <Phone className="h-5 w-5 text-[#F2E9D3]" />
                       </div>
                       <div>
-                        <h3 className="font-semibold">Téléphone</h3>
-                        <a href="tel:+212610023555" className="text-muted-foreground hover:text-primary">
-                          +212 610 023 555
+                        <h3 className="font-semibold text-[#F2E9D3]">{t.contact.phoneLabel}</h3>
+                        <a href="tel:+212610023555" className="text-[#CDBB8A] hover:text-[#F2E9D3]">
+                          {t.topMenu.phone}
                         </a>
-                        <p className="text-xs text-muted-foreground mt-1">Direction Générale</p>
                       </div>
                     </div>
 
                     <div className="flex gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <MapPin className="h-5 w-5 text-primary" />
+                      <div className="w-10 h-10 rounded-full bg-[#5E5B34] flex items-center justify-center flex-shrink-0">
+                        <MapPin className="h-5 w-5 text-[#F2E9D3]" />
                       </div>
                       <div>
-                        <h3 className="font-semibold">Adresse</h3>
-                        <p className="text-muted-foreground">
-                          4 rue Bayt Lham, quartier Palmier<br />Casablanca, Maroc
+                        <h3 className="font-semibold text-[#F2E9D3]">{t.contact.address}</h3>
+                        <p className="text-[#CDBB8A]">
+                          {t.contact.addressValue}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Clock className="h-5 w-5 text-primary" />
+                      <div className="w-10 h-10 rounded-full bg-[#5E5B34] flex items-center justify-center flex-shrink-0">
+                        <Clock className="h-5 w-5 text-[#F2E9D3]" />
                       </div>
                       <div>
-                        <h3 className="font-semibold">Horaires</h3>
-                        <p className="text-muted-foreground">
-                          Lun - Ven : 9h - 18h
+                        <h3 className="font-semibold text-[#F2E9D3]">{t.contact.hoursLabel}</h3>
+                        <p className="text-[#CDBB8A]">
+                          {t.contact.hoursValue}
                         </p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-primary/5 border-primary/20">
+                <Card className="bg-[#4A4829]/50 border-[#F2E9D3]/20">
                   <CardContent className="p-6">
                     <div className="flex gap-3">
-                      <MessageSquare className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                      <MessageSquare className="h-5 w-5 text-[#F2E9D3] flex-shrink-0 mt-0.5" />
                       <div>
-                        <h3 className="font-semibold mb-1">Réponse rapide</h3>
-                        <p className="text-sm text-muted-foreground">
+                        <h3 className="font-semibold mb-1 text-[#F2E9D3]">Réponse rapide</h3>
+                        <p className="text-sm text-[#CDBB8A]">
                           Nous nous efforçons de répondre à tous les messages dans un délai de 24 à 48 heures.
                         </p>
                       </div>
@@ -160,94 +158,98 @@ export default function Contact() {
 
               {/* Contact Form */}
               <div className="lg:col-span-2">
-                <Card>
+                <Card className="bg-[#4A4829] border-[#F2E9D3]/20">
                   <CardHeader>
-                    <CardTitle>Envoyez-nous un message</CardTitle>
+                    <CardTitle className="text-[#F2E9D3]">{t.contact.formTitle}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-6">
                       <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <Label htmlFor="name">Nom complet *</Label>
+                          <Label htmlFor="name" className="text-[#F2E9D3]">{t.contact.name} *</Label>
                           <Input
                             id="name"
-                            placeholder="Votre nom"
+                            placeholder={t.contact.name}
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             required
+                            className="bg-[#5E5B34] border-[#F2E9D3]/30 text-[#F2E9D3] placeholder:text-[#CDBB8A]/60"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="email">Email *</Label>
+                          <Label htmlFor="email" className="text-[#F2E9D3]">{t.contact.email} *</Label>
                           <Input
                             id="email"
                             type="email"
-                            placeholder="votre@email.com"
+                            placeholder={t.contact.email}
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             required
+                            className="bg-[#5E5B34] border-[#F2E9D3]/30 text-[#F2E9D3] placeholder:text-[#CDBB8A]/60"
                           />
                         </div>
                       </div>
 
                       <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <Label htmlFor="phone">Téléphone</Label>
+                          <Label htmlFor="phone" className="text-[#F2E9D3]">{t.contact.phone}</Label>
                           <Input
                             id="phone"
                             type="tel"
                             placeholder="+212 6 00 00 00 00"
                             value={formData.phone}
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                            className="bg-[#5E5B34] border-[#F2E9D3]/30 text-[#F2E9D3] placeholder:text-[#CDBB8A]/60"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="subject">Sujet *</Label>
+                          <Label htmlFor="subject" className="text-[#F2E9D3]">{t.contact.subject} *</Label>
                           <Select
                             value={formData.subject}
                             onValueChange={(value) => setFormData({ ...formData, subject: value })}
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Choisir un sujet" />
+                            <SelectTrigger className="bg-[#5E5B34] border-[#F2E9D3]/30 text-[#F2E9D3]">
+                              <SelectValue placeholder={t.contact.subject} />
                             </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="benevole">Bénévolat</SelectItem>
-                              <SelectItem value="don">Dons</SelectItem>
-                              <SelectItem value="partenariat">Partenariat</SelectItem>
-                              <SelectItem value="presse">Presse / Média</SelectItem>
-                              <SelectItem value="autre">Autre</SelectItem>
+                            <SelectContent className="bg-[#4A4829] border-[#F2E9D3]/20">
+                              <SelectItem value="general" className="text-[#F2E9D3] hover:bg-[#5E5B34]">{t.contact.subjectGeneral}</SelectItem>
+                              <SelectItem value="benevole" className="text-[#F2E9D3] hover:bg-[#5E5B34]">{t.contact.subjectVolunteer}</SelectItem>
+                              <SelectItem value="partenariat" className="text-[#F2E9D3] hover:bg-[#5E5B34]">{t.contact.subjectPartnership}</SelectItem>
+                              <SelectItem value="don" className="text-[#F2E9D3] hover:bg-[#5E5B34]">{t.contact.subjectDonation}</SelectItem>
+                              <SelectItem value="autre" className="text-[#F2E9D3] hover:bg-[#5E5B34]">{t.contact.subjectOther}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="message">Message *</Label>
+                        <Label htmlFor="message" className="text-[#F2E9D3]">{t.contact.message} *</Label>
                         <Textarea
                           id="message"
-                          placeholder="Votre message..."
+                          placeholder={t.contact.message}
                           rows={6}
                           value={formData.message}
                           onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                           required
+                          className="bg-[#5E5B34] border-[#F2E9D3]/30 text-[#F2E9D3] placeholder:text-[#CDBB8A]/60 resize-none"
                         />
                       </div>
 
                       <Button 
                         type="submit" 
                         size="lg" 
-                        className="w-full"
+                        className="w-full bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3] font-semibold"
                         disabled={submitMutation.isPending}
                       >
                         {submitMutation.isPending ? (
                           <>
                             <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                            Envoi en cours...
+                            {t.common.loading}
                           </>
                         ) : (
                           <>
                             <Send className="h-5 w-5 mr-2" />
-                            Envoyer le message
+                            {t.contact.submit}
                           </>
                         )}
                       </Button>
