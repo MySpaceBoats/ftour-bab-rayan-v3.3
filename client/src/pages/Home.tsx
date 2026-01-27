@@ -8,7 +8,7 @@ import { useI18n } from "@/i18n";
 import { Heart, Users, Calendar, ShoppingBag, ArrowRight, Star, Clock, MapPin, HandHeart, Sparkles, Utensils, GraduationCap, Home as HomeIcon, Baby } from "lucide-react";
 
 export default function Home() {
-  const { t, dir } = useI18n();
+  const { t, dir, lang } = useI18n();
   const { data: stats } = trpc.public.stats.useQuery();
   const { data: testimonials } = trpc.public.testimonials.useQuery();
   const { data: partners } = trpc.public.partners.useQuery();
@@ -51,7 +51,7 @@ export default function Home() {
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-                <Link href="/benevole">
+                <Link href={`/${lang}/benevole`}>
                   <Button 
                     size="lg" 
                     className="w-full sm:w-auto text-lg px-8 py-6 bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3] border-2 border-[#F2E9D3]"
@@ -61,7 +61,7 @@ export default function Home() {
                     <ArrowRight className="h-5 w-5 ml-2" />
                   </Button>
                 </Link>
-                <Link href="/dons">
+                <Link href={`/${lang}/dons`}>
                   <Button 
                     size="lg" 
                     variant="outline" 
@@ -107,48 +107,6 @@ export default function Home() {
               <div className="text-center col-span-2 md:col-span-1">
                 <div className="text-3xl md:text-4xl font-bold mb-2 text-[#F2E9D3]">+31 200</div>
                 <div className="text-sm text-[#E6DCC3]">{t.home.ftoursServed}</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Stats Section - Données dynamiques */}
-        <section className="py-16 bg-[#6F6C3F]">
-          <div className="container">
-            <h2 className="text-2xl font-bold text-center mb-8 text-[#F2E9D3]">{t.home.statsTitle}</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="bg-[#4A4829] rounded-lg p-6 text-center border border-[#F2E9D3]/10">
-                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#F2E9D3]/10 flex items-center justify-center">
-                  <Calendar className="h-6 w-6 text-[#F2E9D3]" />
-                </div>
-                <div className="text-3xl font-bold text-[#F2E9D3]">{stats?.totalDays || 30}</div>
-                <div className="text-sm text-[#E6DCC3] mt-1">{t.home.statsDays}</div>
-              </div>
-              
-              <div className="bg-[#4A4829] rounded-lg p-6 text-center border border-[#F2E9D3]/10">
-                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#F2E9D3]/10 flex items-center justify-center">
-                  <Users className="h-6 w-6 text-[#F2E9D3]" />
-                </div>
-                <div className="text-3xl font-bold text-[#F2E9D3]">{stats?.totalVolunteers || 0}</div>
-                <div className="text-sm text-[#E6DCC3] mt-1">{t.home.statsVolunteers}</div>
-              </div>
-              
-              <div className="bg-[#4A4829] rounded-lg p-6 text-center border border-[#F2E9D3]/10">
-                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#CDBB8A]/20 flex items-center justify-center">
-                  <Heart className="h-6 w-6 text-[#CDBB8A]" />
-                </div>
-                <div className="text-3xl font-bold text-[#CDBB8A]">{stats?.totalDonations || 0}</div>
-                <div className="text-sm text-[#E6DCC3] mt-1">{t.home.statsDonations}</div>
-              </div>
-              
-              <div className="bg-[#4A4829] rounded-lg p-6 text-center border border-[#F2E9D3]/10">
-                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#CDBB8A]/20 flex items-center justify-center">
-                  <HandHeart className="h-6 w-6 text-[#CDBB8A]" />
-                </div>
-                <div className="text-3xl font-bold text-[#CDBB8A]">
-                  {stats?.receivedDonationAmount ? `${Number(stats.receivedDonationAmount).toLocaleString()} DH` : '0 DH'}
-                </div>
-                <div className="text-sm text-[#E6DCC3] mt-1">{t.home.statsMeals}</div>
               </div>
             </div>
           </div>
@@ -201,7 +159,7 @@ export default function Home() {
                     </div>
                   </li>
                 </ul>
-                <Link href="/evenement">
+                <Link href={`/${lang}/evenement`}>
                   <Button 
                     variant="outline" 
                     className="mt-4 border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
@@ -274,7 +232,7 @@ export default function Home() {
                   <p className="text-[#E6DCC3]">
                     {t.home.childProtectionDesc}
                   </p>
-                  <Link href="/association">
+                  <Link href={`/${lang}/association`}>
                     <Button 
                       variant="outline" 
                       className="w-full mt-4 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
@@ -296,7 +254,7 @@ export default function Home() {
                   <p className="text-[#E6DCC3]">
                     {t.home.educationSchoolDesc}
                   </p>
-                  <Link href="/association">
+                  <Link href={`/${lang}/association`}>
                     <Button 
                       variant="outline" 
                       className="w-full mt-4 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
@@ -318,7 +276,7 @@ export default function Home() {
                   <p className="text-[#E6DCC3]">
                     {t.home.trainingInsertionDesc}
                   </p>
-                  <Link href="/association">
+                  <Link href={`/${lang}/association`}>
                     <Button 
                       variant="outline" 
                       className="w-full mt-4 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
@@ -357,7 +315,7 @@ export default function Home() {
                   <p className="text-[#E6DCC3]">
                     {t.home.volunteerCardDesc}
                   </p>
-                  <Link href="/benevole">
+                  <Link href={`/${lang}/benevole`}>
                     <Button className="w-full mt-4 bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]">
                       {t.home.register}
                       <ArrowRight className="h-4 w-4 ml-2" />
@@ -377,7 +335,7 @@ export default function Home() {
                   <p className="text-[#E6DCC3]">
                     {t.home.shopDesc}
                   </p>
-                  <Link href="/goodies">
+                  <Link href={`/${lang}/goodies`}>
                     <Button 
                       variant="outline" 
                       className="w-full mt-4 border-[#CDBB8A] text-[#CDBB8A] bg-transparent hover:bg-[#CDBB8A] hover:text-[#4A4829]"
@@ -400,7 +358,7 @@ export default function Home() {
                   <p className="text-[#E6DCC3]">
                     {t.home.donationCardDesc}
                   </p>
-                  <Link href="/dons">
+                  <Link href={`/${lang}/dons`}>
                     <Button 
                       variant="outline" 
                       className="w-full mt-4 border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
@@ -491,7 +449,7 @@ export default function Home() {
               Inscrivez-vous dès maintenant et faites partie de cette belle initiative solidaire pour les enfants en difficulté
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/benevole">
+              <Link href={`/${lang}/benevole`}>
                 <Button 
                   size="lg" 
                   className="w-full sm:w-auto text-lg px-8 bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]"
@@ -500,7 +458,7 @@ export default function Home() {
                   Devenir bénévole
                 </Button>
               </Link>
-              <Link href="/programme">
+              <Link href={`/${lang}/programme`}>
                 <Button 
                   size="lg" 
                   variant="outline" 

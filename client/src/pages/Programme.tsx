@@ -7,8 +7,10 @@ import { trpc } from "@/lib/trpc";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Calendar, Clock, MapPin, Users, CheckCircle, XCircle, ArrowRight } from "lucide-react";
+import { useI18n } from "@/i18n";
 
 export default function Programme() {
+  const { lang } = useI18n();
   const { data: days, isLoading } = trpc.days.list.useQuery();
   const [selectedWeek, setSelectedWeek] = useState<number>(1);
 
@@ -250,7 +252,7 @@ export default function Programme() {
             <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
               Choisissez un ou plusieurs jours et rejoignez notre équipe de bénévoles
             </p>
-            <Link href="/benevole">
+            <Link href={`/${lang}/benevole`}>
               <Button size="lg" className="bg-primary hover:bg-primary/90">
                 <Users className="h-5 w-5 mr-2" />
                 Devenir bénévole

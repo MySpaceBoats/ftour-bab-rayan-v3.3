@@ -355,3 +355,9 @@
 - [x] Supprimer les 2 produits fantômes qui apparaissent sur le front mais pas sur le backend
 - [x] Supprimer les 2 produits test de Supabase (ID 1 et 2)
 - [x] Corriger le champ prix/nombre où le 0 ne s'efface pas lors de la saisie
+
+
+## Corrections Page d'accueil - 28/01/2026
+- [x] Boutons "Devenir bénévole" et "Faire un don" ne fonctionnent pas sur la page d'accueil (ajout préfixe langue)
+- [x] Supprimer la 2ème section "Chiffres clés annuels" (avec les cartes)
+- [x] Corriger tous les liens dans FAQ.tsx et Programme.tsx

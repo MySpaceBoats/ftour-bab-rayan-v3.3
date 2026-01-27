@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { trpc } from "@/lib/trpc";
 import { HelpCircle, MessageSquare, Users, Heart, ShoppingBag, Loader2 } from "lucide-react";
+import { useI18n } from "@/i18n";
 
 const defaultFaqs = [
   {
@@ -71,6 +72,7 @@ const defaultFaqs = [
 ];
 
 export default function FAQ() {
+  const { lang } = useI18n();
   // Use default FAQs - can be extended with database later
   const faqs = defaultFaqs;
 
@@ -160,7 +162,7 @@ export default function FAQ() {
                 <p className="text-muted-foreground">
                   Notre équipe est là pour vous aider. N'hésitez pas à nous contacter.
                 </p>
-                <Link href="/contact">
+                <Link href={`/${lang}/contact`}>
                   <Button size="lg">
                     Nous contacter
                   </Button>
