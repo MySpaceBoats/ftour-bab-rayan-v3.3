@@ -146,9 +146,9 @@ export default function Contact() {
                     <div className="flex gap-3">
                       <MessageSquare className="h-5 w-5 text-[#F2E9D3] flex-shrink-0 mt-0.5" />
                       <div>
-                        <h3 className="font-semibold mb-1 text-[#F2E9D3]">Réponse rapide</h3>
+                        <h3 className="font-semibold mb-1 text-[#F2E9D3]">{t.contact.quickResponse}</h3>
                         <p className="text-sm text-[#CDBB8A]">
-                          Nous nous efforçons de répondre à tous les messages dans un délai de 24 à 48 heures.
+                          {t.contact.quickResponseText}
                         </p>
                       </div>
                     </div>

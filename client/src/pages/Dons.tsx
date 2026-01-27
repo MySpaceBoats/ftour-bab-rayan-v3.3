@@ -12,10 +12,12 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import { Heart, CreditCard, Building2, CheckCircle, Loader2, ArrowRight, HandHeart, Users, Utensils, Gift } from "lucide-react";
+import { useI18n } from "@/i18n";
 
 const suggestedAmounts = [100, 200, 500, 1000, 2000, 5000];
 
 export default function Dons() {
+  const { t, lang } = useI18n();
   const { data: stats } = trpc.public.stats.useQuery();
   
   const [formData, setFormData] = useState({
@@ -43,10 +45,10 @@ export default function Dons() {
         amount: formData.customAmount || formData.amount,
         paymentMethod: formData.paymentMethod,
       });
-      toast.success("Promesse de don enregistrée !");
+      toast.success(t.donations.submitSuccess);
     },
     onError: (error) => {
-      toast.error(error.message || "Erreur lors de l'enregistrement");
+      toast.error(error.message || t.donations.submitError);
     },
   });
 
@@ -55,7 +57,7 @@ export default function Dons() {
     
     const amountStr = formData.customAmount || formData.amount;
     if (!amountStr || parseFloat(amountStr) <= 0) {
-      toast.error("Veuillez entrer un montant valide");
+      toast.error(t.donations.invalidAmount);
       return;
     }
 
@@ -75,7 +77,7 @@ export default function Dons() {
 
   if (donationSuccess) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col" dir={t.dir}>
         <Navbar />
         <main className="flex-1 py-16">
           <div className="container max-w-2xl">
@@ -86,52 +88,52 @@ export default function Dons() {
                 </div>
                 
                 <div className="space-y-2">
-                  <h1 className="text-2xl font-bold text-foreground">Merci pour votre générosité !</h1>
+                  <h1 className="text-2xl font-bold text-foreground">{t.donations.thankYou}</h1>
                   <p className="text-muted-foreground">
-                    Votre promesse de don a été enregistrée avec succès
+                    {t.donations.promiseRegistered}
                   </p>
                 </div>
 
                 <div className="bg-muted/50 rounded-lg p-6 space-y-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Référence</p>
+                    <p className="text-sm text-muted-foreground">{t.donations.reference}</p>
                     <p className="text-2xl font-bold font-mono text-primary">{donationSuccess.reference}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Montant promis</p>
+                    <p className="text-sm text-muted-foreground">{t.donations.promisedAmount}</p>
                     <p className="text-xl font-bold">{donationSuccess.amount} DH</p>
                   </div>
                 </div>
 
                 <div className="bg-primary/5 rounded-lg p-4 text-left space-y-3">
                   <h3 className="font-semibold">
-                    {donationSuccess.paymentMethod === 'transfer' ? 'Instructions pour le virement' : 'Paiement sur place'}
+                    {donationSuccess.paymentMethod === 'transfer' ? t.donations.transferInstructions : t.donations.onSitePayment}
                   </h3>
                   {donationSuccess.paymentMethod === 'transfer' ? (
                     <div className="text-sm text-muted-foreground space-y-2">
-                      <p>Effectuez votre virement avec les informations suivantes :</p>
+                      <p>{t.donations.transferDetails}</p>
                       <div className="bg-white rounded p-3 space-y-1 font-mono text-xs">
-                        <p><strong>Banque :</strong> Banque Populaire</p>
-                        <p><strong>RIB :</strong> XXXX XXXX XXXX XXXX XXXX XXXX</p>
-                        <p><strong>Libellé :</strong> DON-{donationSuccess.reference}</p>
+                        <p><strong>{t.donations.bank}:</strong> Banque Populaire</p>
+                        <p><strong>RIB:</strong> XXXX XXXX XXXX XXXX XXXX XXXX</p>
+                        <p><strong>{t.donations.label}:</strong> DON-{donationSuccess.reference}</p>
                       </div>
-                      <p className="text-xs">Un email avec ces informations vous a été envoyé.</p>
+                      <p className="text-xs">{t.donations.emailSent}</p>
                     </div>
                   ) : (
                     <div className="text-sm text-muted-foreground space-y-2">
-                      <p>Vous pouvez effectuer votre don sur place lors d'un Ftour.</p>
-                      <p>Présentez votre référence : <strong>{donationSuccess.reference}</strong></p>
+                      <p>{t.donations.onSiteDetails}</p>
+                      <p>{t.donations.showReference}: <strong>{donationSuccess.reference}</strong></p>
                     </div>
                   )}
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   <Button onClick={() => setDonationSuccess(null)} variant="outline" className="flex-1">
-                    Faire un autre don
+                    {t.donations.makeAnotherDonation}
                   </Button>
-                  <Link href="/" className="flex-1">
+                  <Link href={`/${lang}`} className="flex-1">
                     <Button className="w-full">
-                      Retour à l'accueil
+                      {t.goodies.backToHome}
                     </Button>
                   </Link>
                 </div>
@@ -145,7 +147,7 @@ export default function Dons() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col" dir={t.dir}>
       <Navbar />
       
       <main className="flex-1">
@@ -155,13 +157,13 @@ export default function Dons() {
             <div className="max-w-3xl mx-auto text-center space-y-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 text-accent text-sm font-medium">
                 <Heart className="h-4 w-4" />
-                Soutenez notre action
+                {t.donations.supportAction}
               </div>
               <h1 className="text-4xl md:text-5xl font-bold text-foreground">
-                Faire un don
+                {t.donations.title}
               </h1>
               <p className="text-lg text-muted-foreground">
-                Votre générosité permet d'offrir des repas aux personnes dans le besoin pendant le Ramadan
+                {t.donations.subtitle}
               </p>
             </div>
           </div>
@@ -175,28 +177,28 @@ export default function Dons() {
                 <CardContent className="p-6 text-center">
                   <Utensils className="h-8 w-8 mx-auto text-primary mb-3" />
                   <div className="text-2xl font-bold">50 DH</div>
-                  <p className="text-sm text-muted-foreground">= 1 repas complet</p>
+                  <p className="text-sm text-muted-foreground">= {t.donations.oneMeal}</p>
                 </CardContent>
               </Card>
               <Card className="border-none shadow-sm">
                 <CardContent className="p-6 text-center">
                   <Users className="h-8 w-8 mx-auto text-primary mb-3" />
                   <div className="text-2xl font-bold">500 DH</div>
-                  <p className="text-sm text-muted-foreground">= 10 repas</p>
+                  <p className="text-sm text-muted-foreground">= {t.donations.tenMeals}</p>
                 </CardContent>
               </Card>
               <Card className="border-none shadow-sm">
                 <CardContent className="p-6 text-center">
                   <Gift className="h-8 w-8 mx-auto text-primary mb-3" />
                   <div className="text-2xl font-bold">1000 DH</div>
-                  <p className="text-sm text-muted-foreground">= 1 journée de Ftour</p>
+                  <p className="text-sm text-muted-foreground">= {t.donations.oneDayFtour}</p>
                 </CardContent>
               </Card>
               <Card className="border-none shadow-sm">
                 <CardContent className="p-6 text-center">
                   <HandHeart className="h-8 w-8 mx-auto text-primary mb-3" />
                   <div className="text-2xl font-bold">{stats?.receivedDonationAmount ? `${Number(stats.receivedDonationAmount).toLocaleString()}` : '0'} DH</div>
-                  <p className="text-sm text-muted-foreground">collectés à ce jour</p>
+                  <p className="text-sm text-muted-foreground">{t.donations.collectedToDate}</p>
                 </CardContent>
               </Card>
             </div>
@@ -209,16 +211,16 @@ export default function Dons() {
             <div className="max-w-2xl mx-auto">
               <Card className="border-none shadow-lg">
                 <CardHeader>
-                  <CardTitle>Promesse de don</CardTitle>
+                  <CardTitle>{t.donations.formTitle}</CardTitle>
                   <CardDescription>
-                    Enregistrez votre promesse de don et choisissez votre mode de paiement
+                    {t.donations.formDescription}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Amount Selection */}
                     <div className="space-y-3">
-                      <Label>Montant du don *</Label>
+                      <Label>{t.donations.amount} *</Label>
                       <div className="grid grid-cols-3 gap-3">
                         {suggestedAmounts.map((amount) => (
                           <Button
@@ -237,7 +239,7 @@ export default function Dons() {
                       <div className="relative">
                         <Input
                           type="number"
-                          placeholder="Autre montant"
+                          placeholder={t.donations.otherAmount}
                           value={formData.customAmount}
                           onChange={(e) => setFormData(prev => ({ ...prev, customAmount: e.target.value, amount: "" }))}
                           className="pr-12"
@@ -248,7 +250,7 @@ export default function Dons() {
 
                     {/* Payment Method */}
                     <div className="space-y-3">
-                      <Label>Mode de paiement *</Label>
+                      <Label>{t.donations.paymentMethod} *</Label>
                       <RadioGroup
                         value={formData.paymentMethod}
                         onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value as "transfer" | "on_site" }))}
@@ -259,8 +261,8 @@ export default function Dons() {
                           <Label htmlFor="transfer" className="flex items-center gap-3 cursor-pointer flex-1">
                             <Building2 className="h-5 w-5 text-muted-foreground" />
                             <div>
-                              <div className="font-medium">Virement bancaire</div>
-                              <div className="text-xs text-muted-foreground">RIB envoyé par email</div>
+                              <div className="font-medium">{t.donations.bankTransfer}</div>
+                              <div className="text-xs text-muted-foreground">{t.donations.ribByEmail}</div>
                             </div>
                           </Label>
                         </div>
@@ -269,8 +271,8 @@ export default function Dons() {
                           <Label htmlFor="on_site" className="flex items-center gap-3 cursor-pointer flex-1">
                             <CreditCard className="h-5 w-5 text-muted-foreground" />
                             <div>
-                              <div className="font-medium">Sur place</div>
-                              <div className="text-xs text-muted-foreground">Lors d'un Ftour</div>
+                              <div className="font-medium">{t.donations.onSite}</div>
+                              <div className="text-xs text-muted-foreground">{t.donations.duringFtour}</div>
                             </div>
                           </Label>
                         </div>
@@ -280,30 +282,30 @@ export default function Dons() {
                     {/* Contact Info */}
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="name">Nom complet *</Label>
+                        <Label htmlFor="name">{t.goodies.fullName} *</Label>
                         <Input
                           id="name"
                           value={formData.donorName}
                           onChange={(e) => setFormData(prev => ({ ...prev, donorName: e.target.value }))}
-                          placeholder="Votre nom"
+                          placeholder={t.donations.yourName}
                           required
                         />
                       </div>
                       
                       <div className="grid sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="email">Email *</Label>
+                          <Label htmlFor="email">{t.goodies.email} *</Label>
                           <Input
                             id="email"
                             type="email"
                             value={formData.donorEmail}
                             onChange={(e) => setFormData(prev => ({ ...prev, donorEmail: e.target.value }))}
-                            placeholder="votre@email.com"
+                            placeholder={t.donations.yourEmail}
                             required
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="phone">Téléphone</Label>
+                          <Label htmlFor="phone">{t.goodies.phone}</Label>
                           <Input
                             id="phone"
                             type="tel"
@@ -317,12 +319,12 @@ export default function Dons() {
 
                     {/* Message */}
                     <div className="space-y-2">
-                      <Label htmlFor="message">Message (optionnel)</Label>
+                      <Label htmlFor="message">{t.donations.messageOptional}</Label>
                       <Textarea
                         id="message"
                         value={formData.message}
                         onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
-                        placeholder="Une intention, une dédicace..."
+                        placeholder={t.donations.messagePlaceholder}
                         rows={3}
                       />
                     </div>
@@ -336,7 +338,7 @@ export default function Dons() {
                           onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isAnonymous: checked as boolean }))}
                         />
                         <label htmlFor="anonymous" className="text-sm cursor-pointer">
-                          Don anonyme (votre nom ne sera pas affiché)
+                          {t.donations.anonymousDonation}
                         </label>
                       </div>
                       <div className="flex items-center space-x-3">
@@ -346,87 +348,33 @@ export default function Dons() {
                           onCheckedChange={(checked) => setFormData(prev => ({ ...prev, acceptsUpdates: checked as boolean }))}
                         />
                         <label htmlFor="updates" className="text-sm cursor-pointer">
-                          Je souhaite recevoir des nouvelles de l'association
+                          {t.donations.receiveUpdates}
                         </label>
                       </div>
                     </div>
 
-                    {/* Summary */}
-                    {selectedAmount && parseFloat(selectedAmount) > 0 && (
-                      <div className="bg-primary/5 rounded-lg p-4 space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">Votre don</span>
-                          <span className="text-2xl font-bold text-primary">{selectedAmount} DH</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          ≈ {Math.floor(parseFloat(selectedAmount) / 50)} repas offerts
-                        </p>
-                      </div>
-                    )}
-
                     {/* Submit */}
                     <Button 
                       type="submit" 
-                      className="w-full" 
-                      size="lg"
+                      className="w-full h-12 text-lg"
                       disabled={createDonationMutation.isPending || !selectedAmount}
                     >
                       {createDonationMutation.isPending ? (
                         <>
-                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                          Enregistrement...
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          {t.goodies.processing}
                         </>
                       ) : (
                         <>
-                          <Heart className="h-5 w-5 mr-2" />
-                          Confirmer ma promesse de don
+                          {t.donations.confirmPromise}
+                          {selectedAmount && ` - ${selectedAmount} DH`}
+                          <ArrowRight className="ml-2 h-5 w-5" />
                         </>
                       )}
                     </Button>
                   </form>
                 </CardContent>
               </Card>
-            </div>
-          </div>
-        </section>
-
-        {/* Transparency Section */}
-        <section className="py-16 bg-muted/30">
-          <div className="container">
-            <div className="max-w-3xl mx-auto text-center space-y-6">
-              <h2 className="text-2xl font-bold">Où vont vos dons ?</h2>
-              <p className="text-muted-foreground">
-                100% de vos dons sont utilisés pour financer les Ftours solidaires
-              </p>
-              <div className="grid md:grid-cols-3 gap-6 text-left">
-                <Card>
-                  <CardContent className="p-6 space-y-2">
-                    <div className="text-3xl font-bold text-primary">70%</div>
-                    <h3 className="font-semibold">Repas</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Achat des ingrédients et préparation des repas
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-6 space-y-2">
-                    <div className="text-3xl font-bold text-primary">20%</div>
-                    <h3 className="font-semibold">Logistique</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Transport, matériel, installation
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-6 space-y-2">
-                    <div className="text-3xl font-bold text-primary">10%</div>
-                    <h3 className="font-semibold">Organisation</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Coordination, communication, sécurité
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
             </div>
           </div>
         </section>

@@ -1,11 +1,14 @@
 import { Link } from "wouter";
 import { Heart, Facebook, Instagram, Linkedin, Mail, Phone, MapPin } from "lucide-react";
+import { useI18n } from "@/i18n";
 
 export default function Footer() {
+  const { t, lang } = useI18n();
   const currentYear = new Date().getFullYear();
+  const isRTL = lang === 'ar';
 
   return (
-    <footer className="bg-[#4A4829] text-[#F2E9D3]">
+    <footer className="bg-[#4A4829] text-[#F2E9D3]" dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="container py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand */}
@@ -29,11 +32,11 @@ export default function Footer() {
               </div>
               <div className="flex flex-col">
                 <span className="text-lg font-bold leading-none" style={{ fontFamily: 'Caveat, cursive' }}>Ftour Bab Rayan</span>
-                <span className="text-xs text-[#CDBB8A]" style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic' }}>12e édition — 2026</span>
+                <span className="text-xs text-[#CDBB8A]" style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic' }}>{t.footer.edition}</span>
               </div>
             </div>
             <p className="text-sm text-[#E6DCC3] leading-relaxed">
-              L'association Bab Rayan organise chaque année depuis 2015 le Ftour Bab Rayan. Cette action apporte convivialité et chaleur pendant le mois sacré du Ramadan.
+              {t.footer.description}
             </p>
             <div className="flex gap-3">
               <a href="https://facebook.com/babrayan" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-[#F2E9D3]/10 hover:bg-[#F2E9D3]/20 transition-colors">
@@ -50,31 +53,31 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg text-[#F2E9D3]">Liens rapides</h3>
+            <h3 className="font-semibold text-lg text-[#F2E9D3]">{t.footer.quickLinks}</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/evenement" className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
-                  L'événement
+                <Link href={`/${lang}/evenement`} className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
+                  {t.nav.event}
                 </Link>
               </li>
               <li>
-                <Link href="/programme" className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
-                  Programme
+                <Link href={`/${lang}/programme`} className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
+                  {t.footer.program}
                 </Link>
               </li>
               <li>
-                <Link href="/benevole" className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
-                  Devenir bénévole
+                <Link href={`/${lang}/benevole`} className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
+                  {t.nav.volunteer}
                 </Link>
               </li>
               <li>
-                <Link href="/goodies" className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
-                  Boutique solidaire
+                <Link href={`/${lang}/goodies`} className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
+                  {t.footer.shop}
                 </Link>
               </li>
               <li>
-                <Link href="/dons" className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
-                  Faire un don
+                <Link href={`/${lang}/dons`} className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
+                  {t.cta.donate}
                 </Link>
               </li>
             </ul>
@@ -82,31 +85,31 @@ export default function Footer() {
 
           {/* Association */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg text-[#F2E9D3]">Association</h3>
+            <h3 className="font-semibold text-lg text-[#F2E9D3]">{t.footer.associationTitle}</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/association" className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
-                  À propos de Bab Rayan
+                <Link href={`/${lang}/association`} className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
+                  {t.footer.about}
                 </Link>
               </li>
               <li>
                 <a href="https://www.babrayan.ma" target="_blank" rel="noopener noreferrer" className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
-                  Site officiel
+                  {t.footer.officialSite}
                 </a>
               </li>
               <li>
-                <Link href="/faq" className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
+                <Link href={`/${lang}/faq`} className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
                   FAQ
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
-                  Contact
+                <Link href={`/${lang}/contact`} className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
+                  {t.nav.contact}
                 </Link>
               </li>
               <li>
-                <Link href="/mentions-legales" className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
-                  Mentions légales
+                <Link href={`/${lang}/mentions-legales`} className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
+                  {t.footer.legal}
                 </Link>
               </li>
             </ul>
@@ -114,11 +117,11 @@ export default function Footer() {
 
           {/* Contact */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg text-[#F2E9D3]">Contact</h3>
+            <h3 className="font-semibold text-lg text-[#F2E9D3]">{t.nav.contact}</h3>
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-3">
                 <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0 text-[#CDBB8A]" />
-                <span className="text-[#E6DCC3]">4 rue Bayt Lham, quartier Palmier, Casablanca</span>
+                <span className="text-[#E6DCC3]">{t.contact.addressValue}</span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="h-4 w-4 flex-shrink-0 text-[#CDBB8A]" />
@@ -139,9 +142,9 @@ export default function Footer() {
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-[#F2E9D3]/10">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-[#E6DCC3]">
-            <p>© {currentYear} Association Bab Rayan - Reconnue d'utilité publique. Tous droits réservés.</p>
+            <p>{t.footer.copyright.replace('{year}', currentYear.toString())}</p>
             <p className="flex items-center gap-1">
-              Fait avec <Heart className="h-4 w-4 text-[#CDBB8A]" /> au Maroc
+              {t.footer.madeWith} <Heart className="h-4 w-4 text-[#CDBB8A]" /> {t.footer.inMorocco}
             </p>
           </div>
         </div>

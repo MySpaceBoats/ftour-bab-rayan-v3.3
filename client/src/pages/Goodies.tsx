@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,7 +10,8 @@ import { trpc } from "@/lib/trpc";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
-import { ShoppingBag, Plus, Minus, Star, Sparkles, Tag, ShoppingCart, X, CheckCircle, Loader2, Package } from "lucide-react";
+import { ShoppingBag, Plus, Minus, ShoppingCart, X, CheckCircle, Loader2, Package } from "lucide-react";
+import { useI18n } from "@/i18n";
 
 type CartItem = {
   goodieId: number;
@@ -24,6 +24,9 @@ type CartItem = {
 };
 
 export default function Goodies() {
+  const { t, lang } = useI18n();
+  const dir = lang === 'ar' ? 'rtl' : 'ltr';
+  
   const { data: goodies, isLoading } = trpc.goodies.list.useQuery();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -43,10 +46,10 @@ export default function Goodies() {
       setOrderSuccess({ reference: data.orderReference, total: data.totalAmount });
       setCart([]);
       setIsCheckoutOpen(false);
-      toast.success("Réservation confirmée !");
+      toast.success(t.goodies.reservationConfirmed);
     },
     onError: (error) => {
-      toast.error(error.message || "Erreur lors de la réservation");
+      toast.error(error.message || t.goodies.reservationError);
     },
   });
 
@@ -76,7 +79,7 @@ export default function Goodies() {
     
     setSelectedGoodie(null);
     setSelectedVariant("");
-    toast.success("Ajouté au panier !");
+    toast.success(t.goodies.addedToCart);
   };
 
   const updateQuantity = (index: number, delta: number) => {
@@ -117,50 +120,50 @@ export default function Goodies() {
 
   if (orderSuccess) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col bg-[#5E5B34]" dir={dir}>
         <Navbar />
         <main className="flex-1 py-16">
           <div className="container max-w-2xl">
-            <Card className="border-none shadow-lg">
+            <Card className="border-none shadow-lg bg-[#4A4829]">
               <CardContent className="p-8 text-center space-y-6">
                 <div className="w-20 h-20 mx-auto rounded-full bg-green-100 flex items-center justify-center">
                   <CheckCircle className="h-10 w-10 text-green-600" />
                 </div>
                 
                 <div className="space-y-2">
-                  <h1 className="text-2xl font-bold text-foreground">Réservation confirmée !</h1>
-                  <p className="text-muted-foreground">
-                    Votre commande a été enregistrée avec succès
+                  <h1 className="text-2xl font-bold text-[#F2E9D3]">{t.goodies.reservationConfirmed}</h1>
+                  <p className="text-[#E6DCC3]">
+                    {t.goodies.orderRegistered}
                   </p>
                 </div>
 
-                <div className="bg-muted/50 rounded-lg p-6 space-y-4">
+                <div className="bg-[#5E5B34] rounded-lg p-6 space-y-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Référence de commande</p>
-                    <p className="text-2xl font-bold font-mono text-primary">{orderSuccess.reference}</p>
+                    <p className="text-sm text-[#E6DCC3]">{t.goodies.orderReference}</p>
+                    <p className="text-2xl font-bold font-mono text-[#CDBB8A]">{orderSuccess.reference}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total à payer sur place</p>
-                    <p className="text-xl font-bold">{orderSuccess.total} DH</p>
+                    <p className="text-sm text-[#E6DCC3]">{t.goodies.totalToPay}</p>
+                    <p className="text-xl font-bold text-[#F2E9D3]">{orderSuccess.total} DH</p>
                   </div>
                 </div>
 
-                <div className="bg-primary/5 rounded-lg p-4 text-left space-y-2">
-                  <h3 className="font-semibold">Prochaines étapes</h3>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>• Un email de confirmation vous a été envoyé</li>
-                    <li>• Présentez-vous au point de retrait avec votre référence</li>
-                    <li>• Le paiement se fait sur place lors du retrait</li>
+                <div className="bg-[#5E5B34] rounded-lg p-4 text-left space-y-2">
+                  <h3 className="font-semibold text-[#F2E9D3]">{t.goodies.nextSteps}</h3>
+                  <ul className="text-sm text-[#E6DCC3] space-y-1">
+                    <li>• {t.goodies.emailSent}</li>
+                    <li>• {t.goodies.pickupPoint}</li>
+                    <li>• {t.goodies.paymentOnSite}</li>
                   </ul>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                  <Button onClick={() => setOrderSuccess(null)} variant="outline" className="flex-1">
-                    Continuer les achats
+                  <Button onClick={() => setOrderSuccess(null)} variant="outline" className="flex-1 border-[#F2E9D3] text-[#F2E9D3] hover:bg-[#F2E9D3] hover:text-[#4A4829]">
+                    {t.goodies.continueShopping}
                   </Button>
-                  <Link href="/" className="flex-1">
-                    <Button className="w-full">
-                      Retour à l'accueil
+                  <Link href={`/${lang}`} className="flex-1">
+                    <Button className="w-full bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]">
+                      {t.goodies.backToHome}
                     </Button>
                   </Link>
                 </div>
@@ -174,23 +177,23 @@ export default function Goodies() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-[#5E5B34]" dir={dir}>
       <Navbar />
       
       <main className="flex-1">
         {/* Hero */}
-        <section className="py-16 bg-gradient-to-b from-secondary/10 to-background">
+        <section className="py-16 bg-[#4A4829]">
           <div className="container">
             <div className="max-w-3xl mx-auto text-center space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/20 text-secondary-foreground text-sm font-medium">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F2E9D3]/10 text-[#F2E9D3] text-sm font-medium">
                 <ShoppingBag className="h-4 w-4" />
-                Boutique solidaire
+                {t.goodies.solidarityShop}
               </div>
-              <h1 className="text-4xl md:text-5xl font-bold text-foreground">
-                Goodies Ftour Bab Rayan
+              <h1 className="text-4xl md:text-5xl font-bold text-[#F2E9D3]" style={{ fontFamily: 'Caveat, cursive' }}>
+                {t.goodies.title}
               </h1>
-              <p className="text-lg text-muted-foreground">
-                Soutenez notre action en vous procurant nos goodies exclusifs. Tous les bénéfices financent les Ftours solidaires.
+              <p className="text-lg text-[#E6DCC3]">
+                {t.goodies.subtitle}
               </p>
             </div>
           </div>
@@ -202,11 +205,11 @@ export default function Goodies() {
             {isLoading ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {[...Array(8)].map((_, i) => (
-                  <Card key={i} className="animate-pulse">
-                    <div className="aspect-square bg-muted" />
+                  <Card key={i} className="animate-pulse bg-[#4A4829]">
+                    <div className="aspect-square bg-[#5E5B34]" />
                     <CardContent className="p-4 space-y-3">
-                      <div className="h-5 bg-muted rounded w-3/4" />
-                      <div className="h-4 bg-muted rounded w-1/2" />
+                      <div className="h-5 bg-[#5E5B34] rounded w-3/4" />
+                      <div className="h-4 bg-[#5E5B34] rounded w-1/2" />
                     </CardContent>
                   </Card>
                 ))}
@@ -214,9 +217,9 @@ export default function Goodies() {
             ) : goodies && goodies.length > 0 ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {goodies.map((goodie) => (
-                  <Card key={goodie.id} className="card-hover overflow-hidden group">
+                  <Card key={goodie.id} className="overflow-hidden group bg-[#4A4829] border-[#F2E9D3]/10 hover:border-[#F2E9D3]/30 transition-all">
                     {/* Image */}
-                    <div className="aspect-square bg-muted relative overflow-hidden">
+                    <div className="aspect-square bg-[#5E5B34] relative overflow-hidden">
                       {goodie.imageUrl ? (
                         <img 
                           src={goodie.imageUrl} 
@@ -225,30 +228,29 @@ export default function Goodies() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Package className="h-16 w-16 text-muted-foreground/30" />
+                          <Package className="h-16 w-16 text-[#F2E9D3]/30" />
                         </div>
                       )}
-                      
-
                     </div>
 
                     {/* Content */}
                     <CardContent className="p-4 space-y-3">
                       <div>
-                        <h3 className="font-semibold text-lg line-clamp-1">{goodie.name}</h3>
+                        <h3 className="font-semibold text-lg line-clamp-1 text-[#F2E9D3]">{goodie.name}</h3>
                         {goodie.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                          <p className="text-sm text-[#E6DCC3] line-clamp-2 mt-1">
                             {goodie.description}
                           </p>
                         )}
                       </div>
                       
                       <div className="flex items-center justify-between">
-                        <span className="text-xl font-bold text-primary">
+                        <span className="text-xl font-bold text-[#CDBB8A]">
                           {goodie.price.toFixed(0)} DH
                         </span>
                         <Button 
                           size="sm"
+                          className="bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]"
                           onClick={() => {
                             if (goodie.variants && goodie.variants.length > 0) {
                               setSelectedGoodie(goodie.id);
@@ -258,7 +260,7 @@ export default function Goodies() {
                           }}
                         >
                           <Plus className="h-4 w-4 mr-1" />
-                          Ajouter
+                          {t.goodies.addToCart}
                         </Button>
                       </div>
                     </CardContent>
@@ -266,109 +268,59 @@ export default function Goodies() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-20">
-                <ShoppingBag className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Boutique à venir</h3>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  Nos goodies seront bientôt disponibles. Revenez nous voir !
-                </p>
+              <div className="text-center py-16">
+                <ShoppingBag className="h-16 w-16 mx-auto text-[#F2E9D3]/30 mb-4" />
+                <h3 className="text-xl font-semibold text-[#F2E9D3] mb-2">{t.goodies.noProducts}</h3>
+                <p className="text-[#E6DCC3]">{t.goodies.comingSoon}</p>
               </div>
             )}
-          </div>
-        </section>
-
-        {/* Info Section */}
-        <section className="py-16 bg-muted/30">
-          <div className="container">
-            <div className="max-w-3xl mx-auto text-center space-y-6">
-              <h2 className="text-2xl font-bold">Comment ça marche ?</h2>
-              <div className="grid md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <div className="w-12 h-12 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-xl font-bold text-primary">1</span>
-                  </div>
-                  <h3 className="font-semibold">Réservez en ligne</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Choisissez vos articles et validez votre réservation
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="w-12 h-12 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-xl font-bold text-primary">2</span>
-                  </div>
-                  <h3 className="font-semibold">Recevez votre confirmation</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Un email avec votre référence de commande
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="w-12 h-12 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-xl font-bold text-primary">3</span>
-                  </div>
-                  <h3 className="font-semibold">Payez et retirez sur place</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Présentez-vous au point de retrait avec votre référence
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
       </main>
 
       {/* Floating Cart Button */}
       {cart.length > 0 && (
-        <div className="fixed bottom-6 right-6 z-40">
-          <Button 
-            size="lg" 
-            className="rounded-full shadow-lg h-14 px-6"
-            onClick={() => setIsCartOpen(true)}
-          >
-            <ShoppingCart className="h-5 w-5 mr-2" />
-            Panier ({cartCount})
-            <span className="ml-2 font-bold">{cartTotal.toFixed(0)} DH</span>
-          </Button>
-        </div>
+        <button
+          onClick={() => setIsCartOpen(true)}
+          className="fixed bottom-6 right-6 bg-[#F2E9D3] text-[#4A4829] p-4 rounded-full shadow-lg hover:bg-[#E6DCC3] transition-colors z-50"
+        >
+          <ShoppingCart className="h-6 w-6" />
+          <span className="absolute -top-2 -right-2 bg-[#4A4829] text-[#F2E9D3] text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
+            {cartCount}
+          </span>
+        </button>
       )}
 
       {/* Variant Selection Dialog */}
-      <Dialog open={selectedGoodie !== null} onOpenChange={() => { setSelectedGoodie(null); setSelectedVariant(""); }}>
-        <DialogContent>
+      <Dialog open={selectedGoodie !== null} onOpenChange={() => setSelectedGoodie(null)}>
+        <DialogContent className="bg-[#4A4829] border-[#F2E9D3]/20">
           <DialogHeader>
-            <DialogTitle>{currentGoodie?.name}</DialogTitle>
-            <DialogDescription>Choisissez une variante</DialogDescription>
+            <DialogTitle className="text-[#F2E9D3]">{t.goodies.selectVariant}</DialogTitle>
+            <DialogDescription className="text-[#E6DCC3]">
+              {t.goodies.chooseOptions}
+            </DialogDescription>
           </DialogHeader>
-          
           {currentGoodie && (
             <div className="space-y-4">
               <Select value={selectedVariant} onValueChange={setSelectedVariant}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez une option" />
+                <SelectTrigger className="bg-[#5E5B34] border-[#F2E9D3]/20 text-[#F2E9D3]">
+                  <SelectValue placeholder={t.goodies.selectOption} />
                 </SelectTrigger>
-                <SelectContent>
-                  {currentGoodie.variants?.map((variant: { id: number; size?: string; color?: string; priceModifier?: number; stock?: number }) => (
-                    <SelectItem key={variant.id} value={variant.id.toString()}>
-                      {variant.size} {variant.color} 
-                      {variant.priceModifier && variant.priceModifier !== 0 && (
-                        <span className="text-muted-foreground ml-2">
-                          ({variant.priceModifier > 0 ? '+' : ''}{variant.priceModifier} DH)
-                        </span>
-                      )}
-                      {variant.stock !== undefined && variant.stock <= 5 && (
-                        <span className="text-amber-500 ml-2">({variant.stock} restants)</span>
-                      )}
+                <SelectContent className="bg-[#4A4829] border-[#F2E9D3]/20">
+                  {currentGoodie.variants?.map((variant: { id: number; size?: string; color?: string; priceModifier?: string }) => (
+                    <SelectItem key={variant.id} value={variant.id.toString()} className="text-[#F2E9D3]">
+                      {`${variant.size || ''} ${variant.color || ''}`.trim()}
+                      {variant.priceModifier && Number(variant.priceModifier) > 0 && ` (+${variant.priceModifier} DH)`}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              
               <Button 
-                className="w-full" 
-                onClick={() => addToCart(currentGoodie)}
+                onClick={() => addToCart(currentGoodie)} 
                 disabled={!selectedVariant}
+                className="w-full bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]"
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter au panier
+                {t.goodies.addToCart}
               </Button>
             </div>
           )}
@@ -377,137 +329,115 @@ export default function Goodies() {
 
       {/* Cart Dialog */}
       <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="bg-[#4A4829] border-[#F2E9D3]/20 max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" />
-              Votre panier
-            </DialogTitle>
+            <DialogTitle className="text-[#F2E9D3]">{t.goodies.yourCart}</DialogTitle>
+            <DialogDescription className="text-[#E6DCC3]">
+              {cartCount} {t.goodies.articles}
+            </DialogDescription>
           </DialogHeader>
-          
-          {cart.length === 0 ? (
-            <div className="text-center py-8">
-              <ShoppingBag className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-              <p className="text-muted-foreground">Votre panier est vide</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {cart.map((item, index) => (
-                <div key={index} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                  <div className="w-16 h-16 bg-muted rounded flex-shrink-0 overflow-hidden">
-                    {item.imageUrl ? (
-                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Package className="h-6 w-6 text-muted-foreground/30" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-sm line-clamp-1">{item.name}</h4>
-                    {item.variant && (
-                      <p className="text-xs text-muted-foreground">{item.variant}</p>
-                    )}
-                    <p className="text-sm font-bold text-primary">{item.price.toFixed(0)} DH</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => updateQuantity(index, -1)}>
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    <span className="w-6 text-center font-medium">{item.quantity}</span>
-                    <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => updateQuantity(index, 1)}>
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
-                  <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" onClick={() => removeFromCart(index)}>
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            {cart.map((item, index) => (
+              <div key={index} className="flex items-center gap-3 p-3 bg-[#5E5B34] rounded-lg">
+                {item.imageUrl && (
+                  <img src={item.imageUrl} alt={item.name} className="w-16 h-16 object-cover rounded" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-[#F2E9D3] truncate">{item.name}</h4>
+                  {item.variant && <p className="text-sm text-[#E6DCC3]">{item.variant}</p>}
+                  <p className="text-[#CDBB8A] font-semibold">{item.price} DH</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button size="icon" variant="outline" className="h-8 w-8 border-[#F2E9D3]/20 text-[#F2E9D3]" onClick={() => updateQuantity(index, -1)}>
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="w-8 text-center text-[#F2E9D3]">{item.quantity}</span>
+                  <Button size="icon" variant="outline" className="h-8 w-8 border-[#F2E9D3]/20 text-[#F2E9D3]" onClick={() => updateQuantity(index, 1)}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-red-400 hover:text-red-300" onClick={() => removeFromCart(index)}>
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-              ))}
-              
-              <div className="border-t pt-4">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="font-medium">Total</span>
-                  <span className="text-xl font-bold text-primary">{cartTotal.toFixed(0)} DH</span>
-                </div>
-                <Button className="w-full" onClick={() => { setIsCartOpen(false); setIsCheckoutOpen(true); }}>
-                  Réserver (paiement sur place)
-                </Button>
               </div>
+            ))}
+          </div>
+          <div className="border-t border-[#F2E9D3]/20 pt-4 space-y-4">
+            <div className="flex justify-between text-lg font-bold text-[#F2E9D3]">
+              <span>{t.goodies.total}</span>
+              <span>{cartTotal} DH</span>
             </div>
-          )}
+            <Button 
+              onClick={() => { setIsCartOpen(false); setIsCheckoutOpen(true); }}
+              className="w-full bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]"
+            >
+              {t.goodies.reserve}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Checkout Dialog */}
       <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
-        <DialogContent>
+        <DialogContent className="bg-[#4A4829] border-[#F2E9D3]/20 max-w-md">
           <DialogHeader>
-            <DialogTitle>Finaliser la réservation</DialogTitle>
-            <DialogDescription>
-              Remplissez vos coordonnées pour réserver vos articles
+            <DialogTitle className="text-[#F2E9D3]">{t.goodies.finalizeReservation}</DialogTitle>
+            <DialogDescription className="text-[#E6DCC3]">
+              {t.goodies.fillInfo}
             </DialogDescription>
           </DialogHeader>
-          
           <form onSubmit={handleCheckout} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nom complet *</Label>
-              <Input
-                id="name"
+              <Label htmlFor="name" className="text-[#F2E9D3]">{t.goodies.fullName}</Label>
+              <Input 
+                id="name" 
                 value={checkoutForm.customerName}
                 onChange={(e) => setCheckoutForm(prev => ({ ...prev, customerName: e.target.value }))}
-                placeholder="Votre nom"
                 required
+                className="bg-[#5E5B34] border-[#F2E9D3]/20 text-[#F2E9D3]"
               />
             </div>
-            
             <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
+              <Label htmlFor="email" className="text-[#F2E9D3]">{t.goodies.email}</Label>
+              <Input 
+                id="email" 
                 type="email"
                 value={checkoutForm.customerEmail}
                 onChange={(e) => setCheckoutForm(prev => ({ ...prev, customerEmail: e.target.value }))}
-                placeholder="votre@email.com"
                 required
+                className="bg-[#5E5B34] border-[#F2E9D3]/20 text-[#F2E9D3]"
               />
             </div>
-            
             <div className="space-y-2">
-              <Label htmlFor="phone">Téléphone *</Label>
-              <Input
-                id="phone"
+              <Label htmlFor="phone" className="text-[#F2E9D3]">{t.goodies.phone}</Label>
+              <Input 
+                id="phone" 
                 type="tel"
                 value={checkoutForm.customerPhone}
                 onChange={(e) => setCheckoutForm(prev => ({ ...prev, customerPhone: e.target.value }))}
-                placeholder="+212 6XX XXX XXX"
                 required
+                className="bg-[#5E5B34] border-[#F2E9D3]/20 text-[#F2E9D3]"
               />
             </div>
-
-            <div className="bg-muted/50 rounded-lg p-4">
-              <div className="flex justify-between items-center">
-                <span>Total à payer sur place</span>
-                <span className="text-xl font-bold text-primary">{cartTotal.toFixed(0)} DH</span>
+            <div className="bg-[#5E5B34] rounded-lg p-4">
+              <div className="flex justify-between text-lg font-bold text-[#F2E9D3]">
+                <span>{t.goodies.total}</span>
+                <span>{cartTotal} DH</span>
               </div>
+              <p className="text-sm text-[#E6DCC3] mt-2">{t.goodies.paymentOnSite}</p>
             </div>
-
             <Button 
               type="submit" 
-              className="w-full" 
-              size="lg"
               disabled={createOrderMutation.isPending}
+              className="w-full bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]"
             >
               {createOrderMutation.isPending ? (
                 <>
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                  Réservation en cours...
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {t.goodies.processing}
                 </>
               ) : (
-                <>
-                  <CheckCircle className="h-5 w-5 mr-2" />
-                  Confirmer la réservation
-                </>
+                t.goodies.confirmReservation
               )}
             </Button>
           </form>

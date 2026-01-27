@@ -11,8 +11,10 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import { Users, Calendar, CheckCircle, Mail, Phone, MapPin, ArrowRight, Loader2, QrCode, Clock, AlertCircle } from "lucide-react";
+import { useI18n } from "@/i18n";
 
 export default function Benevole() {
+  const { t, lang } = useI18n();
   const search = useSearch();
   const params = new URLSearchParams(search);
   const preselectedDay = params.get('day');
@@ -38,17 +40,18 @@ export default function Benevole() {
   const registerMutation = trpc.volunteers.register.useMutation({
     onSuccess: (data) => {
       const selectedDay = days?.find(d => d.id === parseInt(formData.dayId));
+      const dateLocale = lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-US' : 'fr-FR';
       setRegistrationSuccess({
         qrToken: data.qrToken,
         dayInfo: {
           dayNumber: selectedDay?.dayNumber || 0,
-          date: selectedDay?.date ? new Date(selectedDay.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : '',
+          date: selectedDay?.date ? new Date(selectedDay.date).toLocaleDateString(dateLocale, { weekday: 'long', day: 'numeric', month: 'long' }) : '',
         }
       });
-      toast.success("Inscription réussie ! Vérifiez votre email.");
+      toast.success(t.volunteer.submitSuccess);
     },
     onError: (error) => {
-      toast.error(error.message || "Erreur lors de l'inscription");
+      toast.error(error.message || t.volunteer.submitError);
     },
   });
 
@@ -62,12 +65,12 @@ export default function Benevole() {
     e.preventDefault();
     
     if (!formData.acceptedTerms) {
-      toast.error("Veuillez accepter les conditions");
+      toast.error(lang === 'ar' ? 'يرجى قبول الشروط' : lang === 'en' ? 'Please accept the terms' : 'Veuillez accepter les conditions');
       return;
     }
     
     if (!formData.dayId) {
-      toast.error("Veuillez sélectionner un jour");
+      toast.error(lang === 'ar' ? 'يرجى اختيار يوم' : lang === 'en' ? 'Please select a day' : 'Veuillez sélectionner un jour');
       return;
     }
 
@@ -83,6 +86,56 @@ export default function Benevole() {
   };
 
   const availableDays = days?.filter(d => d.isOpen && d.registeredCount < d.capacity) || [];
+  const dateLocale = lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-US' : 'fr-FR';
+
+  // Success screen translations
+  const successTexts = {
+    title: lang === 'ar' ? 'تم التسجيل بنجاح!' : lang === 'en' ? 'Registration confirmed!' : lang === 'amz' ? 'ⵜⵜⵓⵙⵊⵍ ⵙ ⵓⵎⵢⴰⵏ!' : 'Inscription confirmée !',
+    thankYou: lang === 'ar' ? 'شكرا لانضمامك إلى فريق المتطوعين لليوم' : lang === 'en' ? 'Thank you for joining our volunteer team for Day' : lang === 'amz' ? 'ⵜⴰⵏⵎⵎⵉⵔⵜ ⴰⴷ ⵜⵣⴷⵉⴷ ⴷ ⵜⵔⴰⴱⴱⵓⵜ ⵏ ⵉⵎⵜⵜⴰⵡⵉⵏ ⴳ ⵡⴰⵙⵙ' : 'Merci de rejoindre notre équipe de bénévoles pour le Jour',
+    qrCode: lang === 'ar' ? 'رمز QR الخاص بك:' : lang === 'en' ? 'Your unique QR code:' : lang === 'amz' ? 'ⴰⵙⵉⵖⵏ ⵏⵏⴽ QR:' : 'Votre code QR unique :',
+    scanQr: lang === 'ar' ? 'امسح هذا الرمز عند الدخول' : lang === 'en' ? 'Scan this QR code at the entrance' : lang === 'amz' ? 'ⵙⴽⴰⵏ ⴰⵙⵉⵖⵏ ⴰⴷ ⴳ ⵜⴰⵡⵡⵓⵔⵜ' : 'Scannez ce QR code à l\'entrée',
+    emailSent: lang === 'ar' ? 'تم إرسال بريد إلكتروني يحتوي على رمز QR والتعليمات.' : lang === 'en' ? 'An email with your QR code and instructions has been sent.' : lang === 'amz' ? 'ⵉⵜⵜⵓⵣⵏ ⵢⴰⵏ ⵉⵎⴰⵢⵍ ⵙ ⵓⵙⵉⵖⵏ QR ⴷ ⵉⵏⵎⴰⵍⴰⵏ.' : 'Un email contenant votre QR code et les consignes vous a été envoyé.',
+    newRegistration: lang === 'ar' ? 'تسجيل جديد' : lang === 'en' ? 'New registration' : lang === 'amz' ? 'ⴰⵙⵊⵍ ⴰⵎⴰⵢⵏⵓ' : 'Nouvelle inscription',
+    viewProgram: lang === 'ar' ? 'عرض البرنامج' : lang === 'en' ? 'View program' : lang === 'amz' ? 'ⵥⵕ ⴰⵖⴰⵡⴰⵙ' : 'Voir le programme',
+    confirmationEmail: lang === 'ar' ? 'بريد التأكيد' : lang === 'en' ? 'Confirmation email' : lang === 'amz' ? 'ⵉⵎⴰⵢⵍ ⵏ ⵓⵙⴷⴷⵉⴷ' : 'Email de confirmation',
+  };
+
+  // Form translations
+  const formTexts = {
+    joinUs: lang === 'ar' ? 'انضم إلينا' : lang === 'en' ? 'Join us' : lang === 'amz' ? 'ⵣⴷⵉ ⴷⵉⴷⵏⵖ' : 'Rejoignez-nous',
+    becomeVolunteer: lang === 'ar' ? 'كن متطوعا' : lang === 'en' ? 'Become a volunteer' : lang === 'amz' ? 'ⴳ ⴰⵎⵜⵜⴰⵡⵉ' : 'Devenir bénévole',
+    subtitle: lang === 'ar' ? 'شارك في هذه المغامرة التضامنية وشارك لحظات فريدة خلال شهر رمضان' : lang === 'en' ? 'Participate in this solidarity adventure and share unique moments during Ramadan' : lang === 'amz' ? 'ⴰⵎⵓⵔ ⴳ ⵜⴰⵎⵓⵔⵜ ⴰⴷ ⵏ ⵜⴰⴷⵓⴽⵍⵉ ⴷ ⴱⴹⵓ ⵜⵉⵣⵉⵜⵉⵏ ⵉⵎⵥⵍⴰⵢⵏ ⴳ ⵕⵎⴹⴰⵏ' : 'Participez à cette belle aventure solidaire et partagez des moments uniques pendant le Ramadan',
+    schedules: lang === 'ar' ? 'المواعيد' : lang === 'en' ? 'Schedules' : lang === 'amz' ? 'ⵉⵙⵔⴰⴳⵏ' : 'Horaires',
+    schedulesDesc: lang === 'ar' ? 'الوصول قبل ساعة ونصف من الإفطار. يستمر النشاط حوالي 3 ساعات.' : lang === 'en' ? 'Arrive 1h30 before Ftour. Activity lasts about 3 hours.' : lang === 'amz' ? 'ⴰⵡⴹ 1ⵙ30 ⴷⴰⵜ ⵏ ⵓⴼⵟⵓⵕ. ⵜⴰⵎⵀⵍⵜ ⵜⵇⵇⴰⵎ ⵖⵓⵔ 3 ⵉⵙⵔⴰⴳⵏ.' : 'Arrivée 1h30 avant le Ftour. L\'activité dure environ 3h au total.',
+    location: lang === 'ar' ? 'المكان' : lang === 'en' ? 'Location' : lang === 'amz' ? 'ⴰⴷⵖⴰⵔ' : 'Lieu',
+    locationDesc: lang === 'ar' ? 'سيتم إرسال العنوان الدقيق عبر البريد الإلكتروني بعد التسجيل.' : lang === 'en' ? 'The exact address will be sent by email after registration.' : lang === 'amz' ? 'ⵜⴰⵏⵙⴰ ⵜⵓⵎⵍⵉⵍⵜ ⴰⴷ ⵜⵜⵓⵣⵏ ⵙ ⵉⵎⴰⵢⵍ ⴷⴼⴼⵉⵔ ⵏ ⵓⵙⵊⵍ.' : 'L\'adresse exacte vous sera communiquée par email après inscription.',
+    qrCodeTitle: lang === 'ar' ? 'رمز QR' : lang === 'en' ? 'QR Code' : lang === 'amz' ? 'ⴰⵙⵉⵖⵏ QR' : 'QR Code',
+    qrCodeDesc: lang === 'ar' ? 'ستتلقى رمز QR فريدًا لتقديمه عند الدخول يوم المشاركة.' : lang === 'en' ? 'You will receive a unique QR code to present at the entrance on the day.' : lang === 'amz' ? 'ⴰⴷ ⵜⴰⵡⵉⴷ ⴰⵙⵉⵖⵏ QR ⵉⵎⵥⵍⴰⵢ ⴰⴷ ⵜⵙⵙⴽⵏⴷ ⴳ ⵜⴰⵡⵡⵓⵔⵜ ⴰⵙⵙ ⵏ ⵜⵎⵓⵔⵜ.' : 'Vous recevrez un QR code unique à présenter à l\'entrée le jour J.',
+    important: lang === 'ar' ? 'مهم' : lang === 'en' ? 'Important' : lang === 'amz' ? 'ⴰⵎⵇⵇⵔⴰⵏ' : 'Important',
+    dress: lang === 'ar' ? 'لباس محتشم مطلوب' : lang === 'en' ? 'Proper dress required' : lang === 'amz' ? 'ⵉⵅⵚⵚⴰ ⵓⵙⵙⴰⵢ ⵉⵥⵉⵍⵏ' : 'Tenue correcte exigée',
+    punctuality: lang === 'ar' ? 'الالتزام بالمواعيد مطلوب' : lang === 'en' ? 'Punctuality required' : lang === 'amz' ? 'ⵉⵅⵚⵚⴰ ⵜⵉⵣⵉ' : 'Ponctualité requise',
+    instructions: lang === 'ar' ? 'احترام التعليمات' : lang === 'en' ? 'Respect instructions' : lang === 'amz' ? 'ⵙⵙⵓⴷⵓ ⵉⵏⵎⴰⵍⴰⵏ' : 'Respect des consignes',
+    fitness: lang === 'ar' ? 'لياقة بدنية جيدة' : lang === 'en' ? 'Good physical condition' : lang === 'amz' ? 'ⵜⴰⴷⵓⵙⵉ ⵜⴰⴼⵉⵣⵉⴽⵜ ⵉⴼⵓⵍⴽⵉⵏ' : 'Bonne condition physique',
+    formTitle: lang === 'ar' ? 'استمارة التسجيل' : lang === 'en' ? 'Registration form' : lang === 'amz' ? 'ⵜⴰⵍⵖⴰ ⵏ ⵓⵙⵊⵍ' : 'Formulaire d\'inscription',
+    formDesc: lang === 'ar' ? 'املأ هذا النموذج للتسجيل كمتطوع' : lang === 'en' ? 'Fill out this form to register as a volunteer' : lang === 'amz' ? 'ⵙⵎⴷ ⵜⴰⵍⵖⴰ ⴰⴷ ⴰⴷ ⵜⵙⵊⵍⴷ ⴰⵎ ⴰⵎⵜⵜⴰⵡⵉ' : 'Remplissez ce formulaire pour vous inscrire comme bénévole',
+    dayLabel: lang === 'ar' ? 'يوم المشاركة *' : lang === 'en' ? 'Participation day *' : lang === 'amz' ? 'ⴰⵙⵙ ⵏ ⵜⵎⵓⵔⵜ *' : 'Jour de participation *',
+    selectDay: lang === 'ar' ? 'اختر يومًا' : lang === 'en' ? 'Select a day' : lang === 'amz' ? 'ⵙⵜⵉ ⴰⵙⵙ' : 'Sélectionnez un jour',
+    loading: lang === 'ar' ? 'جاري التحميل...' : lang === 'en' ? 'Loading...' : lang === 'amz' ? 'ⴰⵙⵔⵙ...' : 'Chargement...',
+    noDay: lang === 'ar' ? 'لا يوجد يوم متاح' : lang === 'en' ? 'No day available' : lang === 'amz' ? 'ⵓⵔ ⵉⵍⵍⵉ ⵡⴰⵙⵙ' : 'Aucun jour disponible',
+    places: lang === 'ar' ? 'أماكن' : lang === 'en' ? 'places' : lang === 'amz' ? 'ⵉⴷⵖⴰⵔⵏ' : 'places',
+    day: lang === 'ar' ? 'اليوم' : lang === 'en' ? 'Day' : lang === 'amz' ? 'ⴰⵙⵙ' : 'Jour',
+    firstName: lang === 'ar' ? 'الاسم الأول *' : lang === 'en' ? 'First name *' : lang === 'amz' ? 'ⵉⵙⵎ ⴰⵎⵣⵡⴰⵔⵓ *' : 'Prénom *',
+    firstNamePlaceholder: lang === 'ar' ? 'اسمك الأول' : lang === 'en' ? 'Your first name' : lang === 'amz' ? 'ⵉⵙⵎ ⵏⵏⴽ ⴰⵎⵣⵡⴰⵔⵓ' : 'Votre prénom',
+    lastName: lang === 'ar' ? 'اسم العائلة *' : lang === 'en' ? 'Last name *' : lang === 'amz' ? 'ⵉⵙⵎ ⵏ ⵜⵡⵊⴰ *' : 'Nom *',
+    lastNamePlaceholder: lang === 'ar' ? 'اسم عائلتك' : lang === 'en' ? 'Your last name' : lang === 'amz' ? 'ⵉⵙⵎ ⵏ ⵜⵡⵊⴰ ⵏⵏⴽ' : 'Votre nom',
+    email: lang === 'ar' ? 'البريد الإلكتروني *' : lang === 'en' ? 'Email *' : lang === 'amz' ? 'ⵉⵎⴰⵢⵍ *' : 'Email *',
+    phone: lang === 'ar' ? 'الهاتف *' : lang === 'en' ? 'Phone *' : lang === 'amz' ? 'ⵜⵉⵍⵉⴼⵓⵏ *' : 'Téléphone *',
+    city: lang === 'ar' ? 'المدينة (اختياري)' : lang === 'en' ? 'City (optional)' : lang === 'amz' ? 'ⵜⴰⵎⴷⵉⵏⵜ (ⴰⵙⵜⴰⵢ)' : 'Ville (optionnel)',
+    cityPlaceholder: lang === 'ar' ? 'مدينتك' : lang === 'en' ? 'Your city' : lang === 'amz' ? 'ⵜⴰⵎⴷⵉⵏⵜ ⵏⵏⴽ' : 'Votre ville',
+    terms: lang === 'ar' ? 'أوافق على شروط المشاركة وسياسة الخصوصية. أتعهد باحترام التعليمات والحضور في اليوم المختار.' : lang === 'en' ? 'I accept the terms of participation and privacy policy. I commit to respecting the instructions and being present on the chosen day.' : lang === 'amz' ? 'ⵇⴱⵍⵖ ⵜⵉⵡⵉⵍⴰⵡⵉⵏ ⵏ ⵜⵎⵓⵔⵜ ⴷ ⵜⴰⵙⵔⵜⵉⵜ ⵏ ⵜⵉⵏⵏⵓⵜⵍⴰ. ⴰⴷ ⵙⵙⵓⴷⵓⵖ ⵉⵏⵎⴰⵍⴰⵏ ⴷ ⴰⴷ ⵉⵍⵉⵖ ⴳ ⵡⴰⵙⵙ ⵉⵜⵜⵓⵙⵜⴰⵢⵏ.' : 'J\'accepte les conditions de participation et la politique de confidentialité. Je m\'engage à respecter les consignes et à être présent(e) le jour choisi.',
+    registering: lang === 'ar' ? 'جاري التسجيل...' : lang === 'en' ? 'Registering...' : lang === 'amz' ? 'ⴰⵙⵊⵍ...' : 'Inscription en cours...',
+    register: lang === 'ar' ? 'التسجيل كمتطوع' : lang === 'en' ? 'Register as volunteer' : lang === 'amz' ? 'ⵙⵊⵍ ⴰⵎ ⴰⵎⵜⵜⴰⵡⵉ' : 'S\'inscrire comme bénévole',
+  };
 
   if (registrationSuccess) {
     return (
@@ -97,9 +150,9 @@ export default function Benevole() {
                 </div>
                 
                 <div className="space-y-2">
-                  <h1 className="text-2xl font-bold text-foreground">Inscription confirmée !</h1>
+                  <h1 className="text-2xl font-bold text-foreground">{successTexts.title}</h1>
                   <p className="text-muted-foreground">
-                    Merci de rejoindre notre équipe de bénévoles pour le Jour {registrationSuccess.dayInfo.dayNumber}
+                    {successTexts.thankYou} {registrationSuccess.dayInfo.dayNumber}
                   </p>
                 </div>
 
@@ -110,16 +163,15 @@ export default function Benevole() {
                   </div>
                   
                   <div className="border-t border-border pt-4">
-                    <p className="text-sm text-muted-foreground mb-3">Votre code QR unique :</p>
+                    <p className="text-sm text-muted-foreground mb-3">{successTexts.qrCode}</p>
                     <div className="bg-white p-4 rounded-lg inline-block">
-                      {/* QR Code généré via API Google Charts - Standard ISO/IEC 18004 */}
                       <img 
                         src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${window.location.origin}/checkin/${registrationSuccess.qrToken}`)}`}
-                        alt="QR Code de validation"
+                        alt="QR Code"
                         className="w-48 h-48"
                       />
                       <p className="text-xs text-muted-foreground mt-2 text-center">
-                        Scannez ce QR code à l'entrée
+                        {successTexts.scanQr}
                       </p>
                     </div>
                   </div>
@@ -128,20 +180,19 @@ export default function Benevole() {
                 <div className="bg-primary/5 rounded-lg p-4 text-left space-y-2">
                   <h3 className="font-semibold flex items-center gap-2">
                     <Mail className="h-4 w-4 text-primary" />
-                    Email de confirmation
+                    {successTexts.confirmationEmail}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    Un email contenant votre QR code et les consignes vous a été envoyé. 
-                    Présentez ce QR code à l'entrée le jour de votre participation.
+                    {successTexts.emailSent}
                   </p>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   <Button onClick={() => setRegistrationSuccess(null)} variant="outline" className="flex-1">
-                    Nouvelle inscription
+                    {successTexts.newRegistration}
                   </Button>
-                  <Button onClick={() => navigate('/programme')} className="flex-1">
-                    Voir le programme
+                  <Button onClick={() => navigate(`/${lang}/programme`)} className="flex-1">
+                    {successTexts.viewProgram}
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
@@ -165,13 +216,13 @@ export default function Benevole() {
             <div className="max-w-3xl mx-auto text-center space-y-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
                 <Users className="h-4 w-4" />
-                Rejoignez-nous
+                {formTexts.joinUs}
               </div>
               <h1 className="text-4xl md:text-5xl font-bold text-foreground">
-                Devenir bénévole
+                {formTexts.becomeVolunteer}
               </h1>
               <p className="text-lg text-muted-foreground">
-                Participez à cette belle aventure solidaire et partagez des moments uniques pendant le Ramadan
+                {formTexts.subtitle}
               </p>
             </div>
           </div>
@@ -189,10 +240,10 @@ export default function Benevole() {
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                         <Clock className="h-5 w-5 text-primary" />
                       </div>
-                      <h3 className="font-semibold">Horaires</h3>
+                      <h3 className="font-semibold">{formTexts.schedules}</h3>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Arrivée 1h30 avant le Ftour. L'activité dure environ 3h au total.
+                      {formTexts.schedulesDesc}
                     </p>
                   </CardContent>
                 </Card>
@@ -203,10 +254,10 @@ export default function Benevole() {
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                         <MapPin className="h-5 w-5 text-primary" />
                       </div>
-                      <h3 className="font-semibold">Lieu</h3>
+                      <h3 className="font-semibold">{formTexts.location}</h3>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      L'adresse exacte vous sera communiquée par email après inscription.
+                      {formTexts.locationDesc}
                     </p>
                   </CardContent>
                 </Card>
@@ -217,10 +268,10 @@ export default function Benevole() {
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                         <QrCode className="h-5 w-5 text-primary" />
                       </div>
-                      <h3 className="font-semibold">QR Code</h3>
+                      <h3 className="font-semibold">{formTexts.qrCodeTitle}</h3>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Vous recevrez un QR code unique à présenter à l'entrée le jour J.
+                      {formTexts.qrCodeDesc}
                     </p>
                   </CardContent>
                 </Card>
@@ -229,13 +280,13 @@ export default function Benevole() {
                   <CardContent className="p-6 space-y-3">
                     <div className="flex items-center gap-2 text-primary">
                       <AlertCircle className="h-5 w-5" />
-                      <h3 className="font-semibold">Important</h3>
+                      <h3 className="font-semibold">{formTexts.important}</h3>
                     </div>
                     <ul className="text-sm text-muted-foreground space-y-2">
-                      <li>• Tenue correcte exigée</li>
-                      <li>• Ponctualité requise</li>
-                      <li>• Respect des consignes</li>
-                      <li>• Bonne condition physique</li>
+                      <li>• {formTexts.dress}</li>
+                      <li>• {formTexts.punctuality}</li>
+                      <li>• {formTexts.instructions}</li>
+                      <li>• {formTexts.fitness}</li>
                     </ul>
                   </CardContent>
                 </Card>
@@ -245,35 +296,35 @@ export default function Benevole() {
               <div className="lg:col-span-2">
                 <Card className="border-none shadow-lg">
                   <CardHeader>
-                    <CardTitle>Formulaire d'inscription</CardTitle>
+                    <CardTitle>{formTexts.formTitle}</CardTitle>
                     <CardDescription>
-                      Remplissez ce formulaire pour vous inscrire comme bénévole
+                      {formTexts.formDesc}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-6">
                       {/* Day Selection */}
                       <div className="space-y-2">
-                        <Label htmlFor="day">Jour de participation *</Label>
+                        <Label htmlFor="day">{formTexts.dayLabel}</Label>
                         <Select
                           value={formData.dayId}
                           onValueChange={(value) => setFormData(prev => ({ ...prev, dayId: value }))}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionnez un jour" />
+                            <SelectValue placeholder={formTexts.selectDay} />
                           </SelectTrigger>
                           <SelectContent>
                             {daysLoading ? (
-                              <SelectItem value="loading" disabled>Chargement...</SelectItem>
+                              <SelectItem value="loading" disabled>{formTexts.loading}</SelectItem>
                             ) : availableDays.length > 0 ? (
                               availableDays.map((day) => (
                                 <SelectItem key={day.id} value={day.id.toString()}>
-                                  Jour {day.dayNumber} - {new Date(day.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
-                                  {' '}({day.capacity - day.registeredCount} places)
+                                  {formTexts.day} {day.dayNumber} - {new Date(day.date).toLocaleDateString(dateLocale, { weekday: 'short', day: 'numeric', month: 'short' })}
+                                  {' '}({day.capacity - day.registeredCount} {formTexts.places})
                                 </SelectItem>
                               ))
                             ) : (
-                              <SelectItem value="none" disabled>Aucun jour disponible</SelectItem>
+                              <SelectItem value="none" disabled>{formTexts.noDay}</SelectItem>
                             )}
                           </SelectContent>
                         </Select>
@@ -282,22 +333,22 @@ export default function Benevole() {
                       {/* Name Fields */}
                       <div className="grid sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="firstName">Prénom *</Label>
+                          <Label htmlFor="firstName">{formTexts.firstName}</Label>
                           <Input
                             id="firstName"
                             value={formData.firstName}
                             onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                            placeholder="Votre prénom"
+                            placeholder={formTexts.firstNamePlaceholder}
                             required
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="lastName">Nom *</Label>
+                          <Label htmlFor="lastName">{formTexts.lastName}</Label>
                           <Input
                             id="lastName"
                             value={formData.lastName}
                             onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                            placeholder="Votre nom"
+                            placeholder={formTexts.lastNamePlaceholder}
                             required
                           />
                         </div>
@@ -306,7 +357,7 @@ export default function Benevole() {
                       {/* Contact Fields */}
                       <div className="grid sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="email">Email *</Label>
+                          <Label htmlFor="email">{formTexts.email}</Label>
                           <Input
                             id="email"
                             type="email"
@@ -317,7 +368,7 @@ export default function Benevole() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="phone">Téléphone *</Label>
+                          <Label htmlFor="phone">{formTexts.phone}</Label>
                           <Input
                             id="phone"
                             type="tel"
@@ -331,12 +382,12 @@ export default function Benevole() {
 
                       {/* City */}
                       <div className="space-y-2">
-                        <Label htmlFor="city">Ville (optionnel)</Label>
+                        <Label htmlFor="city">{formTexts.city}</Label>
                         <Input
                           id="city"
                           value={formData.city}
                           onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                          placeholder="Votre ville"
+                          placeholder={formTexts.cityPlaceholder}
                         />
                       </div>
 
@@ -348,8 +399,7 @@ export default function Benevole() {
                           onCheckedChange={(checked) => setFormData(prev => ({ ...prev, acceptedTerms: checked as boolean }))}
                         />
                         <label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
-                          J'accepte les conditions de participation et la politique de confidentialité. 
-                          Je m'engage à respecter les consignes et à être présent(e) le jour choisi.
+                          {formTexts.terms}
                         </label>
                       </div>
 
@@ -363,12 +413,12 @@ export default function Benevole() {
                         {registerMutation.isPending ? (
                           <>
                             <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                            Inscription en cours...
+                            {formTexts.registering}
                           </>
                         ) : (
                           <>
                             <Users className="h-5 w-5 mr-2" />
-                            S'inscrire comme bénévole
+                            {formTexts.register}
                           </>
                         )}
                       </Button>
