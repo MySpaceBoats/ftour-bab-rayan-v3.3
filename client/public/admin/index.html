@@ -150,6 +150,13 @@
     // Get Supabase session from localStorage
     function getSupabaseSession() {
       try {
+        // D'abord essayer notre token personnalisé
+        const customToken = localStorage.getItem('supabase_token');
+        if (customToken) {
+          return customToken;
+        }
+        
+        // Sinon essayer le format Supabase standard
         const storageKey = Object.keys(localStorage).find(key => 
           key.startsWith('sb-') && key.endsWith('-auth-token')
         );

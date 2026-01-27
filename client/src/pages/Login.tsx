@@ -17,12 +17,13 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
 
   const loginMutation = trpc.auth.login.useMutation({
-    onSuccess: (data: { user: unknown; session: string | null }) => {
+    onSuccess: (data: { user: { role?: string } | null; session: string | null }) => {
       if (data.session) {
         // Stocker le token dans localStorage
         localStorage.setItem('supabase_token', data.session);
-        // Rediriger vers la page d'accueil
-        window.location.href = '/';
+        // Rediriger vers /admin si l'utilisateur est admin, sinon vers l'accueil
+        const isAdmin = data.user?.role && ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner'].includes(data.user.role);
+        window.location.href = isAdmin ? '/admin' : '/';
       }
     },
     onError: (err: { message?: string }) => {

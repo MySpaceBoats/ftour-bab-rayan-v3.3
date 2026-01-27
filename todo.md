@@ -321,3 +321,7 @@
 - [x] Ajouter scroll automatique vers le haut à chaque changement de page
 - [x] Lien Support doit diriger vers /contact au lieu de /connexion (déjà correct)
 - [x] Lien Support doit diriger vers /connexion (pour les admins)
+
+## Bugs - 27/01/2026 (soir - suite 2)
+- [x] Bouton Administration ne redirige pas vers /admin après connexion (corrigé - redirection automatique pour les admins)
+- [ ] CMS bloqué sur "Chargement du CMS..." sur ftourbabrayan.ma/admin (en pause - utiliser /admin à la place)
