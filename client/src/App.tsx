@@ -37,7 +37,7 @@ import AdminScan from "./pages/AdminScan";
 
 // Language-aware route wrapper
 function LocalizedRoutes() {
-  const [location, setLocation] = useLocation();
+  const [location] = useLocation();
   const { lang, setLang } = useI18n();
   
   // Scroll to top on route change
@@ -45,8 +45,13 @@ function LocalizedRoutes() {
     window.scrollTo(0, 0);
   }, [location]);
   
-  // Extract locale from URL path
+  // Extract locale from URL path (only for non-admin routes)
   useEffect(() => {
+    // Skip locale detection for admin, scanner, and checkin routes
+    if (location.startsWith('/admin') || location.startsWith('/scanner') || location.startsWith('/checkin')) {
+      return;
+    }
+    
     const pathParts = location.split('/').filter(Boolean);
     const urlLocale = pathParts[0] as Locale;
     
@@ -59,6 +64,22 @@ function LocalizedRoutes() {
   
   return (
     <Switch>
+      {/* Admin pages - MUST be before /:lang to avoid being captured */}
+      <Route path="/admin" component={Admin} />
+      <Route path="/admin/benevoles" component={AdminBenevoles} />
+      <Route path="/admin/commandes" component={AdminCommandes} />
+      <Route path="/admin/dons" component={AdminDons} />
+      <Route path="/admin/jours" component={AdminJours} />
+      <Route path="/admin/utilisateurs" component={AdminUtilisateurs} />
+      <Route path="/admin/goodies" component={AdminGoodies} />
+      <Route path="/admin/scan" component={AdminScan} />
+      
+      {/* Scanner (mobile-first) - no locale prefix */}
+      <Route path="/scanner" component={Scanner} />
+      
+      {/* Public QR Check-in page - no locale prefix */}
+      <Route path="/checkin/:token" component={Checkin} />
+      
       {/* Redirect root to default locale */}
       <Route path="/">
         {() => <Redirect to={`/${lang}`} />}
@@ -77,22 +98,6 @@ function LocalizedRoutes() {
       <Route path="/:lang/mentions-legales" component={MentionsLegales} />
       <Route path="/:lang/connexion" component={Login} />
       <Route path="/:lang/inscription" component={Signup} />
-      
-      {/* Scanner (mobile-first) - no locale prefix */}
-      <Route path="/scanner" component={Scanner} />
-      
-      {/* Public QR Check-in page - no locale prefix */}
-      <Route path="/checkin/:token" component={Checkin} />
-      
-      {/* Admin pages - no locale prefix */}
-      <Route path="/admin" component={Admin} />
-      <Route path="/admin/benevoles" component={AdminBenevoles} />
-      <Route path="/admin/commandes" component={AdminCommandes} />
-      <Route path="/admin/dons" component={AdminDons} />
-      <Route path="/admin/jours" component={AdminJours} />
-      <Route path="/admin/utilisateurs" component={AdminUtilisateurs} />
-      <Route path="/admin/goodies" component={AdminGoodies} />
-      <Route path="/admin/scan" component={AdminScan} />
       
       {/* Legacy routes - redirect to localized versions */}
       <Route path="/programme">
