@@ -131,10 +131,9 @@
      * 3. Proxies all Git operations through /api/cms/* endpoints
      */
     
-    // Configuration
-    const CMS_API_BASE = 'https://api.ftourbabrayan.ma/api/cms';
-    const SUPABASE_URL = 'https://nwxvbmicwkqzjbxqxqxq.supabase.co'; // Will be replaced with actual URL
-    const SITE_URL = 'https://www.ftourbabrayan.ma';
+    // Configuration - utilise le même serveur que l'application
+    const CMS_API_BASE = '/api/cms';
+    const SITE_URL = window.location.origin;
     
     // Hide loading screen when CMS is ready
     function hideLoading() {
@@ -195,7 +194,7 @@
       
       if (!token) {
         // No session, redirect to login
-        window.location.href = '/connexion?redirect=/admin/';
+        window.location.href = '/connexion?redirect=/cms/';
         return;
       }
       

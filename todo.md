@@ -326,3 +326,6 @@
 - [x] Bouton Administration ne redirige pas vers /admin après connexion (corrigé - redirection automatique pour les admins)
 - [x] Page /admin affiche maintenant l'interface d'administration complète (routes réorganisées)
 - [ ] CMS bloqué sur "Chargement du CMS..." sur ftourbabrayan.ma/admin (en pause - utiliser /admin à la place)
+
+## Corrections CMS - 27/01/2026
+- [x] Configurer le CMS sur /cms avec les bons endpoints API (même serveur que Supabase)
