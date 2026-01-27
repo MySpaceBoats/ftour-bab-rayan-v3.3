@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>CMS - Ftour Bab Rayan</title>
+  
+  <!-- Decap CMS -->
+  <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+  
+  <style>
+    /* Custom styles for Ftour Bab Rayan CMS */
+    :root {
+      --cms-primary: #4A4829;
+      --cms-secondary: #6F6C3F;
+      --cms-accent: #CDBB8A;
+      --cms-background: #F2E9D3;
+    }
+    
+    /* Loading screen */
+    .cms-loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--cms-background);
+      z-index: 9999;
+    }
+    
+    .cms-loading.hidden {
+      display: none;
+    }
+    
+    .cms-loading-logo {
+      font-family: 'Caveat', cursive;
+      font-size: 2.5rem;
+      color: var(--cms-primary);
+      margin-bottom: 1rem;
+    }
+    
+    .cms-loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--cms-accent);
+      border-top-color: var(--cms-primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Access denied screen */
+    .cms-access-denied {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--cms-background);
+      z-index: 9999;
+    }
+    
+    .cms-access-denied.visible {
+      display: flex;
+    }
+    
+    .cms-access-denied h1 {
+      font-family: 'Caveat', cursive;
+      font-size: 2rem;
+      color: var(--cms-primary);
+      margin-bottom: 1rem;
+    }
+    
+    .cms-access-denied p {
+      color: var(--cms-secondary);
+      margin-bottom: 2rem;
+    }
+    
+    .cms-access-denied a {
+      padding: 0.75rem 1.5rem;
+      background: var(--cms-primary);
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+    }
+    
+    .cms-access-denied a:hover {
+      background: var(--cms-secondary);
+    }
+  </style>
+  
+  <!-- Google Fonts for branding -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Loading screen -->
+  <div id="cms-loading" class="cms-loading">
+    <div class="cms-loading-logo">Ftour Bab Rayan</div>
+    <div class="cms-loading-spinner"></div>
+    <p style="margin-top: 1rem; color: #6F6C3F;">Chargement du CMS...</p>
+  </div>
+  
+  <!-- Access denied screen -->
+  <div id="cms-access-denied" class="cms-access-denied">
+    <h1>Accès refusé</h1>
+    <p>Vous devez être administrateur pour accéder au CMS.</p>
+    <a href="/">Retour à l'accueil</a>
+  </div>
+  
+  <script>
+    /**
+     * Custom Supabase Authentication Backend for Decap CMS
+     * 
+     * This script registers a custom authentication backend that:
+     * 1. Uses Supabase Auth for user authentication
+     * 2. Validates admin role via the /api/cms/session endpoint
+     * 3. Proxies all Git operations through /api/cms/* endpoints
+     */
+    
+    // Configuration
+    const CMS_API_BASE = 'https://api.ftourbabrayan.ma/api/cms';
+    const SUPABASE_URL = 'https://nwxvbmicwkqzjbxqxqxq.supabase.co'; // Will be replaced with actual URL
+    const SITE_URL = 'https://www.ftourbabrayan.ma';
+    
+    // Hide loading screen when CMS is ready
+    function hideLoading() {
+      document.getElementById('cms-loading').classList.add('hidden');
+    }
+    
+    // Show access denied screen
+    function showAccessDenied() {
+      document.getElementById('cms-loading').classList.add('hidden');
+      document.getElementById('cms-access-denied').classList.add('visible');
+    }
+    
+    // Get Supabase session from localStorage
+    function getSupabaseSession() {
+      try {
+        const storageKey = Object.keys(localStorage).find(key => 
+          key.startsWith('sb-') && key.endsWith('-auth-token')
+        );
+        if (storageKey) {
+          const data = JSON.parse(localStorage.getItem(storageKey));
+          return data?.access_token || null;
+        }
+      } catch (e) {
+        console.error('Error getting Supabase session:', e);
+      }
+      return null;
+    }
+    
+    // Validate session with backend
+    async function validateSession(token) {
+      try {
+        const response = await fetch(`${CMS_API_BASE}/session`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          return data.user;
+        }
+      } catch (e) {
+        console.error('Session validation error:', e);
+      }
+      return null;
+    }
+    
+    // Initialize CMS after auth check
+    async function initCMS() {
+      const token = getSupabaseSession();
+      
+      if (!token) {
+        // No session, redirect to login
+        window.location.href = '/connexion?redirect=/admin/';
+        return;
+      }
+      
+      const user = await validateSession(token);
+      
+      if (!user) {
+        showAccessDenied();
+        return;
+      }
+      
+      // User is authenticated and authorized
+      console.log('[CMS] Authenticated as:', user.email, '(', user.role, ')');
+      
+      // Store token for API calls
+      window.CMS_AUTH_TOKEN = token;
+      window.CMS_USER = user;
+      
+      // Hide loading
+      hideLoading();
+    }
+    
+    // Register custom backend for Decap CMS
+    CMS.registerBackend('custom-github', class CustomGitHubBackend {
+      constructor(config, options = {}) {
+        this.config = config;
+        this.options = options;
+        this.api_root = CMS_API_BASE;
+        this.token = window.CMS_AUTH_TOKEN;
+        this.repo = config.getIn(['backend', 'repo']);
+        this.branch = config.getIn(['backend', 'branch']) || 'main';
+      }
+      
+      authComponent() {
+        return null; // We handle auth externally
+      }
+      
+      restoreUser() {
+        return this.authenticate();
+      }
+      
+      async authenticate() {
+        if (!window.CMS_USER) {
+          throw new Error('Not authenticated');
+        }
+        
+        return {
+          name: window.CMS_USER.name || window.CMS_USER.email,
+          login: window.CMS_USER.email,
+          email: window.CMS_USER.email,
+          avatar_url: null,
+          token: this.token,
+        };
+      }
+      
+      logout() {
+        // Clear Supabase session
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+            localStorage.removeItem(key);
+          }
+        });
+        window.location.href = '/';
+      }
+      
+      getToken() {
+        return Promise.resolve(this.token);
+      }
+      
+      async request(path, options = {}) {
+        const url = `${this.api_root}${path}`;
+        const headers = {
+          'Authorization': `Bearer ${this.token}`,
+          'Content-Type': 'application/json',
+          ...options.headers,
+        };
+        
+        const response = await fetch(url, {
+          ...options,
+          headers,
+        });
+        
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`API error: ${response.status} - ${error}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          return response.json();
+        }
+        return response.text();
+      }
+      
+      // Entry operations
+      async entriesByFolder(folder, extension, depth) {
+        const path = `/github/repos/${this.repo}/contents/content/${folder}?ref=${this.branch}`;
+        const files = await this.request(path);
+        
+        return files
+          .filter(file => file.name.endsWith(`.${extension}`))
+          .map(file => ({
+            file: { path: file.path, id: file.sha },
+            data: '', // Will be loaded on demand
+          }));
+      }
+      
+      async entriesByFiles(files) {
+        return Promise.all(
+          files.map(async file => {
+            const data = await this.getEntry(file);
+            return { file, data };
+          })
+        );
+      }
+      
+      async getEntry(file) {
+        const path = `/github/repos/${this.repo}/contents/${file.path}?ref=${this.branch}`;
+        const response = await this.request(path);
+        
+        // Decode base64 content
+        const content = atob(response.content);
+        return content;
+      }
+      
+      async persistEntry(entry, mediaFiles, options) {
+        const path = entry.path;
+        const content = btoa(unescape(encodeURIComponent(entry.raw)));
+        
+        // Get existing file SHA if updating
+        let sha = null;
+        try {
+          const existing = await this.request(
+            `/github/repos/${this.repo}/contents/${path}?ref=${this.branch}`
+          );
+          sha = existing.sha;
+        } catch (e) {
+          // File doesn't exist, will create new
+        }
+        
+        const body = {
+          message: options.commitMessage || `Update ${path}`,
+          content: content,
+          branch: this.branch,
+          ...(sha ? { sha } : {}),
+        };
+        
+        await this.request(`/github/repos/${this.repo}/contents/${path}`, {
+          method: 'PUT',
+          body: JSON.stringify(body),
+        });
+      }
+      
+      async deleteEntry(path, commitMessage) {
+        const existing = await this.request(
+          `/github/repos/${this.repo}/contents/${path}?ref=${this.branch}`
+        );
+        
+        const body = {
+          message: commitMessage || `Delete ${path}`,
+          sha: existing.sha,
+          branch: this.branch,
+        };
+        
+        await this.request(`/github/repos/${this.repo}/contents/${path}`, {
+          method: 'DELETE',
+          body: JSON.stringify(body),
+        });
+      }
+      
+      // Media operations
+      async getMedia() {
+        try {
+          const path = `/github/repos/${this.repo}/contents/content/media?ref=${this.branch}`;
+          const files = await this.request(path);
+          
+          return files.map(file => ({
+            id: file.sha,
+            name: file.name,
+            path: file.path,
+            url: file.download_url,
+          }));
+        } catch (e) {
+          return [];
+        }
+      }
+      
+      async persistMedia(mediaFile) {
+        const path = `content/media/${mediaFile.name}`;
+        const content = await this.toBase64(mediaFile);
+        
+        const body = {
+          message: `Upload ${mediaFile.name}`,
+          content: content,
+          branch: this.branch,
+        };
+        
+        const response = await this.request(
+          `/github/repos/${this.repo}/contents/${path}`,
+          {
+            method: 'PUT',
+            body: JSON.stringify(body),
+          }
+        );
+        
+        return {
+          id: response.content.sha,
+          name: mediaFile.name,
+          path: path,
+          url: response.content.download_url,
+        };
+      }
+      
+      async deleteMedia(path) {
+        const existing = await this.request(
+          `/github/repos/${this.repo}/contents/${path}?ref=${this.branch}`
+        );
+        
+        await this.request(`/github/repos/${this.repo}/contents/${path}`, {
+          method: 'DELETE',
+          body: JSON.stringify({
+            message: `Delete ${path}`,
+            sha: existing.sha,
+            branch: this.branch,
+          }),
+        });
+      }
+      
+      toBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => {
+            const base64 = reader.result.split(',')[1];
+            resolve(base64);
+          };
+          reader.onerror = error => reject(error);
+        });
+      }
+    });
+    
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', initCMS);
+  </script>
+</body>
+</html>

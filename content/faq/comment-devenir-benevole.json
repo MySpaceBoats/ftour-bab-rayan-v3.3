@@ -1,0 +1,21 @@
+{
+  "question": "Comment devenir bénévole ?",
+  "answer": "Pour devenir bénévole, il vous suffit de vous inscrire sur notre site via la page \"Devenir bénévole\". Remplissez le formulaire avec vos informations et choisissez les jours où vous souhaitez participer. Vous recevrez ensuite un email de confirmation avec votre QR code personnel.",
+  "category": "volunteer",
+  "active": true,
+  "order": 1,
+  "translations": {
+    "ar": {
+      "question": "كيف أصبح متطوعًا؟",
+      "answer": "لتصبح متطوعًا، ما عليك سوى التسجيل على موقعنا عبر صفحة \"كن متطوعًا\". املأ النموذج بمعلوماتك واختر الأيام التي ترغب في المشاركة فيها."
+    },
+    "en": {
+      "question": "How to become a volunteer?",
+      "answer": "To become a volunteer, simply register on our website via the \"Become a volunteer\" page. Fill out the form with your information and choose the days you wish to participate."
+    },
+    "amz": {
+      "question": "ⵎⴰⵎⴽ ⴰⴷ ⴳⵖ ⴰⵎⵙⵜⴰⵡⴰⵏ?",
+      "answer": "ⴰⴷ ⵜⴳⵜ ⴰⵎⵙⵜⴰⵡⴰⵏ, ⵙⵊⵍ ⴳ ⵓⵙⵉⵜ ⵏⵏⵖ."
+    }
+  }
+}

@@ -240,3 +240,46 @@
 - [x] Lien Admin doit pointer vers la page de connexion (/connexion)
 - [x] Mettre à jour le numéro de téléphone : +212 610 023 555
 - [x] Corriger l'erreur DialogTitle sur la page bénévole (accessibilité)
+
+## Phase 19 : Intégration CMS Decap avec Supabase Auth et Git Gateway
+
+### Architecture
+- [x] Analyser l'architecture existante et planifier l'intégration
+- [x] Définir le schéma de la table profiles (utilise public.users existante avec role)
+
+### Backend Git Gateway
+- [x] Créer l'endpoint /api/cms/session pour validation session
+- [x] Créer l'endpoint /api/cms/auth pour l'authentification
+- [x] Créer l'endpoint /api/cms/github/* pour proxy Git sécurisé
+- [x] Créer l'endpoint /api/cms/content/* pour CRUD contenu
+- [x] Implémenter la vérification du rôle admin
+- [x] Sécuriser avec JWT et CORS strict
+- [x] Module GitHub App pour tokens temporaires
+
+### Configuration Decap CMS
+- [x] Créer /admin/index.html avec auth Supabase
+- [x] Créer /admin/config.yml avec backend custom-github
+- [x] Configurer les collections (pages, articles, testimonials, partners, faq, settings)
+- [x] Support multilingue intégré (FR, AR, EN, AMZ)
+
+### Structure de contenu
+- [ ] Créer /content/pages/
+- [ ] Créer /content/articles/
+- [ ] Créer /content/settings/
+
+### Sécurité
+- [ ] Protéger l'accès /admin (vérification rôle)
+- [ ] Tokens JWT à durée limitée
+- [ ] Logs d'accès CMS
+- [ ] Aucun token exposé côté client
+
+### Documentation
+- [ ] Documentation technique (architecture, installation)
+- [ ] Guide ajout d'un admin
+- [ ] Guide utilisateur (éditeur)
+
+### Contraintes strictes
+- ❌ Pas de Netlify Identity
+- ❌ Pas de CMS propriétaire
+- ❌ Pas de stockage contenu hors Git
+- ❌ Pas de token exposé côté client

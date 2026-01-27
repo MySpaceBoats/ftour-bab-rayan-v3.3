@@ -5,6 +5,7 @@
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import { appRouter } from './routers';
 import { createWorkerContext } from './context';
+import { handleCMSRequest } from './cms-handlers';
 
 export interface Env {
   SUPABASE_URL: string;
@@ -14,6 +15,11 @@ export interface Env {
   JWT_SECRET: string;
   VITE_APP_ID: string;
   NODE_ENV: string;
+  // GitHub App credentials for CMS
+  GITHUB_APP_ID: string;
+  GITHUB_APP_INSTALLATION_ID: string;
+  GITHUB_APP_PRIVATE_KEY: string;
+  CMS_ALLOWED_ORIGINS?: string;
 }
 
 export default {
@@ -41,6 +47,26 @@ export default {
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: baseCorsHeaders });
+    }
+
+    // Handle CMS API requests (must be before tRPC)
+    if (url.pathname.startsWith('/api/cms')) {
+      const cmsPath = url.pathname.substring(8); // Remove '/api/cms'
+      const response = await handleCMSRequest(request, env, cmsPath);
+      
+      // Merge CORS headers
+      const newHeaders = new Headers(response.headers);
+      Object.entries(baseCorsHeaders).forEach(([key, value]) => {
+        if (!newHeaders.has(key)) {
+          newHeaders.set(key, value);
+        }
+      });
+      
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newHeaders,
+      });
     }
 
     // Handle tRPC API requests

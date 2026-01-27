@@ -1,0 +1,361 @@
+# ==============================================
+# Decap CMS Configuration - Ftour Bab Rayan
+# ==============================================
+# 
+# This configuration uses a custom backend that:
+# - Authenticates via Supabase Auth
+# - Proxies Git operations through Cloudflare Workers
+# - Stores content in Git (no external CMS)
+#
+# Documentation: https://decapcms.org/docs/
+# ==============================================
+
+# Backend Configuration
+backend:
+  name: custom-github
+  repo: MySpaceBoats/ftour-bab-rayan-v2
+  branch: main
+  base_url: https://api.ftourbabrayan.ma
+  auth_endpoint: /api/cms/auth
+
+# Media Configuration
+media_folder: content/media
+public_folder: /content/media
+
+# Site Configuration
+site_url: https://www.ftourbabrayan.ma
+display_url: https://www.ftourbabrayan.ma
+logo_url: /logo.svg
+
+# Locale
+locale: fr
+
+# Slug Configuration
+slug:
+  encoding: unicode
+  clean_accents: true
+  sanitize_replacement: "-"
+
+# ==============================================
+# COLLECTIONS
+# ==============================================
+
+collections:
+  # ------------------------------------------
+  # Pages
+  # ------------------------------------------
+  - name: pages
+    label: "Pages"
+    label_singular: "Page"
+    folder: content/pages
+    create: true
+    slug: "{{slug}}"
+    extension: md
+    format: frontmatter
+    editor:
+      preview: false
+    fields:
+      - { name: title, label: "Titre", widget: string, required: true }
+      - { name: slug, label: "URL", widget: string, required: true, hint: "URL de la page (ex: a-propos)" }
+      - { name: description, label: "Description SEO", widget: text, required: false }
+      - { name: body, label: "Contenu", widget: markdown }
+      - name: translations
+        label: "Traductions"
+        widget: object
+        collapsed: true
+        fields:
+          - name: ar
+            label: "Arabe"
+            widget: object
+            collapsed: true
+            fields:
+              - { name: title, label: "Titre (AR)", widget: string, required: false }
+              - { name: body, label: "Contenu (AR)", widget: markdown, required: false }
+          - name: en
+            label: "Anglais"
+            widget: object
+            collapsed: true
+            fields:
+              - { name: title, label: "Titre (EN)", widget: string, required: false }
+              - { name: body, label: "Contenu (EN)", widget: markdown, required: false }
+          - name: amz
+            label: "Amazigh"
+            widget: object
+            collapsed: true
+            fields:
+              - { name: title, label: "Titre (AMZ)", widget: string, required: false }
+              - { name: body, label: "Contenu (AMZ)", widget: markdown, required: false }
+
+  # ------------------------------------------
+  # Articles / Actualités
+  # ------------------------------------------
+  - name: articles
+    label: "Articles"
+    label_singular: "Article"
+    folder: content/articles
+    create: true
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    extension: md
+    format: frontmatter
+    sortable_fields: [date, title]
+    view_filters:
+      - label: "Publiés"
+        field: published
+        pattern: true
+      - label: "Brouillons"
+        field: published
+        pattern: false
+    editor:
+      preview: false
+    fields:
+      - { name: title, label: "Titre", widget: string, required: true }
+      - { name: date, label: "Date", widget: datetime, required: true }
+      - { name: author, label: "Auteur", widget: string, required: false }
+      - { name: image, label: "Image principale", widget: image, required: false }
+      - { name: excerpt, label: "Extrait", widget: text, required: false, hint: "Résumé affiché dans les listes" }
+      - { name: published, label: "Publié", widget: boolean, default: false }
+      - name: tags
+        label: "Tags"
+        widget: list
+        required: false
+        field: { name: tag, label: "Tag", widget: string }
+      - { name: body, label: "Contenu", widget: markdown }
+      - name: translations
+        label: "Traductions"
+        widget: object
+        collapsed: true
+        fields:
+          - name: ar
+            label: "Arabe"
+            widget: object
+            collapsed: true
+            fields:
+              - { name: title, label: "Titre (AR)", widget: string, required: false }
+              - { name: excerpt, label: "Extrait (AR)", widget: text, required: false }
+              - { name: body, label: "Contenu (AR)", widget: markdown, required: false }
+          - name: en
+            label: "Anglais"
+            widget: object
+            collapsed: true
+            fields:
+              - { name: title, label: "Titre (EN)", widget: string, required: false }
+              - { name: excerpt, label: "Extrait (EN)", widget: text, required: false }
+              - { name: body, label: "Contenu (EN)", widget: markdown, required: false }
+          - name: amz
+            label: "Amazigh"
+            widget: object
+            collapsed: true
+            fields:
+              - { name: title, label: "Titre (AMZ)", widget: string, required: false }
+              - { name: excerpt, label: "Extrait (AMZ)", widget: text, required: false }
+              - { name: body, label: "Contenu (AMZ)", widget: markdown, required: false }
+
+  # ------------------------------------------
+  # Témoignages
+  # ------------------------------------------
+  - name: testimonials
+    label: "Témoignages"
+    label_singular: "Témoignage"
+    folder: content/testimonials
+    create: true
+    slug: "{{slug}}"
+    extension: json
+    format: json
+    editor:
+      preview: false
+    fields:
+      - { name: name, label: "Nom", widget: string, required: true }
+      - { name: role, label: "Rôle / Fonction", widget: string, required: false }
+      - { name: avatar, label: "Photo", widget: image, required: false }
+      - { name: content, label: "Témoignage", widget: text, required: true }
+      - { name: rating, label: "Note (1-5)", widget: number, min: 1, max: 5, default: 5 }
+      - { name: active, label: "Actif", widget: boolean, default: true }
+      - { name: order, label: "Ordre d'affichage", widget: number, default: 0 }
+      - name: translations
+        label: "Traductions"
+        widget: object
+        collapsed: true
+        fields:
+          - name: ar
+            label: "Arabe"
+            widget: object
+            collapsed: true
+            fields:
+              - { name: content, label: "Témoignage (AR)", widget: text, required: false }
+          - name: en
+            label: "Anglais"
+            widget: object
+            collapsed: true
+            fields:
+              - { name: content, label: "Témoignage (EN)", widget: text, required: false }
+          - name: amz
+            label: "Amazigh"
+            widget: object
+            collapsed: true
+            fields:
+              - { name: content, label: "Témoignage (AMZ)", widget: text, required: false }
+
+  # ------------------------------------------
+  # Partenaires
+  # ------------------------------------------
+  - name: partners
+    label: "Partenaires"
+    label_singular: "Partenaire"
+    folder: content/partners
+    create: true
+    slug: "{{slug}}"
+    extension: json
+    format: json
+    editor:
+      preview: false
+    fields:
+      - { name: name, label: "Nom", widget: string, required: true }
+      - { name: logo, label: "Logo", widget: image, required: false }
+      - { name: website, label: "Site web", widget: string, required: false }
+      - { name: description, label: "Description", widget: text, required: false }
+      - name: category
+        label: "Catégorie"
+        widget: select
+        options:
+          - { label: "Sponsor principal", value: "main" }
+          - { label: "Sponsor", value: "sponsor" }
+          - { label: "Partenaire média", value: "media" }
+          - { label: "Partenaire institutionnel", value: "institutional" }
+          - { label: "Partenaire logistique", value: "logistics" }
+      - { name: active, label: "Actif", widget: boolean, default: true }
+      - { name: order, label: "Ordre d'affichage", widget: number, default: 0 }
+
+  # ------------------------------------------
+  # FAQ
+  # ------------------------------------------
+  - name: faq
+    label: "FAQ"
+    label_singular: "Question"
+    folder: content/faq
+    create: true
+    slug: "{{slug}}"
+    extension: json
+    format: json
+    editor:
+      preview: false
+    fields:
+      - { name: question, label: "Question", widget: string, required: true }
+      - { name: answer, label: "Réponse", widget: markdown, required: true }
+      - name: category
+        label: "Catégorie"
+        widget: select
+        options:
+          - { label: "Général", value: "general" }
+          - { label: "Bénévolat", value: "volunteer" }
+          - { label: "Dons", value: "donation" }
+          - { label: "Goodies", value: "goodies" }
+          - { label: "Événement", value: "event" }
+      - { name: active, label: "Actif", widget: boolean, default: true }
+      - { name: order, label: "Ordre d'affichage", widget: number, default: 0 }
+      - name: translations
+        label: "Traductions"
+        widget: object
+        collapsed: true
+        fields:
+          - name: ar
+            label: "Arabe"
+            widget: object
+            collapsed: true
+            fields:
+              - { name: question, label: "Question (AR)", widget: string, required: false }
+              - { name: answer, label: "Réponse (AR)", widget: markdown, required: false }
+          - name: en
+            label: "Anglais"
+            widget: object
+            collapsed: true
+            fields:
+              - { name: question, label: "Question (EN)", widget: string, required: false }
+              - { name: answer, label: "Réponse (EN)", widget: markdown, required: false }
+          - name: amz
+            label: "Amazigh"
+            widget: object
+            collapsed: true
+            fields:
+              - { name: question, label: "Question (AMZ)", widget: string, required: false }
+              - { name: answer, label: "Réponse (AMZ)", widget: markdown, required: false }
+
+  # ------------------------------------------
+  # Paramètres du site
+  # ------------------------------------------
+  - name: settings
+    label: "Paramètres"
+    files:
+      - name: general
+        label: "Paramètres généraux"
+        file: content/settings/general.json
+        fields:
+          - { name: site_title, label: "Titre du site", widget: string }
+          - { name: site_description, label: "Description du site", widget: text }
+          - { name: contact_email, label: "Email de contact", widget: string }
+          - { name: contact_phone, label: "Téléphone", widget: string }
+          - { name: address, label: "Adresse", widget: text }
+          - name: social
+            label: "Réseaux sociaux"
+            widget: object
+            fields:
+              - { name: facebook, label: "Facebook", widget: string, required: false }
+              - { name: instagram, label: "Instagram", widget: string, required: false }
+              - { name: twitter, label: "Twitter/X", widget: string, required: false }
+              - { name: youtube, label: "YouTube", widget: string, required: false }
+              - { name: linkedin, label: "LinkedIn", widget: string, required: false }
+      
+      - name: event
+        label: "Paramètres de l'événement"
+        file: content/settings/event.json
+        fields:
+          - { name: edition, label: "Numéro d'édition", widget: number }
+          - { name: year, label: "Année", widget: number }
+          - { name: start_date, label: "Date de début", widget: datetime }
+          - { name: end_date, label: "Date de fin", widget: datetime }
+          - { name: location, label: "Lieu principal", widget: string }
+          - { name: daily_capacity, label: "Capacité journalière", widget: number }
+          - { name: registration_open, label: "Inscriptions ouvertes", widget: boolean }
+          - { name: donations_open, label: "Dons ouverts", widget: boolean }
+          - { name: goodies_open, label: "Boutique ouverte", widget: boolean }
+      
+      - name: homepage
+        label: "Page d'accueil"
+        file: content/settings/homepage.json
+        fields:
+          - { name: hero_title, label: "Titre principal", widget: string }
+          - { name: hero_subtitle, label: "Sous-titre", widget: text }
+          - { name: hero_image, label: "Image de fond", widget: image, required: false }
+          - { name: cta_volunteer, label: "Texte bouton bénévole", widget: string }
+          - { name: cta_donate, label: "Texte bouton don", widget: string }
+          - name: stats
+            label: "Statistiques"
+            widget: list
+            fields:
+              - { name: value, label: "Valeur", widget: string }
+              - { name: label, label: "Label", widget: string }
+          - name: translations
+            label: "Traductions"
+            widget: object
+            collapsed: true
+            fields:
+              - name: ar
+                label: "Arabe"
+                widget: object
+                collapsed: true
+                fields:
+                  - { name: hero_title, label: "Titre (AR)", widget: string, required: false }
+                  - { name: hero_subtitle, label: "Sous-titre (AR)", widget: text, required: false }
+              - name: en
+                label: "Anglais"
+                widget: object
+                collapsed: true
+                fields:
+                  - { name: hero_title, label: "Titre (EN)", widget: string, required: false }
+                  - { name: hero_subtitle, label: "Sous-titre (EN)", widget: text, required: false }
+              - name: amz
+                label: "Amazigh"
+                widget: object
+                collapsed: true
+                fields:
+                  - { name: hero_title, label: "Titre (AMZ)", widget: string, required: false }
+                  - { name: hero_subtitle, label: "Sous-titre (AMZ)", widget: text, required: false }

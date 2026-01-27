@@ -1,0 +1,27 @@
+{
+  "hero_title": "Ftour Bab Rayan",
+  "hero_subtitle": "Parce que chaque enfant mérite un bon départ dans la vie. Partageons ensemble des moments de solidarité pendant ce mois sacré.",
+  "hero_image": "",
+  "cta_volunteer": "Devenir bénévole",
+  "cta_donate": "Faire un don",
+  "stats": [
+    { "value": "12", "label": "Éditions" },
+    { "value": "150 000+", "label": "Repas servis" },
+    { "value": "5 000+", "label": "Bénévoles" },
+    { "value": "30", "label": "Jours de partage" }
+  ],
+  "translations": {
+    "ar": {
+      "hero_title": "فطور باب ريان",
+      "hero_subtitle": "لأن كل طفل يستحق بداية جيدة في الحياة. دعونا نتشارك لحظات التضامن خلال هذا الشهر الفضيل."
+    },
+    "en": {
+      "hero_title": "Ftour Bab Rayan",
+      "hero_subtitle": "Because every child deserves a good start in life. Let's share moments of solidarity during this sacred month."
+    },
+    "amz": {
+      "hero_title": "ⴼⵜⵓⵔ ⴱⴰⴱ ⵔⴰⵢⴰⵏ",
+      "hero_subtitle": "ⴰⵛⴽⵓ ⴽⵓ ⴰⴼⵔⵓⵅ ⵉⵙⵜⴰⵀⵍ ⵜⴰⵣⵡⵓⵔⵜ ⵉⴼⵓⵍⴽⵉⵏ ⴳ ⵜⵓⴷⵔⵜ."
+    }
+  }
+}
