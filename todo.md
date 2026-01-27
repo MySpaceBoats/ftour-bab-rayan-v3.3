@@ -231,3 +231,7 @@
 - [x] URLs dédiées (/fr, /ar, /amz, /en)
 - [x] Mémoriser la langue sélectionnée (localStorage)
 - [x] Support RTL pour l'arabe
+
+## Bug : Les onglets de menu ne fonctionnent pas
+- [x] Diagnostiquer le problème des liens de navigation
+- [x] Corriger les liens dans la Navbar pour le routing multilingue

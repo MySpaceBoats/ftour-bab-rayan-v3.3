@@ -22,14 +22,20 @@ export default function Navbar() {
 
   const isAdmin = user?.role && ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner'].includes(user.role);
 
+  // Fonction pour générer les URLs localisées
+  const localizedHref = (path: string) => {
+    if (path === '/') return `/${lang}`;
+    return `/${lang}${path}`;
+  };
+
   // Nouveau menu principal selon le cahier des charges
   const mainLinks = [
-    { href: "/", label: t.nav.home, icon: Home },
-    { href: "/evenement", label: t.nav.event, icon: Info },
-    { href: "/benevole", label: t.nav.volunteer, icon: Users },
-    { href: "/goodies", label: t.nav.goodies, icon: ShoppingBag },
-    { href: "/association", label: t.association.title, icon: Building2 },
-    { href: "/contact", label: t.nav.contact, icon: Phone },
+    { href: localizedHref('/'), label: t.nav.home, icon: Home },
+    { href: localizedHref('/evenement'), label: t.nav.event, icon: Info },
+    { href: localizedHref('/benevole'), label: t.nav.volunteer, icon: Users },
+    { href: localizedHref('/goodies'), label: t.nav.goodies, icon: ShoppingBag },
+    { href: localizedHref('/association'), label: t.association.title, icon: Building2 },
+    { href: localizedHref('/contact'), label: t.nav.contact, icon: Phone },
   ];
 
   const handleLogout = async () => {
@@ -144,7 +150,7 @@ export default function Navbar() {
       <div className="bg-[#4A4829] border-b border-[#F2E9D3]/20">
         <div className="container flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3">
+          <Link href={localizedHref('/')} className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center">
               <svg viewBox="0 0 40 40" className="h-10 w-10">
                 <path 
@@ -201,7 +207,7 @@ export default function Navbar() {
               </Button>
             )}
             {/* CTA Principal : Devenir bénévole */}
-            <Link href="/benevole">
+            <Link href={localizedHref('/benevole')}>
               <Button 
                 size="sm" 
                 className="bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3] border-2 border-[#F2E9D3] font-semibold"
@@ -211,7 +217,7 @@ export default function Navbar() {
               </Button>
             </Link>
             {/* CTA Secondaire : Faire un don */}
-            <Link href="/dons">
+            <Link href={localizedHref('/dons')}>
               <Button 
                 size="sm" 
                 variant="outline"
@@ -316,13 +322,13 @@ export default function Navbar() {
                   ) : null}
                   
                   {/* CTA Buttons Mobile */}
-                  <Link href="/benevole" onClick={() => setIsOpen(false)}>
+                  <Link href={localizedHref('/benevole')} onClick={() => setIsOpen(false)}>
                     <Button className="w-full bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3] border-2 border-[#F2E9D3] font-semibold">
                       <Users className="h-4 w-4 mr-2" />
                       {t.cta.volunteer}
                     </Button>
                   </Link>
-                  <Link href="/dons" onClick={() => setIsOpen(false)}>
+                  <Link href={localizedHref('/dons')} onClick={() => setIsOpen(false)}>
                     <Button 
                       variant="outline" 
                       className="w-full border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829] font-semibold"
