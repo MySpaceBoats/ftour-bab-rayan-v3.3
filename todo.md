@@ -309,3 +309,8 @@
 - [x] Sélecteur de langue ne fonctionne pas après chargement de la page (déjà implémenté avec window.location.href)
 - [x] Bouton d'accès à l'interface admin manquant pour les utilisateurs connectés (ajouté dans Navbar)
 - [x] Renommer "Admin" en "Support" dans le top menu (traductions ajoutées)
+
+
+## Bugs à corriger - 27/01/2026 (soir)
+- [x] Erreur NetworkError lors de l'envoi du formulaire de contact (testé et fonctionnel)
+- [x] Mettre à jour le numéro de téléphone dans les coordonnées de contact (+212 610 023 555)
