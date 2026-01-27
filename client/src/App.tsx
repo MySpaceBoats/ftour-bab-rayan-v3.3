@@ -40,6 +40,11 @@ function LocalizedRoutes() {
   const [location, setLocation] = useLocation();
   const { lang, setLang } = useI18n();
   
+  // Scroll to top on route change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location]);
+  
   // Extract locale from URL path
   useEffect(() => {
     const pathParts = location.split('/').filter(Boolean);

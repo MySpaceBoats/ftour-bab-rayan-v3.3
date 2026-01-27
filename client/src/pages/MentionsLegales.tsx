@@ -33,7 +33,7 @@ export default function MentionsLegales() {
               <ul>
                 <li><strong>Raison sociale :</strong> Association Bab Rayan</li>
                 <li><strong>Siège social :</strong> Casablanca, Maroc</li>
-                <li><strong>Email :</strong> contact@babrayan.ma</li>
+                <li><strong>Email :</strong> contact@ftourbabrayan.ma</li>
                 <li><strong>Site web :</strong> www.babrayan.ma</li>
               </ul>
 
@@ -77,7 +77,7 @@ export default function MentionsLegales() {
               </p>
               <p>
                 Pour exercer vos droits ou pour toute question relative à vos données personnelles, 
-                contactez-nous à : contact@babrayan.ma
+                contactez-nous à : contact@ftourbabrayan.ma
               </p>
 
               <h2>Cookies</h2>
@@ -114,7 +114,7 @@ export default function MentionsLegales() {
                 Pour toute question concernant ces mentions légales, vous pouvez nous contacter :
               </p>
               <ul>
-                <li>Par email : contact@babrayan.ma</li>
+                <li>Par email : contact@ftourbabrayan.ma</li>
                 <li>Via le formulaire de contact du site</li>
               </ul>
 

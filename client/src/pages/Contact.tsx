@@ -97,8 +97,8 @@ export default function Contact() {
                       </div>
                       <div>
                         <h3 className="font-semibold text-[#F2E9D3]">{t.contact.emailLabel}</h3>
-                        <a href="mailto:contact@babrayan.ma" className="text-[#CDBB8A] hover:text-[#F2E9D3]">
-                          contact@babrayan.ma
+                        <a href="mailto:contact@ftourbabrayan.ma" className="text-[#CDBB8A] hover:text-[#F2E9D3]">
+                          contact@ftourbabrayan.ma
                         </a>
                       </div>
                     </div>

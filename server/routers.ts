@@ -582,7 +582,7 @@ const contactRouter = router({
         });
         
         await sendEmail({
-          to: 'contact@babrayan.ma',
+          to: 'contact@ftourbabrayan.ma',
           subject: emailData.subject,
           html: emailData.html,
         });

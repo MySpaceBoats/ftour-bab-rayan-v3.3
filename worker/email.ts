@@ -5,7 +5,7 @@
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 const FROM_EMAIL = "Ftour Bab Rayan <onboarding@resend.dev>";
-const REPLY_TO = "contact@babrayan.ma";
+const REPLY_TO = "contact@ftourbabrayan.ma";
 const BCC_EMAIL = "rsebbani@myspace.boats";
 
 interface EmailOptions {
@@ -105,7 +105,7 @@ function baseTemplate(content: string): string {
               </p>
               <p style="margin: 0; font-size: 12px; color: #9ca3af;">
                 4 rue Bayt Lham, quartier Palmier, Casablanca<br>
-                Tél: +212 610 023 555 | contact@babrayan.ma
+                Tél: +212 610 023 555 | contact@ftourbabrayan.ma
               </p>
             </td>
           </tr>

@@ -314,3 +314,9 @@
 ## Bugs à corriger - 27/01/2026 (soir)
 - [x] Erreur NetworkError lors de l'envoi du formulaire de contact (testé et fonctionnel)
 - [x] Mettre à jour le numéro de téléphone dans les coordonnées de contact (+212 610 023 555)
+
+
+## Corrections - 27/01/2026 (soir suite)
+- [x] Changer l'email de contact vers contact@ftourbabrayan.ma
+- [x] Ajouter scroll automatique vers le haut à chaque changement de page
+- [x] Lien Support doit diriger vers /contact au lieu de /connexion (déjà correct)
