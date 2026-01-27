@@ -23,7 +23,11 @@ export default function AdminBenevoles() {
   const { data: days } = trpc.days.list.useQuery();
   const { data: volunteers, isLoading, refetch } = trpc.volunteers.listByDay.useQuery(
     { dayId: selectedDay === "all" ? undefined : parseInt(selectedDay) },
-    { enabled: true }
+    { 
+      enabled: true,
+      refetchInterval: 5000, // Rafraîchir automatiquement toutes les 5 secondes
+      refetchIntervalInBackground: false, // Ne pas rafraîchir en arrière-plan
+    }
   );
 
   const updateStatusMutation = trpc.volunteers.updateStatus.useMutation({

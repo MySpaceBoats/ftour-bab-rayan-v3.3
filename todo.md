@@ -338,3 +338,10 @@
 ## Bugs Scanner QR - 27/01/2026
 - [x] Scanner QR embarqué affiche "QR code invalide" alors que le QR est valide (corrigé - ajout support URLs /checkin/)
 - [x] Mettre à jour le statut du bénévole sur "Présent" après validation du QR code (déjà implémenté dans le backend)
+
+
+## Gestion des utilisateurs - 27/01/2026
+- [x] Créer le compte super admin admin@ftourbabrayan.ma dans Supabase
+
+## Bug UX - 27/01/2026
+- [x] Rafraîchissement automatique du statut bénévole après scan QR code (polling toutes les 5 secondes)

@@ -8,15 +8,59 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 async function createAdmin() {
+  const email = 'admin@ftourbabrayan.ma';
+  const password = 'f;a;vKQ.DgGe';
+  
+  console.log('Creating super admin:', email);
+  
   // Créer l'utilisateur dans Supabase Auth
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-    email: 'rsebbani@myspace.boats',
-    password: '#10Love8Joy3Harmony',
+    email: email,
+    password: password,
     email_confirm: true
   });
   
   if (authError) {
     console.log('Auth error:', authError.message);
+    
+    // Si l'utilisateur existe déjà, mettre à jour son rôle
+    if (authError.message.includes('already been registered')) {
+      console.log('User already exists, updating role...');
+      
+      // Mettre à jour le rôle dans la table users
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ role: 'super_admin' })
+        .eq('email', email);
+      
+      if (updateError) {
+        console.log('Update error:', updateError.message);
+        
+        // Si l'utilisateur n'existe pas dans la table users, le créer
+        const { data: users } = await supabase.auth.admin.listUsers();
+        const existingUser = users?.users?.find(u => u.email === email);
+        
+        if (existingUser) {
+          const { error: insertError } = await supabase
+            .from('users')
+            .insert({
+              open_id: existingUser.id,
+              email: email,
+              name: 'Admin Ftour',
+              role: 'super_admin'
+            });
+          
+          if (insertError) {
+            console.log('Insert error:', insertError.message);
+          } else {
+            console.log('✅ User created in users table with super_admin role');
+          }
+        }
+      } else {
+        console.log('✅ User role updated to super_admin');
+      }
+      return;
+    }
     return;
   }
   
@@ -26,9 +70,9 @@ async function createAdmin() {
   const { data: userData, error: userError } = await supabase
     .from('users')
     .insert({
-      id: authData.user.id,
-      email: 'rsebbani@myspace.boats',
-      name: 'Admin Bab Rayan',
+      open_id: authData.user.id,
+      email: email,
+      name: 'Admin Ftour',
       role: 'super_admin'
     })
     .select()
@@ -39,7 +83,8 @@ async function createAdmin() {
     return;
   }
   
-  console.log('User created in table:', userData);
+  console.log('✅ Super admin created successfully!');
+  console.log('User:', userData);
 }
 
 createAdmin().catch(console.error);
