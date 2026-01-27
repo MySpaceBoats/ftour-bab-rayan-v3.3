@@ -521,6 +521,25 @@ export async function getVolunteerStatsSupabase() {
   return { total, present, absent };
 }
 
+export async function deleteVolunteerSupabase(volunteerId: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  // D'abord supprimer les checkins associés
+  await client
+    .from('checkins')
+    .delete()
+    .eq('volunteer_id', volunteerId);
+
+  // Ensuite supprimer le bénévole
+  const { error } = await client
+    .from('volunteers')
+    .delete()
+    .eq('id', volunteerId);
+
+  if (error) throw error;
+}
+
 // ============================================
 // GOODIES SERVICES
 // ============================================

@@ -345,3 +345,6 @@
 
 ## Bug UX - 27/01/2026
 - [x] Rafraîchissement automatique du statut bénévole après scan QR code (polling toutes les 5 secondes)
+
+## Fonctionnalité - 27/01/2026
+- [x] Ajouter un bouton de suppression pour les bénévoles dans l'interface admin

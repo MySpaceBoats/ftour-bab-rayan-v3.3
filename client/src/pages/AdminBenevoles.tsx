@@ -11,8 +11,19 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { 
   ArrowLeft, Search, Download, Users, CheckCircle, XCircle, 
-  Clock, Filter, Loader2, QrCode, Mail, Phone, Calendar
+  Clock, Filter, Loader2, QrCode, Mail, Phone, Calendar, Trash2
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function AdminBenevoles() {
   const [selectedDay, setSelectedDay] = useState<string>("all");
@@ -33,6 +44,16 @@ export default function AdminBenevoles() {
   const updateStatusMutation = trpc.volunteers.updateStatus.useMutation({
     onSuccess: () => {
       toast.success("Statut mis à jour");
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const deleteMutation = trpc.volunteers.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Bénévole supprimé");
       refetch();
     },
     onError: (error) => {
@@ -286,6 +307,35 @@ export default function AdminBenevoles() {
                                 <XCircle className="h-4 w-4" />
                               </Button>
                             )}
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Supprimer ce bénévole ?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Êtes-vous sûr de vouloir supprimer {volunteer.firstName} {volunteer.lastName} ?
+                                    Cette action est irréversible.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-red-600 hover:bg-red-700"
+                                    onClick={() => deleteMutation.mutate({ volunteerId: volunteer.id })}
+                                  >
+                                    Supprimer
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </TableCell>
                       </TableRow>

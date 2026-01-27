@@ -285,6 +285,13 @@ const volunteersRouter = router({
   stats: adminOpsProcedure.query(async () => {
     return supabaseServices.getVolunteerStatsSupabase();
   }),
+  
+  delete: adminOpsProcedure
+    .input(z.object({ volunteerId: z.number() }))
+    .mutation(async ({ input }) => {
+      await supabaseServices.deleteVolunteerSupabase(input.volunteerId);
+      return { success: true };
+    }),
 });
 
 // ============================================
