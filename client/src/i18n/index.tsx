@@ -13,7 +13,7 @@ interface I18nContextType {
   t: Translations;
   setLang: (lang: Language) => void;
   dir: 'ltr' | 'rtl';
-  languages: { code: Language; name: string; flag: string }[];
+  languages: { code: Language; name: string; nativeName: string }[];
 }
 
 const translations: Record<Language, Translations> = {
@@ -23,11 +23,12 @@ const translations: Record<Language, Translations> = {
   amz,
 };
 
+// Langues affichées avec leurs noms natifs uniquement (sans drapeaux)
 const languages = [
-  { code: 'fr' as Language, name: 'Français', flag: '🇫🇷' },
-  { code: 'ar' as Language, name: 'العربية', flag: '🇲🇦' },
-  { code: 'amz' as Language, name: 'ⵜⴰⵎⴰⵣⵉⵖⵜ', flag: '🟦' },
-  { code: 'en' as Language, name: 'English', flag: '🇬🇧' },
+  { code: 'fr' as Language, name: 'Français', nativeName: 'Français' },
+  { code: 'ar' as Language, name: 'العربية', nativeName: 'العربية' },
+  { code: 'amz' as Language, name: 'ⵜⴰⵎⴰⵣⵉⵖⵜ', nativeName: 'ⵜⴰⵎⴰⵣⵉⵖⵜ' },
+  { code: 'en' as Language, name: 'English', nativeName: 'English' },
 ];
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);

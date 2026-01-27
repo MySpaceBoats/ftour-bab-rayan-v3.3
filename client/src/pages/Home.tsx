@@ -115,14 +115,14 @@ export default function Home() {
         {/* Stats Section - Données dynamiques */}
         <section className="py-16 bg-[#6F6C3F]">
           <div className="container">
-            <h2 className="text-2xl font-bold text-center mb-8 text-[#F2E9D3]">Cette année</h2>
+            <h2 className="text-2xl font-bold text-center mb-8 text-[#F2E9D3]">{t.home.statsTitle}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="bg-[#4A4829] rounded-lg p-6 text-center border border-[#F2E9D3]/10">
                 <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#F2E9D3]/10 flex items-center justify-center">
                   <Calendar className="h-6 w-6 text-[#F2E9D3]" />
                 </div>
                 <div className="text-3xl font-bold text-[#F2E9D3]">{stats?.totalDays || 30}</div>
-                <div className="text-sm text-[#E6DCC3] mt-1">Jours de Ftour</div>
+                <div className="text-sm text-[#E6DCC3] mt-1">{t.home.statsDays}</div>
               </div>
               
               <div className="bg-[#4A4829] rounded-lg p-6 text-center border border-[#F2E9D3]/10">
@@ -130,7 +130,7 @@ export default function Home() {
                   <Users className="h-6 w-6 text-[#F2E9D3]" />
                 </div>
                 <div className="text-3xl font-bold text-[#F2E9D3]">{stats?.totalVolunteers || 0}</div>
-                <div className="text-sm text-[#E6DCC3] mt-1">Bénévoles inscrits</div>
+                <div className="text-sm text-[#E6DCC3] mt-1">{t.home.statsVolunteers}</div>
               </div>
               
               <div className="bg-[#4A4829] rounded-lg p-6 text-center border border-[#F2E9D3]/10">
@@ -138,7 +138,7 @@ export default function Home() {
                   <Heart className="h-6 w-6 text-[#CDBB8A]" />
                 </div>
                 <div className="text-3xl font-bold text-[#CDBB8A]">{stats?.totalDonations || 0}</div>
-                <div className="text-sm text-[#E6DCC3] mt-1">Promesses de dons</div>
+                <div className="text-sm text-[#E6DCC3] mt-1">{t.home.statsDonations}</div>
               </div>
               
               <div className="bg-[#4A4829] rounded-lg p-6 text-center border border-[#F2E9D3]/10">
@@ -148,7 +148,7 @@ export default function Home() {
                 <div className="text-3xl font-bold text-[#CDBB8A]">
                   {stats?.receivedDonationAmount ? `${Number(stats.receivedDonationAmount).toLocaleString()} DH` : '0 DH'}
                 </div>
-                <div className="text-sm text-[#E6DCC3] mt-1">Collectés</div>
+                <div className="text-sm text-[#E6DCC3] mt-1">{t.home.statsMeals}</div>
               </div>
             </div>
           </div>
@@ -161,16 +161,16 @@ export default function Home() {
               <div className="space-y-6">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F2E9D3]/10 text-[#CDBB8A] text-sm font-medium">
                   <Utensils className="h-4 w-4" />
-                  Actions Solidaires
+                  {t.home.solidarityActions}
                 </div>
                 <h2 className="text-3xl md:text-4xl font-bold text-[#F2E9D3]" style={{ fontFamily: 'Caveat, cursive' }}>
-                  Les Ftours Bab Rayan
+                  {t.home.ftourTitle}
                 </h2>
                 <p className="text-lg text-[#E6DCC3] leading-relaxed">
-                  L'association Bab Rayan organise chaque année depuis 2015 le Ftour Bab Rayan. Pendant ce mois sacré, la plupart n'ont pas la chance de rompre leur jeûne autour d'une table garnie.
+                  {t.home.ftourDesc1}
                 </p>
                 <p className="text-lg text-[#E6DCC3] leading-relaxed">
-                  Cette action apporte beaucoup de convivialité et de chaleur à leur environnement ; l'esprit de solidarité du Ramadan est alors au rendez-vous, grâce à vos dons !
+                  {t.home.ftourDesc2}
                 </p>
                 <ul className="space-y-4">
                   <li className="flex items-start gap-3">
@@ -178,8 +178,8 @@ export default function Home() {
                       <Clock className="h-3 w-3 text-[#CDBB8A]" />
                     </div>
                     <div>
-                      <span className="font-medium text-[#F2E9D3]">Depuis 2015</span>
-                      <p className="text-sm text-[#E6DCC3]">11 ans d'engagement solidaire</p>
+                      <span className="font-medium text-[#F2E9D3]">{t.home.since2015}</span>
+                      <p className="text-sm text-[#E6DCC3]">{t.home.yearsEngagement}</p>
                     </div>
                   </li>
                   <li className="flex items-start gap-3">
@@ -187,8 +187,8 @@ export default function Home() {
                       <MapPin className="h-3 w-3 text-[#CDBB8A]" />
                     </div>
                     <div>
-                      <span className="font-medium text-[#F2E9D3]">Casablanca</span>
-                      <p className="text-sm text-[#E6DCC3]">4 rue Bayt Lham, quartier Palmier</p>
+                      <span className="font-medium text-[#F2E9D3]">{t.home.casablanca}</span>
+                      <p className="text-sm text-[#E6DCC3]">{t.home.address}</p>
                     </div>
                   </li>
                   <li className="flex items-start gap-3">
@@ -196,8 +196,8 @@ export default function Home() {
                       <Users className="h-3 w-3 text-[#CDBB8A]" />
                     </div>
                     <div>
-                      <span className="font-medium text-[#F2E9D3]">+6 000 bénévoles</span>
-                      <p className="text-sm text-[#E6DCC3]">Une communauté engagée</p>
+                      <span className="font-medium text-[#F2E9D3]">{t.home.volunteersCount6000}</span>
+                      <p className="text-sm text-[#E6DCC3]">{t.home.engagedCommunity}</p>
                     </div>
                   </li>
                 </ul>
@@ -206,7 +206,7 @@ export default function Home() {
                     variant="outline" 
                     className="mt-4 border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
                   >
-                    En savoir plus
+                    {t.cta.learnMore}
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </Link>
@@ -256,10 +256,10 @@ export default function Home() {
           <div className="container">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-[#F2E9D3] mb-4" style={{ fontFamily: 'Caveat, cursive' }}>
-                Nos Missions
+                {t.home.missionsTitle}
               </h2>
               <p className="text-lg text-[#E6DCC3] max-w-3xl mx-auto">
-                Notre mission est de protéger, d'éduquer et de former les enfants et jeunes en difficulté pour leur offrir un avenir digne, autonome et enrichissant.
+                {t.home.missionsSubtitle}
               </p>
             </div>
             
@@ -270,16 +270,16 @@ export default function Home() {
                   <div className="w-14 h-14 rounded-2xl bg-[#CDBB8A]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <HomeIcon className="h-7 w-7 text-[#CDBB8A]" />
                   </div>
-                  <h3 className="text-xl font-bold text-[#F2E9D3]">Protection de l'enfance</h3>
+                  <h3 className="text-xl font-bold text-[#F2E9D3]">{t.home.childProtection}</h3>
                   <p className="text-[#E6DCC3]">
-                    Depuis 2014, Bab Rayan se consacre à la protection de l'enfance, assurant un environnement sûr et bienveillant pour les enfants vulnérables.
+                    {t.home.childProtectionDesc}
                   </p>
                   <Link href="/association">
                     <Button 
                       variant="outline" 
                       className="w-full mt-4 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
                     >
-                      Découvrir le foyer
+                      {t.home.discoverHome}
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
                   </Link>
@@ -292,16 +292,16 @@ export default function Home() {
                   <div className="w-14 h-14 rounded-2xl bg-[#CDBB8A]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <GraduationCap className="h-7 w-7 text-[#CDBB8A]" />
                   </div>
-                  <h3 className="text-xl font-bold text-[#F2E9D3]">Éducation et scolarité</h3>
+                  <h3 className="text-xl font-bold text-[#F2E9D3]">{t.home.educationSchool}</h3>
                   <p className="text-[#E6DCC3]">
-                    En intégrant ces jeunes dans un parcours éducatif adapté à leurs besoins, nous leur donnons les outils nécessaires pour construire leur avenir.
+                    {t.home.educationSchoolDesc}
                   </p>
                   <Link href="/association">
                     <Button 
                       variant="outline" 
                       className="w-full mt-4 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
                     >
-                      Découvrir l'école Palmier
+                      {t.home.discoverSchool}
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
                   </Link>
@@ -314,16 +314,16 @@ export default function Home() {
                   <div className="w-14 h-14 rounded-2xl bg-[#CDBB8A]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Baby className="h-7 w-7 text-[#CDBB8A]" />
                   </div>
-                  <h3 className="text-xl font-bold text-[#F2E9D3]">Formation et insertion</h3>
+                  <h3 className="text-xl font-bold text-[#F2E9D3]">{t.home.trainingInsertion}</h3>
                   <p className="text-[#E6DCC3]">
-                    Des formations offertes dans des secteurs variés tels que l'hôtellerie-restauration et les métiers du digital pour une insertion professionnelle réussie.
+                    {t.home.trainingInsertionDesc}
                   </p>
                   <Link href="/association">
                     <Button 
                       variant="outline" 
                       className="w-full mt-4 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
                     >
-                      Découvrir le CFI
+                      {t.home.discoverCFI}
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
                   </Link>
@@ -338,10 +338,10 @@ export default function Home() {
           <div className="container">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-[#F2E9D3] mb-4" style={{ fontFamily: 'Caveat, cursive' }}>
-                Comment participer ?
+                {t.home.howToParticipate}
               </h2>
               <p className="text-lg text-[#E6DCC3] max-w-2xl mx-auto">
-                Rejoignez le combat pour la protection de l'enfance, engagez-vous en devenant donateur, partenaire ou bénévole.
+                {t.home.howToParticipateDesc}
               </p>
             </div>
             
@@ -353,13 +353,13 @@ export default function Home() {
                   <div className="w-14 h-14 rounded-2xl bg-[#F2E9D3]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Users className="h-7 w-7 text-[#F2E9D3]" />
                   </div>
-                  <h3 className="text-xl font-bold text-[#F2E9D3]">Devenir bénévole</h3>
+                  <h3 className="text-xl font-bold text-[#F2E9D3]">{t.home.volunteerCardTitle}</h3>
                   <p className="text-[#E6DCC3]">
-                    Rejoignez notre équipe de +6 000 bénévoles et participez à l'organisation des Ftours solidaires. Choisissez vos jours de disponibilité.
+                    {t.home.volunteerCardDesc}
                   </p>
                   <Link href="/benevole">
                     <Button className="w-full mt-4 bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]">
-                      S'inscrire
+                      {t.home.register}
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
                   </Link>
@@ -373,16 +373,16 @@ export default function Home() {
                   <div className="w-14 h-14 rounded-2xl bg-[#CDBB8A]/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <ShoppingBag className="h-7 w-7 text-[#CDBB8A]" />
                   </div>
-                  <h3 className="text-xl font-bold text-[#F2E9D3]">Boutique solidaire</h3>
+                  <h3 className="text-xl font-bold text-[#F2E9D3]">{t.home.shopTitle}</h3>
                   <p className="text-[#E6DCC3]">
-                    Découvrez nos goodies exclusifs édition Ramadan 2026. Tous les bénéfices soutiennent nos actions pour les enfants en difficulté.
+                    {t.home.shopDesc}
                   </p>
                   <Link href="/goodies">
                     <Button 
                       variant="outline" 
                       className="w-full mt-4 border-[#CDBB8A] text-[#CDBB8A] bg-transparent hover:bg-[#CDBB8A] hover:text-[#4A4829]"
                     >
-                      Voir la boutique
+                      {t.home.viewShop}
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
                   </Link>
@@ -396,16 +396,16 @@ export default function Home() {
                   <div className="w-14 h-14 rounded-2xl bg-[#F2E9D3]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Heart className="h-7 w-7 text-[#F2E9D3]" />
                   </div>
-                  <h3 className="text-xl font-bold text-[#F2E9D3]">Faire un don</h3>
+                  <h3 className="text-xl font-bold text-[#F2E9D3]">{t.home.donationCardTitle}</h3>
                   <p className="text-[#E6DCC3]">
-                    Soutenez notre action par un don. Chaque contribution compte pour offrir des repas et un avenir meilleur aux enfants.
+                    {t.home.donationCardDesc}
                   </p>
                   <Link href="/dons">
                     <Button 
                       variant="outline" 
                       className="w-full mt-4 border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
                     >
-                      Faire un don
+                     {t.home.donateNow}
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
                   </Link>
@@ -421,10 +421,10 @@ export default function Home() {
             <div className="container">
               <div className="text-center mb-12">
                 <h2 className="text-3xl md:text-4xl font-bold text-[#F2E9D3] mb-4" style={{ fontFamily: 'Caveat, cursive' }}>
-                  Témoignages
+                  {t.home.testimonialsTitle}
                 </h2>
                 <p className="text-lg text-[#E6DCC3] max-w-2xl mx-auto">
-                  Ce que disent nos bénévoles et partenaires
+                  {t.home.testimonialsSubtitle}
                 </p>
               </div>
               

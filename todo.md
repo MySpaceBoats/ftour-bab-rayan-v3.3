@@ -283,3 +283,24 @@
 - ❌ Pas de CMS propriétaire
 - ❌ Pas de stockage contenu hors Git
 - ❌ Pas de token exposé côté client
+
+## Phase 20 : Traduction complète et sélecteur de langues
+
+### Sélecteur de langues
+- [x] Supprimer tous les drapeaux du sélecteur
+- [x] Afficher les noms natifs : Français, العربية, ⵜⴰⵎⴰⵣⵉⵖⵜ, English
+- [x] Style minimaliste et sobre
+
+### Traduction complète
+- [x] Compléter fichiers i18n (fr.ts, ar.ts, en.ts, amz.ts)
+- [x] Traduire page Home
+- [ ] Traduire page Evenement
+- [ ] Traduire page Benevole
+- [ ] Traduire page Goodies
+- [ ] Traduire page Dons
+- [ ] Traduire page Association
+- [ ] Traduire page Contact
+- [ ] Traduire page FAQ
+- [ ] Traduire page Mentions légales
+- [ ] Traduire formulaires et messages dynamiques
+- [ ] Vérifier RTL pour l'arabe

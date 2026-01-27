@@ -135,8 +135,7 @@ export default function Navbar() {
                     lang === language.code ? 'bg-[#5E5B34]' : ''
                   }`}
                 >
-                  <span className="mr-2">{language.flag}</span>
-                  {language.name}
+                  {language.nativeName}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -254,7 +253,7 @@ export default function Navbar() {
                             : 'text-[#CDBB8A] hover:text-[#F2E9D3]'
                         }`}
                       >
-                        {language.flag}
+                        {language.nativeName}
                       </button>
                     ))}
                   </div>
