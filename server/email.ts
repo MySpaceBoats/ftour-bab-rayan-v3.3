@@ -8,8 +8,8 @@ import { ENV } from "./_core/env";
 const RESEND_API_URL = "https://api.resend.com/emails";
 
 // Configuration de l'expéditeur
-const FROM_EMAIL = "Ftour Bab Rayan <onboarding@resend.dev>"; // Domaine par défaut Resend
-const REPLY_TO = "contact@ftourbabrayan.ma";
+const FROM_EMAIL = "Ftour Bab Rayan <noreply@ftourbabrayan.ma>"; // Domaine vérifié Resend
+const REPLY_TO = "contact@ftourbabrayan.ma"; // Stackmail pour réception
 
 interface EmailOptions {
   to: string;
