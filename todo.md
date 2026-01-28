@@ -364,4 +364,7 @@
 
 
 ## Bug Email Bénévole - 28/01/2026
-- [ ] Email de confirmation bénévole non envoyé lors d'inscription réelle sur le site
+- [x] Email de confirmation bénévole non envoyé lors d'inscription réelle sur le site
+
+## Bug : Formulaire de don - 28/01/2026
+- [x] Erreur de type sur le champ amount (expected string, received number)
