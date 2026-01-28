@@ -65,7 +65,7 @@ export default function Dons() {
       donorName: formData.donorName,
       donorEmail: formData.donorEmail,
       donorPhone: formData.donorPhone || undefined,
-      amount: parseFloat(amountStr),
+      amount: amountStr,
       paymentMethod: formData.paymentMethod,
       message: formData.message || undefined,
       isAnonymous: formData.isAnonymous,

@@ -368,3 +368,6 @@
 
 ## Bug : Formulaire de don - 28/01/2026
 - [x] Erreur de type sur le champ amount (expected string, received number)
+
+## Bug : Worker Cloudflare - Formulaire de don - 28/01/2026
+- [ ] Corriger le schéma de validation amount dans le worker Cloudflare (production)

@@ -1119,7 +1119,7 @@ const donationsRouter = router({
       donorName: z.string().min(2),
       donorEmail: z.string().email(),
       donorPhone: z.string().optional(),
-      amount: z.string(),
+      amount: z.union([z.number(), z.string()]).transform((val) => typeof val === 'number' ? String(val) : val),
       paymentMethod: z.enum(['transfer', 'on_site']),
       message: z.string().optional(),
       isAnonymous: z.boolean().default(false),
