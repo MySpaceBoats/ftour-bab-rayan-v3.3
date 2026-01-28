@@ -370,4 +370,7 @@
 - [x] Erreur de type sur le champ amount (expected string, received number)
 
 ## Bug : Worker Cloudflare - Formulaire de don - 28/01/2026
-- [ ] Corriger le schéma de validation amount dans le worker Cloudflare (production)
+- [x] Corriger le schéma de validation amount dans le worker Cloudflare (production)
+
+## Bug : Adresse d'expéditeur email - 28/01/2026
+- [x] Corriger l'adresse d'expéditeur pour utiliser noreply@ftourbabrayan.ma au lieu de onboarding@resend.dev

@@ -4,7 +4,7 @@
  */
 
 const RESEND_API_URL = "https://api.resend.com/emails";
-const FROM_EMAIL = "Ftour Bab Rayan <onboarding@resend.dev>";
+const FROM_EMAIL = "Ftour Bab Rayan <noreply@ftourbabrayan.ma>";
 const REPLY_TO = "contact@ftourbabrayan.ma";
 const BCC_EMAIL = "rsebbani@myspace.boats";
 
