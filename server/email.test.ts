@@ -1,11 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { verifyResendApiKey, generateVolunteerConfirmationEmail, generateOrderConfirmationEmail, generateDonationConfirmationEmail } from "./email";
+import { verifyResendApiKey, generateVolunteerConfirmationEmail, generateOrderConfirmationEmail, generateDonationConfirmationEmail, sendEmail } from "./email";
 
 describe("Resend API Key Validation", () => {
   it("should have a valid Resend API key configured", async () => {
     const isValid = await verifyResendApiKey();
     expect(isValid).toBe(true);
   });
+
+  it("should have API key starting with re_CnEF", () => {
+    const apiKey = process.env.RESEND_API_KEY;
+    expect(apiKey).toBeDefined();
+    expect(apiKey?.startsWith("re_CnEF")).toBe(true);
+  });
+});
+
+describe("Email Sending", () => {
+  it("should successfully send a test email via Resend API", async () => {
+    const result = await sendEmail({
+      to: "reda.sebbani@gmail.com",
+      subject: "Test Vitest - Ftour Bab Rayan",
+      html: "<p>Test email envoyé depuis Vitest pour valider la clé API Resend.</p>",
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.id).toBeDefined();
+    expect(result.error).toBeUndefined();
+  }, 30000); // Timeout de 30 secondes pour l'appel API
 });
 
 describe("Email Templates", () => {
