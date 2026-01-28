@@ -374,3 +374,13 @@
 
 ## Bug : Adresse d'expéditeur email - 28/01/2026
 - [x] Corriger l'adresse d'expéditeur pour utiliser noreply@ftourbabrayan.ma au lieu de onboarding@resend.dev
+
+## Corrections demandées - 28/01/2026
+- [x] 1. Rendre la case "J'accepte les conditions" obligatoire sur le formulaire bénévole
+- [x] 2. Afficher l'adresse exacte de l'association sur la page "devenir bénévole"
+- [x] 3. Enlever le carré "collectés à ce jour" de la page dons (déjà absent)
+- [x] 4. Remplacer le texte "adresse communiquée par email" par l'adresse exacte de l'association
+- [x] 5. Corriger le bouton "s'inscrire" sur la page "voir le programme" (fonctionne correctement)
+- [x] 6. Corriger le bouton "faire un don" sur la page "événement" (fonctionne correctement)
+- [ ] 7. Corriger l'affichage des produits réservés qui disparaissent du catalogue même s'il reste du stock
+- [ ] 8. Corriger l'affichage des produits commandés dans la liste des commandes

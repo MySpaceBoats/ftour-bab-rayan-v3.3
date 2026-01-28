@@ -108,7 +108,7 @@ export default function Benevole() {
     schedules: lang === 'ar' ? 'المواعيد' : lang === 'en' ? 'Schedules' : lang === 'amz' ? 'ⵉⵙⵔⴰⴳⵏ' : 'Horaires',
     schedulesDesc: lang === 'ar' ? 'الوصول قبل ساعة ونصف من الإفطار. يستمر النشاط حوالي 3 ساعات.' : lang === 'en' ? 'Arrive 1h30 before Ftour. Activity lasts about 3 hours.' : lang === 'amz' ? 'ⴰⵡⴹ 1ⵙ30 ⴷⴰⵜ ⵏ ⵓⴼⵟⵓⵕ. ⵜⴰⵎⵀⵍⵜ ⵜⵇⵇⴰⵎ ⵖⵓⵔ 3 ⵉⵙⵔⴰⴳⵏ.' : 'Arrivée 1h30 avant le Ftour. L\'activité dure environ 3h au total.',
     location: lang === 'ar' ? 'المكان' : lang === 'en' ? 'Location' : lang === 'amz' ? 'ⴰⴷⵖⴰⵔ' : 'Lieu',
-    locationDesc: lang === 'ar' ? 'سيتم إرسال العنوان الدقيق عبر البريد الإلكتروني بعد التسجيل.' : lang === 'en' ? 'The exact address will be sent by email after registration.' : lang === 'amz' ? 'ⵜⴰⵏⵙⴰ ⵜⵓⵎⵍⵉⵍⵜ ⴰⴷ ⵜⵜⵓⵣⵏ ⵙ ⵉⵎⴰⵢⵍ ⴷⴼⴼⵉⵔ ⵏ ⵓⵙⵊⵍ.' : 'L\'adresse exacte vous sera communiquée par email après inscription.',
+    locationDesc: lang === 'ar' ? '4 شارع بيت لحم، حي النخيل، الدار البيضاء' : lang === 'en' ? '4 rue Bayt Lham, Palmier district, Casablanca' : lang === 'amz' ? '4 ⴰⵣⵏⵉⵇ ⴱⴰⵢⵜ ⵍⵃⴰⵎ, ⴰⵏⴰⵅⵍ, ⵜⵉⴳⵎⵎⵉ' : '4 rue Bayt Lham, quartier Palmier, Casablanca',
     qrCodeTitle: lang === 'ar' ? 'رمز QR' : lang === 'en' ? 'QR Code' : lang === 'amz' ? 'ⴰⵙⵉⵖⵏ QR' : 'QR Code',
     qrCodeDesc: lang === 'ar' ? 'ستتلقى رمز QR فريدًا لتقديمه عند الدخول يوم المشاركة.' : lang === 'en' ? 'You will receive a unique QR code to present at the entrance on the day.' : lang === 'amz' ? 'ⴰⴷ ⵜⴰⵡⵉⴷ ⴰⵙⵉⵖⵏ QR ⵉⵎⵥⵍⴰⵢ ⴰⴷ ⵜⵙⵙⴽⵏⴷ ⴳ ⵜⴰⵡⵡⵓⵔⵜ ⴰⵙⵙ ⵏ ⵜⵎⵓⵔⵜ.' : 'Vous recevrez un QR code unique à présenter à l\'entrée le jour J.',
     important: lang === 'ar' ? 'مهم' : lang === 'en' ? 'Important' : lang === 'amz' ? 'ⴰⵎⵇⵇⵔⴰⵏ' : 'Important',
@@ -397,6 +397,7 @@ export default function Benevole() {
                           id="terms"
                           checked={formData.acceptedTerms}
                           onCheckedChange={(checked) => setFormData(prev => ({ ...prev, acceptedTerms: checked as boolean }))}
+                          required
                         />
                         <label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
                           {formTexts.terms}

@@ -148,7 +148,7 @@ export default function Programme() {
                       </div>
 
                       {/* Action */}
-                      <Link href={`/benevole?day=${day.id}`}>
+                      <Link href={`/${lang}/benevole?day=${day.id}`}>
                         <Button 
                           className="w-full" 
                           disabled={!day.isOpen}
@@ -205,8 +205,7 @@ export default function Programme() {
                       <h3 className="font-semibold">Lieu</h3>
                     </div>
                     <p className="text-muted-foreground text-sm">
-                      L'adresse exacte vous sera communiquée par email après votre inscription. 
-                      Un point de rendez-vous sera indiqué.
+                      4 rue Bayt Lham, quartier Palmier, Casablanca
                     </p>
                   </CardContent>
                 </Card>

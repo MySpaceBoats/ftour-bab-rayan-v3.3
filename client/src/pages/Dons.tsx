@@ -194,13 +194,7 @@ export default function Dons() {
                   <p className="text-sm text-muted-foreground">= {t.donations.oneDayFtour}</p>
                 </CardContent>
               </Card>
-              <Card className="border-none shadow-sm">
-                <CardContent className="p-6 text-center">
-                  <HandHeart className="h-8 w-8 mx-auto text-primary mb-3" />
-                  <div className="text-2xl font-bold">{stats?.receivedDonationAmount ? `${Number(stats.receivedDonationAmount).toLocaleString()}` : '0'} DH</div>
-                  <p className="text-sm text-muted-foreground">{t.donations.collectedToDate}</p>
-                </CardContent>
-              </Card>
+
             </div>
           </div>
         </section>

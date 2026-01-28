@@ -1,0 +1,8 @@
+{
+  "query": "SELECT g.id, g.name, g.is_active, gv.id as variant_id, gv.stock, gv.is_available \nFROM goodies g \nLEFT JOIN goodie_variants gv ON g.id = gv.goodie_id \nORDER BY g.id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AcjZqcYK3EX3uxV.dd54fc6940c5 --database axVHSEMeXtqmA9TfobQFiG --execute SELECT g.id, g.name, g.is_active, gv.id as variant_id, gv.stock, gv.is_available \nFROM goodies g \nLEFT JOIN goodie_variants gv ON g.id = gv.goodie_id \nORDER BY g.id;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'gv.goodie_id' in 'on clause'"
+  ]
+}
