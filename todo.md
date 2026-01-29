@@ -384,3 +384,7 @@
 - [x] 6. Corriger le bouton "faire un don" sur la page "événement" (fonctionne correctement)
 - [ ] 7. Corriger l'affichage des produits réservés qui disparaissent du catalogue même s'il reste du stock
 - [ ] 8. Corriger l'affichage des produits commandés dans la liste des commandes
+
+## Bugs 9-10 - 28/01/2026
+- [ ] 9. Corriger l'affichage des commandes différent entre production (ftourbabrayan.ma) et dev (manus.im)
+- [ ] 10. Corriger les envois d'emails qui ne fonctionnent pas sur production

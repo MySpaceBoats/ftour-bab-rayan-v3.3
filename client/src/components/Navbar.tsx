@@ -118,11 +118,11 @@ export default function Navbar() {
 
           {/* Téléphone */}
           <a 
-            href="tel:+212610023555" 
+            href="tel:+212664887978" 
             className="hidden sm:flex items-center gap-1 text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors"
           >
             <Phone className="h-3 w-3" />
-            <span>+212 610 023 555</span>
+            <span>+212 664-887978</span>
           </a>
 
           {/* Sélecteur de langue */}
@@ -291,11 +291,11 @@ export default function Navbar() {
 
                 {/* Phone */}
                 <a 
-                  href="tel:+212610023555" 
+                  href="tel:+212664887978" 
                   className="flex items-center gap-2 text-[#CDBB8A] hover:text-[#F2E9D3] px-4"
                 >
                   <Phone className="h-4 w-4" />
-                  <span>+212 610 023 555</span>
+                  <span>+212 664-887978</span>
                 </a>
 
                 <div className="border-t border-[#F2E9D3]/20" />

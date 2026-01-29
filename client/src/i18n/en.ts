@@ -37,7 +37,7 @@ export const en: Translations = {
 
   // Top Menu
   topMenu: {
-    phone: '+212 610 023 555',
+    phone: '+212 664-887978',
     language: 'Language',
   },
 

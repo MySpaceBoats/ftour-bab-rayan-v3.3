@@ -35,7 +35,7 @@ export const fr = {
 
   // Top Menu
   topMenu: {
-    phone: '+212 610 023 555',
+    phone: '+212 664-887978',
     language: 'Langue',
   },
 
