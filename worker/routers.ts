@@ -1048,6 +1048,49 @@ const ordersRouter = router({
           .insert({ ...item, order_id: order.id });
       }
 
+      // Get goodie names for email
+      const itemsForEmail: Array<{ name: string; quantity: number; unitPrice: number; totalPrice: number }> = [];
+      for (const item of input.items) {
+        const { data: goodie } = await supabase
+          .from('goodies')
+          .select('name, price')
+          .eq('id', item.goodieId)
+          .single();
+        if (goodie) {
+          const unitPrice = parseFloat(goodie.price);
+          itemsForEmail.push({
+            name: goodie.name,
+            quantity: item.quantity,
+            unitPrice,
+            totalPrice: unitPrice * item.quantity,
+          });
+        }
+      }
+
+      // Send confirmation email
+      try {
+        const { sendEmail, generateOrderConfirmationEmail } = await import('./email');
+        const emailData = generateOrderConfirmationEmail({
+          customerName: input.customerName,
+          customerEmail: input.customerEmail,
+          orderReference: orderRef,
+          items: itemsForEmail,
+          totalAmount,
+          pickupLocation: input.pickupLocation,
+          pickupDate: input.pickupDate,
+        });
+
+        await sendEmail({
+          to: input.customerEmail,
+          subject: emailData.subject,
+          html: emailData.html,
+          apiKey: ctx.env.RESEND_API_KEY,
+        });
+      } catch (emailError) {
+        console.error('[Worker] Error sending order email:', emailError);
+        // Don't throw - order is still successful
+      }
+
       return { id: order.id, orderReference: orderRef, totalAmount };
     }),
 
@@ -1150,6 +1193,29 @@ const donationsRouter = router({
 
       if (error) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      }
+
+      // Send confirmation email
+      try {
+        const { sendEmail, generateDonationConfirmationEmail } = await import('./email');
+        const emailData = generateDonationConfirmationEmail({
+          donorName: input.donorName,
+          donorEmail: input.donorEmail,
+          donationReference: donationRef,
+          amount: input.amount,
+          paymentMethod: input.paymentMethod,
+          message: input.message,
+        });
+
+        await sendEmail({
+          to: input.donorEmail,
+          subject: emailData.subject,
+          html: emailData.html,
+          apiKey: ctx.env.RESEND_API_KEY,
+        });
+      } catch (emailError) {
+        console.error('[Worker] Error sending donation email:', emailError);
+        // Don't throw - donation is still successful
       }
 
       return { id: data.id, donationReference: donationRef };
@@ -1259,6 +1325,46 @@ const contactRouter = router({
 
       if (error) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      }
+
+      // Send confirmation email to user and notification to admin
+      try {
+        const { sendEmail, generateContactConfirmationEmail, generateContactAdminNotificationEmail } = await import('./email');
+        
+        // Send confirmation to user
+        const userEmailData = generateContactConfirmationEmail({
+          name: input.name,
+          email: input.email,
+          phone: input.phone,
+          subject: input.subject || 'Contact',
+          message: input.message,
+        });
+
+        await sendEmail({
+          to: input.email,
+          subject: userEmailData.subject,
+          html: userEmailData.html,
+          apiKey: ctx.env.RESEND_API_KEY,
+        });
+
+        // Send notification to admin
+        const adminEmailData = generateContactAdminNotificationEmail({
+          name: input.name,
+          email: input.email,
+          phone: input.phone,
+          subject: input.subject || 'Contact',
+          message: input.message,
+        });
+
+        await sendEmail({
+          to: 'contact@ftourbabrayan.ma',
+          subject: adminEmailData.subject,
+          html: adminEmailData.html,
+          apiKey: ctx.env.RESEND_API_KEY,
+        });
+      } catch (emailError) {
+        console.error('[Worker] Error sending contact email:', emailError);
+        // Don't throw - contact message is still saved
       }
 
       return { id: data.id };

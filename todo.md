@@ -33,7 +33,7 @@
 - [x] Badges produits (best-seller, nouveau, édition Ramadan)
 - [x] Panier de réservation
 - [x] Formulaire client (nom, téléphone, email)
-- [ ] Email de confirmation avec référence commande
+- [x] Email de confirmation avec référence commande
 
 ## Phase 6 : Back-office Goodies
 - [x] Liste des commandes
@@ -43,7 +43,7 @@
 ## Phase 7 : Module Promesses de Dons
 - [x] Formulaire promesse de don
 - [x] Choix mode paiement (virement/sur place)
-- [ ] Email automatique avec instructions RIB
+- [x] Email automatique avec instructions RIB
 - [x] Liste des promesses admin
 - [x] Gestion des statuts (Promis/En attente/Reçu/Annulé)
 - [x] Export CSV donations
@@ -388,3 +388,8 @@
 ## Bugs 9-10 - 28/01/2026
 - [ ] 9. Corriger l'affichage des commandes différent entre production (ftourbabrayan.ma) et dev (manus.im)
 - [ ] 10. Corriger les envois d'emails qui ne fonctionnent pas sur production
+
+## Correction envoi emails - 29/01/2026
+- [ ] Corriger l'envoi d'email pour le formulaire goodies (comme bénévole)
+- [ ] Corriger l'envoi d'email pour le formulaire contact (comme bénévole)
+- [ ] Corriger l'envoi d'email pour le formulaire dons (comme bénévole)

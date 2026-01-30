@@ -105,7 +105,7 @@ function baseTemplate(content: string): string {
               </p>
               <p style="margin: 0; font-size: 12px; color: #9ca3af;">
                 4 rue Bayt Lham, quartier Palmier, Casablanca<br>
-                Tél: +212 610 023 555 | contact@ftourbabrayan.ma
+                Tél: +212 664-887978 | contact@ftourbabrayan.ma
               </p>
             </td>
           </tr>
@@ -199,6 +199,265 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
 
   return {
     subject: `✅ Confirmation inscription - Ftour Bab Rayan Jour ${data.dayNumber}`,
+    html: baseTemplate(content),
+  };
+}
+
+
+/**
+ * Generate order confirmation email for goodies
+ */
+export interface OrderEmailData {
+  customerName: string;
+  customerEmail: string;
+  orderReference: string;
+  items: Array<{ name: string; quantity: number; unitPrice: number; totalPrice: number }>;
+  totalAmount: number;
+  pickupLocation?: string;
+  pickupDate?: string;
+}
+
+export function generateOrderConfirmationEmail(data: OrderEmailData): { subject: string; html: string } {
+  const itemsHtml = data.items.map(item => `
+    <tr>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${item.name}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${item.unitPrice} DH</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${item.totalPrice} DH</td>
+    </tr>
+  `).join('');
+
+  const content = `
+    <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
+      Merci pour votre commande !
+    </h2>
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Cher(e) <strong>${data.customerName}</strong>,
+    </p>
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Votre commande de goodies solidaires a bien été enregistrée. 
+      Merci de soutenir l'association Bab Rayan !
+    </p>
+    
+    <!-- Référence commande -->
+    <div style="background-color: #f0fdf4; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center;">
+      <p style="margin: 0; color: #166534; font-size: 14px;">Référence de commande</p>
+      <p style="margin: 5px 0 0 0; color: #166534; font-size: 24px; font-weight: bold;">${data.orderReference}</p>
+    </div>
+    
+    <!-- Détails commande -->
+    <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+      <thead>
+        <tr style="background-color: #f3f4f6;">
+          <th style="padding: 10px; text-align: left; color: #374151;">Article</th>
+          <th style="padding: 10px; text-align: center; color: #374151;">Qté</th>
+          <th style="padding: 10px; text-align: right; color: #374151;">Prix unit.</th>
+          <th style="padding: 10px; text-align: right; color: #374151;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsHtml}
+      </tbody>
+      <tfoot>
+        <tr style="background-color: #166534;">
+          <td colspan="3" style="padding: 15px; color: #ffffff; font-weight: bold;">Total</td>
+          <td style="padding: 15px; color: #ffffff; font-weight: bold; text-align: right;">${data.totalAmount} DH</td>
+        </tr>
+      </tfoot>
+    </table>
+    
+    <!-- Retrait -->
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fef3c7; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 18px;">📦 Retrait de votre commande</h3>
+          <p style="margin: 5px 0; color: #374151;"><strong>Lieu :</strong> ${data.pickupLocation || 'Association Bab Rayan, 4 rue Bayt Lham, Casablanca'}</p>
+          ${data.pickupDate ? `<p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.pickupDate}</p>` : ''}
+          <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;">
+            Présentez cette confirmation lors du retrait. Le paiement s'effectue sur place.
+          </p>
+        </td>
+      </tr>
+    </table>
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">
+      Merci pour votre soutien !<br>
+      <strong>L'équipe Ftour Bab Rayan</strong>
+    </p>
+  `;
+
+  return {
+    subject: `🛍️ Confirmation commande ${data.orderReference} - Ftour Bab Rayan`,
+    html: baseTemplate(content),
+  };
+}
+
+/**
+ * Generate donation confirmation email
+ */
+export interface DonationEmailData {
+  donorName: string;
+  donorEmail: string;
+  donationReference: string;
+  amount: string;
+  paymentMethod: 'transfer' | 'on_site';
+  message?: string;
+}
+
+export function generateDonationConfirmationEmail(data: DonationEmailData): { subject: string; html: string } {
+  const paymentInfo = data.paymentMethod === 'transfer' ? `
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #eff6ff; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #1e40af; margin: 0 0 15px 0; font-size: 18px;">🏦 Coordonnées bancaires</h3>
+          <p style="margin: 5px 0; color: #374151;"><strong>Banque :</strong> Attijariwafa Bank</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Titulaire :</strong> Association Bab Rayan</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>RIB :</strong> 007 780 0003851000000217 97</p>
+          <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;">
+            Merci d'indiquer la référence <strong>${data.donationReference}</strong> dans le motif du virement.
+          </p>
+        </td>
+      </tr>
+    </table>
+  ` : `
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fef3c7; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 18px;">📍 Don sur place</h3>
+          <p style="margin: 5px 0; color: #374151;">Vous pouvez effectuer votre don lors d'un Ftour à :</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Association Bab Rayan</strong></p>
+          <p style="margin: 5px 0; color: #374151;">4 rue Bayt Lham, quartier Palmier, Casablanca</p>
+          <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;">
+            Présentez cette confirmation avec la référence <strong>${data.donationReference}</strong>.
+          </p>
+        </td>
+      </tr>
+    </table>
+  `;
+
+  const content = `
+    <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
+      Merci pour votre générosité !
+    </h2>
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Cher(e) <strong>${data.donorName}</strong>,
+    </p>
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Nous avons bien reçu votre promesse de don pour le <strong>Ftour Bab Rayan</strong>. 
+      Votre générosité permettra d'offrir des repas aux enfants de l'association.
+    </p>
+    
+    <!-- Récapitulatif -->
+    <div style="background-color: #f0fdf4; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+      <p style="margin: 0; color: #166534; font-size: 14px;">Référence de don</p>
+      <p style="margin: 5px 0; color: #166534; font-size: 24px; font-weight: bold;">${data.donationReference}</p>
+      <p style="margin: 15px 0 0 0; color: #166534; font-size: 32px; font-weight: bold;">${data.amount} DH</p>
+    </div>
+    
+    ${paymentInfo}
+    
+    ${data.message ? `
+    <div style="background-color: #f3f4f6; border-radius: 8px; padding: 15px; margin: 20px 0; border-left: 4px solid #166534;">
+      <p style="margin: 0; color: #6b7280; font-size: 14px;">Votre message :</p>
+      <p style="margin: 5px 0 0 0; color: #374151; font-style: italic;">"${data.message}"</p>
+    </div>
+    ` : ''}
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">
+      Que Dieu vous récompense pour votre générosité !<br>
+      <strong>L'équipe Ftour Bab Rayan</strong>
+    </p>
+  `;
+
+  return {
+    subject: `❤️ Merci pour votre don ${data.donationReference} - Ftour Bab Rayan`,
+    html: baseTemplate(content),
+  };
+}
+
+/**
+ * Generate contact form confirmation email
+ */
+export interface ContactEmailData {
+  name: string;
+  email: string;
+  phone?: string;
+  subject: string;
+  message: string;
+}
+
+export function generateContactConfirmationEmail(data: ContactEmailData): { subject: string; html: string } {
+  const content = `
+    <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
+      Message bien reçu !
+    </h2>
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Cher(e) <strong>${data.name}</strong>,
+    </p>
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Nous avons bien reçu votre message et nous vous en remercions. 
+      Notre équipe vous répondra dans les plus brefs délais.
+    </p>
+    
+    <!-- Récapitulatif -->
+    <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <h3 style="color: #374151; margin: 0 0 15px 0; font-size: 18px;">📝 Récapitulatif de votre message</h3>
+      <p style="margin: 5px 0; color: #374151;"><strong>Sujet :</strong> ${data.subject}</p>
+      <p style="margin: 5px 0; color: #374151;"><strong>Email :</strong> ${data.email}</p>
+      ${data.phone ? `<p style="margin: 5px 0; color: #374151;"><strong>Téléphone :</strong> ${data.phone}</p>` : ''}
+      <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+        <p style="margin: 0; color: #6b7280; font-size: 14px;">Message :</p>
+        <p style="margin: 5px 0 0 0; color: #374151; white-space: pre-wrap;">${data.message}</p>
+      </div>
+    </div>
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">
+      À très bientôt !<br>
+      <strong>L'équipe Ftour Bab Rayan</strong>
+    </p>
+  `;
+
+  return {
+    subject: `📩 Message reçu - ${data.subject}`,
+    html: baseTemplate(content),
+  };
+}
+
+/**
+ * Generate admin notification email for new contact message
+ */
+export function generateContactAdminNotificationEmail(data: ContactEmailData): { subject: string; html: string } {
+  const content = `
+    <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
+      Nouveau message de contact
+    </h2>
+    
+    <div style="background-color: #fef3c7; border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 18px;">📬 Informations du contact</h3>
+      <p style="margin: 5px 0; color: #374151;"><strong>Nom :</strong> ${data.name}</p>
+      <p style="margin: 5px 0; color: #374151;"><strong>Email :</strong> <a href="mailto:${data.email}" style="color: #166534;">${data.email}</a></p>
+      ${data.phone ? `<p style="margin: 5px 0; color: #374151;"><strong>Téléphone :</strong> <a href="tel:${data.phone}" style="color: #166534;">${data.phone}</a></p>` : ''}
+      <p style="margin: 5px 0; color: #374151;"><strong>Sujet :</strong> ${data.subject}</p>
+    </div>
+    
+    <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <h3 style="color: #374151; margin: 0 0 15px 0; font-size: 18px;">💬 Message</h3>
+      <p style="margin: 0; color: #374151; white-space: pre-wrap;">${data.message}</p>
+    </div>
+    
+    <p style="color: #6b7280; font-size: 14px; margin: 20px 0 0 0;">
+      Répondez directement à cet email pour contacter ${data.name}.
+    </p>
+  `;
+
+  return {
+    subject: `📬 [Contact] ${data.subject} - ${data.name}`,
     html: baseTemplate(content),
   };
 }
