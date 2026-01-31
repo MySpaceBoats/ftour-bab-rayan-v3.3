@@ -1534,6 +1534,515 @@ const systemRouter = router({
 });
 
 // ============================================
+// RESTAURANTS ROUTER
+// ============================================
+
+const restaurantsRouter = router({
+  list: publicProcedure.query(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+    
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select('*')
+      .eq('active', true)
+      .order('name', { ascending: true });
+
+    if (error) {
+      return [];
+    }
+
+    return (data || []).map(r => ({
+      id: r.id,
+      name: r.name,
+      address: r.address,
+      phone: r.phone,
+      capacity: r.capacity,
+      active: r.active,
+      createdAt: r.created_at,
+    }));
+  }),
+
+  listAll: adminProcedure.query(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+    
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      return [];
+    }
+
+    return (data || []).map(r => ({
+      id: r.id,
+      name: r.name,
+      address: r.address,
+      phone: r.phone,
+      capacity: r.capacity,
+      active: r.active,
+      createdAt: r.created_at,
+    }));
+  }),
+
+  create: adminProcedure
+    .input(z.object({
+      name: z.string().min(2),
+      address: z.string().min(5),
+      phone: z.string().optional(),
+      capacity: z.number().min(1).default(50),
+      active: z.boolean().default(true),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const { data, error } = await supabase
+        .from('restaurants')
+        .insert({
+          name: input.name,
+          address: input.address,
+          phone: input.phone,
+          capacity: input.capacity,
+          active: input.active,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      }
+
+      return { id: data.id };
+    }),
+
+  update: adminProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().min(2).optional(),
+      address: z.string().min(5).optional(),
+      phone: z.string().optional(),
+      capacity: z.number().min(1).optional(),
+      active: z.boolean().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { id, ...updateData } = input;
+
+      const { error } = await supabase
+        .from('restaurants')
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      }
+
+      return { success: true };
+    }),
+
+  delete: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const { error } = await supabase
+        .from('restaurants')
+        .delete()
+        .eq('id', input.id);
+
+      if (error) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      }
+
+      return { success: true };
+    }),
+
+  getAvailability: publicProcedure
+    .input(z.object({
+      restaurantId: z.number(),
+      date: z.string(),
+    }))
+    .query(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      // Get restaurant capacity
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('capacity')
+        .eq('id', input.restaurantId)
+        .single();
+
+      if (!restaurant) {
+        return { available: 0, total: 0 };
+      }
+
+      // Get total reserved seats for this date
+      const { data: reservations } = await supabase
+        .from('reservations')
+        .select('seats')
+        .eq('restaurant_id', input.restaurantId)
+        .eq('date', input.date)
+        .in('status', ['pending', 'confirmed']);
+
+      const reserved = (reservations || []).reduce((sum, r) => sum + r.seats, 0);
+
+      return {
+        available: Math.max(0, restaurant.capacity - reserved),
+        total: restaurant.capacity,
+        reserved,
+      };
+    }),
+});
+
+// ============================================
+// RESERVATIONS ROUTER
+// ============================================
+
+const reservationsRouter = router({
+  create: publicProcedure
+    .input(z.object({
+      restaurantId: z.number(),
+      date: z.string(),
+      slotId: z.number().optional(),
+      fullName: z.string().min(2),
+      phone: z.string().min(8),
+      email: z.string().email().optional(),
+      seats: z.number().min(1).max(10),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      // Check availability
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('capacity, name, address')
+        .eq('id', input.restaurantId)
+        .single();
+
+      if (!restaurant) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Restaurant non trouvé' });
+      }
+
+      // Get current reservations
+      const { data: existingReservations } = await supabase
+        .from('reservations')
+        .select('seats')
+        .eq('restaurant_id', input.restaurantId)
+        .eq('date', input.date)
+        .in('status', ['pending', 'confirmed']);
+
+      const totalReserved = (existingReservations || []).reduce((sum, r) => sum + r.seats, 0);
+      const available = restaurant.capacity - totalReserved;
+
+      if (input.seats > available) {
+        throw new TRPCError({ 
+          code: 'BAD_REQUEST', 
+          message: `Seulement ${available} places disponibles pour cette date` 
+        });
+      }
+
+      // Generate reference code and QR token
+      const referenceCode = `RES-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+      const qrToken = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+
+      // Create reservation
+      const { data, error } = await supabase
+        .from('reservations')
+        .insert({
+          restaurant_id: input.restaurantId,
+          date: input.date,
+          slot_id: input.slotId,
+          full_name: input.fullName,
+          phone: input.phone,
+          email: input.email,
+          seats: input.seats,
+          notes: input.notes,
+          status: 'confirmed',
+          reference_code: referenceCode,
+          qr_token: qrToken,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      }
+
+      // Send confirmation emails
+      if (input.email) {
+        try {
+          const { sendEmail, generateReservationConfirmationEmail, generateReservationAdminNotificationEmail } = await import('./email');
+          
+          const emailData = {
+            fullName: input.fullName,
+            email: input.email,
+            phone: input.phone,
+            referenceCode,
+            restaurantName: restaurant.name,
+            restaurantAddress: restaurant.address,
+            date: input.date,
+            seats: input.seats,
+            qrToken,
+            baseUrl: 'https://ftourbabrayan.ma',
+          };
+
+          // Send to customer
+          const customerEmail = generateReservationConfirmationEmail(emailData);
+          await sendEmail({
+            to: input.email,
+            subject: customerEmail.subject,
+            html: customerEmail.html,
+            apiKey: ctx.env.RESEND_API_KEY,
+          });
+
+          // Send to admin
+          const adminEmail = generateReservationAdminNotificationEmail(emailData);
+          await sendEmail({
+            to: 'contact@ftourbabrayan.ma',
+            subject: adminEmail.subject,
+            html: adminEmail.html,
+            apiKey: ctx.env.RESEND_API_KEY,
+          });
+        } catch (emailError) {
+          console.error('[Worker] Error sending reservation email:', emailError);
+        }
+      }
+
+      return { 
+        id: data.id, 
+        referenceCode,
+        qrToken,
+      };
+    }),
+
+  list: adminProcedure
+    .input(z.object({
+      date: z.string().optional(),
+      restaurantId: z.number().optional(),
+      status: z.string().optional(),
+    }).optional())
+    .query(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      let query = supabase
+        .from('reservations')
+        .select('*, restaurants(name, address)')
+        .order('created_at', { ascending: false });
+
+      if (input?.date) {
+        query = query.eq('date', input.date);
+      }
+      if (input?.restaurantId) {
+        query = query.eq('restaurant_id', input.restaurantId);
+      }
+      if (input?.status) {
+        query = query.eq('status', input.status);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        return [];
+      }
+
+      return (data || []).map(r => ({
+        id: r.id,
+        restaurantId: r.restaurant_id,
+        restaurantName: r.restaurants?.name,
+        restaurantAddress: r.restaurants?.address,
+        date: r.date,
+        slotId: r.slot_id,
+        fullName: r.full_name,
+        phone: r.phone,
+        email: r.email,
+        seats: r.seats,
+        notes: r.notes,
+        status: r.status,
+        referenceCode: r.reference_code,
+        qrToken: r.qr_token,
+        createdAt: r.created_at,
+      }));
+    }),
+
+  updateStatus: adminProcedure
+    .input(z.object({
+      reservationId: z.number(),
+      status: z.enum(['pending', 'confirmed', 'cancelled', 'no_show', 'checked_in']),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const { error } = await supabase
+        .from('reservations')
+        .update({ status: input.status })
+        .eq('id', input.reservationId);
+
+      if (error) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      }
+
+      return { success: true };
+    }),
+
+  checkin: scannerProcedure
+    .input(z.object({
+      qrToken: z.string().optional(),
+      referenceCode: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      // Find reservation
+      let query = supabase.from('reservations').select('*, restaurants(name)');
+      
+      if (input.qrToken) {
+        query = query.eq('qr_token', input.qrToken);
+      } else if (input.referenceCode) {
+        query = query.eq('reference_code', input.referenceCode);
+      } else {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'QR token ou référence requis' });
+      }
+
+      const { data: reservation, error } = await query.single();
+
+      if (error || !reservation) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Réservation non trouvée' });
+      }
+
+      if (reservation.status === 'checked_in') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Réservation déjà validée' });
+      }
+
+      if (reservation.status === 'cancelled') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Réservation annulée' });
+      }
+
+      // Check date
+      const today = new Date().toISOString().split('T')[0];
+      if (reservation.date !== today) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cette réservation n\'est pas pour aujourd\'hui' });
+      }
+
+      // Update status
+      await supabase
+        .from('reservations')
+        .update({ status: 'checked_in' })
+        .eq('id', reservation.id);
+
+      // Create checkin record
+      await supabase
+        .from('reservation_checkins')
+        .insert({
+          reservation_id: reservation.id,
+          scanned_at: new Date().toISOString(),
+          validation_mode: input.qrToken ? 'qr_scan' : 'manual',
+          validated_by: ctx.user?.id,
+        });
+
+      return {
+        success: true,
+        reservation: {
+          id: reservation.id,
+          fullName: reservation.full_name,
+          seats: reservation.seats,
+          restaurantName: reservation.restaurants?.name,
+        },
+      };
+    }),
+
+  verify: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const { data: reservation, error } = await supabase
+        .from('reservations')
+        .select('*, restaurants(name, address)')
+        .eq('qr_token', input.token)
+        .single();
+
+      if (error || !reservation) {
+        return { valid: false, error: 'Réservation non trouvée' };
+      }
+
+      if (reservation.status === 'checked_in') {
+        return { valid: false, error: 'Réservation déjà validée', reservation };
+      }
+
+      if (reservation.status === 'cancelled') {
+        return { valid: false, error: 'Réservation annulée' };
+      }
+
+      return {
+        valid: true,
+        reservation: {
+          id: reservation.id,
+          fullName: reservation.full_name,
+          phone: reservation.phone,
+          email: reservation.email,
+          seats: reservation.seats,
+          date: reservation.date,
+          status: reservation.status,
+          referenceCode: reservation.reference_code,
+          restaurantName: reservation.restaurants?.name,
+          restaurantAddress: reservation.restaurants?.address,
+        },
+      };
+    }),
+
+  getStats: adminProcedure
+    .input(z.object({
+      date: z.string().optional(),
+      restaurantId: z.number().optional(),
+    }).optional())
+    .query(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      let query = supabase.from('reservations').select('seats, status');
+
+      if (input?.date) {
+        query = query.eq('date', input.date);
+      }
+      if (input?.restaurantId) {
+        query = query.eq('restaurant_id', input.restaurantId);
+      }
+
+      const { data } = await query;
+
+      const stats = {
+        total: 0,
+        confirmed: 0,
+        checkedIn: 0,
+        cancelled: 0,
+        noShow: 0,
+        totalSeats: 0,
+        confirmedSeats: 0,
+        checkedInSeats: 0,
+      };
+
+      for (const r of data || []) {
+        stats.total++;
+        stats.totalSeats += r.seats;
+        
+        if (r.status === 'confirmed') {
+          stats.confirmed++;
+          stats.confirmedSeats += r.seats;
+        } else if (r.status === 'checked_in') {
+          stats.checkedIn++;
+          stats.checkedInSeats += r.seats;
+        } else if (r.status === 'cancelled') {
+          stats.cancelled++;
+        } else if (r.status === 'no_show') {
+          stats.noShow++;
+        }
+      }
+
+      return stats;
+    }),
+});
+
+// ============================================
 // MAIN APP ROUTER
 // ============================================
 
@@ -1550,6 +2059,8 @@ export const appRouter = router({
   users: usersRouter,
   public: publicRouter,
   upload: uploadRouter,
+  restaurants: restaurantsRouter,
+  reservations: reservationsRouter,
 });
 
 export type AppRouter = typeof appRouter;

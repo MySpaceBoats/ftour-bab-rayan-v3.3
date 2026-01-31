@@ -7,6 +7,7 @@ import { z } from "zod";
 import { sendEmail, generateVolunteerConfirmationEmail, generateOrderConfirmationEmail, generateDonationConfirmationEmail, generateContactNotificationEmail } from "./email";
 import { signInUser, signUpUser, getUserFromToken, signOutUser } from "./supabase-auth";
 import * as supabaseServices from "./supabase-services";
+import * as reservationServices from "./reservation-services";
 import { getSupabaseAdminClient } from "./supabase";
 
 // ============================================
@@ -710,6 +711,356 @@ const uploadRouter = router({
 });
 
 // ============================================
+// RESERVATIONS ROUTER
+// ============================================
+
+const restaurantsRouter = router({
+  list: publicProcedure
+    .input(z.object({ activeOnly: z.boolean().optional() }).optional())
+    .query(async ({ input }) => {
+      return reservationServices.getAllRestaurantsSupabase(input?.activeOnly);
+    }),
+  
+  getById: publicProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input }) => {
+      return reservationServices.getRestaurantByIdSupabase(input.id);
+    }),
+  
+  create: superAdminProcedure
+    .input(z.object({
+      name: z.string().min(1),
+      address: z.string().min(1),
+      phone: z.string().optional(),
+      description: z.string().optional(),
+      capacity: z.number().min(1).default(100),
+      active: z.boolean().default(true),
+    }))
+    .mutation(async ({ input }) => {
+      return reservationServices.createRestaurantSupabase(input);
+    }),
+  
+  update: superAdminProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      address: z.string().optional(),
+      phone: z.string().optional(),
+      description: z.string().optional(),
+      capacity: z.number().optional(),
+      active: z.boolean().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { id, ...updates } = input;
+      await reservationServices.updateRestaurantSupabase(id, updates);
+      return { success: true };
+    }),
+  
+  delete: superAdminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      await reservationServices.deleteRestaurantSupabase(input.id);
+      return { success: true };
+    }),
+  
+  getSlots: publicProcedure
+    .input(z.object({
+      restaurantId: z.number(),
+      date: z.string(),
+    }))
+    .query(async ({ input }) => {
+      return reservationServices.getSlotsByRestaurantAndDateSupabase(input.restaurantId, input.date);
+    }),
+  
+  createSlot: superAdminProcedure
+    .input(z.object({
+      restaurantId: z.number(),
+      date: z.string(),
+      startTime: z.string().optional(),
+      endTime: z.string().optional(),
+      capacity: z.number().min(1),
+    }))
+    .mutation(async ({ input }) => {
+      return reservationServices.createRestaurantSlotSupabase(input);
+    }),
+  
+  updateSlot: superAdminProcedure
+    .input(z.object({
+      id: z.number(),
+      date: z.string().optional(),
+      startTime: z.string().optional(),
+      endTime: z.string().optional(),
+      capacity: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { id, ...updates } = input;
+      await reservationServices.updateSlotSupabase(id, updates);
+      return { success: true };
+    }),
+  
+  deleteSlot: superAdminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      await reservationServices.deleteSlotSupabase(input.id);
+      return { success: true };
+    }),
+  
+  getCapacityStats: publicProcedure
+    .input(z.object({
+      restaurantId: z.number(),
+      date: z.string(),
+    }))
+    .query(async ({ input }) => {
+      return reservationServices.getCapacityStatsSupabase(input.restaurantId, input.date);
+    }),
+});
+
+const reservationsRouter = router({
+  create: publicProcedure
+    .input(z.object({
+      restaurantId: z.number(),
+      date: z.string(),
+      slotId: z.number().optional(),
+      fullName: z.string().min(1),
+      phone: z.string().min(1),
+      email: z.string().email().optional(),
+      seats: z.number().min(1).max(20),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      try {
+        const reservation = await reservationServices.createReservationSupabase(input);
+        
+        // Send confirmation email if email provided
+        if (reservation.email) {
+          try {
+            const { html, subject } = generateReservationConfirmationEmail(reservation);
+            await sendEmail({
+              to: reservation.email,
+              subject,
+              html,
+              bcc: ['contact@ftourbabrayan.ma'],
+            });
+          } catch (emailError) {
+            console.error('[Reservation] Email error:', emailError);
+          }
+        }
+        
+        return reservation;
+      } catch (error: any) {
+        throw new TRPCError({ 
+          code: 'BAD_REQUEST', 
+          message: error.message || 'Erreur lors de la création de la réservation' 
+        });
+      }
+    }),
+  
+  getByReference: publicProcedure
+    .input(z.object({ referenceCode: z.string() }))
+    .query(async ({ input }) => {
+      return reservationServices.getReservationByReferenceSupabase(input.referenceCode);
+    }),
+  
+  getByQrToken: publicProcedure
+    .input(z.object({ qrToken: z.string() }))
+    .query(async ({ input }) => {
+      return reservationServices.getReservationByQrTokenSupabase(input.qrToken);
+    }),
+  
+  getAvailableSeats: publicProcedure
+    .input(z.object({
+      restaurantId: z.number(),
+      date: z.string(),
+      slotId: z.number().optional(),
+    }))
+    .query(async ({ input }) => {
+      return reservationServices.getAvailableSeatsSupabase(input.restaurantId, input.date, input.slotId);
+    }),
+  
+  list: adminProcedure
+    .input(z.object({
+      restaurantId: z.number().optional(),
+      date: z.string().optional(),
+      status: z.enum(['pending', 'confirmed', 'cancelled', 'no_show', 'checked_in']).optional(),
+      slotId: z.number().optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      return reservationServices.getAllReservationsSupabase(input);
+    }),
+  
+  updateStatus: adminProcedure
+    .input(z.object({
+      id: z.number(),
+      status: z.enum(['pending', 'confirmed', 'cancelled', 'no_show', 'checked_in']),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      await reservationServices.updateReservationStatusSupabase(
+        input.id, 
+        input.status,
+        ctx.user?.name || ctx.user?.email || 'Admin'
+      );
+      return { success: true };
+    }),
+  
+  cancel: publicProcedure
+    .input(z.object({ referenceCode: z.string() }))
+    .mutation(async ({ input }) => {
+      const reservation = await reservationServices.getReservationByReferenceSupabase(input.referenceCode);
+      if (!reservation) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Réservation non trouvée' });
+      }
+      await reservationServices.cancelReservationSupabase(reservation.id);
+      return { success: true };
+    }),
+  
+  checkin: scannerProcedure
+    .input(z.object({
+      qrToken: z.string().optional(),
+      referenceCode: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      let reservation;
+      
+      if (input.qrToken) {
+        reservation = await reservationServices.getReservationByQrTokenSupabase(input.qrToken);
+      } else if (input.referenceCode) {
+        reservation = await reservationServices.getReservationByReferenceSupabase(input.referenceCode);
+      }
+      
+      if (!reservation) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Réservation non trouvée' });
+      }
+      
+      try {
+        const checkin = await reservationServices.createCheckinSupabase({
+          reservationId: reservation.id,
+          validationMode: input.qrToken ? 'scan' : 'manual',
+          validatedBy: ctx.user?.name || ctx.user?.email || 'Scanner',
+        });
+        return checkin;
+      } catch (error: any) {
+        throw new TRPCError({ 
+          code: 'BAD_REQUEST', 
+          message: error.message || 'Erreur lors du check-in' 
+        });
+      }
+    }),
+  
+  exportCSV: adminProcedure
+    .input(z.object({
+      restaurantId: z.number().optional(),
+      date: z.string().optional(),
+      status: z.enum(['pending', 'confirmed', 'cancelled', 'no_show', 'checked_in']).optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      return reservationServices.exportReservationsCSVSupabase(input);
+    }),
+  
+  getStats: adminProcedure
+    .input(z.object({
+      restaurantId: z.number().optional(),
+      date: z.string().optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      return reservationServices.getReservationStatsSupabase(input);
+    }),
+});
+
+// Helper function for reservation confirmation email
+function generateReservationConfirmationEmail(reservation: any) {
+  const baseUrl = process.env.VITE_APP_URL || 'https://ftourbabrayan.ma';
+  const qrUrl = `${baseUrl}/checkin-reservation/${reservation.qrToken}`;
+  
+  const html = `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f0;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <!-- Header -->
+    <div style="background-color: #5d5a3c; padding: 30px; text-align: center;">
+      <h1 style="color: #f5f5dc; margin: 0; font-size: 28px;">Ftour Bab Rayan</h1>
+      <p style="color: #d4d4aa; margin: 10px 0 0 0; font-size: 14px;">Réservation confirmée</p>
+    </div>
+    
+    <!-- Content -->
+    <div style="padding: 30px;">
+      <h2 style="color: #5d5a3c; margin-top: 0;">Bonjour ${reservation.fullName},</h2>
+      
+      <p style="color: #333; line-height: 1.6;">
+        Votre réservation pour le Ftour solidaire a été confirmée.
+      </p>
+      
+      <!-- Reservation Details -->
+      <div style="background-color: #f5f5f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+        <h3 style="color: #5d5a3c; margin-top: 0;">Détails de votre réservation</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 8px 0; color: #666;">Référence:</td>
+            <td style="padding: 8px 0; color: #333; font-weight: bold;">${reservation.referenceCode}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #666;">Date:</td>
+            <td style="padding: 8px 0; color: #333;">${reservation.date}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #666;">Restaurant:</td>
+            <td style="padding: 8px 0; color: #333;">${reservation.restaurant?.name || 'Non spécifié'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #666;">Nombre de places:</td>
+            <td style="padding: 8px 0; color: #333;">${reservation.seats}</td>
+          </tr>
+        </table>
+      </div>
+      
+      <!-- QR Code Section -->
+      <div style="text-align: center; margin: 30px 0;">
+        <p style="color: #5d5a3c; font-weight: bold;">Présentez ce QR code à votre arrivée:</p>
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrUrl)}" 
+             alt="QR Code" style="margin: 15px 0;" />
+        <p style="color: #666; font-size: 12px;">Référence: ${reservation.referenceCode}</p>
+      </div>
+      
+      <!-- Address -->
+      <div style="background-color: #5d5a3c; color: #f5f5dc; border-radius: 8px; padding: 20px; margin: 20px 0;">
+        <h3 style="margin-top: 0;">📍 Adresse</h3>
+        <p style="margin: 0;">${reservation.restaurant?.address || '4 rue Bayt Lham, quartier Palmier, Casablanca'}</p>
+      </div>
+      
+      <!-- Important Notes -->
+      <div style="border-left: 4px solid #5d5a3c; padding-left: 15px; margin: 20px 0;">
+        <h4 style="color: #5d5a3c; margin-top: 0;">Informations importantes</h4>
+        <ul style="color: #666; padding-left: 20px;">
+          <li>Présentez-vous 15 minutes avant l'heure du Ftour</li>
+          <li>Munissez-vous de ce QR code (imprimé ou sur téléphone)</li>
+          <li>En cas d'empêchement, merci d'annuler votre réservation</li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- Footer -->
+    <div style="background-color: #5d5a3c; padding: 20px; text-align: center;">
+      <p style="color: #d4d4aa; margin: 0; font-size: 14px;">
+        Association Bab Rayan<br/>
+        📞 +212 664-887978 | ✉️ contact@ftourbabrayan.ma
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+  
+  return {
+    html,
+    subject: `✅ Réservation confirmée - ${reservation.referenceCode} - Ftour Bab Rayan`,
+  };
+}
+
+// ============================================
 // MAIN APP ROUTER
 // ============================================
 
@@ -777,6 +1128,8 @@ export const appRouter = router({
   users: usersRouter,
   public: publicRouter,
   upload: uploadRouter,
+  restaurants: restaurantsRouter,
+  reservations: reservationsRouter,
 });
 
 export type AppRouter = typeof appRouter;

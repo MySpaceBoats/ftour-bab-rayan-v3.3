@@ -20,6 +20,7 @@ import FAQ from "./pages/FAQ";
 import MentionsLegales from "./pages/MentionsLegales";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import Reservation from "./pages/Reservation";
 
 // Scanner
 import Scanner from "./pages/Scanner";
@@ -34,6 +35,10 @@ import AdminJours from "./pages/AdminJours";
 import AdminUtilisateurs from "./pages/AdminUtilisateurs";
 import AdminGoodies from "./pages/AdminGoodies";
 import AdminScan from "./pages/AdminScan";
+import AdminReservations from "./pages/AdminReservations";
+import AdminRestaurants from "./pages/AdminRestaurants";
+import AdminScanReservation from "./pages/AdminScanReservation";
+import CheckinReservation from "./pages/CheckinReservation";
 
 // Language-aware route wrapper
 function LocalizedRoutes() {
@@ -73,12 +78,16 @@ function LocalizedRoutes() {
       <Route path="/admin/utilisateurs" component={AdminUtilisateurs} />
       <Route path="/admin/goodies" component={AdminGoodies} />
       <Route path="/admin/scan" component={AdminScan} />
+      <Route path="/admin/reservations" component={AdminReservations} />
+      <Route path="/admin/restaurants" component={AdminRestaurants} />
+      <Route path="/admin/scan-reservation" component={AdminScanReservation} />
       
       {/* Scanner (mobile-first) - no locale prefix */}
       <Route path="/scanner" component={Scanner} />
       
       {/* Public QR Check-in page - no locale prefix */}
       <Route path="/checkin/:token" component={Checkin} />
+      <Route path="/checkin-reservation/:token" component={CheckinReservation} />
       
       {/* Redirect root to default locale */}
       <Route path="/">
@@ -98,6 +107,7 @@ function LocalizedRoutes() {
       <Route path="/:lang/mentions-legales" component={MentionsLegales} />
       <Route path="/:lang/connexion" component={Login} />
       <Route path="/:lang/inscription" component={Signup} />
+      <Route path="/:lang/reservation" component={Reservation} />
       
       {/* Legacy routes - redirect to localized versions */}
       <Route path="/programme">
@@ -132,6 +142,9 @@ function LocalizedRoutes() {
       </Route>
       <Route path="/inscription">
         {() => <Redirect to={`/${lang}/inscription`} />}
+      </Route>
+      <Route path="/reservation">
+        {() => <Redirect to={`/${lang}/reservation`} />}
       </Route>
       
       {/* 404 */}

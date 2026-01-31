@@ -393,3 +393,38 @@
 - [ ] Corriger l'envoi d'email pour le formulaire goodies (comme bénévole)
 - [ ] Corriger l'envoi d'email pour le formulaire contact (comme bénévole)
 - [ ] Corriger l'envoi d'email pour le formulaire dons (comme bénévole)
+
+## Module Réservation Ftour - 31/01/2026
+### Phase 1 : Modèle de données
+- [ ] Créer table restaurants (id, name, address, phone, active, created_at)
+- [ ] Créer table restaurant_slots (id, restaurant_id, date, start_time, end_time, capacity)
+- [ ] Créer table reservations (id, restaurant_id, date, slot_id, full_name, phone, email, seats, status, reference_code, qr_token, created_at)
+- [ ] Créer table reservation_checkins (id, reservation_id, scanned_at, validation_mode, validated_by, created_at)
+
+### Phase 2 : Backend et API
+- [ ] Services Supabase pour restaurants et réservations
+- [ ] Routes tRPC pour CRUD restaurants
+- [ ] Routes tRPC pour créer/annuler réservations
+- [ ] Routes tRPC pour check-in par QR/référence
+- [ ] Validation anti-surbooking (capacité)
+
+### Phase 3 : Page publique /reservation
+- [ ] UI mobile-first avec étapes (date, restaurant, créneau, formulaire)
+- [ ] Écran de confirmation avec référence unique
+- [ ] Blocage si capacité atteinte
+
+### Phase 4 : Dashboard admin /admin/reservations
+- [ ] Vue liste avec filtres (date, restaurant, statut, créneau)
+- [ ] Actions (confirmer, annuler, checked_in, no_show)
+- [ ] Affichage capacités restantes
+- [ ] Export CSV par jour et restaurant
+
+### Phase 5 : Check-in QR /admin/scan-reservation
+- [ ] Scanner QR avec caméra navigateur
+- [ ] Validation automatique si statut et date OK
+- [ ] Blocage doublons
+
+### Phase 6 : Notifications
+- [ ] Email confirmation au participant
+- [ ] Email notification admin/restaurant
+- [ ] Messages multilingues (FR/AR/AMZ/EN)

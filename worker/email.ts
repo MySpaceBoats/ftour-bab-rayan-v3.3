@@ -461,3 +461,128 @@ export function generateContactAdminNotificationEmail(data: ContactEmailData): {
     html: baseTemplate(content),
   };
 }
+
+
+/**
+ * Generate reservation confirmation email
+ */
+export interface ReservationEmailData {
+  fullName: string;
+  email: string;
+  phone: string;
+  referenceCode: string;
+  restaurantName: string;
+  restaurantAddress: string;
+  date: string;
+  seats: number;
+  qrToken: string;
+  baseUrl: string;
+}
+
+export function generateReservationConfirmationEmail(data: ReservationEmailData): { subject: string; html: string } {
+  const qrCodeUrl = getQrCodeUrl(data.qrToken, data.baseUrl.replace('/checkin/', '/reservation/checkin/'));
+  const checkinUrl = `${data.baseUrl.replace('/checkin/', '/reservation/checkin/')}${data.qrToken}`;
+  
+  const content = `
+    <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
+      Réservation confirmée !
+    </h2>
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Cher(e) <strong>${data.fullName}</strong>,
+    </p>
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Votre réservation pour le <strong>Ftour solidaire</strong> a bien été enregistrée. 
+      Nous avons hâte de vous accueillir !
+    </p>
+    
+    <!-- Référence -->
+    <div style="background-color: #f0fdf4; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center;">
+      <p style="margin: 0; color: #166534; font-size: 14px;">Référence de réservation</p>
+      <p style="margin: 5px 0 0 0; color: #166534; font-size: 24px; font-weight: bold;">${data.referenceCode}</p>
+    </div>
+    
+    <!-- Détails de la réservation -->
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f0fdf4; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">📅 Détails de votre réservation</h3>
+          <p style="margin: 5px 0; color: #374151;"><strong>Restaurant :</strong> ${data.restaurantName}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Adresse :</strong> ${data.restaurantAddress}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Nombre de places :</strong> ${data.seats} personne(s)</p>
+        </td>
+      </tr>
+    </table>
+    
+    <!-- QR Code -->
+    <div style="text-align: center; margin: 30px 0; padding: 20px; background-color: #ffffff; border: 2px dashed #166534; border-radius: 8px;">
+      <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">🎫 Votre QR Code</h3>
+      <img src="${qrCodeUrl}" alt="QR Code" style="width: 200px; height: 200px; margin: 10px 0;" />
+      <p style="color: #6b7280; font-size: 14px; margin: 10px 0 0 0;">
+        Présentez ce QR code à l'entrée du restaurant
+      </p>
+    </div>
+    
+    <!-- Consignes -->
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fef3c7; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 18px;">📋 Informations importantes</h3>
+          <ul style="margin: 0; padding-left: 20px; color: #374151;">
+            <li style="margin-bottom: 8px;">Arrivez 15 minutes avant l'heure du Ftour</li>
+            <li style="margin-bottom: 8px;">Présentez votre QR code ou référence à l'entrée</li>
+            <li style="margin-bottom: 8px;">En cas d'annulation, prévenez-nous à l'avance</li>
+          </ul>
+        </td>
+      </tr>
+    </table>
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">
+      Ramadan Moubarak !<br>
+      <strong>L'équipe Ftour Bab Rayan</strong>
+    </p>
+  `;
+
+  return {
+    subject: `✅ Réservation confirmée - ${data.referenceCode}`,
+    html: baseTemplate(content),
+  };
+}
+
+/**
+ * Generate admin notification email for new reservation
+ */
+export function generateReservationAdminNotificationEmail(data: ReservationEmailData): { subject: string; html: string } {
+  const content = `
+    <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
+      Nouvelle réservation Ftour
+    </h2>
+    
+    <div style="background-color: #f0fdf4; border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de la réservation</h3>
+      <p style="margin: 5px 0; color: #374151;"><strong>Référence :</strong> ${data.referenceCode}</p>
+      <p style="margin: 5px 0; color: #374151;"><strong>Nom :</strong> ${data.fullName}</p>
+      <p style="margin: 5px 0; color: #374151;"><strong>Téléphone :</strong> <a href="tel:${data.phone}" style="color: #166534;">${data.phone}</a></p>
+      ${data.email ? `<p style="margin: 5px 0; color: #374151;"><strong>Email :</strong> <a href="mailto:${data.email}" style="color: #166534;">${data.email}</a></p>` : ''}
+      <p style="margin: 5px 0; color: #374151;"><strong>Places :</strong> ${data.seats}</p>
+    </div>
+    
+    <div style="background-color: #fef3c7; border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 18px;">📍 Lieu et date</h3>
+      <p style="margin: 5px 0; color: #374151;"><strong>Restaurant :</strong> ${data.restaurantName}</p>
+      <p style="margin: 5px 0; color: #374151;"><strong>Adresse :</strong> ${data.restaurantAddress}</p>
+      <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
+    </div>
+    
+    <p style="color: #6b7280; font-size: 14px; margin: 20px 0 0 0;">
+      Gérez cette réservation depuis le <a href="https://ftourbabrayan.ma/admin/reservations" style="color: #166534;">dashboard admin</a>.
+    </p>
+  `;
+
+  return {
+    subject: `📅 [Réservation] ${data.referenceCode} - ${data.fullName} (${data.seats} places)`,
+    html: baseTemplate(content),
+  };
+}
