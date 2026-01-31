@@ -1951,6 +1951,44 @@ const reservationsRouter = router({
       };
     }),
 
+  getAvailableSeats: publicProcedure
+    .input(z.object({
+      restaurantId: z.number(),
+      date: z.string(),
+      slotId: z.number().optional(),
+    }))
+    .query(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      // Get restaurant capacity
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('capacity')
+        .eq('id', input.restaurantId)
+        .single();
+
+      if (!restaurant) {
+        return { available: 0, total: 0 };
+      }
+
+      // Get current reservations for this date
+      const { data: existingReservations } = await supabase
+        .from('reservations')
+        .select('seats')
+        .eq('restaurant_id', input.restaurantId)
+        .eq('date', input.date)
+        .in('status', ['pending', 'confirmed']);
+
+      const totalReserved = (existingReservations || []).reduce((sum, r) => sum + r.seats, 0);
+      const available = restaurant.capacity - totalReserved;
+
+      return {
+        available: Math.max(0, available),
+        total: restaurant.capacity,
+        reserved: totalReserved,
+      };
+    }),
+
   verify: publicProcedure
     .input(z.object({ token: z.string() }))
     .query(async ({ input, ctx }) => {

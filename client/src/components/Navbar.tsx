@@ -33,6 +33,7 @@ export default function Navbar() {
     { href: localizedHref('/'), label: t.nav.home, icon: Home },
     { href: localizedHref('/evenement'), label: t.nav.event, icon: Info },
     { href: localizedHref('/benevole'), label: t.nav.volunteer, icon: Users },
+    { href: localizedHref('/reservation'), label: t.nav.restaurant || 'Restaurant Solidaire', icon: Building2 },
     { href: localizedHref('/goodies'), label: t.nav.goodies, icon: ShoppingBag },
     { href: localizedHref('/association'), label: t.association.title, icon: Building2 },
     { href: localizedHref('/contact'), label: t.nav.contact, icon: Phone },

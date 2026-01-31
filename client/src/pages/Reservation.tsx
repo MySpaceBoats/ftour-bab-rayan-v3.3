@@ -110,8 +110,8 @@ export default function Reservation() {
         setStep('details');
         break;
       case 'details':
-        if (formData.seats < 1 || formData.seats > (availableSeats || 0)) {
-          toast.error(`Nombre de places invalide. Disponibles: ${availableSeats || 0}`);
+        if (formData.seats < 1 || formData.seats > (availableSeats?.available || 0)) {
+          toast.error(`Nombre de places invalide. Disponibles: ${availableSeats?.available || 0}`);
           return;
         }
         setStep('form');
@@ -388,7 +388,7 @@ export default function Reservation() {
                       type="button"
                       variant="outline"
                       size="icon"
-                      onClick={() => setFormData({ ...formData, seats: Math.min(availableSeats || 20, formData.seats + 1) })}
+                      onClick={() => setFormData({ ...formData, seats: Math.min(availableSeats?.available || 20, formData.seats + 1) })}
                       className="border-[#5d5a3c] text-[#5d5a3c]"
                     >
                       +
@@ -399,8 +399,8 @@ export default function Reservation() {
                   ) : (
                     <p className="text-sm text-[#6b6b4e] mt-2">
                       {lang === 'ar' 
-                        ? `${availableSeats || 0} مكان متاح`
-                        : `${availableSeats || 0} places disponibles`
+                        ? `${availableSeats?.available || 0} مكان متاح`
+                        : `${availableSeats?.available || 0} places disponibles`
                       }
                     </p>
                   )}

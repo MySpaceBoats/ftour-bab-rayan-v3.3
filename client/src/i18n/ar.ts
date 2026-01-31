@@ -12,6 +12,7 @@ export const ar: Translations = {
     home: 'الرئيسية',
     event: 'الحدث',
     volunteer: 'كن متطوعاً',
+    restaurant: 'مطعم تضامني',
     goodies: 'منتجات تضامنية',
     association: 'الجمعية',
     contact: 'اتصل بنا',

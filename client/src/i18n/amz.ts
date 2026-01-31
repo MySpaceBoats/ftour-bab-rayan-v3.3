@@ -12,6 +12,7 @@ export const amz: Translations = {
     home: 'ⴰⵙⵏⵓⴱⴳ',
     event: 'ⵜⴰⵎⵙⴽⵉⵔⵜ',
     volunteer: 'ⴰⴷ ⵜⴳⵜ ⴰⵎⵙⵜⴰⵡⴰⵏ',
+    restaurant: 'ⴰⵙⵉⵔⵎ ⵏ ⵜⵉⵡⵉⵣⵉ',
     goodies: 'ⵉⵙⵓⴼⴰⵔ ⵏ ⵜⵉⵡⵉⵣⵉ',
     association: 'ⵜⴰⵎⵙⵎⵓⵏⵜ',
     contact: 'ⴰⵎⵢⴰⵡⴰⴹ',

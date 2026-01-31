@@ -243,9 +243,9 @@ export async function createReservationSupabase(data: ReservationData) {
   if (!client) throw new Error('Supabase not configured');
 
   // Check capacity before creating
-  const available = await getAvailableSeatsSupabase(data.restaurantId, data.date, data.slotId);
-  if (available < data.seats) {
-    throw new Error(`Capacité insuffisante. Places disponibles: ${available}`);
+  const availabilityResult = await getAvailableSeatsSupabase(data.restaurantId, data.date, data.slotId);
+  if (availabilityResult.available < data.seats) {
+    throw new Error(`Capacité insuffisante. Places disponibles: ${availabilityResult.available}`);
   }
 
   const referenceCode = generateReferenceCode();
@@ -372,13 +372,19 @@ export async function cancelReservationSupabase(id: number, updatedBy?: string) 
   return updateReservationStatusSupabase(id, 'cancelled', updatedBy);
 }
 
+export interface AvailableSeatsResult {
+  available: number;
+  total: number;
+  reserved: number;
+}
+
 export async function getAvailableSeatsSupabase(
   restaurantId: number, 
   date: string, 
   slotId?: number
-): Promise<number> {
+): Promise<AvailableSeatsResult> {
   const client = getSupabaseAdminClient();
-  if (!client) return 0;
+  if (!client) return { available: 0, total: 0, reserved: 0 };
 
   // Get restaurant capacity
   const { data: restaurant } = await client
@@ -387,7 +393,7 @@ export async function getAvailableSeatsSupabase(
     .eq('id', restaurantId)
     .single();
 
-  if (!restaurant) return 0;
+  if (!restaurant) return { available: 0, total: 0, reserved: 0 };
 
   let capacity = restaurant.capacity;
 
@@ -419,8 +425,13 @@ export async function getAvailableSeatsSupabase(
   const { data: reservations } = await query;
   
   const reservedSeats = reservations?.reduce((sum, r) => sum + r.seats, 0) || 0;
+  const availableSeats = Math.max(0, capacity - reservedSeats);
   
-  return Math.max(0, capacity - reservedSeats);
+  return {
+    available: availableSeats,
+    total: capacity,
+    reserved: reservedSeats,
+  };
 }
 
 export async function getCapacityStatsSupabase(restaurantId: number, date: string) {

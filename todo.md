@@ -428,3 +428,7 @@
 - [ ] Email confirmation au participant
 - [ ] Email notification admin/restaurant
 - [ ] Messages multilingues (FR/AR/AMZ/EN)
+
+## Bugs Réservation - 31/01/2026
+- [x] Bug: Places disponibles affiche 0 au lieu de la capacité réelle (corrigé - getAvailableSeatsSupabase retourne maintenant {available, total, reserved})
+- [x] Ajouter "Restaurant Solidaire" au menu de navigation (ajouté avec traductions FR/EN/AR/AMZ)

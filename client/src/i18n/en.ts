@@ -12,6 +12,7 @@ export const en: Translations = {
     home: 'Home',
     event: 'The Event',
     volunteer: 'Become a Volunteer',
+    restaurant: 'Solidarity Restaurant',
     goodies: 'Solidarity Goodies',
     association: 'Association',
     contact: 'Contact',
