@@ -432,3 +432,13 @@
 ## Bugs Réservation - 31/01/2026
 - [x] Bug: Places disponibles affiche 0 au lieu de la capacité réelle (corrigé - getAvailableSeatsSupabase retourne maintenant {available, total, reserved})
 - [x] Ajouter "Restaurant Solidaire" au menu de navigation (ajouté avec traductions FR/EN/AR/AMZ)
+
+## Modifications Ftour Solidaire - 31/01/2026
+- [x] Renommer "Restaurant Solidaire" en "Ftour Solidaire" dans toutes les traductions (FR/EN/AR/AMZ)
+- [x] Ajouter section admin pour gérer les réservations Ftour Solidaire (Réservations Ftour, Restaurants, Scanner Réservations)
+- [x] Ajouter bloc "La Table du Jardin" sur la page /reservation avec:
+  - Titre et description
+  - Adresse, téléphone, horaires
+  - Design olive/crème cohérent
+- [x] Traduire le bloc "La Table du Jardin" dans les 4 langues (FR/EN/AR/AMZ)
+- [x] Lien externe vers https://latabledujardin.ftourbabrayan.ma (nouvel onglet, rel="noopener noreferrer")

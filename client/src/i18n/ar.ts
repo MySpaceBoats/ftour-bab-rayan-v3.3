@@ -12,7 +12,7 @@ export const ar: Translations = {
     home: 'الرئيسية',
     event: 'الحدث',
     volunteer: 'كن متطوعاً',
-    restaurant: 'مطعم تضامني',
+    restaurant: 'فطور تضامني',
     goodies: 'منتجات تضامنية',
     association: 'الجمعية',
     contact: 'اتصل بنا',
@@ -480,5 +480,13 @@ export const ar: Translations = {
     address: 'العنوان',
     active: 'نشط',
     inactive: 'غير نشط',
+    tableJardin: {
+      title: 'مائدة الحديقة',
+      description: 'اكتشف مائدة الحديقة، مطعمنا التضامني الشريك. مكان دافئ حيث يلتقي المطبخ المغربي التقليدي بالالتزام الاجتماعي، لخدمة المحتاجين.',
+      address: 'حي النخيل، الدار البيضاء',
+      hours: 'مفتوح خلال رمضان',
+      cta: 'زيارة موقع مائدة الحديقة',
+      tagline: 'مطبخ تضامني',
+    },
   },
 };

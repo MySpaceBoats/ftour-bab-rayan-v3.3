@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, MapPin, Users, Phone, Mail, CheckCircle2, ArrowRight, ArrowLeft, Utensils, Clock, AlertCircle } from 'lucide-react';
+import { Calendar, MapPin, Users, Phone, Mail, CheckCircle2, ArrowRight, ArrowLeft, Utensils, Clock, AlertCircle, ExternalLink, Leaf } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Step = 'date' | 'restaurant' | 'details' | 'form' | 'confirmation';
@@ -637,6 +637,75 @@ export default function Reservation() {
           )}
         </div>
       </main>
+
+      {/* La Table du Jardin Section */}
+      <section className="py-16 bg-[#f5f5f0]">
+        <div className="container max-w-4xl mx-auto px-4">
+          <Card className="border-[#5d5a3c]/20 bg-white overflow-hidden">
+            <div className="md:flex">
+              {/* Left side - Content */}
+              <div className="p-8 md:w-2/3">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-full bg-[#5d5a3c]/10 flex items-center justify-center">
+                    <Leaf className="w-6 h-6 text-[#5d5a3c]" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-[#5d5a3c]" style={{ fontFamily: 'Cormorant Garamond, serif' }}>
+                    {t.reservation.tableJardin.title}
+                  </h2>
+                </div>
+                
+                <p className="text-[#6b6b4e] mb-6 leading-relaxed">
+                  {t.reservation.tableJardin.description}
+                </p>
+
+                <div className="space-y-3 mb-6">
+                  <div className="flex items-center gap-3 text-[#5d5a3c]">
+                    <MapPin className="w-5 h-5 text-[#5d5a3c]/70" />
+                    <span>{t.reservation.tableJardin.address}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-[#5d5a3c]">
+                    <Phone className="w-5 h-5 text-[#5d5a3c]/70" />
+                    <span>+212 664-887978</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-[#5d5a3c]">
+                    <Clock className="w-5 h-5 text-[#5d5a3c]/70" />
+                    <span>{t.reservation.tableJardin.hours}</span>
+                  </div>
+                </div>
+
+                <a 
+                  href="https://latabledujardin.ftourbabrayan.ma" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-[#5d5a3c] hover:bg-[#4a4730] text-[#f5f5dc] px-6 py-3 rounded-lg transition-colors font-medium"
+                >
+                  {t.reservation.tableJardin.cta}
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
+
+              {/* Right side - Decorative */}
+              <div className="hidden md:block md:w-1/3 bg-[#5d5a3c] relative">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center text-[#f5f5dc]/90">
+                    <Utensils className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium" style={{ fontFamily: 'Caveat, cursive' }}>
+                      {t.reservation.tableJardin.tagline}
+                    </p>
+                  </div>
+                </div>
+                {/* Decorative pattern */}
+                <div className="absolute inset-0 opacity-10">
+                  <div className="w-full h-full" style={{ 
+                    backgroundImage: 'radial-gradient(circle, #f5f5dc 1px, transparent 1px)',
+                    backgroundSize: '20px 20px'
+                  }} />
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </section>
 
       <Footer />
     </div>

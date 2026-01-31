@@ -10,7 +10,7 @@ export const fr = {
     home: 'Accueil',
     event: "L'événement",
     volunteer: 'Devenir bénévole',
-    restaurant: 'Restaurant Solidaire',
+    restaurant: 'Ftour Solidaire',
     goodies: 'Goodies solidaires',
     association: 'Association',
     contact: 'Contact',
@@ -478,6 +478,14 @@ export const fr = {
     address: 'Adresse',
     active: 'Actif',
     inactive: 'Inactif',
+    tableJardin: {
+      title: 'La Table du Jardin',
+      description: 'Découvrez La Table du Jardin, notre restaurant solidaire partenaire. Un lieu chaleureux où la cuisine traditionnelle marocaine rencontre l\'engagement social, au service des personnes dans le besoin.',
+      address: 'Quartier Palmier, Casablanca',
+      hours: 'Ouvert pendant le Ramadan',
+      cta: 'Visiter le site de La Table du Jardin',
+      tagline: 'Cuisine solidaire',
+    },
   },
 };
 

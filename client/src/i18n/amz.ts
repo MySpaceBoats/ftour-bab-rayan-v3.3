@@ -12,7 +12,7 @@ export const amz: Translations = {
     home: 'ⴰⵙⵏⵓⴱⴳ',
     event: 'ⵜⴰⵎⵙⴽⵉⵔⵜ',
     volunteer: 'ⴰⴷ ⵜⴳⵜ ⴰⵎⵙⵜⴰⵡⴰⵏ',
-    restaurant: 'ⴰⵙⵉⵔⵎ ⵏ ⵜⵉⵡⵉⵣⵉ',
+    restaurant: 'ⴼⵜⵓⵔ ⵏ ⵜⵉⵡⵉⵣⵉ',
     goodies: 'ⵉⵙⵓⴼⴰⵔ ⵏ ⵜⵉⵡⵉⵣⵉ',
     association: 'ⵜⴰⵎⵙⵎⵓⵏⵜ',
     contact: 'ⴰⵎⵢⴰⵡⴰⴹ',
@@ -480,5 +480,13 @@ export const amz: Translations = {
     address: 'ⵜⴰⵏⵙⴰ',
     active: 'ⵉⵜⵜⵓⵔⵎ',
     inactive: 'ⵓⵔ ⵉⵜⵜⵓⵔⵎ',
+    tableJardin: {
+      title: 'La Table du Jardin',
+      description: 'ⵙⵙⵏ ⵜⴰⴼⵏⴰ ⵏ ⵓⵔⵜⵉ, ⵜⴰⵎⵙⵔⵉⵜ ⵏⵏⵖ ⵏ ⵜⴰⵎⵓⵏⵜ. ⴰⴷⵖⴰⵔ ⴰⵙⵎⵎⵉⴹ ⴰⵏⴷⴰ ⵜⴰⵎⵙⵔⵉⵜ ⵜⴰⵎⵖⵔⴰⴱⵉⵜ ⵜⴰⵎⵏⵙ�ⴰⵜ ⵜⵎⵏⴰⴹⴰ ⴰⵏⴰⵎⵓⵏ ⴰⵏⴰⵎⵓⵏ, ⵉ ⵜⵉⵡⵉⵣⵉ ⵏ ⵡⵉⴷ ⵉⵃⵜⴰⵊⴰⵏ.',
+      address: 'ⴰⵖⵔⴰⴱ ⵏ ⵜⵉⵏⵉⵔ�ⵉ, ⵜⵉⴹⴰⵔⵜ ⵜⴰⵎⵍⵍⴰⵍⵜ',
+      hours: 'ⵉⵔⵣⵎ ⴷⵉ ⵔⵎⴹⴰⵏ',
+      cta: 'ⵜⵜⵓ ⴰⵙ�ⵉⵜ ⵏ La Table du Jardin',
+      tagline: 'ⵜⴰⵎⵙⵔⵉⵜ ⵏ ⵜⴰⵎⵓⵏⵜ',
+    },
   },
 };

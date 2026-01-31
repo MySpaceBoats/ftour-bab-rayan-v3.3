@@ -12,7 +12,7 @@ export const en: Translations = {
     home: 'Home',
     event: 'The Event',
     volunteer: 'Become a Volunteer',
-    restaurant: 'Solidarity Restaurant',
+    restaurant: 'Solidarity Ftour',
     goodies: 'Solidarity Goodies',
     association: 'Association',
     contact: 'Contact',
@@ -480,5 +480,13 @@ export const en: Translations = {
     address: 'Address',
     active: 'Active',
     inactive: 'Inactive',
+    tableJardin: {
+      title: 'La Table du Jardin',
+      description: 'Discover La Table du Jardin, our partner solidarity restaurant. A warm place where traditional Moroccan cuisine meets social commitment, serving people in need.',
+      address: 'Palmier District, Casablanca',
+      hours: 'Open during Ramadan',
+      cta: 'Visit La Table du Jardin website',
+      tagline: 'Solidarity cuisine',
+    },
   },
 };

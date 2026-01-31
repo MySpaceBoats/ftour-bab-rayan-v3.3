@@ -8,7 +8,7 @@ import { getLoginUrl } from "@/const";
 import { 
   Users, ShoppingBag, Heart, Calendar, QrCode, Settings, 
   ArrowRight, Loader2, BarChart3, Package, MessageSquare,
-  UserCog, FileText, Home, LogOut
+  UserCog, FileText, Home, LogOut, UtensilsCrossed, Store
 } from "lucide-react";
 
 export default function Admin() {
@@ -411,6 +411,90 @@ export default function Admin() {
               </CardContent>
             </Card>
           )}
+        </div>
+
+        {/* Ftour Solidaire Section */}
+        <div className="mt-8">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <UtensilsCrossed className="h-5 w-5 text-[#5d5a3c]" />
+            Ftour Solidaire
+          </h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Réservations Management */}
+            {canManageVolunteers && (
+              <Card className="card-hover border-[#5d5a3c]/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[#5d5a3c]/10 flex items-center justify-center">
+                      <UtensilsCrossed className="h-5 w-5 text-[#5d5a3c]" />
+                    </div>
+                    Réservations Ftour
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Gérer les réservations pour les repas Ftour solidaires
+                  </p>
+                  <Link href="/admin/reservations">
+                    <Button variant="outline" className="w-full border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10">
+                      Gérer les réservations
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Restaurants Management */}
+            {isSuperAdmin && (
+              <Card className="card-hover border-[#5d5a3c]/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[#5d5a3c]/10 flex items-center justify-center">
+                      <Store className="h-5 w-5 text-[#5d5a3c]" />
+                    </div>
+                    Restaurants
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Configurer les restaurants et leurs capacités
+                  </p>
+                  <Link href="/admin/restaurants">
+                    <Button variant="outline" className="w-full border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10">
+                      Gérer les restaurants
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Scanner Réservations */}
+            {canScan && (
+              <Card className="card-hover border-[#5d5a3c]/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[#5d5a3c]/10 flex items-center justify-center">
+                      <QrCode className="h-5 w-5 text-[#5d5a3c]" />
+                    </div>
+                    Scanner Réservations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Scanner les QR codes des réservations Ftour
+                  </p>
+                  <Link href="/admin/scan-reservation">
+                    <Button className="w-full bg-[#5d5a3c] hover:bg-[#5d5a3c]/90">
+                      Ouvrir le scanner
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
       </main>
     </div>
