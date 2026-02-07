@@ -442,3 +442,62 @@
   - Design olive/crème cohérent
 - [x] Traduire le bloc "La Table du Jardin" dans les 4 langues (FR/EN/AR/AMZ)
 - [x] Lien externe vers https://latabledujardin.ftourbabrayan.ma (nouvel onglet, rel="noopener noreferrer")
+
+
+## Bug Confirmation Réservation - 31/01/2026
+- [ ] Date affiche "Invalid Date" au lieu de la vraie date
+- [ ] Restaurant n'affiche pas le nom
+- [ ] Places n'affiche pas le nombre
+
+
+## Module Livraison Goodies Solidaires - 31/01/2026
+### Phase 1 : Correction bug confirmation réservation
+- [ ] Corriger l'affichage de la date (Invalid Date)
+- [ ] Corriger l'affichage du restaurant
+- [ ] Corriger l'affichage des places
+
+### Phase 2 : Modèle de données livraison
+- [x] Ajouter champs à la table orders: delivery_mode, delivery_fee, delivery_address, delivery_phone, delivery_instructions, delivery_notes
+- [x] Créer migration Drizzle pour les nouveaux champs (migration appliquée avec succès)
+
+### Phase 3 : Choix mode de réception
+- [ ] Ajouter section "Mode de réception" dans le checkout
+- [ ] Options: Retrait sur place (défaut), Livraison à domicile
+- [ ] Validation obligatoire du choix
+
+### Phase 4 : Frais de livraison
+- [ ] Ajouter frais de livraison fixes (30 MAD) si livraison sélectionnée
+- [ ] Recalcul dynamique du total du panier
+- [ ] Affichage clair: sous-total, frais, total
+
+### Phase 5 : Formulaire adresse livraison
+- [ ] Afficher uniquement si livraison sélectionnée
+- [ ] Champs requis: adresse, ville, quartier, téléphone
+- [ ] Champs optionnels: code postal, instructions
+- [ ] Validation avant confirmation
+
+### Phase 6 : Mise à jour panier et récapitulatif
+- [ ] Afficher mode de réception dans le panier
+- [ ] Afficher frais de livraison
+- [ ] Afficher adresse de livraison (si applicable)
+- [ ] Mention "Paiement sur place"
+
+### Phase 7 : Dashboard admin
+- [ ] Voir mode de réception pour chaque commande
+- [ ] Voir adresse de livraison
+- [ ] Filtres: retrait / livraison
+- [ ] Export CSV avec infos livraison
+
+### Phase 8 : Traductions multilingues
+- [ ] Traduire "Mode de réception" (FR/EN/AR/AMZ)
+- [ ] Traduire "Retrait sur place" (FR/EN/AR/AMZ)
+- [ ] Traduire "Livraison à domicile" (FR/EN/AR/AMZ)
+- [ ] Traduire "Frais de livraison" (FR/EN/AR/AMZ)
+- [ ] Traduire formulaire adresse (FR/EN/AR/AMZ)
+
+
+## Module Livraison Goodies - Phases restantes
+- [ ] Créer une page AdminOrders pour afficher les commandes avec informations de livraison
+- [ ] Ajouter les filtres pour les commandes (retrait/livraison)
+- [ ] Créer une page d'export CSV avec les adresses de livraison
+- [ ] Tester le module de livraison complet

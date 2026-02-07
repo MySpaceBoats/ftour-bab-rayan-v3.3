@@ -164,7 +164,10 @@ export default function Reservation() {
   };
 
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
+    if (!dateStr) return 'Date invalide';
+    // Handle ISO date format (YYYY-MM-DD)
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
     const options: Intl.DateTimeFormatOptions = { 
       weekday: 'long', 
       year: 'numeric', 

@@ -39,6 +39,13 @@ export default function Goodies() {
     customerName: "",
     customerEmail: "",
     customerPhone: "",
+    deliveryMode: "pickup" as "pickup" | "home_delivery",
+    deliveryAddress: "",
+    deliveryCity: "",
+    deliveryNeighborhood: "",
+    deliveryPostalCode: "",
+    deliveryPhone: "",
+    deliveryInstructions: "",
   });
 
   const createOrderMutation = trpc.orders.create.useMutation({
@@ -100,13 +107,31 @@ export default function Goodies() {
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  const deliveryFee = checkoutForm.deliveryMode === 'home_delivery' ? 30 : 0;
+  const cartTotalWithDelivery = cartTotal + deliveryFee;
+
   const handleCheckout = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate delivery address if home delivery is selected
+    if (checkoutForm.deliveryMode === 'home_delivery') {
+      if (!checkoutForm.deliveryAddress.trim() || !checkoutForm.deliveryCity.trim() || !checkoutForm.deliveryNeighborhood.trim() || !checkoutForm.deliveryPhone.trim()) {
+        toast.error(t.goodies.deliveryAddressRequired);
+        return;
+      }
+    }
     
     createOrderMutation.mutate({
       customerName: checkoutForm.customerName,
       customerEmail: checkoutForm.customerEmail,
       customerPhone: checkoutForm.customerPhone,
+      deliveryMode: checkoutForm.deliveryMode,
+      deliveryAddress: checkoutForm.deliveryMode === 'home_delivery' ? checkoutForm.deliveryAddress : undefined,
+      deliveryCity: checkoutForm.deliveryMode === 'home_delivery' ? checkoutForm.deliveryCity : undefined,
+      deliveryNeighborhood: checkoutForm.deliveryMode === 'home_delivery' ? checkoutForm.deliveryNeighborhood : undefined,
+      deliveryPostalCode: checkoutForm.deliveryMode === 'home_delivery' ? checkoutForm.deliveryPostalCode : undefined,
+      deliveryPhone: checkoutForm.deliveryMode === 'home_delivery' ? checkoutForm.deliveryPhone : undefined,
+      deliveryInstructions: checkoutForm.deliveryMode === 'home_delivery' ? checkoutForm.deliveryInstructions : undefined,
       items: cart.map(item => ({
         goodieId: item.goodieId,
         variantId: item.variantId,
@@ -419,12 +444,131 @@ export default function Goodies() {
                 className="bg-[#5E5B34] border-[#F2E9D3]/20 text-[#F2E9D3]"
               />
             </div>
-            <div className="bg-[#5E5B34] rounded-lg p-4">
-              <div className="flex justify-between text-lg font-bold text-[#F2E9D3]">
-                <span>{t.goodies.total}</span>
+            
+            {/* Delivery Mode Selection */}
+            <div className="space-y-2 border-t border-[#F2E9D3]/20 pt-4">
+              <Label className="text-[#F2E9D3]">{t.goodies.deliveryMode}</Label>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="radio" 
+                    id="pickup" 
+                    name="deliveryMode" 
+                    value="pickup"
+                    checked={checkoutForm.deliveryMode === 'pickup'}
+                    onChange={(e) => setCheckoutForm(prev => ({ ...prev, deliveryMode: 'pickup' as const }))}
+                    className="w-4 h-4"
+                  />
+                  <Label htmlFor="pickup" className="text-[#E6DCC3] cursor-pointer">{t.goodies.pickupAtLocation}</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="radio" 
+                    id="delivery" 
+                    name="deliveryMode" 
+                    value="home_delivery"
+                    checked={checkoutForm.deliveryMode === 'home_delivery'}
+                    onChange={(e) => setCheckoutForm(prev => ({ ...prev, deliveryMode: 'home_delivery' as const }))}
+                    className="w-4 h-4"
+                  />
+                  <Label htmlFor="delivery" className="text-[#E6DCC3] cursor-pointer">{t.goodies.homeDelivery}</Label>
+                </div>
+              </div>
+            </div>
+            {/* Delivery Address Form - Only shown if home delivery is selected */}
+            {checkoutForm.deliveryMode === 'home_delivery' && (
+              <div className="space-y-3 bg-[#5E5B34] rounded-lg p-4 border border-[#F2E9D3]/10">
+                <h4 className="font-semibold text-[#F2E9D3]">{t.goodies.deliveryAddress}</h4>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="address" className="text-[#F2E9D3] text-sm">{t.goodies.fullAddress}</Label>
+                  <Input 
+                    id="address" 
+                    value={checkoutForm.deliveryAddress}
+                    onChange={(e) => setCheckoutForm(prev => ({ ...prev, deliveryAddress: e.target.value }))}
+                    required
+                    className="bg-[#4A4829] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="city" className="text-[#F2E9D3] text-sm">{t.goodies.city}</Label>
+                    <Input 
+                      id="city" 
+                      value={checkoutForm.deliveryCity}
+                      onChange={(e) => setCheckoutForm(prev => ({ ...prev, deliveryCity: e.target.value }))}
+                      required
+                      className="bg-[#4A4829] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="neighborhood" className="text-[#F2E9D3] text-sm">{t.goodies.neighborhood}</Label>
+                    <Input 
+                      id="neighborhood" 
+                      value={checkoutForm.deliveryNeighborhood}
+                      onChange={(e) => setCheckoutForm(prev => ({ ...prev, deliveryNeighborhood: e.target.value }))}
+                      required
+                      className="bg-[#4A4829] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="postal" className="text-[#F2E9D3] text-sm">{t.goodies.postalCode}</Label>
+                    <Input 
+                      id="postal" 
+                      value={checkoutForm.deliveryPostalCode}
+                      onChange={(e) => setCheckoutForm(prev => ({ ...prev, deliveryPostalCode: e.target.value }))}
+                      className="bg-[#4A4829] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="deliveryPhone" className="text-[#F2E9D3] text-sm">{t.goodies.contactPhone}</Label>
+                    <Input 
+                      id="deliveryPhone" 
+                      type="tel"
+                      value={checkoutForm.deliveryPhone}
+                      onChange={(e) => setCheckoutForm(prev => ({ ...prev, deliveryPhone: e.target.value }))}
+                      required
+                      className="bg-[#4A4829] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="instructions" className="text-[#F2E9D3] text-sm">{t.goodies.deliveryInstructions}</Label>
+                  <textarea 
+                    id="instructions" 
+                    value={checkoutForm.deliveryInstructions}
+                    onChange={(e) => setCheckoutForm(prev => ({ ...prev, deliveryInstructions: e.target.value }))}
+                    className="w-full bg-[#4A4829] border border-[#F2E9D3]/20 text-[#F2E9D3] rounded px-3 py-2 text-sm min-h-[60px]"
+                    placeholder={t.goodies.deliveryInstructions}
+                  />
+                </div>
+              </div>
+            )}
+            
+            {/* Price Summary */}
+            <div className="bg-[#5E5B34] rounded-lg p-4 space-y-2">
+              <div className="flex justify-between text-sm text-[#E6DCC3]">
+                <span>{t.goodies.subtotal}</span>
                 <span>{cartTotal} DH</span>
               </div>
-              <p className="text-sm text-[#E6DCC3] mt-2">{t.goodies.paymentOnSite}</p>
+              {checkoutForm.deliveryMode === 'home_delivery' && (
+                <div className="flex justify-between text-sm text-[#E6DCC3]">
+                  <span>{t.goodies.deliveryFee}</span>
+                  <span>{deliveryFee} DH</span>
+                </div>
+              )}
+              <div className="flex justify-between text-lg font-bold text-[#F2E9D3] border-t border-[#F2E9D3]/20 pt-2">
+                <span>{t.goodies.total}</span>
+                <span>{cartTotalWithDelivery} DH</span>
+              </div>
+              <p className="text-sm text-[#E6DCC3] mt-2">
+                {checkoutForm.deliveryMode === 'pickup' ? t.goodies.paymentOnPlacePickup : t.goodies.paymentOnDelivery}
+              </p>
             </div>
             <Button 
               type="submit" 

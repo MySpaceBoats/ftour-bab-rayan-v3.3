@@ -662,6 +662,13 @@ export interface OrderData {
   pickupDate?: string;
   pickupLocation?: string;
   notes?: string;
+  deliveryMode?: 'pickup' | 'home_delivery';
+  deliveryAddress?: string;
+  deliveryCity?: string;
+  deliveryNeighborhood?: string;
+  deliveryPostalCode?: string;
+  deliveryPhone?: string;
+  deliveryInstructions?: string;
 }
 
 function generateOrderReference(): string {
@@ -676,7 +683,17 @@ export async function createGoodieOrderSupabase(data: OrderData) {
   if (!client) throw new Error('Supabase not configured');
 
   const orderReference = generateOrderReference();
-  const totalAmount = data.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const deliveryFee = data.deliveryMode === 'home_delivery' ? 30 : 0;
+  const itemsTotal = data.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const totalAmount = itemsTotal + deliveryFee;
+
+  // Build delivery address JSON if home delivery
+  const deliveryAddressData = data.deliveryMode === 'home_delivery' ? JSON.stringify({
+    address: data.deliveryAddress,
+    city: data.deliveryCity,
+    neighborhood: data.deliveryNeighborhood,
+    postalCode: data.deliveryPostalCode,
+  }) : null;
 
   // Create order
   const { data: order, error: orderError } = await client
@@ -691,6 +708,11 @@ export async function createGoodieOrderSupabase(data: OrderData) {
       pickup_date: data.pickupDate,
       pickup_location: data.pickupLocation,
       notes: data.notes,
+      delivery_mode: data.deliveryMode || 'pickup',
+      delivery_fee: deliveryFee,
+      delivery_address: deliveryAddressData,
+      delivery_phone: data.deliveryPhone,
+      delivery_instructions: data.deliveryInstructions,
     })
     .select()
     .single();

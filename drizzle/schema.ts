@@ -174,12 +174,21 @@ export const orders = mysqlTable("orders", {
   pickupDate: timestamp("pickupDate"),
   pickupLocation: text("pickupLocation"),
   
+  // Livraison
+  deliveryMode: varchar("deliveryMode", { length: 20 }).default("pickup").notNull(), // pickup | home_delivery
+  deliveryFee: decimal("deliveryFee", { precision: 10, scale: 2 }).default("0").notNull(),
+  deliveryAddress: text("deliveryAddress"), // JSON stringified address
+  deliveryPhone: varchar("deliveryPhone", { length: 20 }),
+  deliveryInstructions: text("deliveryInstructions"),
+  
   // Tracking
   emailSent: boolean("emailSent").notNull().default(false),
   processedBy: int("processedBy"), // Admin qui a traité
   processedAt: timestamp("processedAt"),
+  deliveredAt: timestamp("deliveredAt"),
   
   notes: text("notes"),
+  deliveryNotes: text("deliveryNotes"), // Notes pour le livreur
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

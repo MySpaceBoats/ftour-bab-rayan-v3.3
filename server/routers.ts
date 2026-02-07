@@ -439,6 +439,13 @@ const ordersRouter = router({
       pickupDate: z.string().optional(),
       pickupLocation: z.string().optional(),
       notes: z.string().optional(),
+      deliveryMode: z.enum(['pickup', 'home_delivery']).default('pickup'),
+      deliveryAddress: z.string().optional(),
+      deliveryCity: z.string().optional(),
+      deliveryNeighborhood: z.string().optional(),
+      deliveryPostalCode: z.string().optional(),
+      deliveryPhone: z.string().optional(),
+      deliveryInstructions: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
       const order = await supabaseServices.createGoodieOrderSupabase(input);
