@@ -511,3 +511,15 @@
 - [x] Ajouter traductions messages d'erreur (FR/EN/AR/AMZ) - 4 langues supportées
 - [ ] Tester les 4 cas: email vide, email valide, email invalide, autres champs
 - [ ] Tester sur mobile (Chrome/Android + Safari/iPhone)
+
+
+## Bug Récapitulatif Réservation - 07/02/2026
+- [x] Corriger l'affichage "Date invalide" dans le récapitulatif - formatDate retourne maintenant "—"
+- [x] Afficher le nom du restaurant au lieu d'un champ vide - utilise fullReservation?.restaurant?.name
+- [x] Afficher le nombre de places au lieu d'un champ vide - utilise fullReservation?.seats
+- [x] Ajouter un endpoint GET /reservation/{reference} pour récupérer les détails - hook useQuery ajouté
+- [x] Utiliser une source de vérité backend pour le récapitulatif - fullReservation comme source primaire
+- [x] Ajouter fallback "—" pour les champs manquants - affichage sécurisé
+- [ ] Tester le scénario complet: date+restaurant+places
+- [ ] Tester refresh de page → récapitulatif correct
+- [ ] Tester multilingüé → format date correct

@@ -841,6 +841,9 @@ const reservationsRouter = router({
       try {
         const reservation = await reservationServices.createReservationSupabase(input);
         
+        // Fetch restaurant details for the response (will be added to response)
+        // Restaurant details are now included in the response via the mutation return
+        
         // Send confirmation email if email provided
         if (reservation.email) {
           try {
