@@ -579,3 +579,29 @@
 - [ ] Tests d'intégration checkout
 - [ ] Tests des intégrations PayPal/CIM
 - [ ] Checkpoint et déploiement
+
+
+### Phase 4 : Checkout unifié
+- [ ] Créer page Checkout.tsx avec sélection du moyen de paiement
+- [ ] Ajouter formulaire pour chaque moyen (virement, chèque, cash, PayPal)
+- [ ] Afficher instructions spécifiques dynamiquement
+- [ ] Validation du formulaire
+- [ ] Intégration avec mutations tRPC
+
+### Phase 5 : Intégration PayPal
+- [ ] Configurer credentials PayPal (client ID, secret)
+- [ ] Implémenter création de paiement PayPal
+- [ ] Ajouter webhook de confirmation
+- [ ] Redirection sécurisée après paiement
+
+### Phase 6 : Dashboard admin
+- [ ] Créer page AdminPayments.tsx
+- [ ] Afficher liste des paiements avec détails
+- [ ] Ajouter filtres (statut, moyen, date)
+- [ ] Implémenter actions (valider, annuler)
+- [ ] Ajouter export CSV
+
+### Phase 7 : Traductions multilingues
+- [ ] Ajouter traductions checkout (FR/EN/AR/AMZ)
+- [ ] Ajouter traductions dashboard (FR/EN/AR/AMZ)
+- [ ] Ajouter traductions instructions paiement
