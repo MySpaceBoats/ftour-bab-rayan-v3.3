@@ -178,7 +178,7 @@ export default function GoodiesConfirmation({ orderReference, onClose }: Goodies
               <div className="bg-[#5E5B34] rounded-lg p-4 space-y-3">
                 <h4 className="font-semibold text-[#F2E9D3]">{t.goodies.presentYourReference}</h4>
                 <p className="text-[#E6DCC3]">{t.goodies.presentReferenceAtPickup}</p>
-                <p className="text-sm text-[#E6DCC3] mt-3">{t.goodies.paymentOnPlacePickupMessage}</p>
+                <p className="text-sm text-[#E6DCC3] mt-3">{t.goodies.paymentOnPlacePickup}</p>
               </div>
 
               {/* Next Steps for Pickup */}

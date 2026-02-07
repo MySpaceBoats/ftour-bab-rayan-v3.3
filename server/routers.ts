@@ -497,6 +497,16 @@ const ordersRouter = router({
   stats: adminBoutiqueProcedure.query(async () => {
     return supabaseServices.getOrderStatsSupabase();
   }),
+  
+  getByReference: publicProcedure
+    .input(z.object({ reference: z.string() }))
+    .query(async ({ input }) => {
+      const order = await supabaseServices.getGoodieOrderByReferenceSupabase(input.reference);
+      if (!order) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Order not found' });
+      }
+      return order;
+    }),
 });
 
 // ============================================

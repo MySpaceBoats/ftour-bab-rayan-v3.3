@@ -790,6 +790,68 @@ export async function updateGoodieOrderStatusSupabase(orderId: number, status: s
   if (error) throw error;
 }
 
+export async function getGoodieOrderByReferenceSupabase(reference: string) {
+  const client = getSupabaseAdminClient();
+  if (!client) return null;
+
+  const { data, error } = await client
+    .from('orders')
+    .select('*, order_items(*, goodies(name))')
+    .eq('order_reference', reference)
+    .single();
+
+  if (error || !data) return null;
+
+  // Parse delivery address if it's a JSON string
+  let deliveryAddress = null;
+  let deliveryCity = null;
+  let deliveryNeighborhood = null;
+  let deliveryPostalCode = null;
+  
+  if (data.delivery_address && typeof data.delivery_address === 'string') {
+    try {
+      const parsed = JSON.parse(data.delivery_address);
+      deliveryAddress = parsed.address;
+      deliveryCity = parsed.city;
+      deliveryNeighborhood = parsed.neighborhood;
+      deliveryPostalCode = parsed.postalCode;
+    } catch (e) {
+      // If parsing fails, use as is
+      deliveryAddress = data.delivery_address;
+    }
+  }
+
+  return {
+    id: data.id,
+    orderReference: data.order_reference,
+    customerName: data.customer_name,
+    customerEmail: data.customer_email,
+    customerPhone: data.customer_phone,
+    totalAmount: parseFloat(data.total_amount),
+    status: data.status,
+    pickupDate: data.pickup_date,
+    pickupLocation: data.pickup_location,
+    notes: data.notes,
+    deliveryMode: data.delivery_mode,
+    deliveryFee: data.delivery_fee ? parseFloat(data.delivery_fee) : 0,
+    deliveryAddress,
+    deliveryCity,
+    deliveryNeighborhood,
+    deliveryPostalCode,
+    deliveryPhone: data.delivery_phone,
+    deliveryInstructions: data.delivery_instructions,
+    createdAt: new Date(data.created_at),
+    items: data.order_items?.map((i: { id: number; goodie_id: number; quantity: number; unit_price: string; total_price: string; goodies: { name: string } | null }) => ({
+      id: i.id,
+      goodieId: i.goodie_id,
+      goodieName: i.goodies?.name,
+      quantity: i.quantity,
+      unitPrice: parseFloat(i.unit_price),
+      totalPrice: parseFloat(i.total_price),
+    })) || [],
+  };
+}
+
 export async function getOrderStatsSupabase() {
   const client = getSupabaseAdminClient();
   if (!client) return { total: 0, reserved: 0, paid: 0, delivered: 0, totalAmount: 0 };
