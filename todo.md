@@ -523,3 +523,56 @@
 - [ ] Tester le scénario complet: date+restaurant+places
 - [ ] Tester refresh de page → récapitulatif correct
 - [ ] Tester multilingüé → format date correct
+
+
+## Module Paiement Unifié - Février 2026
+### Phase 1 : Schéma de base de données
+- [x] Créer table payments avec tous les champs requis
+- [x] Ajouter table payment_logs pour la traçabilité
+- [x] Ajouter table payment_methods pour la configuration des moyens
+- [x] Créer migration Drizzle et appliquer (schéma ajouté, migration en attente)
+
+### Phase 2 : Services backend
+- [ ] Service pour virement bancaire
+- [ ] Service pour chèque
+- [ ] Service pour cash
+- [ ] Service pour PayPal (intégration API)
+- [ ] Service pour CIM (intégration API)
+
+### Phase 3 : Routers tRPC
+- [ ] Router payments.create
+- [ ] Router payments.list (admin)
+- [ ] Router payments.getById
+- [ ] Router payments.validate (admin)
+- [ ] Router payments.cancel (admin)
+
+### Phase 4 : Checkout
+- [ ] Page checkout avec sélection moyen de paiement
+- [ ] Affichage dynamique des instructions
+- [ ] Intégration avec donations/goodies
+
+### Phase 5 : Intégrations externes
+- [ ] Intégration PayPal
+- [ ] Intégration CIM
+- [ ] Webhooks pour confirmations
+
+### Phase 6 : Dashboard admin
+- [ ] Liste des paiements avec filtres
+- [ ] Actions de validation/annulation
+- [ ] Détail complet d'un paiement
+- [ ] Export CSV/Excel
+
+### Phase 7 : Traductions
+- [ ] Traductions FR/EN/AR/AMZ pour tous les textes
+- [ ] Libellés, instructions, messages
+
+### Phase 8 : Traçabilité
+- [ ] Journalisation des actions admin
+- [ ] Historique des changements de statut
+- [ ] Audit trail complet
+
+### Phase 9 : Tests et déploiement
+- [ ] Tests unitaires des services
+- [ ] Tests d'intégration checkout
+- [ ] Tests des intégrations PayPal/CIM
+- [ ] Checkpoint et déploiement

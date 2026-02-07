@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, decimal } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, decimal, json } from "drizzle-orm/mysql-core";
 
 // ============================================
 // USERS & AUTHENTICATION
@@ -219,7 +219,14 @@ export type InsertOrderItem = typeof orderItems.$inferInsert;
 // ============================================
 
 export const donationStatusEnum = mysqlEnum("donationStatus", ["promised", "pending", "received", "cancelled"]);
-export const paymentMethodEnum = mysqlEnum("paymentMethod", ["transfer", "on_site"]);
+
+export const paymentMethodEnum = mysqlEnum("payment_method", [
+  "bank_transfer",
+  "cheque",
+  "cash",
+  "paypal",
+  "cim_card"
+]);
 
 export const donations = mysqlTable("donations", {
   id: int("id").autoincrement().primaryKey(),
@@ -366,3 +373,108 @@ export const faqItems = mysqlTable("faq_items", {
 
 export type FaqItem = typeof faqItems.$inferSelect;
 export type InsertFaqItem = typeof faqItems.$inferInsert;
+
+
+// ============================================
+// PAYMENTS (Paiements)
+// ============================================
+
+export const paymentStatusEnum = mysqlEnum("payment_status", [
+  "pending",           // En attente (virement, chèque, cash)
+  "processing",        // En cours de traitement (PayPal, CIM)
+  "paid",              // Payé (PayPal, CIM confirmé)
+  "failed",            // Échoué (PayPal, CIM refusé)
+  "cancelled",         // Annulé
+  "cashed",            // Encaissé (chèque)
+  "confirmed"          // Confirmé (après validation admin)
+]);
+
+// Note: paymentMethodEnum already defined above
+
+export const payments = mysqlTable("payments", {
+  id: int("id").autoincrement().primaryKey(),
+  userName: varchar("user_name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("MAD"),
+  paymentMethod: paymentMethodEnum.notNull(),
+  paymentReference: varchar("payment_reference", { length: 100 }).notNull().unique(),
+  externalTransactionId: varchar("external_transaction_id", { length: 255 }), // PayPal/CIM
+  status: paymentStatusEnum.notNull().default("pending"),
+  description: text("description"), // Description du paiement (donation, goodies, etc)
+  relatedEntityType: varchar("related_entity_type", { length: 50 }), // donation, order, reservation
+  relatedEntityId: varchar("related_entity_id", { length: 100 }), // ID de l'entité associée
+  
+  // Métadonnées supplémentaires
+  metadata: json("metadata"), // Données additionnelles (JSON)
+  
+  // Traçabilité
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  validatedAt: timestamp("validated_at"),
+  validatedBy: int("validated_by"), // ID de l'admin qui a validé
+  cancelledAt: timestamp("cancelled_at"),
+  cancelledBy: int("cancelled_by"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Payment = typeof payments.$inferSelect;
+export type InsertPayment = typeof payments.$inferInsert;
+
+// ============================================
+// PAYMENT LOGS (Journalisation des paiements)
+// ============================================
+
+export const paymentLogs = mysqlTable("payment_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  paymentId: int("payment_id").notNull().references(() => payments.id, { onDelete: "cascade" }),
+  action: varchar("action", { length: 100 }).notNull(), // created, validated, cancelled, status_changed
+  oldStatus: paymentStatusEnum,
+  newStatus: paymentStatusEnum,
+  performedBy: int("performed_by"), // ID de l'utilisateur qui a effectué l'action
+  notes: text("notes"),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PaymentLog = typeof paymentLogs.$inferSelect;
+export type InsertPaymentLog = typeof paymentLogs.$inferInsert;
+
+// ============================================
+// PAYMENT METHODS CONFIGURATION
+// ============================================
+
+export const paymentMethodsConfig = mysqlTable("payment_methods_config", {
+  id: int("id").autoincrement().primaryKey(),
+  method: paymentMethodEnum.notNull().unique(),
+  isEnabled: boolean("is_enabled").notNull().default(true),
+  displayName: varchar("display_name", { length: 255 }).notNull(),
+  description: text("description"),
+  
+  // Configuration spécifique à chaque moyen
+  // Virement bancaire
+  bankName: varchar("bank_name", { length: 255 }), // Nom de la banque
+  beneficiaryName: varchar("beneficiary_name", { length: 255 }), // Nom du bénéficiaire
+  iban: varchar("iban", { length: 34 }), // IBAN
+  rib: varchar("rib", { length: 23 }), // RIB (Maroc)
+  recommendedLabel: text("recommended_label"), // Libellé recommandé
+  
+  // Chèque
+  chequeOrder: varchar("cheque_order", { length: 255 }), // À l'ordre de
+  chequeDepositLocation: text("cheque_deposit_location"), // Lieu de dépôt
+  
+  // PayPal
+  paypalClientId: varchar("paypal_client_id", { length: 255 }),
+  paypalClientSecret: varchar("paypal_client_secret", { length: 255 }),
+  
+  // CIM
+  cimMerchantId: varchar("cim_merchant_id", { length: 255 }),
+  cimApiKey: varchar("cim_api_key", { length: 255 }),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PaymentMethodConfig = typeof paymentMethodsConfig.$inferSelect;
+export type InsertPaymentMethodConfig = typeof paymentMethodsConfig.$inferInsert;
