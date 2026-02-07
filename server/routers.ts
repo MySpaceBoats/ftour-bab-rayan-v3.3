@@ -451,16 +451,25 @@ const ordersRouter = router({
     .mutation(async ({ input }) => {
       const order = await supabaseServices.createGoodieOrderSupabase(input);
       
-      // Send confirmation email
+      // Send confirmation email with dynamic content
       try {
         const nameParts = input.customerName.split(' ');
-        const emailData = generateOrderConfirmationEmail({
+        const { generateGoodiesOrderEmail } = await import('./email-templates');
+        
+        const emailData = generateGoodiesOrderEmail({
           firstName: nameParts[0] || input.customerName,
           lastName: nameParts.slice(1).join(' ') || '',
           email: input.customerEmail,
           phone: input.customerPhone,
           orderId: order.orderReference,
           totalAmount: order.totalAmount,
+          deliveryFee: input.deliveryMode === 'home_delivery' ? 30 : 0,
+          deliveryMode: input.deliveryMode,
+          paymentMethod: input.paymentMethod || 'cash',
+          deliveryAddress: input.deliveryAddress,
+          deliveryCity: input.deliveryCity,
+          deliveryNeighborhood: input.deliveryNeighborhood,
+          deliveryPhone: input.deliveryPhone,
           items: input.items.map(item => ({
             name: `Article #${item.goodieId}`,
             quantity: item.quantity,
