@@ -22,7 +22,7 @@ interface ReservationData {
   seats: number;
   fullName: string;
   phone: string;
-  email: string;
+  email: string | undefined;
   notes: string;
   acceptedTerms: boolean;
 }
@@ -32,6 +32,7 @@ export default function Reservation() {
   const [step, setStep] = useState<Step>('date');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reservationResult, setReservationResult] = useState<any>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   
   const [formData, setFormData] = useState<ReservationData>({
     date: '',
@@ -40,7 +41,7 @@ export default function Reservation() {
     seats: 1,
     fullName: '',
     phone: '',
-    email: '',
+    email: undefined,
     notes: '',
     acceptedTerms: false,
   });
@@ -136,6 +137,12 @@ export default function Reservation() {
     }
   };
 
+  const validateEmail = (email: string | undefined) => {
+    if (!email) return true; // Email is optional
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleSubmit = async () => {
     if (!formData.fullName.trim()) {
       toast.error('Veuillez entrer votre nom complet');
@@ -145,10 +152,21 @@ export default function Reservation() {
       toast.error('Veuillez entrer votre numéro de téléphone');
       return;
     }
+    if (formData.email && !validateEmail(formData.email)) {
+      const errorMessages: Record<string, string> = {
+        fr: 'Adresse email invalide',
+        en: 'Invalid email address',
+        ar: 'البريد الإلكتروني غير صالح',
+        amz: 'Imayl ur sɛiḥ'
+      };
+      setFormErrors({ email: errorMessages[lang] || errorMessages.fr });
+      return;
+    }
     if (!formData.acceptedTerms) {
       toast.error('Veuillez accepter les conditions');
       return;
     }
+    setFormErrors({});
 
     setIsSubmitting(true);
     createReservation.mutate({
@@ -157,7 +175,7 @@ export default function Reservation() {
       slotId: formData.slotId || undefined,
       fullName: formData.fullName,
       phone: formData.phone,
-      email: formData.email || undefined,
+      email: formData.email?.trim(),
       seats: formData.seats,
       notes: formData.notes || undefined,
     });
@@ -461,11 +479,17 @@ export default function Reservation() {
                   <Input
                     id="email"
                     type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="votre@email.com"
-                    className="mt-1 border-[#d4d4aa] focus:border-[#5d5a3c]"
+                    value={formData.email || ''}
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value || undefined });
+                      if (formErrors.email) setFormErrors({});
+                    }}
+                    placeholder="nom@example.com"
+                    className={`mt-1 border-[#d4d4aa] focus:border-[#5d5a3c] ${formErrors.email ? 'border-red-500' : ''}`}
                   />
+                  {formErrors.email && (
+                    <p className="text-xs text-red-500 mt-1">{formErrors.email}</p>
+                  )}
                   <p className="text-xs text-[#6b6b4e] mt-1">
                     {lang === 'ar' 
                       ? 'لتلقي تأكيد الحجز ورمز QR'

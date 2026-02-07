@@ -501,3 +501,13 @@
 - [ ] Ajouter les filtres pour les commandes (retrait/livraison)
 - [ ] Créer une page d'export CSV avec les adresses de livraison
 - [ ] Tester le module de livraison complet
+
+
+## Bug Validation Email Réservation - 07/02/2026
+- [x] Rendre l'email vraiment optionnel (vide = OK) - validation zod avec union et transform
+- [x] Valider le format email si renseigné - regex /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+- [x] Supprimer l'affichage des erreurs techniques brutes (JSON/regex) - affichage simple sous le champ
+- [x] Afficher des messages d'erreur simples sous le champ email - message en rouge sous input
+- [x] Ajouter traductions messages d'erreur (FR/EN/AR/AMZ) - 4 langues supportées
+- [ ] Tester les 4 cas: email vide, email valide, email invalide, autres champs
+- [ ] Tester sur mobile (Chrome/Android + Safari/iPhone)

@@ -830,7 +830,10 @@ const reservationsRouter = router({
       slotId: z.number().optional(),
       fullName: z.string().min(1),
       phone: z.string().min(1),
-      email: z.string().email().optional(),
+      email: z.union([
+        z.string().trim().transform(val => val === '' ? undefined : val).pipe(z.string().email()),
+        z.literal('').transform(() => undefined),
+      ]).optional(),
       seats: z.number().min(1).max(20),
       notes: z.string().optional(),
     }))
