@@ -446,6 +446,7 @@ const ordersRouter = router({
       deliveryPostalCode: z.string().optional(),
       deliveryPhone: z.string().optional(),
       deliveryInstructions: z.string().optional(),
+      paymentMethod: z.enum(['bank_transfer', 'check', 'cash', 'paypal']).default('cash'),
     }))
     .mutation(async ({ input }) => {
       const order = await supabaseServices.createGoodieOrderSupabase(input);

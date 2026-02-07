@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { ShoppingBag, Plus, Minus, ShoppingCart, X, CheckCircle, Loader2, Package } from "lucide-react";
 import { useI18n } from "@/i18n";
 import GoodiesConfirmation from "@/components/GoodiesConfirmation";
+import PaymentMethodSelector, { PaymentMethod } from "@/components/PaymentMethodSelector";
 
 type CartItem = {
   goodieId: number;
@@ -47,6 +48,7 @@ export default function Goodies() {
     deliveryPostalCode: "",
     deliveryPhone: "",
     deliveryInstructions: "",
+    paymentMethod: "cash" as PaymentMethod,
   });
 
   const createOrderMutation = trpc.orders.create.useMutation({
@@ -139,6 +141,7 @@ export default function Goodies() {
         quantity: item.quantity,
         unitPrice: item.price,
       })),
+      paymentMethod: checkoutForm.paymentMethod,
     });
   };
 
@@ -507,6 +510,14 @@ export default function Goodies() {
                 </div>
               </div>
             )}
+            
+            {/* Payment Method Selection */}
+            <PaymentMethodSelector
+              value={checkoutForm.paymentMethod}
+              onChange={(method) => setCheckoutForm(prev => ({ ...prev, paymentMethod: method }))}
+              availableMethods={['bank_transfer', 'check', 'cash', 'paypal']}
+              showDescriptions={true}
+            />
             
             {/* Price Summary */}
             <div className="bg-[#5E5B34] rounded-lg p-4 space-y-2">
