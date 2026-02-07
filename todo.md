@@ -533,18 +533,21 @@
 - [x] Créer migration Drizzle et appliquer (schéma ajouté, migration en attente)
 
 ### Phase 2 : Services backend
-- [ ] Service pour virement bancaire
-- [ ] Service pour chèque
-- [ ] Service pour cash
-- [ ] Service pour PayPal (intégration API)
-- [ ] Service pour CIM (intégration API)
+- [x] Service pour virement bancaire
+- [x] Service pour chèque
+- [x] Service pour cash
+- [x] Service pour PayPal (intégration API - placeholder)
+- [x] Tous les services implémentés dans supabase-services.ts
 
 ### Phase 3 : Routers tRPC
-- [ ] Router payments.create
-- [ ] Router payments.list (admin)
-- [ ] Router payments.getById
-- [ ] Router payments.validate (admin)
-- [ ] Router payments.cancel (admin)
+- [x] Router payments.create
+- [x] Router payments.list (admin)
+- [x] Router payments.getById
+- [x] Router payments.validate (admin)
+- [x] Router payments.cancel (admin)
+- [x] Router payments.getByReference
+- [x] Router payments.markChequeAsCashed
+- [x] Router payments.getStats
 
 ### Phase 4 : Checkout
 - [ ] Page checkout avec sélection moyen de paiement

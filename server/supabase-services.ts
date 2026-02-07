@@ -1054,3 +1054,341 @@ export async function getAllPartnersSupabase() {
     createdAt: new Date(p.created_at),
   }));
 }
+
+
+// ============================================
+// PAYMENT SERVICES
+// ============================================
+
+import crypto from 'crypto';
+
+export interface CreatePaymentInput {
+  userName: string;
+  email: string;
+  phone: string;
+  amount: number;
+  currency?: string;
+  paymentMethod: 'bank_transfer' | 'cheque' | 'cash' | 'paypal';
+  description?: string;
+  relatedEntityType?: string;
+  relatedEntityId?: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Génère une référence de paiement unique
+ * Format: PAY-YYYYMMDD-XXXXX
+ */
+export function generatePaymentReference(): string {
+  const date = new Date();
+  const dateStr = date.toISOString().split('T')[0].replace(/-/g, '');
+  const random = crypto.randomBytes(3).toString('hex').toUpperCase().slice(0, 5);
+  return `PAY-${dateStr}-${random}`;
+}
+
+/**
+ * Crée un paiement dans la base de données
+ */
+export async function createPaymentSupabase(input: CreatePaymentInput) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const paymentReference = generatePaymentReference();
+  const status = input.paymentMethod === 'paypal' ? 'processing' : 'pending';
+
+  const { data: payment, error } = await client
+    .from('payments')
+    .insert({
+      user_name: input.userName,
+      email: input.email,
+      phone: input.phone,
+      amount: input.amount,
+      currency: input.currency || 'MAD',
+      payment_method: input.paymentMethod,
+      payment_reference: paymentReference,
+      status,
+      description: input.description,
+      related_entity_type: input.relatedEntityType,
+      related_entity_id: input.relatedEntityId,
+      metadata: input.metadata,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Enregistrer l'action dans les logs
+  await logPaymentActionSupabase(
+    payment.id,
+    'created',
+    undefined,
+    status,
+    `Paiement ${input.paymentMethod} créé`
+  );
+
+  return payment;
+}
+
+/**
+ * Récupère un paiement par ID
+ */
+export async function getPaymentByIdSupabase(paymentId: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) return null;
+
+  const { data, error } = await client
+    .from('payments')
+    .select('*')
+    .eq('id', paymentId)
+    .single();
+
+  if (error) return null;
+  return data;
+}
+
+/**
+ * Récupère un paiement par référence
+ */
+export async function getPaymentByReferenceSupabase(reference: string) {
+  const client = getSupabaseAdminClient();
+  if (!client) return null;
+
+  const { data, error } = await client
+    .from('payments')
+    .select('*')
+    .eq('payment_reference', reference)
+    .single();
+
+  if (error) return null;
+  return data;
+}
+
+/**
+ * Récupère tous les paiements avec filtres optionnels
+ */
+export async function getPaymentsSupabase(filters?: {
+  paymentMethod?: string;
+  status?: string;
+  startDate?: Date;
+  endDate?: Date;
+}) {
+  const client = getSupabaseAdminClient();
+  if (!client) return [];
+
+  let query = client.from('payments').select('*');
+
+  if (filters?.paymentMethod) {
+    query = query.eq('payment_method', filters.paymentMethod);
+  }
+
+  if (filters?.status) {
+    query = query.eq('status', filters.status);
+  }
+
+  if (filters?.startDate) {
+    query = query.gte('created_at', filters.startDate.toISOString());
+  }
+
+  if (filters?.endDate) {
+    query = query.lte('created_at', filters.endDate.toISOString());
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false });
+
+  if (error) return [];
+  return data || [];
+}
+
+/**
+ * Valide un paiement (admin)
+ */
+export async function validatePaymentSupabase(
+  paymentId: number,
+  validatedBy: number,
+  notes?: string
+) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const payment = await getPaymentByIdSupabase(paymentId);
+  if (!payment) throw new Error('Payment not found');
+
+  const oldStatus = payment.status;
+
+  const { error } = await client
+    .from('payments')
+    .update({
+      status: 'confirmed',
+      validated_at: new Date().toISOString(),
+      validated_by: validatedBy,
+    })
+    .eq('id', paymentId);
+
+  if (error) throw error;
+
+  // Enregistrer l'action
+  await logPaymentActionSupabase(
+    paymentId,
+    'validated',
+    oldStatus,
+    'confirmed',
+    notes || 'Paiement validé par admin',
+    validatedBy
+  );
+
+  return getPaymentByIdSupabase(paymentId);
+}
+
+/**
+ * Annule un paiement
+ */
+export async function cancelPaymentSupabase(
+  paymentId: number,
+  cancelledBy: number,
+  notes?: string
+) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const payment = await getPaymentByIdSupabase(paymentId);
+  if (!payment) throw new Error('Payment not found');
+
+  const oldStatus = payment.status;
+
+  const { error } = await client
+    .from('payments')
+    .update({
+      status: 'cancelled',
+      cancelled_at: new Date().toISOString(),
+      cancelled_by: cancelledBy,
+    })
+    .eq('id', paymentId);
+
+  if (error) throw error;
+
+  // Enregistrer l'action
+  await logPaymentActionSupabase(
+    paymentId,
+    'cancelled',
+    oldStatus,
+    'cancelled',
+    notes || 'Paiement annulé',
+    cancelledBy
+  );
+
+  return getPaymentByIdSupabase(paymentId);
+}
+
+/**
+ * Marque un chèque comme encaissé
+ */
+export async function markChequeAsCashedSupabase(
+  paymentId: number,
+  cashedBy: number,
+  notes?: string
+) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const payment = await getPaymentByIdSupabase(paymentId);
+  if (!payment) throw new Error('Payment not found');
+  if (payment.payment_method !== 'cheque') throw new Error('Payment is not a cheque');
+
+  const oldStatus = payment.status;
+
+  const { error } = await client
+    .from('payments')
+    .update({
+      status: 'cashed',
+      validated_at: new Date().toISOString(),
+      validated_by: cashedBy,
+    })
+    .eq('id', paymentId);
+
+  if (error) throw error;
+
+  // Enregistrer l'action
+  await logPaymentActionSupabase(
+    paymentId,
+    'cashed',
+    oldStatus,
+    'cashed',
+    notes || 'Chèque encaissé',
+    cashedBy
+  );
+
+  return getPaymentByIdSupabase(paymentId);
+}
+
+/**
+ * Enregistre une action dans le journal des paiements
+ */
+export async function logPaymentActionSupabase(
+  paymentId: number,
+  action: string,
+  oldStatus?: string,
+  newStatus?: string,
+  notes?: string,
+  performedBy?: number,
+  ipAddress?: string,
+  userAgent?: string
+) {
+  try {
+    const client = getSupabaseAdminClient();
+    if (!client) return;
+
+    await client.from('payment_logs').insert({
+      payment_id: paymentId,
+      action,
+      old_status: oldStatus,
+      new_status: newStatus,
+      notes,
+      performed_by: performedBy,
+      ip_address: ipAddress,
+      user_agent: userAgent,
+    });
+  } catch (error) {
+    console.error('[PaymentLog] Error logging action:', error);
+  }
+}
+
+/**
+ * Récupère la configuration d'un moyen de paiement
+ */
+export async function getPaymentMethodConfigSupabase(method: string) {
+  const client = getSupabaseAdminClient();
+  if (!client) return null;
+
+  const { data, error } = await client
+    .from('payment_methods_config')
+    .select('*')
+    .eq('method', method)
+    .single();
+
+  if (error) return null;
+  return data;
+}
+
+/**
+ * Récupère les statistiques des paiements
+ */
+export async function getPaymentStatsSupabase() {
+  const client = getSupabaseAdminClient();
+  if (!client) return { total: 0, pending: 0, confirmed: 0, cancelled: 0, totalAmount: 0 };
+
+  const { data, error } = await client
+    .from('payments')
+    .select('status, amount');
+
+  if (error) return { total: 0, pending: 0, confirmed: 0, cancelled: 0, totalAmount: 0 };
+
+  const stats = {
+    total: data?.length || 0,
+    pending: data?.filter(p => p.status === 'pending').length || 0,
+    confirmed: data?.filter(p => p.status === 'confirmed').length || 0,
+    cancelled: data?.filter(p => p.status === 'cancelled').length || 0,
+    totalAmount: data?.reduce((sum: number, p: any) => sum + (parseFloat(p.amount) || 0), 0) || 0,
+  };
+
+  return stats;
+}

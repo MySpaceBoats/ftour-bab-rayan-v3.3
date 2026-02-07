@@ -1074,6 +1074,149 @@ function generateReservationConfirmationEmail(reservation: any) {
 }
 
 // ============================================
+// PAYMENTS ROUTER
+// ============================================
+
+const paymentsRouter = router({
+  create: publicProcedure
+    .input(z.object({
+      userName: z.string().min(1),
+      email: z.string().email(),
+      phone: z.string().min(1),
+      amount: z.number().positive(),
+      currency: z.string().optional().default('MAD'),
+      paymentMethod: z.enum(['bank_transfer', 'cheque', 'cash', 'paypal']),
+      description: z.string().optional(),
+      relatedEntityType: z.string().optional(),
+      relatedEntityId: z.string().optional(),
+      metadata: z.record(z.string(), z.any()).optional(),
+    }))
+    .mutation(async ({ input }) => {
+      try {
+        const payment = await supabaseServices.createPaymentSupabase(input);
+        return {
+          success: true,
+          payment,
+          message: 'Paiement créé avec succès',
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Erreur lors de la création du paiement',
+        });
+      }
+    }),
+
+  getById: publicProcedure
+    .input(z.object({ paymentId: z.number() }))
+    .query(async ({ input }) => {
+      const payment = await supabaseServices.getPaymentByIdSupabase(input.paymentId);
+      if (!payment) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Paiement non trouvé' });
+      }
+      return payment;
+    }),
+
+  getByReference: publicProcedure
+    .input(z.object({ reference: z.string() }))
+    .query(async ({ input }) => {
+      const payment = await supabaseServices.getPaymentByReferenceSupabase(input.reference);
+      if (!payment) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Paiement non trouvé' });
+      }
+      return payment;
+    }),
+
+  list: adminProcedure
+    .input(z.object({
+      paymentMethod: z.string().optional(),
+      status: z.string().optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      return supabaseServices.getPaymentsSupabase(input);
+    }),
+
+  validate: adminProcedure
+    .input(z.object({
+      paymentId: z.number(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const payment = await supabaseServices.validatePaymentSupabase(
+          input.paymentId,
+          ctx.user?.id || 0,
+          input.notes
+        );
+        return {
+          success: true,
+          payment,
+          message: 'Paiement validé avec succès',
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Erreur lors de la validation du paiement',
+        });
+      }
+    }),
+
+  cancel: adminProcedure
+    .input(z.object({
+      paymentId: z.number(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const payment = await supabaseServices.cancelPaymentSupabase(
+          input.paymentId,
+          ctx.user?.id || 0,
+          input.notes
+        );
+        return {
+          success: true,
+          payment,
+          message: 'Paiement annulé avec succès',
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Erreur lors de l\'annulation du paiement',
+        });
+      }
+    }),
+
+  markChequeAsCashed: adminProcedure
+    .input(z.object({
+      paymentId: z.number(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const payment = await supabaseServices.markChequeAsCashedSupabase(
+          input.paymentId,
+          ctx.user?.id || 0,
+          input.notes
+        );
+        return {
+          success: true,
+          payment,
+          message: 'Chèque marqué comme encaissé',
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Erreur lors du marquage du chèque',
+        });
+      }
+    }),
+
+  getStats: adminProcedure.query(async () => {
+    return supabaseServices.getPaymentStatsSupabase();
+  }),
+});
+
+// ============================================
 // MAIN APP ROUTER
 // ============================================
 
@@ -1143,6 +1286,7 @@ export const appRouter = router({
   upload: uploadRouter,
   restaurants: restaurantsRouter,
   reservations: reservationsRouter,
+  payments: paymentsRouter,
 });
 
 export type AppRouter = typeof appRouter;

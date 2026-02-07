@@ -224,8 +224,7 @@ export const paymentMethodEnum = mysqlEnum("payment_method", [
   "bank_transfer",
   "cheque",
   "cash",
-  "paypal",
-  "cim_card"
+  "paypal"
 ]);
 
 export const donations = mysqlTable("donations", {
@@ -468,9 +467,7 @@ export const paymentMethodsConfig = mysqlTable("payment_methods_config", {
   paypalClientId: varchar("paypal_client_id", { length: 255 }),
   paypalClientSecret: varchar("paypal_client_secret", { length: 255 }),
   
-  // CIM
-  cimMerchantId: varchar("cim_merchant_id", { length: 255 }),
-  cimApiKey: varchar("cim_api_key", { length: 255 }),
+
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
