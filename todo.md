@@ -606,3 +606,7 @@
 - [ ] Ajouter traductions checkout (FR/EN/AR/AMZ)
 - [ ] Ajouter traductions dashboard (FR/EN/AR/AMZ)
 - [ ] Ajouter traductions instructions paiement
+
+
+## Bug Scroll Goodies - 07/02/2026
+- [x] Scroll ne marche pas sur la page Goodies (Checkout) - ajout max-h-[90vh] overflow-y-auto au DialogContent

@@ -404,7 +404,7 @@ export default function Goodies() {
 
       {/* Checkout Dialog */}
       <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
-        <DialogContent className="bg-[#4A4829] border-[#F2E9D3]/20 max-w-md">
+        <DialogContent className="bg-[#4A4829] border-[#F2E9D3]/20 max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-[#F2E9D3]">{t.goodies.finalizeReservation}</DialogTitle>
             <DialogDescription className="text-[#E6DCC3]">
