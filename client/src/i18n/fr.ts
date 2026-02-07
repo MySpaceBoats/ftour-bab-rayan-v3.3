@@ -235,6 +235,20 @@ export const fr = {
     paymentOnPlacePickup: 'Paiement sur place lors du retrait',
     paymentOnDelivery: 'Paiement à la livraison',
     estimatedDelivery: 'Livraison estimée après confirmation',
+    orderConfirmed: 'Commande confirmée !',
+    orderSuccessMessage: 'Votre commande a été enregistrée avec succès.',
+    yourOrderWillBeDeliveredTo: 'Votre commande sera livrée à l\'adresse suivante :',
+    confirmationEmailSent: 'Vous recevrez un email de confirmation.',
+    teamWillContact: 'Notre équipe vous contactera si besoin pour organiser la livraison.',
+    paymentOnDeliveryMessage: 'Le paiement se fait à la livraison (cash ou autre selon vos règles).',
+    thankYouForSupport: 'Merci pour votre soutien.',
+    pickupInstructions: 'Instructions de retrait',
+    presentYourReference: 'Présentez votre référence',
+    presentReferenceAtPickup: 'Présentez votre référence au point de retrait',
+    paymentAtPickupLocation: 'Paiement sur place lors du retrait',
+    loading: 'Chargement...',
+    error: 'Erreur',
+    orderNotFound: 'Commande non trouvée'
   },
 
   // Donations Page

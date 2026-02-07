@@ -610,3 +610,55 @@
 
 ## Bug Scroll Goodies - 07/02/2026
 - [x] Scroll ne marche pas sur la page Goodies (Checkout) - ajout max-h-[90vh] overflow-y-auto au DialogContent
+
+
+## Modifications Majeures - 07/02/2026
+
+### Phase 1 : Page de confirmation Goodies (pickup vs livraison)
+- [ ] Modifier la page de confirmation pour afficher 2 variantes selon delivery_mode
+- [ ] Ajouter endpoint GET pour charger les données de commande par référence
+- [ ] Variante pickup : conserver page actuelle avec "retrait sur place"
+- [ ] Variante home_delivery : afficher adresse de livraison et prochaines étapes adaptées
+- [ ] Afficher adresse formatée (adresse complète, ville, quartier, code postal, instructions)
+- [ ] Ajouter traductions multilingues pour les deux variantes (FR/EN/AR/AMZ)
+- [ ] Tester les 2 variantes et refresh de page
+
+### Phase 2 : Harmoniser les méthodes de paiement sur tous les modules
+- [ ] Créer une configuration centrale des méthodes de paiement
+- [ ] Ajouter étape "Choix du moyen de paiement" dans Goodies, Ftour, Donations
+- [ ] Proposer systématiquement : Cash, Virement, Chèque, PayPal
+- [ ] Afficher instructions adaptées selon moyen choisi
+- [ ] Ajouter traductions multilingues pour tous les moyens de paiement
+- [ ] Mettre à jour le dashboard admin pour filtrer par méthode de paiement
+
+### Phase 3 : Mettre à jour les emails transactionnels
+- [ ] Identifier tous les emails envoyés (Goodies, Ftour, Donations, Admin)
+- [ ] Rendre le contenu conditionnel basé sur : payment_method, payment_status, delivery_mode, module_type
+- [ ] Mettre à jour emails Goodies (confirmation, statut)
+- [ ] Mettre à jour emails Ftour (réservation, QR, annulation)
+- [ ] Mettre à jour emails Donations (promesse, paiement reçu)
+- [ ] Ajouter traductions multilingues pour tous les emails (FR/EN/AR/AMZ)
+- [ ] Logger l'envoi des emails avec type, date, référence
+- [ ] Tester chaque module avec chaque méthode de paiement
+
+
+## Modifications Majeures - Février 2026
+### Phase 1 : Page de confirmation Goodies (EN COURS)
+- [x] Créer 2 variantes (pickup vs livraison) - composant GoodiesConfirmation.tsx créé
+- [x] Afficher adresse de livraison si livraison
+- [x] Afficher instructions de livraison
+- [x] Afficher référence et montant
+- [ ] Ajouter traductions FR/EN/AR/AMZ (FR partiellement, EN/AR/AMZ manquent)
+- [ ] Intégrer le composant dans la page Goodies.tsx
+- [ ] Corriger les erreurs TypeScript restantes
+
+### Phase 2 : Harmoniser les méthodes de paiement (À FAIRE)
+- [ ] Configuration centrale des moyens de paiement
+- [ ] Proposer systématiquement sur tous les modules (Goodies, Ftour, Donations)
+- [ ] Ajouter traductions multilingues
+
+### Phase 3 : Mettre à jour tous les emails transactionnels (À FAIRE)
+- [ ] Contenu conditionnel basé sur payment_method
+- [ ] Contenu conditionnel basé sur payment_status
+- [ ] Contenu conditionnel basé sur delivery_mode
+- [ ] Contenu conditionnel basé sur module_type
