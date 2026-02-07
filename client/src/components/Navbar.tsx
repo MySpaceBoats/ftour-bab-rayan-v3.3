@@ -104,9 +104,9 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Support Link - pointe vers la page de connexion pour les admins */}
+          {/* Admin Link - pointe vers la page de connexion pour les admins */}
           <Link href={localizedHref('/connexion')} className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors">
-            {t.nav.support}
+            {t.nav.admin}
           </Link>
           
           {/* Admin Link - visible uniquement pour les admins connectés */}
