@@ -12,6 +12,7 @@ import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import { ShoppingBag, Plus, Minus, ShoppingCart, X, CheckCircle, Loader2, Package } from "lucide-react";
 import { useI18n } from "@/i18n";
+import GoodiesConfirmation from "@/components/GoodiesConfirmation";
 
 type CartItem = {
   goodieId: number;
@@ -147,54 +148,11 @@ export default function Goodies() {
     return (
       <div className="min-h-screen flex flex-col bg-[#5E5B34]" dir={dir}>
         <Navbar />
-        <main className="flex-1 py-16">
-          <div className="container max-w-2xl">
-            <Card className="border-none shadow-lg bg-[#4A4829]">
-              <CardContent className="p-8 text-center space-y-6">
-                <div className="w-20 h-20 mx-auto rounded-full bg-green-100 flex items-center justify-center">
-                  <CheckCircle className="h-10 w-10 text-green-600" />
-                </div>
-                
-                <div className="space-y-2">
-                  <h1 className="text-2xl font-bold text-[#F2E9D3]">{t.goodies.reservationConfirmed}</h1>
-                  <p className="text-[#E6DCC3]">
-                    {t.goodies.orderRegistered}
-                  </p>
-                </div>
-
-                <div className="bg-[#5E5B34] rounded-lg p-6 space-y-4">
-                  <div>
-                    <p className="text-sm text-[#E6DCC3]">{t.goodies.orderReference}</p>
-                    <p className="text-2xl font-bold font-mono text-[#CDBB8A]">{orderSuccess.reference}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#E6DCC3]">{t.goodies.totalToPay}</p>
-                    <p className="text-xl font-bold text-[#F2E9D3]">{orderSuccess.total} DH</p>
-                  </div>
-                </div>
-
-                <div className="bg-[#5E5B34] rounded-lg p-4 text-left space-y-2">
-                  <h3 className="font-semibold text-[#F2E9D3]">{t.goodies.nextSteps}</h3>
-                  <ul className="text-sm text-[#E6DCC3] space-y-1">
-                    <li>• {t.goodies.emailSent}</li>
-                    <li>• {t.goodies.pickupPoint}</li>
-                    <li>• {t.goodies.paymentOnSite}</li>
-                  </ul>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                  <Button onClick={() => setOrderSuccess(null)} variant="outline" className="flex-1 border-[#F2E9D3] text-[#F2E9D3] hover:bg-[#F2E9D3] hover:text-[#4A4829]">
-                    {t.goodies.continueShopping}
-                  </Button>
-                  <Link href={`/${lang}`} className="flex-1">
-                    <Button className="w-full bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]">
-                      {t.goodies.backToHome}
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        <main className="flex-1">
+          <GoodiesConfirmation 
+            orderReference={orderSuccess.reference}
+            onClose={() => setOrderSuccess(null)}
+          />
         </main>
         <Footer />
       </div>
