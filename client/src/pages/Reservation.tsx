@@ -577,15 +577,15 @@ export default function Reservation() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-[#6b6b4e]">{lang === 'ar' ? 'التاريخ' : 'Date'}:</span>
-                      <span className="font-medium text-[#5d5a3c]">{formatDate(fullReservation?.date || reservationResult?.date)}</span>
+                      <span className="font-medium text-[#5d5a3c]">{formatDate(reservationResult?.date)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-[#6b6b4e]">{lang === 'ar' ? 'المطعم' : 'Restaurant'}:</span>
-                      <span className="font-medium text-[#5d5a3c]">{fullReservation?.restaurant?.name || reservationResult?.restaurant?.name || '—'}</span>
+                      <span className="font-medium text-[#5d5a3c]">{reservationResult?.restaurantName || '—'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-[#6b6b4e]">{lang === 'ar' ? 'عدد الأماكن' : 'Places'}:</span>
-                      <span className="font-medium text-[#5d5a3c]">{fullReservation?.seats || reservationResult?.seats || '—'}</span>
+                      <span className="font-medium text-[#5d5a3c]">{reservationResult?.seats || '—'}</span>
                     </div>
                   </div>
                 </div>

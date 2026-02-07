@@ -506,6 +506,7 @@ function mapReservation(r: any) {
     createdAt: new Date(r.created_at),
     updatedAt: r.updated_at ? new Date(r.updated_at) : null,
     restaurant: r.restaurants ? mapRestaurant(r.restaurants) : null,
+    restaurantName: r.restaurants?.name || null,
     slot: r.restaurant_slots ? mapSlot(r.restaurant_slots) : null,
   };
 }
