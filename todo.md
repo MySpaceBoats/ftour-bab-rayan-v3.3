@@ -648,9 +648,10 @@
 - [x] Afficher adresse de livraison si livraison
 - [x] Afficher instructions de livraison
 - [x] Afficher référence et montant
-- [ ] Ajouter traductions FR/EN/AR/AMZ (FR partiellement, EN/AR/AMZ manquent)
+- [x] Ajouter traductions FR/EN (partiellement)
+- [ ] Ajouter traductions AR/AMZ (manquent)
 - [ ] Intégrer le composant dans la page Goodies.tsx
-- [ ] Corriger les erreurs TypeScript restantes
+- [ ] Corriger les erreurs TypeScript restantes (paymentOnPlacePickupMessage, getByReference, AR/AMZ)
 
 ### Phase 2 : Harmoniser les méthodes de paiement (À FAIRE)
 - [ ] Configuration centrale des moyens de paiement

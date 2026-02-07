@@ -129,7 +129,7 @@ export default function GoodiesConfirmation({ orderReference, onClose }: Goodies
                   )}
                   {order.deliveryInstructions && (
                     <div className="mt-3 pt-3 border-t border-[#F2E9D3]/20">
-                      <p className="text-sm text-[#E6DCC3]">{t.goodies.instructions}:</p>
+                      <p className="text-sm text-[#E6DCC3]">{t.goodies.deliveryInstructions}:</p>
                       <p className="text-[#F2E9D3]">{order.deliveryInstructions}</p>
                     </div>
                   )}
@@ -154,7 +154,7 @@ export default function GoodiesConfirmation({ orderReference, onClose }: Goodies
                   </li>
                   <li className="flex gap-2">
                     <span className="text-[#F2E9D3]">✓</span>
-                    <span>{t.goodies.teamWillContact}</span>
+                    <span>{t.goodies.deliveryInstructions}</span>
                   </li>
                   <li className="flex gap-2">
                     <span className="text-[#F2E9D3]">✓</span>

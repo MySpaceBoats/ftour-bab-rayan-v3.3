@@ -237,6 +237,20 @@ export const en: Translations = {
     paymentOnPlacePickup: 'Payment on site upon pickup',
     paymentOnDelivery: 'Payment on delivery',
     estimatedDelivery: 'Estimated delivery after confirmation',
+    orderConfirmed: 'Order confirmed!',
+    orderSuccessMessage: 'Your order has been successfully registered.',
+    yourOrderWillBeDeliveredTo: 'Your order will be delivered to the following address:',
+    confirmationEmailSent: 'You will receive a confirmation email.',
+    teamWillContact: 'Our team will contact you if needed to organize the delivery.',
+    paymentOnDeliveryMessage: 'Payment is made on delivery (cash or other according to your rules).',
+    thankYouForSupport: 'Thank you for your support.',
+    pickupInstructions: 'Pickup instructions',
+    presentYourReference: 'Present your reference',
+    presentReferenceAtPickup: 'Present your reference at the pickup point',
+    paymentAtPickupLocation: 'Payment on site upon pickup',
+    loading: 'Loading...',
+    error: 'Error',
+    orderNotFound: 'Order not found'
   },
 
   // Donations Page
