@@ -312,6 +312,31 @@ export default function Admin() {
             </Card>
           )}
 
+          {/* Payments Management */}
+          {(canManageOrders || canManageDonations) && (
+            <Card className="card-hover">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                    <BarChart3 className="h-5 w-5 text-green-600" />
+                  </div>
+                  Paiements
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Suivi et gestion de tous les paiements avec filtres et export
+                </p>
+                <Link href="/admin/payments">
+                  <Button variant="outline" className="w-full">
+                    Gérer les paiements
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Days Management */}
           {isSuperAdmin && (
             <Card className="card-hover">

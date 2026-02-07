@@ -38,6 +38,7 @@ import AdminScan from "./pages/AdminScan";
 import AdminReservations from "./pages/AdminReservations";
 import AdminRestaurants from "./pages/AdminRestaurants";
 import AdminScanReservation from "./pages/AdminScanReservation";
+import AdminPayments from "./pages/AdminPayments";
 import CheckinReservation from "./pages/CheckinReservation";
 
 // Language-aware route wrapper
@@ -78,6 +79,7 @@ function LocalizedRoutes() {
       <Route path="/admin/utilisateurs" component={AdminUtilisateurs} />
       <Route path="/admin/goodies" component={AdminGoodies} />
       <Route path="/admin/scan" component={AdminScan} />
+      <Route path="/admin/payments" component={AdminPayments} />
       <Route path="/admin/reservations" component={AdminReservations} />
       <Route path="/admin/restaurants" component={AdminRestaurants} />
       <Route path="/admin/scan-reservation" component={AdminScanReservation} />
