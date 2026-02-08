@@ -347,6 +347,29 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* Pastries Card */}
+              <div className="bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#D4A574]/30 transition-all">
+                <div className="h-1 bg-[#D4A574]" />
+                <div className="p-8 space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-[#D4A574]/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Utensils className="h-7 w-7 text-[#D4A574]" />
+                  </div>
+                  <h3 className="text-xl font-bold text-[#F2E9D3]">{t.home.pastriesTitle || 'Pâtisserie Solidaire'}</h3>
+                  <p className="text-[#E6DCC3]">
+                    {t.home.pastriesDesc || 'Dégustez nos pâtisseries artisanales solidaires'}
+                  </p>
+                  <Link href={`/${lang}/pastries`}>
+                    <Button 
+                      variant="outline" 
+                      className="w-full mt-4 border-[#D4A574] text-[#D4A574] bg-transparent hover:bg-[#D4A574] hover:text-[#4A4829]"
+                    >
+                      {t.home.viewPastries || 'Voir les pâtisseries'}
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+
               {/* Donation Card */}
               <div className="bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#F2E9D3]/30 transition-all">
                 <div className="h-1 bg-[#F2E9D3]" />
