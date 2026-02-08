@@ -44,6 +44,7 @@ import AdminScanReservation from "./pages/AdminScanReservation";
 import AdminPayments from "./pages/AdminPayments";
 import AdminScanProduct from "./pages/AdminScanProduct";
 import AdminPastries from "./pages/AdminPastries";
+import AdminUnifiedDashboard from "./pages/AdminUnifiedDashboard";
 import CheckinReservation from "./pages/CheckinReservation";
 
 // Language-aware route wrapper
@@ -90,6 +91,7 @@ function LocalizedRoutes() {
       <Route path="/admin/scan-reservation" component={AdminScanReservation} />
       <Route path="/admin/scan-product" component={AdminScanProduct} />
       <Route path="/admin/pastries" component={AdminPastries} />
+      <Route path="/admin/unified-dashboard" component={AdminUnifiedDashboard} />
       
       {/* Scanner (mobile-first) - no locale prefix */}
       <Route path="/scanner" component={Scanner} />
