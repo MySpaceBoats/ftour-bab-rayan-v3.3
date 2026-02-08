@@ -141,6 +141,9 @@ export async function updateCompanyBookingStatusSupabase(
   status: string,
   paymentStatus?: string
 ) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error("Supabase not configured");
+  
   const update: any = { status };
   if (paymentStatus) update.paymentStatus = paymentStatus;
 
@@ -262,6 +265,9 @@ export async function validateCompanyTicketSupabase(
   qrToken: string,
   validatedBy: number
 ) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error("Supabase not configured");
+  
   // Récupérer le billet
   const ticket = await getCompanyTicketByTokenSupabase(qrToken);
 
