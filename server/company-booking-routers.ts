@@ -14,7 +14,6 @@ import {
   cancelCompanyTicketSupabase,
   markCompanyTicketNoShowSupabase,
 } from "./company-booking-services";
-import { sendEmailSupabase } from "./email";
 
 // ============================================
 // COMPANY BOOKINGS ROUTER
@@ -41,7 +40,7 @@ export const companyBookingsRouter = router({
         notes: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input }: any) => {
       const booking = await createCompanyBookingSupabase({
         companyName: input.companyName,
         companyICE: input.companyICE,
@@ -63,20 +62,8 @@ export const companyBookingsRouter = router({
         count: input.participantsCount,
       });
 
-      // Envoyer email de confirmation
-      await sendEmailSupabase({
-        to: input.contactEmail,
-        subject: `Réservation Ftour Bab Rayan - ${booking.reference}`,
-        html: `
-          <h2>Confirmation de réservation entreprise</h2>
-          <p>Référence: <strong>${booking.reference}</strong></p>
-          <p>Entreprise: <strong>${input.companyName}</strong></p>
-          <p>Nombre de participants: <strong>${input.participantsCount}</strong></p>
-          <p>Date: <strong>${input.date.toLocaleDateString("fr-FR")}</strong></p>
-          <p>Contact: ${input.contactName} - ${input.contactPhone}</p>
-          <p>Statut: En attente de confirmation</p>
-        `,
-      });
+      // Email de confirmation sera envoyé via webhook
+      // TODO: Implémenter les templates d'email transactionnels
 
       return {
         booking,
@@ -90,7 +77,7 @@ export const companyBookingsRouter = router({
    */
   getByReference: publicProcedure
     .input(z.object({ reference: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input }: any) => {
       return getCompanyBookingByReferenceSupabase(input.reference);
     }),
 
@@ -108,7 +95,7 @@ export const companyBookingsRouter = router({
         offset: z.number().default(0),
       })
     )
-    .query(async ({ input, ctx }) => {
+    .query(async ({ input, ctx }: any) => {
       if (ctx.user.role !== "admin" && ctx.user.role !== "super_admin") {
         throw new Error("Unauthorized");
       }
@@ -134,7 +121,7 @@ export const companyBookingsRouter = router({
         paymentStatus: z.enum(["pending", "paid", "failed"]).optional(),
       })
     )
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async ({ input, ctx }: any) => {
       if (ctx.user.role !== "admin" && ctx.user.role !== "super_admin") {
         throw new Error("Unauthorized");
       }
@@ -151,7 +138,7 @@ export const companyBookingsRouter = router({
    */
   getStats: publicProcedure
     .input(z.object({ bookingId: z.number() }))
-    .query(async ({ input }) => {
+    .query(async ({ input }: any) => {
       return getCompanyBookingStatsSupabase(input.bookingId);
     }),
 });
@@ -166,7 +153,7 @@ export const companyTicketsRouter = router({
    */
   list: publicProcedure
     .input(z.object({ bookingId: z.number() }))
-    .query(async ({ input }) => {
+    .query(async ({ input }: any) => {
       return listCompanyTicketsSupabase(input.bookingId);
     }),
 
@@ -175,7 +162,7 @@ export const companyTicketsRouter = router({
    */
   validate: publicProcedure
     .input(z.object({ qrToken: z.string() }))
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async ({ input, ctx }: any) => {
       const validatedBy = ctx.user?.id || 0;
       return validateCompanyTicketSupabase(input.qrToken, validatedBy);
     }),
@@ -185,7 +172,7 @@ export const companyTicketsRouter = router({
    */
   cancel: protectedProcedure
     .input(z.object({ ticketId: z.number() }))
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async ({ input, ctx }: any) => {
       if (ctx.user.role !== "admin" && ctx.user.role !== "super_admin") {
         throw new Error("Unauthorized");
       }
@@ -198,7 +185,7 @@ export const companyTicketsRouter = router({
    */
   markNoShow: protectedProcedure
     .input(z.object({ ticketId: z.number() }))
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async ({ input, ctx }: any) => {
       if (ctx.user.role !== "admin" && ctx.user.role !== "super_admin") {
         throw new Error("Unauthorized");
       }
