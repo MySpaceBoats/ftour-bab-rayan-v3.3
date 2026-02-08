@@ -588,3 +588,76 @@ export const qrScans = mysqlTable("qr_scans", {
 
 export type QRScan = typeof qrScans.$inferSelect;
 export type InsertQRScan = typeof qrScans.$inferInsert;
+
+
+// ============================================
+// COMPANY BOOKINGS (Réservations Entreprise)
+// ============================================
+
+export const companyBookingStatusEnum = mysqlEnum("company_booking_status", ["pending", "confirmed", "cancelled"]);
+export const companyPaymentStatusEnum = mysqlEnum("company_payment_status", ["pending", "paid", "failed"]);
+export const companyPaymentMethodEnum = mysqlEnum("company_payment_method", ["cash", "bank_transfer", "check", "paypal", "cmi"]);
+
+export const companyBookings = mysqlTable("company_bookings", {
+  id: int("id").autoincrement().primaryKey(),
+  reference: varchar("reference", { length: 50 }).notNull().unique(), // CBR-2026-000123
+  companyName: varchar("companyName", { length: 255 }).notNull(),
+  companyICE: varchar("companyICE", { length: 50 }),
+  companySector: varchar("companySector", { length: 100 }),
+  contactName: varchar("contactName", { length: 255 }).notNull(),
+  contactEmail: varchar("contactEmail", { length: 320 }).notNull(),
+  contactPhone: varchar("contactPhone", { length: 20 }).notNull(),
+  participantsCount: int("participantsCount").notNull(),
+  date: timestamp("date").notNull(),
+  restaurantId: int("restaurantId"),
+  slotId: int("slotId"),
+  status: companyBookingStatusEnum.default("pending").notNull(),
+  paymentMethod: companyPaymentMethodEnum.default("cash"),
+  paymentStatus: companyPaymentStatusEnum.default("pending"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CompanyBooking = typeof companyBookings.$inferSelect;
+export type InsertCompanyBooking = typeof companyBookings.$inferInsert;
+
+// ============================================
+// COMPANY TICKETS (Billets Individuels)
+// ============================================
+
+export const companyTicketStatusEnum = mysqlEnum("company_ticket_status", ["issued", "checked_in", "no_show", "cancelled"]);
+
+export const companyTickets = mysqlTable("company_tickets", {
+  id: int("id").autoincrement().primaryKey(),
+  companyBookingId: int("companyBookingId").notNull().references(() => companyBookings.id),
+  ticketCode: varchar("ticketCode", { length: 50 }).notNull().unique(), // TCK-8H2K
+  qrToken: varchar("qrToken", { length: 256 }).notNull().unique(), // Token long et non devinable
+  participantName: varchar("participantName", { length: 255 }),
+  participantEmail: varchar("participantEmail", { length: 320 }),
+  participantDepartment: varchar("participantDepartment", { length: 100 }),
+  status: companyTicketStatusEnum.default("issued").notNull(),
+  checkedInAt: timestamp("checkedInAt"),
+  checkedInBy: int("checkedInBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CompanyTicket = typeof companyTickets.$inferSelect;
+export type InsertCompanyTicket = typeof companyTickets.$inferInsert;
+
+// ============================================
+// COMPANY BOOKING SCANS (Audit des scans)
+// ============================================
+
+export const companyBookingScans = mysqlTable("company_booking_scans", {
+  id: int("id").autoincrement().primaryKey(),
+  companyTicketId: int("companyTicketId").notNull().references(() => companyTickets.id),
+  qrToken: varchar("qrToken", { length: 256 }).notNull(),
+  result: varchar("result", { length: 50 }).notNull(), // "success", "already_checked_in", "invalid_date", "ticket_cancelled"
+  validatedBy: int("validatedBy").notNull(),
+  scannedAt: timestamp("scannedAt").defaultNow().notNull(),
+});
+
+export type CompanyBookingScan = typeof companyBookingScans.$inferSelect;
+export type InsertCompanyBookingScan = typeof companyBookingScans.$inferInsert;
