@@ -46,6 +46,10 @@ import AdminScanProduct from "./pages/AdminScanProduct";
 import AdminPastries from "./pages/AdminPastries";
 import AdminUnifiedDashboard from "./pages/AdminUnifiedDashboard";
 import CheckinReservation from "./pages/CheckinReservation";
+import CompanyBooking from "./pages/CompanyBooking";
+import CompanyBookingConfirmation from "./pages/CompanyBookingConfirmation";
+import CompanyBookingSpace from "./pages/CompanyBookingSpace";
+import AdminCompanyBookings from "./pages/AdminCompanyBookings";
 
 // Language-aware route wrapper
 function LocalizedRoutes() {
@@ -120,6 +124,9 @@ function LocalizedRoutes() {
       <Route path="/:lang/connexion" component={Login} />
       <Route path="/:lang/inscription" component={Signup} />
       <Route path="/:lang/reservation" component={Reservation} />
+      <Route path="/:lang/company-booking" component={CompanyBooking} />
+      <Route path="/:lang/company-booking-confirmation/:reference" component={CompanyBookingConfirmation} />
+      <Route path="/:lang/company-booking-space/:token" component={CompanyBookingSpace} />
       <Route path="/:lang/buy/goodie/:id" component={BuyGoodie} />
       <Route path="/:lang/buy/pastry/:id" component={BuyPastry} />
       

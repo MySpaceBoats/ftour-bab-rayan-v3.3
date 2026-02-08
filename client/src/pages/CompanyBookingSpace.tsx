@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useI18n } from '../lib/i18n';
-import { trpc } from '../lib/trpc';
+import { useI18n } from '@/i18n';
+import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';

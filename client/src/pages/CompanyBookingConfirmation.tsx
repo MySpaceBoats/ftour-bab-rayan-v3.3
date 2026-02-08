@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRoute, useLocation } from 'wouter';
-import { useI18n } from '../lib/i18n';
-import { trpc } from '../lib/trpc';
+import { useI18n } from '@/i18n';
+import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle2, Download, Eye } from 'lucide-react';
