@@ -152,10 +152,34 @@ export type GoodieVariant = typeof goodieVariants.$inferSelect;
 export type InsertGoodieVariant = typeof goodieVariants.$inferInsert;
 
 // ============================================
-// ORDERS (Commandes goodies)
+// ENUMS - Définir avant utilisation
 // ============================================
 
-export const orderStatusEnum = mysqlEnum("orderStatus", ["reserved", "confirmed", "paid", "delivered", "cancelled"]);
+export const orderStatusEnum = mysqlEnum("orderStatus", ["reserved", "pending", "confirmed", "delivered", "cancelled"]);
+export const donationStatusEnum = mysqlEnum("donationStatus", ["promised", "pending", "received", "cancelled", "handed", "checked_in"]);
+export const paymentMethodEnum = mysqlEnum("payment_method", [
+  "bank_transfer",
+  "cheque",
+  "cash",
+  "paypal",
+  "cmi"
+]);
+export const orderChannelEnum = mysqlEnum("orderChannel", ["online", "on_site_qr", "on_site_admin"]);
+export const moduleTypeEnum = mysqlEnum("moduleType", ["goodies", "pastry", "donation", "ftour"]);
+export const businessStatusEnum = mysqlEnum("businessStatus", ["reserved", "confirmed", "handed", "checked_in", "cancelled"]);
+export const paymentStatusEnum = mysqlEnum("paymentStatus", [
+  "pending",           // En attente (virement, chèque, cash)
+  "processing",        // En cours de traitement (PayPal, CIM)
+  "paid",              // Payé (PayPal, CIM confirmé)
+  "failed",            // Échoué (PayPal, CIM refusé)
+  "cancelled",         // Annulé
+  "cashed",            // Encaissé (chèque)
+  "confirmed"          // Confirmé (après validation admin)
+]);
+
+// ============================================
+// ORDERS (Commandes)
+// ============================================
 
 export const orders = mysqlTable("orders", {
   id: int("id").autoincrement().primaryKey(),
@@ -226,21 +250,8 @@ export type InsertOrderItem = typeof orderItems.$inferInsert;
 // DONATIONS (Promesses de dons)
 // ============================================
 
-export const donationStatusEnum = mysqlEnum("donationStatus", ["promised", "pending", "received", "cancelled", "handed", "checked_in"]);
 
-export const paymentMethodEnum = mysqlEnum("payment_method", [
-  "bank_transfer",
-  "cheque",
-  "cash",
-  "paypal",
-  "cmi"
-]);
-
-export const orderChannelEnum = mysqlEnum("orderChannel", ["online", "on_site_qr", "on_site_admin"]);
-export const moduleTypeEnum = mysqlEnum("moduleType", ["goodies", "pastry", "donation", "ftour"]);
-export const businessStatusEnum = mysqlEnum("businessStatus", ["reserved", "confirmed", "handed", "checked_in", "cancelled"]);
-export const paymentStatusEnum = mysqlEnum("paymentStatus", ["pending", "confirmed", "paid", "cancelled"]);
-
+// Donations table
 export const donations = mysqlTable("donations", {
   id: int("id").autoincrement().primaryKey(),
   donationReference: varchar("donationReference", { length: 20 }).notNull().unique(), // DON-XXXXX
@@ -266,7 +277,6 @@ export const donations = mysqlTable("donations", {
   moduleType: moduleTypeEnum.default("donation").notNull(),
   paymentStatus: paymentStatusEnum.default("pending").notNull(),
   qrToken: varchar("qrToken", { length: 64 }).unique(),
-  paymentMethod: paymentMethodEnum.notNull(),
   
   // Tracking
   emailSent: boolean("emailSent").notNull().default(false),
@@ -400,15 +410,7 @@ export type InsertFaqItem = typeof faqItems.$inferInsert;
 // PAYMENTS (Paiements)
 // ============================================
 
-export const paymentStatusEnum = mysqlEnum("payment_status", [
-  "pending",           // En attente (virement, chèque, cash)
-  "processing",        // En cours de traitement (PayPal, CIM)
-  "paid",              // Payé (PayPal, CIM confirmé)
-  "failed",            // Échoué (PayPal, CIM refusé)
-  "cancelled",         // Annulé
-  "cashed",            // Encaissé (chèque)
-  "confirmed"          // Confirmé (après validation admin)
-]);
+// paymentStatusEnum already defined above (line 242)
 
 // Note: paymentMethodEnum already defined above
 

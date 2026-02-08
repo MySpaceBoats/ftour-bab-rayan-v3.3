@@ -248,7 +248,15 @@ export const fr = {
     paymentAtPickupLocation: 'Paiement sur place lors du retrait',
     loading: 'Chargement...',
     error: 'Erreur',
-    orderNotFound: 'Commande non trouvée'
+    orderNotFound: 'Commande non trouvée',
+    backToGoodies: 'Retour aux Goodies',
+    expressCheckout: 'Achat express',
+    productNotFound: 'Produit non trouvé',
+    completeOrder: 'Finaliser la commande',
+    customerInfo: 'Informations client',
+    optional: '(optionnel)',
+    quantity: 'Quantité',
+    unitPrice: 'Prix unitaire'
   },
 
   // Pastries Page
