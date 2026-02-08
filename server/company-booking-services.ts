@@ -42,7 +42,7 @@ export async function createCompanyBookingSupabase({
 
   const reference = `CBR-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 1000000)).padStart(6, "0")}`;
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("company_bookings")
     .insert({
       reference,
@@ -74,7 +74,7 @@ export async function createCompanyBookingSupabase({
 export async function getCompanyBookingSupabase(id: number) {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error("Supabase not configured");
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("company_bookings")
     .select("*")
     .eq("id", id)
@@ -90,7 +90,7 @@ export async function getCompanyBookingSupabase(id: number) {
 export async function getCompanyBookingByReferenceSupabase(reference: string) {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error("Supabase not configured");
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("company_bookings")
     .select("*")
     .eq("reference", reference)
@@ -146,7 +146,7 @@ export async function updateCompanyBookingStatusSupabase(
   const update: any = { status };
   if (paymentStatus) update.paymentStatus = paymentStatus;
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("company_bookings")
     .update(update)
     .eq("id", id)
@@ -216,7 +216,7 @@ export async function createCompanyTicketsSupabase({
     });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("company_tickets")
     .insert(tickets)
     .select();
@@ -231,7 +231,7 @@ export async function createCompanyTicketsSupabase({
 export async function getCompanyTicketByTokenSupabase(qrToken: string) {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error("Supabase not configured");
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("company_tickets")
     .select("*, company_bookings(*)")
     .eq("qrToken", qrToken)
@@ -247,7 +247,7 @@ export async function getCompanyTicketByTokenSupabase(qrToken: string) {
 export async function listCompanyTicketsSupabase(companyBookingId: number) {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error("Supabase not configured");
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("company_tickets")
     .select("*")
     .eq("companyBookingId", companyBookingId)
@@ -290,7 +290,7 @@ export async function validateCompanyTicketSupabase(
   }
 
   // Mettre à jour le statut du billet
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("company_tickets")
     .update({
       status: "checked_in",
@@ -322,7 +322,7 @@ export async function validateCompanyTicketSupabase(
 export async function getCompanyBookingStatsSupabase(companyBookingId: number) {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error("Supabase not configured");
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("company_tickets")
     .select("status")
     .eq("companyBookingId", companyBookingId);
@@ -346,7 +346,7 @@ export async function getCompanyBookingStatsSupabase(companyBookingId: number) {
 export async function cancelCompanyTicketSupabase(ticketId: number) {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error("Supabase not configured");
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("company_tickets")
     .update({ status: "cancelled" })
     .eq("id", ticketId)
@@ -363,7 +363,7 @@ export async function cancelCompanyTicketSupabase(ticketId: number) {
 export async function markCompanyTicketNoShowSupabase(ticketId: number) {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error("Supabase not configured");
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("company_tickets")
     .update({ status: "no_show" })
     .eq("id", ticketId)
