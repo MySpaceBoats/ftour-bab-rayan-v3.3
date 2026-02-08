@@ -9,6 +9,7 @@ import { signInUser, signUpUser, getUserFromToken, signOutUser } from "./supabas
 import * as supabaseServices from "./supabase-services";
 import * as reservationServices from "./reservation-services";
 import { getSupabaseAdminClient } from "./supabase";
+import { companyBookingsRouter } from "./company-booking-routers";
 
 // ============================================
 // ROLE-BASED PROCEDURES
@@ -1443,7 +1444,7 @@ const pastryOrdersRouter = router({
         await sendEmail({
           to: input.email || input.phone,
           subject: `Confirmation de commande pâtisserie #${reference}`,
-          text: emailContent,
+          html: `<p>${emailContent.replace(/\n/g, '</p><p>')}</p>`,
         });
       } catch (e) {
         console.error('Email send error:', e);
@@ -1605,6 +1606,7 @@ export const appRouterUpdated = router({
   pastries: pastriesRouter,
   pastryOrders: pastryOrdersRouter,
   qr: qrRouter,
+  companyBookings: companyBookingsRouter,
 });
 
 export type AppRouter = typeof appRouterUpdated;

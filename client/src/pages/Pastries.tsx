@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { trpc } from '@/lib/trpc';
 import { useI18n } from '@/i18n';
-import PaymentMethodSelector from '@/components/PaymentMethodSelector';
+import PaymentMethodSelector, { type PaymentMethod } from '@/components/PaymentMethodSelector';
 import PastriesConfirmation from '@/components/PastriesConfirmation';
 
 interface CartItem {
@@ -24,7 +24,19 @@ export default function Pastries() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [step, setStep] = useState<'browse' | 'checkout' | 'success'>('browse');
   const [orderData, setOrderData] = useState<any>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    fullName: string;
+    phone: string;
+    email: string;
+    deliveryMode: string;
+    deliveryAddress: string;
+    city: string;
+    neighborhood: string;
+    postalCode: string;
+    contactPhone: string;
+    deliveryInstructions: string;
+    paymentMethod: PaymentMethod;
+  }>({
     fullName: '',
     phone: '',
     email: '',

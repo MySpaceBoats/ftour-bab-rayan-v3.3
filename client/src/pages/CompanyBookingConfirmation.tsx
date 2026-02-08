@@ -97,7 +97,7 @@ export default function CompanyBookingConfirmation() {
           {showTickets && (
             <CardContent>
               <div className="space-y-2 max-h-96 overflow-y-auto">
-                {booking.tickets?.map((ticket, idx) => (
+                {booking.tickets?.map((ticket: any, idx: number) => (
                   <div key={ticket.id} className="p-3 bg-muted rounded-lg flex justify-between items-center">
                     <div>
                       <p className="font-semibold">Participant {idx + 1}</p>

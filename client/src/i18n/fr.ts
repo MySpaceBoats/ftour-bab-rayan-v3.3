@@ -119,6 +119,16 @@ export const fr = {
     donationCardTitle: 'Faire un don',
     donationCardDesc: 'Votre générosité permet de financer les repas, l\'hébergement et l\'éducation des enfants. Chaque don compte.',
     donateNow: 'Donner maintenant',
+    companyBookingCardTitle: 'Reservation Entreprise',
+    companyBookingTitle: 'Reservation Entreprise',
+    companyBookingDesc: 'Reservez un Ftour pour votre equipe. Chaque participant reçoit un QR code pour un acces facile et traçable.',
+    bookForCompany: 'Reserver pour mon entreprise',
+    pastryCardTitle: 'Patisserie Solidaire',
+    pastriesTitle: 'Patisserie Solidaire',
+    pastryDesc: 'Commandez nos delicieuses patisseries artisanales. 100% des benefices soutiennent nos actions.',
+    pastriesDesc: 'Degustez nos patisseries artisanales solidaires',
+    viewPastries: 'Voir les patisseries',
+    orderPastry: 'Commander'
   },
 
   // Event Page

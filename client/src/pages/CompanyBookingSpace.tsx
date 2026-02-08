@@ -50,41 +50,45 @@ export default function CompanyBookingSpace() {
             <CardContent>
               <div className="flex gap-2">
                 <Input
-                  placeholder="Ex: CBR-2026-123456"
+                  placeholder="Ex: REF-2026-001"
                   value={bookingReference}
                   onChange={(e) => setBookingReference(e.target.value)}
                 />
-                <Button onClick={() => setSelectedBooking(booking)}>Accéder</Button>
+                <Button onClick={() => setBookingReference(bookingReference)}>
+                  Accéder
+                </Button>
               </div>
             </CardContent>
           </Card>
         )}
 
+        {/* Booking Details */}
         {booking && (
           <>
-            {/* Booking Info */}
             <Card className="mb-8">
               <CardHeader>
-                <CardTitle>{booking.companyName}</CardTitle>
-                <CardDescription>Référence: {booking.reference}</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Détails de la réservation
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Contact</p>
-                    <p className="font-semibold">{booking.contactName}</p>
+                    <p className="text-sm text-muted-foreground">Entreprise</p>
+                    <p className="font-semibold">{booking.companyName}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Email</p>
-                    <p className="font-semibold text-sm">{booking.contactEmail}</p>
+                    <p className="text-sm text-muted-foreground">Référence</p>
+                    <p className="font-semibold">{booking.reference}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Téléphone</p>
-                    <p className="font-semibold">{booking.contactPhone}</p>
+                    <p className="text-sm text-muted-foreground">Nombre de participants</p>
+                    <p className="font-semibold">{booking.numberOfTickets}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Date</p>
-                    <p className="font-semibold">{new Date(booking.date).toLocaleDateString('fr-FR')}</p>
+                    <p className="text-sm text-muted-foreground">Statut</p>
+                    <p className="font-semibold">{booking.status}</p>
                   </div>
                 </div>
               </CardContent>
@@ -92,106 +96,65 @@ export default function CompanyBookingSpace() {
 
             {/* Statistics */}
             {stats && (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">{t.companyBooking.totalParticipants}</p>
-                        <p className="text-2xl font-bold">{stats.totalParticipants}</p>
-                      </div>
-                      <Users className="w-8 h-8 text-muted-foreground" />
+              <Card className="mb-8">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    Statistiques
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total billets</p>
+                      <p className="text-2xl font-bold">{stats.total}</p>
                     </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">{t.companyBooking.checkedInCount}</p>
-                        <p className="text-2xl font-bold text-green-600">{stats.checkedInCount}</p>
-                      </div>
-                      <QrCode className="w-8 h-8 text-green-600" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Billets scannés</p>
+                      <p className="text-2xl font-bold">{stats.checkedIn}</p>
                     </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">{t.companyBooking.absentCount}</p>
-                        <p className="text-2xl font-bold text-orange-600">{stats.absentCount}</p>
-                      </div>
-                      <BarChart3 className="w-8 h-8 text-orange-600" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Taux de présence</p>
+                      <p className="text-2xl font-bold">
+                        {stats.total > 0 
+                          ? Math.round((stats.checkedIn / stats.total) * 100) 
+                          : 0}%
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">{t.companyBooking.cancelledCount}</p>
-                        <p className="text-2xl font-bold text-red-600">{stats.cancelledCount}</p>
-                      </div>
-                      <BarChart3 className="w-8 h-8 text-red-600" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
-            {/* Tickets List */}
-            <Card className="mb-8">
+            {/* QR Codes Actions */}
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>{t.companyBooking.participantsList}</span>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={handleDownloadQRCodes}>
-                      <Download className="w-4 h-4 mr-2" />
-                      {t.companyBooking.downloadPDF}
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={handlePrintQRCodes}>
-                      <QrCode className="w-4 h-4 mr-2" />
-                      {t.companyBooking.printQRCodes}
-                    </Button>
-                  </div>
+                <CardTitle className="flex items-center gap-2">
+                  <QrCode className="h-5 w-5" />
+                  Codes QR
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {booking.tickets?.map((ticket, idx) => (
-                    <div key={ticket.id} className="p-4 bg-muted rounded-lg flex justify-between items-center">
-                      <div>
-                        <p className="font-semibold">{t.companyBooking.participantName} {idx + 1}</p>
-                        <p className="text-sm text-muted-foreground">Code: {ticket.ticketCode}</p>
-                        <p className="text-xs text-muted-foreground mt-1">QR Token: {ticket.qrToken}</p>
-                      </div>
-                      <div className="text-right">
-                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                          ticket.checkedInAt ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {ticket.checkedInAt ? t.companyBooking.checkedIn : t.companyBooking.notCheckedIn}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                <div className="flex gap-2">
+                  <Button onClick={handleDownloadQRCodes} variant="outline" className="flex-1">
+                    <Download className="h-4 w-4 mr-2" />
+                    Télécharger les QR codes
+                  </Button>
+                  <Button onClick={handlePrintQRCodes} className="flex-1">
+                    Imprimer les QR codes
+                  </Button>
                 </div>
               </CardContent>
             </Card>
-
-            {/* Actions */}
-            <div className="flex gap-4">
-              <Button variant="outline" className="flex-1" onClick={() => setBookingReference('')}>
-                Accéder à une autre réservation
-              </Button>
-              <Button className="flex-1" onClick={() => window.location.href = '/'}>
-                Retour à l'accueil
-              </Button>
-            </div>
           </>
+        )}
+
+        {isLoading && (
+          <Card>
+            <CardContent className="py-8">
+              <p className="text-center text-muted-foreground">Chargement...</p>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

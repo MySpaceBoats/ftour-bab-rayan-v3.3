@@ -23,14 +23,14 @@ export default function CompanyBooking() {
     contactPhone: '',
     participantsCount: 1,
     date: new Date().toISOString().split('T')[0],
-    restaurantId: undefined,
-    slotId: undefined,
+    restaurantId: undefined as number | undefined,
+    slotId: undefined as number | undefined,
     paymentMethod: 'cash' as const,
     notes: '',
   });
 
   const createReservation = trpc.companyBookings.create.useMutation({
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       navigate(`/company-booking-confirmation/${data.booking.reference}`);
     },
   });
@@ -192,7 +192,7 @@ export default function CompanyBooking() {
 
                 <div>
                   <Label htmlFor="restaurant">{t.companyBooking.restaurant}</Label>
-                  <Select value={formData.restaurantId?.toString() || ''} onValueChange={(v) => handleInputChange('restaurantId', parseInt(v))}>
+                  <Select value={formData.restaurantId ? formData.restaurantId.toString() : ''} onValueChange={(v) => handleInputChange('restaurantId', parseInt(v))}>
                     <SelectTrigger id="restaurant">
                       <SelectValue placeholder="Sélectionner un restaurant" />
                     </SelectTrigger>
@@ -205,7 +205,7 @@ export default function CompanyBooking() {
 
                 <div>
                   <Label htmlFor="slot">{t.companyBooking.slot}</Label>
-                  <Select value={formData.slotId?.toString() || ''} onValueChange={(v) => handleInputChange('slotId', parseInt(v))}>
+                  <Select value={formData.slotId ? formData.slotId.toString() : ''} onValueChange={(v) => handleInputChange('slotId', parseInt(v))}>
                     <SelectTrigger id="slot">
                       <SelectValue placeholder="Sélectionner un créneau" />
                     </SelectTrigger>
@@ -234,8 +234,8 @@ export default function CompanyBooking() {
             {step === 3 && (
               <div className="space-y-4">
                 <PaymentMethodSelector
-                  selectedMethod={formData.paymentMethod}
-                  onMethodChange={(method) => handleInputChange('paymentMethod', method)}
+                  value={formData.paymentMethod}
+                  onChange={(method: any) => handleInputChange('paymentMethod', method)}
                 />
               </div>
             )}
