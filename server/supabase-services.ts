@@ -1454,3 +1454,241 @@ export async function getPaymentStatsSupabase() {
 
   return stats;
 }
+
+
+// ============================================
+// PASTRY SERVICES (Pâtisserie Solidaire)
+// ============================================
+
+export async function getPastriesSupabase() {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const { data, error } = await client
+    .from('pastries')
+    .select('*')
+    .eq('active', true)
+    .order('sortOrder', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createPastryOrderSupabase(orderData: {
+  reference: string;
+  customerName: string;
+  phone: string;
+  email?: string;
+  items: Array<{ pastryId: number; quantity: number; price: number }>;
+  totalAmount: number;
+  paymentMethod: string;
+  qrToken?: string;
+}) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const { data, error } = await client
+    .from('pastry_orders')
+    .insert({
+      reference: orderData.reference,
+      customer_name: orderData.customerName,
+      phone: orderData.phone,
+      email: orderData.email,
+      items: orderData.items,
+      total_amount: orderData.totalAmount,
+      payment_method: orderData.paymentMethod,
+      payment_status: 'pending',
+      order_status: 'reserved',
+      qr_token: orderData.qrToken,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getPastryOrderByReferenceSupabase(reference: string) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const { data, error } = await client
+    .from('pastry_orders')
+    .select('*')
+    .eq('reference', reference)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getPastryOrdersSupabase(filters?: {
+  status?: string;
+  paymentStatus?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  let query = client.from('pastry_orders').select('*');
+
+  if (filters?.status) {
+    query = query.eq('order_status', filters.status);
+  }
+  if (filters?.paymentStatus) {
+    query = query.eq('payment_status', filters.paymentStatus);
+  }
+  if (filters?.dateFrom) {
+    query = query.gte('created_at', filters.dateFrom);
+  }
+  if (filters?.dateTo) {
+    query = query.lte('created_at', filters.dateTo);
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function updatePastryOrderStatusSupabase(
+  orderId: number,
+  orderStatus: string,
+  paymentStatus?: string,
+  scannedBy?: number
+) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const updateData: any = {
+    order_status: orderStatus,
+    scanned_at: new Date().toISOString(),
+  };
+
+  if (paymentStatus) {
+    updateData.payment_status = paymentStatus;
+  }
+  if (scannedBy) {
+    updateData.scanned_by = scannedBy;
+  }
+
+  const { data, error } = await client
+    .from('pastry_orders')
+    .update(updateData)
+    .eq('id', orderId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function generateQRTokenSupabase(scope: string, entityId: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const token = generateSecureToken();
+
+  const { data, error } = await client
+    .from('qr_tokens')
+    .insert({
+      token,
+      scope,
+      entity_id: entityId,
+      status: 'active',
+      max_uses: 1,
+      uses_count: 0,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function validateQRTokenSupabase(token: string, scope: string) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const { data: qrData, error: qrError } = await client
+    .from('qr_tokens')
+    .select('*')
+    .eq('token', token)
+    .eq('scope', scope)
+    .single();
+
+  if (qrError || !qrData) {
+    throw new Error('QR token not found');
+  }
+
+  if (qrData.status !== 'active') {
+    throw new Error('QR token is not active');
+  }
+
+  if (qrData.uses_count >= qrData.max_uses) {
+    throw new Error('QR token has reached maximum uses');
+  }
+
+  // Increment uses count
+  const { error: updateError } = await client
+    .from('qr_tokens')
+    .update({
+      uses_count: qrData.uses_count + 1,
+      status: qrData.uses_count + 1 >= qrData.max_uses ? 'used' : 'active',
+    })
+    .eq('id', qrData.id);
+
+  if (updateError) throw updateError;
+
+  return qrData;
+}
+
+export async function logQRScanSupabase(
+  token: string,
+  scope: string,
+  entityId: number,
+  validationAction: string,
+  validatedBy: number,
+  success: boolean = true,
+  errorMessage?: string
+) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const { error } = await client
+    .from('qr_scans')
+    .insert({
+      token,
+      scope,
+      entity_id: entityId,
+      validation_action: validationAction,
+      validated_by: validatedBy,
+      success,
+      error_message: errorMessage,
+      scanned_at: new Date().toISOString(),
+    });
+
+  if (error) throw error;
+}
+
+export async function getPastryOrderStatsSupabase() {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const { data, error } = await client
+    .from('pastry_orders')
+    .select('order_status, payment_status, total_amount');
+
+  if (error) return { total: 0, reserved: 0, paid: 0, handed: 0, totalAmount: 0 };
+
+  const stats = {
+    total: data?.length || 0,
+    reserved: data?.filter(p => p.order_status === 'reserved').length || 0,
+    paid: data?.filter(p => p.order_status === 'paid').length || 0,
+    handed: data?.filter(p => p.order_status === 'handed').length || 0,
+    totalAmount: data?.reduce((sum: number, p: any) => sum + (parseFloat(p.total_amount) || 0), 0) || 0,
+  };
+
+  return stats;
+}

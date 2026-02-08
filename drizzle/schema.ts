@@ -475,3 +475,92 @@ export const paymentMethodsConfig = mysqlTable("payment_methods_config", {
 
 export type PaymentMethodConfig = typeof paymentMethodsConfig.$inferSelect;
 export type InsertPaymentMethodConfig = typeof paymentMethodsConfig.$inferInsert;
+
+// ============================================
+// PASTRIES (Pâtisserie Solidaire)
+// ============================================
+
+export const pastries = mysqlTable("pastries", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  imageUrl: text("imageUrl"),
+  active: boolean("active").notNull().default(true),
+  sortOrder: int("sortOrder").notNull().default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Pastry = typeof pastries.$inferSelect;
+export type InsertPastry = typeof pastries.$inferInsert;
+
+// ============================================
+// PASTRY ORDERS (Commandes Pâtisserie)
+// ============================================
+
+export const pastryOrderStatusEnum = mysqlEnum("pastryOrderStatus", ["reserved", "paid", "handed", "cancelled"]);
+export const pastryPaymentStatusEnum = mysqlEnum("pastryPaymentStatus", ["pending", "confirmed", "paid", "cancelled"]);
+
+export const pastryOrders = mysqlTable("pastry_orders", {
+  id: int("id").autoincrement().primaryKey(),
+  reference: varchar("reference", { length: 50 }).notNull().unique(),
+  customerName: varchar("customerName", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  email: varchar("email", { length: 320 }),
+  items: json("items").$type<Array<{ pastryId: number; quantity: number; price: number }>>().notNull(),
+  totalAmount: decimal("totalAmount", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: paymentMethodEnum.notNull(),
+  paymentStatus: pastryPaymentStatusEnum.default("pending").notNull(),
+  orderStatus: pastryOrderStatusEnum.default("reserved").notNull(),
+  qrToken: varchar("qrToken", { length: 64 }).unique(),
+  scannedAt: timestamp("scannedAt"),
+  scannedBy: int("scannedBy"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PastryOrder = typeof pastryOrders.$inferSelect;
+export type InsertPastryOrder = typeof pastryOrders.$inferInsert;
+
+// ============================================
+// QR TOKENS (Jetons QR génériques)
+// ============================================
+
+export const qrTokenStatusEnum = mysqlEnum("qrTokenStatus", ["active", "used", "expired", "revoked"]);
+
+export const qrTokens = mysqlTable("qr_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  scope: varchar("scope", { length: 50 }).notNull(), // "volunteer", "pastry", "pastry_quick_buy", etc.
+  entityId: int("entityId"), // ID de l'entité associée (pastry_order_id, volunteer_id, etc.)
+  status: qrTokenStatusEnum.default("active").notNull(),
+  maxUses: int("maxUses").notNull().default(1),
+  usesCount: int("usesCount").notNull().default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type QRToken = typeof qrTokens.$inferSelect;
+export type InsertQRToken = typeof qrTokens.$inferInsert;
+
+// ============================================
+// QR SCANS (Historique des scans QR)
+// ============================================
+
+export const qrScans = mysqlTable("qr_scans", {
+  id: int("id").autoincrement().primaryKey(),
+  token: varchar("token", { length: 64 }).notNull(),
+  scope: varchar("scope", { length: 50 }).notNull(),
+  entityId: int("entityId"),
+  validationAction: varchar("validationAction", { length: 50 }).notNull(), // "check_in", "payment_confirmed", "handed", "quick_buy", etc.
+  validatedBy: int("validatedBy").notNull(), // ID de l'utilisateur
+  success: boolean("success").notNull().default(true),
+  errorMessage: text("errorMessage"),
+  scannedAt: timestamp("scannedAt").defaultNow().notNull(),
+});
+
+export type QRScan = typeof qrScans.$inferSelect;
+export type InsertQRScan = typeof qrScans.$inferInsert;
