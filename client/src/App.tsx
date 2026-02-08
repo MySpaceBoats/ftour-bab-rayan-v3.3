@@ -22,6 +22,8 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Reservation from "./pages/Reservation";
 import Pastries from "./pages/Pastries";
+import BuyGoodie from "./pages/BuyGoodie";
+import BuyPastry from "./pages/BuyPastry";
 
 // Scanner
 import Scanner from "./pages/Scanner";
@@ -112,6 +114,8 @@ function LocalizedRoutes() {
       <Route path="/:lang/connexion" component={Login} />
       <Route path="/:lang/inscription" component={Signup} />
       <Route path="/:lang/reservation" component={Reservation} />
+      <Route path="/:lang/buy/goodie/:id" component={BuyGoodie} />
+      <Route path="/:lang/buy/pastry/:id" component={BuyPastry} />
       
       {/* Legacy routes - redirect to localized versions */}
       <Route path="/programme">
