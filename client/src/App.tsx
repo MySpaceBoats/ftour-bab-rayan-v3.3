@@ -21,6 +21,7 @@ import MentionsLegales from "./pages/MentionsLegales";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Reservation from "./pages/Reservation";
+import Pastries from "./pages/Pastries";
 
 // Scanner
 import Scanner from "./pages/Scanner";
@@ -101,6 +102,7 @@ function LocalizedRoutes() {
       <Route path="/:lang/programme" component={Programme} />
       <Route path="/:lang/benevole" component={Benevole} />
       <Route path="/:lang/goodies" component={Goodies} />
+      <Route path="/:lang/pastries" component={Pastries} />
       <Route path="/:lang/dons" component={Dons} />
       <Route path="/:lang/evenement" component={Evenement} />
       <Route path="/:lang/association" component={Association} />
@@ -120,6 +122,9 @@ function LocalizedRoutes() {
       </Route>
       <Route path="/goodies">
         {() => <Redirect to={`/${lang}/goodies`} />}
+      </Route>
+      <Route path="/pastries">
+        {() => <Redirect to={`/${lang}/pastries`} />}
       </Route>
       <Route path="/dons">
         {() => <Redirect to={`/${lang}/dons`} />}
