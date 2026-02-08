@@ -323,6 +323,16 @@ export const amz: Translations = {
     customerInfo: "Talɣut n umeslay",
     optional: "(afran)",
     quantity: "Amḍan",
+    unitPrice: "Taqimt n yiwen",
+    total: "Amsum",
+    finalizeReservation: "Smed taladdit",
+    backToPastries: "Uɣal ar tiqsiwin",
+    expressCheckout: "Azren aqaṛun",
+    productNotFound: "Taɣawsa ur nufa",
+    completeOrder: "Smed taladdit",
+    customerInfo: "Talɣut n umeslay",
+    optional: "(afran)",
+    quantity: "Amḍan",
     unitPrice: "Taqimt n yiwen"
   },
 

@@ -323,6 +323,16 @@ export const ar: Translations = {
     customerInfo: "معلومات العميل",
     optional: "(اختياري)",
     quantity: "الكمية",
+    unitPrice: "السعر الفردي",
+    total: "الإجمالي",
+    finalizeReservation: "إتمام الحجز",
+    backToPastries: "العودة إلى المعجنات",
+    expressCheckout: "شراء سريع",
+    productNotFound: "المنتج غير موجود",
+    completeOrder: "إتمام الطلب",
+    customerInfo: "معلومات العميل",
+    optional: "(اختياري)",
+    quantity: "الكمية",
     unitPrice: "السعر الفردي"
   },
 
