@@ -312,6 +312,56 @@ export default function Admin() {
             </Card>
           )}
 
+          {/* Pastries Management */}
+          {canManageOrders && (
+            <Card className="card-hover">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                    <UtensilsCrossed className="h-5 w-5 text-amber-600" />
+                  </div>
+                  Pâtisserie
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Gérer les commandes et billets de pâtisserie
+                </p>
+                <Link href="/admin/pastries">
+                  <Button variant="outline" className="w-full">
+                    Gérer la pâtisserie
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Company Bookings Management */}
+          {canManageOrders && (
+            <Card className="card-hover">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-purple-600" />
+                  </div>
+                  Réservation Entreprise
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Gérer les réservations groupe avec QR codes individuels
+                </p>
+                <Link href="/admin/company-bookings">
+                  <Button variant="outline" className="w-full">
+                    Gérer les réservations
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Payments Management */}
           {(canManageOrders || canManageDonations) && (
             <Card className="card-hover">
