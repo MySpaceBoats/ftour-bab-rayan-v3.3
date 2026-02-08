@@ -171,8 +171,14 @@ export const orders = mysqlTable("orders", {
   
   // Statut et retrait
   status: orderStatusEnum.default("reserved").notNull(),
+  businessStatus: businessStatusEnum.default("reserved").notNull(),
+  channel: orderChannelEnum.default("online").notNull(),
+  moduleType: moduleTypeEnum.default("goodies").notNull(),
+  paymentStatus: paymentStatusEnum.default("pending").notNull(),
+  paymentMethod: paymentMethodEnum.notNull(),
   pickupDate: timestamp("pickupDate"),
   pickupLocation: text("pickupLocation"),
+  qrToken: varchar("qrToken", { length: 64 }).unique(),
   
   // Livraison
   deliveryMode: varchar("deliveryMode", { length: 20 }).default("pickup").notNull(), // pickup | home_delivery
@@ -189,6 +195,8 @@ export const orders = mysqlTable("orders", {
   
   notes: text("notes"),
   deliveryNotes: text("deliveryNotes"), // Notes pour le livreur
+  scannedAt: timestamp("scannedAt"),
+  scannedBy: int("scannedBy"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -218,14 +226,20 @@ export type InsertOrderItem = typeof orderItems.$inferInsert;
 // DONATIONS (Promesses de dons)
 // ============================================
 
-export const donationStatusEnum = mysqlEnum("donationStatus", ["promised", "pending", "received", "cancelled"]);
+export const donationStatusEnum = mysqlEnum("donationStatus", ["promised", "pending", "received", "cancelled", "handed", "checked_in"]);
 
 export const paymentMethodEnum = mysqlEnum("payment_method", [
   "bank_transfer",
   "cheque",
   "cash",
-  "paypal"
+  "paypal",
+  "cmi"
 ]);
+
+export const orderChannelEnum = mysqlEnum("orderChannel", ["online", "on_site_qr", "on_site_admin"]);
+export const moduleTypeEnum = mysqlEnum("moduleType", ["goodies", "pastry", "donation", "ftour"]);
+export const businessStatusEnum = mysqlEnum("businessStatus", ["reserved", "confirmed", "handed", "checked_in", "cancelled"]);
+export const paymentStatusEnum = mysqlEnum("paymentStatus", ["pending", "confirmed", "paid", "cancelled"]);
 
 export const donations = mysqlTable("donations", {
   id: int("id").autoincrement().primaryKey(),
@@ -247,12 +261,20 @@ export const donations = mysqlTable("donations", {
   
   // Statut
   status: donationStatusEnum.default("promised").notNull(),
+  businessStatus: businessStatusEnum.default("reserved").notNull(),
+  channel: orderChannelEnum.default("online").notNull(),
+  moduleType: moduleTypeEnum.default("donation").notNull(),
+  paymentStatus: paymentStatusEnum.default("pending").notNull(),
+  qrToken: varchar("qrToken", { length: 64 }).unique(),
+  paymentMethod: paymentMethodEnum.notNull(),
   
   // Tracking
   emailSent: boolean("emailSent").notNull().default(false),
   processedBy: int("processedBy"),
   processedAt: timestamp("processedAt"),
   receivedAt: timestamp("receivedAt"),
+  scannedAt: timestamp("scannedAt"),
+  scannedBy: int("scannedBy"),
   
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

@@ -1309,4 +1309,302 @@ export const appRouter = router({
   payments: paymentsRouter,
 });
 
-export type AppRouter = typeof appRouter;
+// ============================================
+// PASTRIES ROUTERR (Pâtisserie Solidaire)
+// ============================================
+
+const pastriesRouter = router({
+  list: publicProcedure.query(async () => {
+    return supabaseServices.getPastriesSupabase();
+  }),
+
+  create: adminBoutiqueProcedure
+    .input(z.object({
+      name: z.string(),
+      description: z.string().optional(),
+      price: z.number().positive(),
+      imageUrl: z.string().optional(),
+      sortOrder: z.number().default(0),
+    }))
+    .mutation(async ({ input }) => {
+      const client = getSupabaseAdminClient();
+      if (!client) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase not configured' });
+
+      const { data, error } = await client
+        .from('pastries')
+        .insert({
+          name: input.name,
+          description: input.description,
+          price: input.price,
+          image_url: input.imageUrl,
+          sort_order: input.sortOrder,
+          active: true,
+        })
+        .select()
+        .single();
+
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data;
+    }),
+
+  update: adminBoutiqueProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      description: z.string().optional(),
+      price: z.number().positive().optional(),
+      imageUrl: z.string().optional(),
+      active: z.boolean().optional(),
+      sortOrder: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const client = getSupabaseAdminClient();
+      if (!client) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase not configured' });
+
+      const updateData: any = {};
+      if (input.name) updateData.name = input.name;
+      if (input.description) updateData.description = input.description;
+      if (input.price) updateData.price = input.price;
+      if (input.imageUrl) updateData.image_url = input.imageUrl;
+      if (input.active !== undefined) updateData.active = input.active;
+      if (input.sortOrder !== undefined) updateData.sort_order = input.sortOrder;
+
+      const { data, error } = await client
+        .from('pastries')
+        .update(updateData)
+        .eq('id', input.id)
+        .select()
+        .single();
+
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data;
+    }),
+
+  delete: adminBoutiqueProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const client = getSupabaseAdminClient();
+      if (!client) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase not configured' });
+
+      const { error } = await client
+        .from('pastries')
+        .update({ active: false })
+        .eq('id', input.id);
+
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return { success: true };
+    }),
+});
+
+// ============================================
+// PASTRY ORDERS ROUTER
+// ============================================
+
+const pastryOrdersRouter = router({
+  create: publicProcedure
+    .input(z.object({
+      customerName: z.string(),
+      phone: z.string(),
+      email: z.string().email().optional(),
+      items: z.array(z.object({
+        pastryId: z.number(),
+        quantity: z.number().positive(),
+        price: z.number().positive(),
+      })),
+      totalAmount: z.number().positive(),
+      paymentMethod: z.enum(['bank_transfer', 'cheque', 'cash', 'paypal', 'cmi']),
+      channel: z.enum(['online', 'on_site_qr', 'on_site_admin']).default('online'),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      // Générer référence unique
+      const reference = `PASTRY-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      
+      // Créer la commande
+      const order = await supabaseServices.createPastryOrderSupabase({
+        reference,
+        customerName: input.customerName,
+        phone: input.phone,
+        email: input.email,
+        items: input.items,
+        totalAmount: input.totalAmount,
+        paymentMethod: input.paymentMethod,
+      });
+
+      // Générer QR token si nécessaire
+      if (input.channel === 'online' || input.channel === 'on_site_qr') {
+        const qrData = await supabaseServices.generateQRTokenSupabase('pastry', order.id);
+        order.qr_token = qrData.token;
+      }
+
+      // Envoyer email de confirmation
+      try {
+        const emailContent = `Commande Pâtisserie #${reference}\n\nMerci pour votre commande!\n\nDétails:\n${input.items.map(item => `- Item ${item.pastryId}: ${item.quantity}x`).join('\n')}\n\nMontant total: ${input.totalAmount}€\nMéthode de paiement: ${input.paymentMethod}`;
+        
+        await sendEmail({
+          to: input.email || input.phone,
+          subject: `Confirmation de commande pâtisserie #${reference}`,
+          text: emailContent,
+        });
+      } catch (e) {
+        console.error('Email send error:', e);
+      }
+
+      return order;
+    }),
+
+  getByReference: publicProcedure
+    .input(z.object({ reference: z.string() }))
+    .query(async ({ input }) => {
+      return supabaseServices.getPastryOrderByReferenceSupabase(input.reference);
+    }),
+
+  list: adminBoutiqueProcedure
+    .input(z.object({
+      status: z.string().optional(),
+      paymentStatus: z.string().optional(),
+      dateFrom: z.string().optional(),
+      dateTo: z.string().optional(),
+    }))
+    .query(async ({ input }) => {
+      return supabaseServices.getPastryOrdersSupabase({
+        status: input.status,
+        paymentStatus: input.paymentStatus,
+        dateFrom: input.dateFrom,
+        dateTo: input.dateTo,
+      });
+    }),
+
+  updateStatus: scannerProcedure
+    .input(z.object({
+      orderId: z.number(),
+      orderStatus: z.enum(['reserved', 'paid', 'handed', 'cancelled']),
+      paymentStatus: z.enum(['pending', 'confirmed', 'paid', 'cancelled']).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      return supabaseServices.updatePastryOrderStatusSupabase(
+        input.orderId,
+        input.orderStatus,
+        input.paymentStatus,
+        ctx.user?.id
+      );
+    }),
+
+  stats: adminBoutiqueProcedure.query(async () => {
+    return supabaseServices.getPastryOrderStatsSupabase();
+  }),
+});
+
+// ============================================
+// QR CODES ROUTER
+// ============================================
+
+const qrRouter = router({
+  generate: adminBoutiqueProcedure
+    .input(z.object({
+      scope: z.string(),
+      entityId: z.number(),
+    }))
+    .mutation(async ({ input }) => {
+      return supabaseServices.generateQRTokenSupabase(input.scope, input.entityId);
+    }),
+
+  validate: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      scope: z.string(),
+    }))
+    .query(async ({ input }) => {
+      return supabaseServices.validateQRTokenSupabase(input.token, input.scope);
+    }),
+
+  scan: scannerProcedure
+    .input(z.object({
+      token: z.string(),
+      scope: z.string(),
+      entityId: z.number(),
+      validationAction: z.string(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      await supabaseServices.logQRScanSupabase(
+        input.token,
+        input.scope,
+        input.entityId,
+        input.validationAction,
+        ctx.user?.id || 0,
+        true
+      );
+      return { success: true };
+    }),
+});
+
+// Ajouter les nouveaux routers à l'appRouter existant
+export const appRouterUpdated = router({
+  system: systemRouter,
+  auth: router({
+    me: publicProcedure.query(async ({ ctx }) => {
+      const authHeader = ctx.req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        const user = await getUserFromToken(token);
+        if (user) {
+          return user;
+        }
+      }
+      return ctx.user;
+    }),
+    
+    login: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string().min(6),
+      }))
+      .mutation(async ({ input }) => {
+        const result = await signInUser(input);
+        if (result.error) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: result.error });
+        }
+        return { user: result.user, session: result.session };
+      }),
+    
+    signup: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string().min(6),
+        name: z.string().optional(),
+        phone: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const result = await signUpUser(input);
+        if (result.error) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: result.error });
+        }
+        return { user: result.user };
+      }),
+    
+    logout: publicProcedure.mutation(async ({ ctx }) => {
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      await signOutUser();
+      return { success: true } as const;
+    }),
+  }),
+  
+  days: daysRouter,
+  volunteers: volunteersRouter,
+  checkin: checkinRouter,
+  goodies: goodiesRouter,
+  orders: ordersRouter,
+  donations: donationsRouter,
+  contact: contactRouter,
+  users: usersRouter,
+  public: publicRouter,
+  upload: uploadRouter,
+  restaurants: restaurantsRouter,
+  reservations: reservationsRouter,
+  payments: paymentsRouter,
+  pastries: pastriesRouter,
+  pastryOrders: pastryOrdersRouter,
+  qr: qrRouter,
+});
+
+export type AppRouter = typeof appRouterUpdated;
