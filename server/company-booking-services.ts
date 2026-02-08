@@ -9,8 +9,6 @@ import crypto from "crypto";
  * Créer une réservation entreprise
  */
 export async function createCompanyBookingSupabase({
-  const client = getSupabaseAdminClient();
-  if (!client) throw new Error("Supabase not configured");
   companyName,
   companyICE,
   companySector,
@@ -104,8 +102,6 @@ export async function getCompanyBookingByReferenceSupabase(reference: string) {
  * Lister toutes les réservations entreprise avec filtres
  */
 export async function listCompanyBookingsSupabase({
-  const client = getSupabaseAdminClient();
-  if (!client) throw new Error("Supabase not configured");
   status,
   startDate,
   endDate,
@@ -120,6 +116,8 @@ export async function listCompanyBookingsSupabase({
   limit?: number;
   offset?: number;
 } = {}) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error("Supabase not configured");
   let query = client.from("company_bookings").select("*");
 
   if (status) query = query.eq("status", status);
@@ -184,8 +182,6 @@ function generateTicketCode(): string {
  * Créer des billets individuels pour une réservation entreprise
  */
 export async function createCompanyTicketsSupabase({
-  const client = getSupabaseAdminClient();
-  if (!client) throw new Error("Supabase not configured");
   companyBookingId,
   count,
   participants,
@@ -198,6 +194,8 @@ export async function createCompanyTicketsSupabase({
     department?: string;
   }>;
 }) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error("Supabase not configured");
   const tickets = [];
 
   for (let i = 0; i < count; i++) {
