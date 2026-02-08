@@ -313,7 +313,17 @@ export const ar: Translations = {
     paymentAtPickupLocation: 'الدفع في المكان عند الاستلام',
     loading: 'جاري التحميل...',
     error: 'خطأ',
-    orderNotFound: 'لم يتم العثور على الطلب',
+    orderNotFound: "الطلب غير موجود",
+    total: "الإجمالي",
+    finalizeReservation: "إتمام الحجز",
+    backToPastries: "العودة إلى المعجنات",
+    expressCheckout: "شراء سريع",
+    productNotFound: "المنتج غير موجود",
+    completeOrder: "إتمام الطلب",
+    customerInfo: "معلومات العميل",
+    optional: "(اختياري)",
+    quantity: "الكمية",
+    unitPrice: "السعر الفردي"
   },
 
   // Donations Page

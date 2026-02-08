@@ -521,6 +521,40 @@ export default function Admin() {
             )}
           </div>
         </div>
+
+        {/* Unified Dashboard Section */}
+        <div className="mt-8">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-blue-600" />
+            Tableau de bord unifié
+          </h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Unified Dashboard */}
+            {isSuperAdmin && (
+              <Card className="card-hover">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <BarChart3 className="h-5 w-5 text-blue-600" />
+                    </div>
+                    Tous les services
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Statistiques et gestion unifiées pour tous les modules (Goodies, Pâtisserie, Dons, Ftour)
+                  </p>
+                  <Link href="/admin/unified-dashboard">
+                    <Button variant="outline" className="w-full">
+                      Voir le tableau de bord
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   );

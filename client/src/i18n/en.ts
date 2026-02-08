@@ -313,7 +313,17 @@ export const en: Translations = {
     paymentAtPickupLocation: 'Payment on site upon pickup',
     loading: 'Loading...',
     error: 'Error',
-    orderNotFound: 'Order not found'
+    orderNotFound: "Order not found",
+    total: "Total",
+    finalizeReservation: "Finalize reservation",
+    backToPastries: "Back to Pastries",
+    expressCheckout: "Express checkout",
+    productNotFound: "Product not found",
+    completeOrder: "Complete order",
+    customerInfo: "Customer information",
+    optional: "(optional)",
+    quantity: "Quantity",
+    unitPrice: "Unit price"
   },
 
   // Donations Page

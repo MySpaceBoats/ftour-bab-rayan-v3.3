@@ -313,7 +313,17 @@ export const amz: Translations = {
     paymentAtPickupLocation: 'Payment on site upon pickup',
     loading: 'Loading...',
     error: 'Error',
-    orderNotFound: 'Order not found'
+    orderNotFound: "Taladdit ur nufa",
+    total: "Amsum",
+    finalizeReservation: "Smed taladdit",
+    backToPastries: "Uɣal ar tiqsiwin",
+    expressCheckout: "Azren aqaṛun",
+    productNotFound: "Taɣawsa ur nufa",
+    completeOrder: "Smed taladdit",
+    customerInfo: "Talɣut n umeslay",
+    optional: "(afran)",
+    quantity: "Amḍan",
+    unitPrice: "Taqimt n yiwen"
   },
 
   // Donations Page
