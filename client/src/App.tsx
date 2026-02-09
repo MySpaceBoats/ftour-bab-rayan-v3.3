@@ -22,12 +22,16 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Reservation from "./pages/Reservation";
 import Pastries from "./pages/Pastries";
+import ProduitsTerroir from "./pages/ProduitsTerroir";
 import BuyGoodie from "./pages/BuyGoodie";
 import BuyPastry from "./pages/BuyPastry";
 
 // Scanner
 import Scanner from "./pages/Scanner";
 import Checkin from "./pages/Checkin";
+import ScannerGoodies from "./pages/ScannerGoodies";
+import ScannerFtours from "./pages/ScannerFtours";
+import ScannerBenevoles from "./pages/ScannerBenevoles";
 
 // Admin pages
 import Admin from "./pages/Admin";
@@ -99,6 +103,9 @@ function LocalizedRoutes() {
       
       {/* Scanner (mobile-first) - no locale prefix */}
       <Route path="/scanner" component={Scanner} />
+      <Route path="/scanner/goodies" component={ScannerGoodies} />
+      <Route path="/scanner/ftours" component={ScannerFtours} />
+      <Route path="/scanner/benevoles" component={ScannerBenevoles} />
       
       {/* Public QR Check-in page - no locale prefix */}
       <Route path="/checkin/:token" component={Checkin} />
@@ -114,6 +121,7 @@ function LocalizedRoutes() {
       <Route path="/:lang/programme" component={Programme} />
       <Route path="/:lang/benevole" component={Benevole} />
       <Route path="/:lang/goodies" component={Goodies} />
+      <Route path="/:lang/produits-terroir" component={ProduitsTerroir} />
       <Route path="/:lang/pastries" component={Pastries} />
       <Route path="/:lang/dons" component={Dons} />
       <Route path="/:lang/evenement" component={Evenement} />

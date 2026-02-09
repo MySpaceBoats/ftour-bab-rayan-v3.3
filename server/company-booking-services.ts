@@ -19,8 +19,8 @@ export async function createCompanyBookingSupabase({
   date,
   restaurantId,
   slotId,
-  paymentMethod,
   notes,
+  scansAllowed,
 }: {
   companyName: string;
   companyICE?: string;
@@ -32,8 +32,8 @@ export async function createCompanyBookingSupabase({
   date: Date;
   restaurantId?: number;
   slotId?: number;
-  paymentMethod: string;
   notes?: string;
+  scansAllowed: number;
 }) {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error('Supabase not configured');
@@ -55,9 +55,9 @@ export async function createCompanyBookingSupabase({
       restaurantId,
       slotId,
       status: "pending",
-      paymentMethod,
       paymentStatus: "pending",
       notes,
+      scansAllowed,
     })
     .select()
     .single();

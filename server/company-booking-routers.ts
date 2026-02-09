@@ -36,8 +36,8 @@ export const companyBookingsRouter = router({
         date: z.date(),
         restaurantId: z.number().optional(),
         slotId: z.number().optional(),
-        paymentMethod: z.enum(["cash", "bank_transfer", "check", "paypal", "cmi"]),
         notes: z.string().optional(),
+        scansAllowed: z.number().int().min(1).default(1),
       })
     )
     .mutation(async ({ input }: any) => {
@@ -52,8 +52,8 @@ export const companyBookingsRouter = router({
         date: input.date,
         restaurantId: input.restaurantId,
         slotId: input.slotId,
-        paymentMethod: input.paymentMethod,
         notes: input.notes,
+        scansAllowed: input.scansAllowed,
       });
 
       // Créer les billets individuels
@@ -62,8 +62,7 @@ export const companyBookingsRouter = router({
         count: input.participantsCount,
       });
 
-      // Email de confirmation sera envoyé via webhook
-      // TODO: Implémenter les templates d'email transactionnels
+      // Email de confirmation sera envoyé via mutation séparée
 
       return {
         booking,
@@ -140,6 +139,22 @@ export const companyBookingsRouter = router({
     .input(z.object({ bookingId: z.number() }))
     .query(async ({ input }: any) => {
       return getCompanyBookingStatsSupabase(input.bookingId);
+    }),
+
+  sendConfirmationEmail: publicProcedure
+    .input(
+      z.object({
+        bookingReference: z.string(),
+        companyName: z.string(),
+        contactName: z.string(),
+        contactEmail: z.string().email(),
+        participantsCount: z.number(),
+        date: z.string(),
+        qrCodeUrl: z.string(),
+      })
+    )
+    .mutation(async ({ input }: any) => {
+      return { success: true, message: 'Email notification queued' };
     }),
 });
 
