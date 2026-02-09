@@ -128,7 +128,10 @@ export const fr = {
     pastryDesc: 'Commandez nos delicieuses patisseries artisanales. 100% des benefices soutiennent nos actions.',
     pastriesDesc: 'Degustez nos patisseries artisanales solidaires',
     viewPastries: 'Voir les patisseries',
-    orderPastry: 'Commander'
+    orderPastry: 'Commander',
+    produitsTerroir: 'Produits du Terroir',
+    produitsTerroinDesc: 'Découvrez nos produits authentiques du Maroc',
+    viewProducts: 'Voir les produits'
   },
 
   // Event Page
