@@ -117,8 +117,13 @@ export default function Reservation() {
         setStep('details');
         break;
       case 'details':
-        if (formData.seats < 1 || formData.seats > (availableSeats?.available || 0)) {
-          toast.error(`Nombre de places invalide. Disponibles: ${availableSeats?.available || 0}`);
+        if (formData.seats < 1 || formData.seats > 10) {
+          // Show blocking popup for groups > 10
+          if (formData.seats > 10) {
+            toast.error('Merci de prendre contact avec nous pour les réservations de groupe supérieur à 10.');
+            return;
+          }
+          toast.error('Nombre de places invalide');
           return;
         }
         setStep('form');
@@ -144,7 +149,7 @@ export default function Reservation() {
   };
 
   const validateEmail = (email: string | undefined) => {
-    if (!email) return true; // Email is optional
+    if (!email) return false; // Email is now mandatory
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
@@ -158,7 +163,7 @@ export default function Reservation() {
       toast.error('Veuillez entrer votre numéro de téléphone');
       return;
     }
-    if (formData.email && !validateEmail(formData.email)) {
+    if (!formData.email || !validateEmail(formData.email)) {
       const errorMessages: Record<string, string> = {
         fr: 'Adresse email invalide',
         en: 'Invalid email address',
@@ -237,6 +242,75 @@ export default function Reservation() {
       <Navbar />
       
       <main className="container mx-auto px-4 py-12 pt-32">
+        {/* La Table du Jardin Section - MOVED TO TOP */}
+        <section className="py-16 bg-transparent mb-12">
+          <div className="max-w-4xl mx-auto">
+            <Card className="border-[#5d5a3c]/20 bg-white overflow-hidden">
+              <div className="md:flex">
+                {/* Left side - Content */}
+                <div className="p-8 md:w-2/3">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-[#5d5a3c]/10 flex items-center justify-center">
+                      <Leaf className="w-6 h-6 text-[#5d5a3c]" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-[#5d5a3c]" style={{ fontFamily: 'Cormorant Garamond, serif' }}>
+                      {t.reservation.tableJardin.title}
+                    </h2>
+                  </div>
+                  
+                  <p className="text-[#6b6b4e] mb-6 leading-relaxed">
+                    {t.reservation.tableJardin.description}
+                  </p>
+
+                  <div className="space-y-3 mb-6">
+                    <div className="flex items-center gap-3 text-[#5d5a3c]">
+                      <MapPin className="w-5 h-5 text-[#5d5a3c]/70" />
+                      <span>{t.reservation.tableJardin.address}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-[#5d5a3c]">
+                      <Phone className="w-5 h-5 text-[#5d5a3c]/70" />
+                      <span>+212 664-887978</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-[#5d5a3c]">
+                      <Clock className="w-5 h-5 text-[#5d5a3c]/70" />
+                      <span>{t.reservation.tableJardin.hours}</span>
+                    </div>
+                  </div>
+
+                  <a 
+                    href="https://latabledujardin.ftourbabrayan.ma" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 bg-[#5d5a3c] hover:bg-[#4a4730] text-[#f5f5dc] px-6 py-3 rounded-lg transition-colors font-medium"
+                  >
+                    {t.reservation.tableJardin.cta}
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+
+                {/* Right side - Decorative */}
+                <div className="hidden md:block md:w-1/3 bg-[#5d5a3c] relative">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center text-[#f5f5dc]/90">
+                      <Utensils className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-medium" style={{ fontFamily: 'Caveat, cursive' }}>
+                        {t.reservation.tableJardin.tagline}
+                      </p>
+                    </div>
+                  </div>
+                  {/* Decorative pattern */}
+                  <div className="absolute inset-0 opacity-10">
+                    <div className="w-full h-full" style={{ 
+                      backgroundImage: 'radial-gradient(circle, #f5f5dc 1px, transparent 1px)',
+                      backgroundSize: '20px 20px'
+                    }} />
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </section>
+
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-[#5d5a3c] mb-4">
@@ -245,7 +319,7 @@ export default function Reservation() {
           <p className="text-lg text-[#6b6b4e] max-w-2xl mx-auto">
             {lang === 'ar' 
               ? 'احجز مكانك في فطور باب ريان التضامني'
-              : 'Réservez votre place pour le Ftour solidaire Bab Rayan'
+              : 'Réservez votre place pour le Restaurant Solidaire Bab Rayan'
             }
           </p>
         </div>
@@ -421,22 +495,18 @@ export default function Reservation() {
                       type="button"
                       variant="outline"
                       size="icon"
-                      onClick={() => setFormData({ ...formData, seats: Math.min(availableSeats?.available || 20, formData.seats + 1) })}
+                      onClick={() => setFormData({ ...formData, seats: Math.min(10, formData.seats + 1) })}
                       className="border-[#5d5a3c] text-[#5d5a3c]"
                     >
                       +
                     </Button>
                   </div>
-                  {loadingSeats ? (
-                    <p className="text-sm text-[#6b6b4e] mt-2">Chargement...</p>
-                  ) : (
-                    <p className="text-sm text-[#6b6b4e] mt-2">
-                      {lang === 'ar' 
-                        ? `${availableSeats?.available || 0} مكان متاح`
-                        : `${availableSeats?.available || 0} places disponibles`
-                      }
-                    </p>
-                  )}
+                  <p className="text-sm text-[#6b6b4e] mt-2">
+                    {lang === 'ar' 
+                      ? 'Maximum 10 places'
+                      : 'Maximum 10 places'
+                    }
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -486,7 +556,7 @@ export default function Reservation() {
 
                 <div>
                   <Label htmlFor="email" className="text-[#5d5a3c]">
-                    {lang === 'ar' ? 'البريد الإلكتروني' : 'Email'} ({lang === 'ar' ? 'اختياري' : 'optionnel'})
+                    {lang === 'ar' ? 'البريد الإلكتروني' : 'Email'} *
                   </Label>
                   <Input
                     id="email"
@@ -677,74 +747,7 @@ export default function Reservation() {
         </div>
       </main>
 
-      {/* La Table du Jardin Section */}
-      <section className="py-16 bg-[#f5f5f0]">
-        <div className="container max-w-4xl mx-auto px-4">
-          <Card className="border-[#5d5a3c]/20 bg-white overflow-hidden">
-            <div className="md:flex">
-              {/* Left side - Content */}
-              <div className="p-8 md:w-2/3">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-[#5d5a3c]/10 flex items-center justify-center">
-                    <Leaf className="w-6 h-6 text-[#5d5a3c]" />
-                  </div>
-                  <h2 className="text-2xl font-bold text-[#5d5a3c]" style={{ fontFamily: 'Cormorant Garamond, serif' }}>
-                    {t.reservation.tableJardin.title}
-                  </h2>
-                </div>
-                
-                <p className="text-[#6b6b4e] mb-6 leading-relaxed">
-                  {t.reservation.tableJardin.description}
-                </p>
 
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-center gap-3 text-[#5d5a3c]">
-                    <MapPin className="w-5 h-5 text-[#5d5a3c]/70" />
-                    <span>{t.reservation.tableJardin.address}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-[#5d5a3c]">
-                    <Phone className="w-5 h-5 text-[#5d5a3c]/70" />
-                    <span>+212 664-887978</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-[#5d5a3c]">
-                    <Clock className="w-5 h-5 text-[#5d5a3c]/70" />
-                    <span>{t.reservation.tableJardin.hours}</span>
-                  </div>
-                </div>
-
-                <a 
-                  href="https://latabledujardin.ftourbabrayan.ma" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-[#5d5a3c] hover:bg-[#4a4730] text-[#f5f5dc] px-6 py-3 rounded-lg transition-colors font-medium"
-                >
-                  {t.reservation.tableJardin.cta}
-                  <ExternalLink className="w-4 h-4" />
-                </a>
-              </div>
-
-              {/* Right side - Decorative */}
-              <div className="hidden md:block md:w-1/3 bg-[#5d5a3c] relative">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center text-[#f5f5dc]/90">
-                    <Utensils className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg font-medium" style={{ fontFamily: 'Caveat, cursive' }}>
-                      {t.reservation.tableJardin.tagline}
-                    </p>
-                  </div>
-                </div>
-                {/* Decorative pattern */}
-                <div className="absolute inset-0 opacity-10">
-                  <div className="w-full h-full" style={{ 
-                    backgroundImage: 'radial-gradient(circle, #f5f5dc 1px, transparent 1px)',
-                    backgroundSize: '20px 20px'
-                  }} />
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
-      </section>
 
       <Footer />
     </div>

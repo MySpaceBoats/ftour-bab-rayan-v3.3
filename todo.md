@@ -663,3 +663,63 @@
 - [ ] Contenu conditionnel basé sur payment_status
 - [ ] Contenu conditionnel basé sur delivery_mode
 - [ ] Contenu conditionnel basé sur module_type
+
+
+## Phase 19 : Cahier des charges spécifique - Mise à jour globale (Février 2026)
+
+### 1️⃣ Module Réservation Ftours
+- [x] 1.1 Supprimer complètement l'affichage de la capacité restante sur la page de réservation
+- [x] 1.2 Changer le thème du formulaire : blanc crémeux → noir/marron (meilleure lisibilité)
+- [x] 1.3 Rendre le champ email obligatoire
+- [x] 1.4 Limiter la sélection à 10 places maximum
+- [x] 1.5 Afficher popup bloquante si > 10 places : "Merci de prendre contact avec nous pour les réservations de groupe supérieur à 10."
+- [ ] 1.6 Popup contient bouton "Contact" qui redirige vers page Contact (utilise toast actuellement)
+- [x] 1.7 Inverser l'ordre des blocs : "La Table du Jardin" en haut, formulaire en bas
+
+### 2️⃣ Dashboard - Scanners & Restaurants
+- [ ] 2.1 Créer 3 pages scanner sans authentification (protégées par URL + QR code)
+  - [ ] 2.1.1 Scanner Goodies
+  - [ ] 2.1.2 Scanner Ftours
+  - [ ] 2.1.3 Scanner Bénévoles
+- [ ] 2.2 Générer QR code dédié pour chaque scanner
+- [ ] 2.3 QR affiché sur la page du scanner elle-même
+- [ ] 2.4 Renommer restaurant existant en "La Table du Jardin"
+- [ ] 2.5 Ajouter second restaurant : "Restaurant Corpo"
+- [x] 2.6 Fixer capacité maximale : 50 places pour chacun
+
+### 3️⃣ Module Bénévoles
+- [x] 3.1 Augmenter capacité maximale à 100 bénévoles par jour
+- [x] 3.2 Ajouter deux créneaux non exclusifs :
+  - [x] 3.2.1 "Créneaux Préparation : 15h30 à 16h45"
+  - [x] 3.2.2 "Créneaux Service : 17h00 à 19h15"
+- [ ] 3.3 Bénévole peut choisir l'un ou les deux créneaux (UI à créer)
+- [x] 3.4 Ajouter mention "Sac non autorisé" dans l'encadré information
+
+### 4️⃣ Page Événement
+- [x] 4.1 Supprimer complètement l'encadré "Rangement" (déjà absent)
+
+### 5️⃣ Modifications globales
+- [x] 5.1 Remplacer partout "Ftour solidaire" → "Restaurant Solidaire"
+- [ ] 5.2 Dupliquer module Goodies
+- [ ] 5.3 Créer nouveau module "Produits du terroir"
+- [ ] 5.4 Ajouter encadré de mise en avant sur page d'accueil
+- [ ] 5.5 Remplacer lien "Réservation entreprise" par "La Table du Jardin – Restaurant Solidaire"
+- [ ] 5.6 Ce lien redirige vers module de réservation Ftour (grand public)
+
+### 6️⃣ Module Réservation Entreprise (refonte complète)
+- [ ] 6.1 Supprimer totalement la page de paiement
+- [ ] 6.2 À la soumission du formulaire entreprise :
+  - [ ] 6.2.1 Envoyer email automatique à entreprise@ftourbabrayan.ma
+  - [ ] 6.2.2 Afficher page de remerciement (pas de paiement)
+- [ ] 6.3 Email récapitulatif entreprise contient :
+  - [ ] 6.3.1 Récapitulatif de la demande
+  - [ ] 6.3.2 QR code unique "chargé" du nombre de places réservées
+- [ ] 6.4 Règle QR "chargé" :
+  - [ ] 6.4.1 QR scannable N fois (N = nombre de places)
+  - [ ] 6.4.2 Chaque scan décrémente le compteur
+  - [ ] 6.4.3 Une fois quota atteint → scan refusé
+- [ ] 6.5 Dashboard admin - Section "Réservations Entreprise" :
+  - [ ] 6.5.1 Voir les demandes
+  - [ ] 6.5.2 Accepter une réservation (déclenche envoi email avec QR chargé)
+  - [ ] 6.5.3 Gérer les statuts et détails
+  - [ ] 6.5.4 Mêmes options que module Réservation Ftour particulier

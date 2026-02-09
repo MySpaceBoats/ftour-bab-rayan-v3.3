@@ -27,7 +27,7 @@ const defaultFormData: RestaurantFormData = {
   address: '',
   phone: '',
   description: '',
-  capacity: 100,
+  capacity: 50,
   active: true,
 };
 
@@ -97,6 +97,10 @@ export default function AdminRestaurants() {
     }
     if (!formData.address.trim()) {
       toast.error("L'adresse est requise");
+      return;
+    }
+    if (formData.capacity > 50) {
+      toast.error('La capacité maximale est de 50 places');
       return;
     }
 
@@ -231,7 +235,7 @@ export default function AdminRestaurants() {
                 {editingId ? 'Modifier le restaurant' : 'Nouveau restaurant'}
               </DialogTitle>
               <DialogDescription>
-                {editingId ? 'Modifiez les informations du restaurant' : 'Ajoutez un nouveau lieu de Ftour solidaire'}
+                {editingId ? 'Modifiez les informations du restaurant' : 'Ajoutez un nouveau lieu de Restaurant Solidaire'}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">

@@ -10,7 +10,7 @@ export const fr = {
     home: 'Accueil',
     event: "L'événement",
     volunteer: 'Devenir bénévole',
-    restaurant: 'Ftour Solidaire',
+    restaurant: 'Restaurant Solidaire',
     goodies: 'Goodies solidaires',
     association: 'Association',
     contact: 'Contact',
@@ -560,7 +560,7 @@ export const fr = {
   // Reservation
   reservation: {
     title: 'Réservation Ftour',
-    subtitle: 'Réservez votre place pour un Ftour solidaire',
+    subtitle: 'Réservez votre place pour un Restaurant Solidaire',
     step1: 'Choisir la date',
     step2: 'Choisir le restaurant',
     step3: 'Nombre de places',

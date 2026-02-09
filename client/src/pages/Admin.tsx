@@ -508,7 +508,7 @@ export default function Admin() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Gérer les réservations pour les repas Ftour solidaires
+                    Gérer les réservations pour les repas Restaurant Solidaires
                   </p>
                   <Link href="/admin/reservations">
                     <Button variant="outline" className="w-full border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10">

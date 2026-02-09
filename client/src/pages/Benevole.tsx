@@ -29,6 +29,10 @@ export default function Benevole() {
     phone: "",
     city: "",
     dayId: preselectedDay || "",
+    slots: {
+      preparation: false,  // Créneaux Préparation : 15h30 à 16h45
+      service: false,      // Créneaux Service : 17h00 à 19h15
+    },
     acceptedTerms: false,
   });
   
@@ -85,7 +89,7 @@ export default function Benevole() {
     });
   };
 
-  const availableDays = days?.filter(d => d.isOpen && d.registeredCount < d.capacity) || [];
+  const availableDays = days?.filter(d => d.isOpen && d.registeredCount < 100) || [];
   const dateLocale = lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-US' : 'fr-FR';
 
   // Success screen translations
@@ -116,6 +120,7 @@ export default function Benevole() {
     punctuality: lang === 'ar' ? 'الالتزام بالمواعيد مطلوب' : lang === 'en' ? 'Punctuality required' : lang === 'amz' ? 'ⵉⵅⵚⵚⴰ ⵜⵉⵣⵉ' : 'Ponctualité requise',
     instructions: lang === 'ar' ? 'احترام التعليمات' : lang === 'en' ? 'Respect instructions' : lang === 'amz' ? 'ⵙⵙⵓⴷⵓ ⵉⵏⵎⴰⵍⴰⵏ' : 'Respect des consignes',
     fitness: lang === 'ar' ? 'لياقة بدنية جيدة' : lang === 'en' ? 'Good physical condition' : lang === 'amz' ? 'ⵜⴰⴷⵓⵙⵉ ⵜⴰⴼⵉⵣⵉⴽⵜ ⵉⴼⵓⵍⴽⵉⵏ' : 'Bonne condition physique',
+    noBags: lang === 'ar' ? 'الحقائب غير مسموحة' : lang === 'en' ? 'No bags allowed' : lang === 'amz' ? 'ⵉⵎⴰⴷⴰⵎ ⵓⵔ ⵉⵙⵎⴰⵜⵜⴰⵏ' : 'Sac non autorisé',
     formTitle: lang === 'ar' ? 'استمارة التسجيل' : lang === 'en' ? 'Registration form' : lang === 'amz' ? 'ⵜⴰⵍⵖⴰ ⵏ ⵓⵙⵊⵍ' : 'Formulaire d\'inscription',
     formDesc: lang === 'ar' ? 'املأ هذا النموذج للتسجيل كمتطوع' : lang === 'en' ? 'Fill out this form to register as a volunteer' : lang === 'amz' ? 'ⵙⵎⴷ ⵜⴰⵍⵖⴰ ⴰⴷ ⴰⴷ ⵜⵙⵊⵍⴷ ⴰⵎ ⴰⵎⵜⵜⴰⵡⵉ' : 'Remplissez ce formulaire pour vous inscrire comme bénévole',
     dayLabel: lang === 'ar' ? 'يوم المشاركة *' : lang === 'en' ? 'Participation day *' : lang === 'amz' ? 'ⴰⵙⵙ ⵏ ⵜⵎⵓⵔⵜ *' : 'Jour de participation *',
@@ -135,6 +140,9 @@ export default function Benevole() {
     terms: lang === 'ar' ? 'أوافق على شروط المشاركة وسياسة الخصوصية. أتعهد باحترام التعليمات والحضور في اليوم المختار.' : lang === 'en' ? 'I accept the terms of participation and privacy policy. I commit to respecting the instructions and being present on the chosen day.' : lang === 'amz' ? 'ⵇⴱⵍⵖ ⵜⵉⵡⵉⵍⴰⵡⵉⵏ ⵏ ⵜⵎⵓⵔⵜ ⴷ ⵜⴰⵙⵔⵜⵉⵜ ⵏ ⵜⵉⵏⵏⵓⵜⵍⴰ. ⴰⴷ ⵙⵙⵓⴷⵓⵖ ⵉⵏⵎⴰⵍⴰⵏ ⴷ ⴰⴷ ⵉⵍⵉⵖ ⴳ ⵡⴰⵙⵙ ⵉⵜⵜⵓⵙⵜⴰⵢⵏ.' : 'J\'accepte les conditions de participation et la politique de confidentialité. Je m\'engage à respecter les consignes et à être présent(e) le jour choisi.',
     registering: lang === 'ar' ? 'جاري التسجيل...' : lang === 'en' ? 'Registering...' : lang === 'amz' ? 'ⴰⵙⵊⵍ...' : 'Inscription en cours...',
     register: lang === 'ar' ? 'التسجيل كمتطوع' : lang === 'en' ? 'Register as volunteer' : lang === 'amz' ? 'ⵙⵊⵍ ⴰⵎ ⴰⵎⵜⵜⴰⵡⵉ' : 'S\'inscrire comme bénévole',
+    slotsLabel: lang === 'ar' ? 'اختر الفترات' : lang === 'en' ? 'Choose slots' : lang === 'amz' ? 'ⵙⵜⵉ ⵉⵙⵔⴰⴳⵏ' : 'Choisissez les créneaux',
+    preparationSlot: lang === 'ar' ? 'Préparation 15h30-16h45' : lang === 'en' ? 'Preparation 15h30-16h45' : lang === 'amz' ? 'Préparation 15h30-16h45' : 'Préparation 15h30-16h45',
+    serviceSlot: lang === 'ar' ? 'Service 17h00-19h15' : lang === 'en' ? 'Service 17h00-19h15' : lang === 'amz' ? 'Service 17h00-19h15' : 'Service 17h00-19h15',
   };
 
   if (registrationSuccess) {

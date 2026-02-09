@@ -761,7 +761,7 @@ const restaurantsRouter = router({
       address: z.string().min(1),
       phone: z.string().optional(),
       description: z.string().optional(),
-      capacity: z.number().min(1).default(100),
+      capacity: z.number().min(1).max(50).default(50),
       active: z.boolean().default(true),
     }))
     .mutation(async ({ input }) => {
@@ -775,7 +775,7 @@ const restaurantsRouter = router({
       address: z.string().optional(),
       phone: z.string().optional(),
       description: z.string().optional(),
-      capacity: z.number().optional(),
+      capacity: z.number().max(50).optional(),
       active: z.boolean().optional(),
     }))
     .mutation(async ({ input }) => {
