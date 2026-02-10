@@ -36,7 +36,7 @@ type SectionDefinition = {
   borderClass?: string;
 };
 
-const ALL_ADMIN_ROLES = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes'];
+const ALL_ADMIN_ROLES = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes', 'admin_patisserie', 'admin_terroir'];
 
 const sections: SectionDefinition[] = [
   {
@@ -112,7 +112,7 @@ const sections: SectionDefinition[] = [
     title: "Commerce",
     modules: [
       {
-        label: "Commandes",
+        label: "Commandes Goodies",
         description: "Gérer les réservations de goodies et leur statut",
         route: "/admin/commandes",
         icon: Package,
@@ -136,7 +136,25 @@ const sections: SectionDefinition[] = [
         icon: UtensilsCrossed,
         iconColor: "text-amber-600",
         iconBg: "bg-amber-100",
-        allowedRoles: ['admin', 'super_admin', 'admin_boutique'],
+        allowedRoles: ['admin', 'super_admin', 'admin_boutique', 'admin_patisserie'],
+      },
+      {
+        label: "Commandes Terroir",
+        description: "Suivi des commandes de produits du terroir",
+        route: "/admin/terroir/orders",
+        icon: Package,
+        iconColor: "text-emerald-700",
+        iconBg: "bg-emerald-100",
+        allowedRoles: ['admin', 'super_admin', 'admin_terroir'],
+      },
+      {
+        label: "Catalogue Terroir",
+        description: "Gérer les produits du terroir, variantes et stocks",
+        route: "/admin/terroir/products",
+        icon: ShoppingBag,
+        iconColor: "text-emerald-700",
+        iconBg: "bg-emerald-100",
+        allowedRoles: ['admin', 'super_admin', 'admin_terroir'],
       },
       {
         label: "Réservation Entreprise",
@@ -154,7 +172,7 @@ const sections: SectionDefinition[] = [
         icon: BarChart3,
         iconColor: "text-green-600",
         iconBg: "bg-green-100",
-        allowedRoles: ['admin', 'super_admin', 'admin_boutique', 'admin_dons'],
+        allowedRoles: ['admin', 'super_admin', 'admin_boutique', 'admin_dons', 'admin_terroir'],
       },
     ],
   },

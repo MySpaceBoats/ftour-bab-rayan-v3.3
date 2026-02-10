@@ -23,6 +23,8 @@ const roleLabels: Record<string, string> = {
   admin_restaurant_particuliers: "Admin Restaurant Particuliers",
   admin_restaurant_entreprises: "Admin Restaurant Entreprises",
   admin_restaurant_groupes: "Admin Restaurant Groupes",
+  admin_patisserie: "Admin Pâtisserie",
+  admin_terroir: "Admin Terroir",
 };
 
 const roleColors: Record<string, string> = {
@@ -36,6 +38,8 @@ const roleColors: Record<string, string> = {
   admin_restaurant_particuliers: "bg-amber-100 text-amber-700",
   admin_restaurant_entreprises: "bg-indigo-100 text-indigo-700",
   admin_restaurant_groupes: "bg-teal-100 text-teal-700",
+  admin_patisserie: "bg-rose-100 text-rose-700",
+  admin_terroir: "bg-emerald-100 text-emerald-700",
 };
 
 export default function AdminUtilisateurs() {
@@ -118,7 +122,7 @@ export default function AdminUtilisateurs() {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {users?.filter((u: any) => ['admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes'].includes(u.role)).length || 0}
+                {users?.filter((u: any) => ['admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes', 'admin_patisserie', 'admin_terroir'].includes(u.role)).length || 0}
               </div>
               <div className="text-xs text-muted-foreground">Admins</div>
             </CardContent>
@@ -198,6 +202,8 @@ export default function AdminUtilisateurs() {
                               <SelectItem value="admin_restaurant_particuliers">Admin Restaurant Particuliers</SelectItem>
                               <SelectItem value="admin_restaurant_entreprises">Admin Restaurant Entreprises</SelectItem>
                               <SelectItem value="admin_restaurant_groupes">Admin Restaurant Groupes</SelectItem>
+                              <SelectItem value="admin_patisserie">Admin Pâtisserie</SelectItem>
+                              <SelectItem value="admin_terroir">Admin Terroir</SelectItem>
                               <SelectItem value="admin">Admin</SelectItem>
                               <SelectItem value="super_admin">Super Admin</SelectItem>
                             </SelectContent>
@@ -260,6 +266,14 @@ export default function AdminUtilisateurs() {
               <div>
                 <Badge className={roleColors.admin_restaurant_groupes}>Admin Restaurant Groupes</Badge>
                 <p className="text-muted-foreground mt-1">Réservations restaurant groupes</p>
+              </div>
+              <div>
+                <Badge className={roleColors.admin_patisserie}>Admin Pâtisserie</Badge>
+                <p className="text-muted-foreground mt-1">Gestion des commandes pâtisserie</p>
+              </div>
+              <div>
+                <Badge className={roleColors.admin_terroir}>Admin Terroir</Badge>
+                <p className="text-muted-foreground mt-1">Gestion des produits et commandes terroir</p>
               </div>
             </div>
           </CardContent>

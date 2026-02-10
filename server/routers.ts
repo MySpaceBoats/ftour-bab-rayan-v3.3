@@ -16,7 +16,7 @@ import { companyBookingsRouter } from "./company-booking-routers";
 // ============================================
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes'];
+  const allowedRoles = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes', 'admin_patisserie', 'admin_terroir'];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès administrateur requis' });
   }
@@ -82,6 +82,22 @@ const adminRestaurantGroupProcedure = protectedProcedure.use(({ ctx, next }) => 
   const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_groupes'];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès réservations groupes requis' });
+  }
+  return next({ ctx });
+});
+
+const adminPatisserieProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const allowedRoles = ['admin', 'super_admin', 'admin_patisserie', 'admin_boutique'];
+  if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès pâtisserie requis' });
+  }
+  return next({ ctx });
+});
+
+const adminTerroirProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const allowedRoles = ['admin', 'super_admin', 'admin_terroir'];
+  if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès produits du terroir requis' });
   }
   return next({ ctx });
 });
@@ -474,8 +490,45 @@ const ordersRouter = router({
       paymentMethod: z.enum(['bank_transfer', 'check', 'cash', 'paypal']).default('cash'),
     }))
     .mutation(async ({ input }) => {
+      // Validate stock for items with variants before creating order
+      const supabase = getSupabaseAdminClient();
+      if (supabase) {
+        for (const item of input.items) {
+          if (item.variantId) {
+            const { data: variant } = await supabase
+              .from('goodie_variants')
+              .select('stock, is_available')
+              .eq('id', item.variantId)
+              .single();
+            if (!variant) throw new TRPCError({ code: 'NOT_FOUND', message: `Variante #${item.variantId} introuvable` });
+            if (!variant.is_available) throw new TRPCError({ code: 'BAD_REQUEST', message: `Variante #${item.variantId} indisponible` });
+            if (variant.stock < item.quantity) {
+              throw new TRPCError({ code: 'BAD_REQUEST', message: `Stock insuffisant pour la variante #${item.variantId} (dispo: ${variant.stock}, demandé: ${item.quantity})` });
+            }
+          }
+        }
+      }
+
       const order = await supabaseServices.createGoodieOrderSupabase(input);
-      
+
+      // Decrement stock for items with variants
+      if (supabase) {
+        for (const item of input.items) {
+          if (item.variantId) {
+            const { data: variant } = await supabase
+              .from('goodie_variants')
+              .select('stock')
+              .eq('id', item.variantId)
+              .single();
+            if (variant) {
+              await supabase.from('goodie_variants')
+                .update({ stock: Math.max(0, variant.stock - item.quantity) })
+                .eq('id', item.variantId);
+            }
+          }
+        }
+      }
+
       // Send confirmation email with dynamic content
       try {
         const nameParts = input.customerName.split(' ');
@@ -525,6 +578,32 @@ const ordersRouter = router({
       status: z.enum(['reserved', 'confirmed', 'paid', 'delivered', 'cancelled']),
     }))
     .mutation(async ({ input, ctx }) => {
+      // Release stock when cancelling an order
+      if (input.status === 'cancelled') {
+        const supabase = getSupabaseAdminClient();
+        if (supabase) {
+          const { data: orderItems } = await supabase
+            .from('order_items')
+            .select('variant_id, quantity')
+            .eq('order_id', input.orderId);
+          if (orderItems) {
+            for (const item of orderItems) {
+              if (item.variant_id) {
+                const { data: variant } = await supabase
+                  .from('goodie_variants')
+                  .select('stock')
+                  .eq('id', item.variant_id)
+                  .single();
+                if (variant) {
+                  await supabase.from('goodie_variants')
+                    .update({ stock: variant.stock + item.quantity })
+                    .eq('id', item.variant_id);
+                }
+              }
+            }
+          }
+        }
+      }
       await supabaseServices.updateGoodieOrderStatusSupabase(input.orderId, input.status, ctx.user?.id);
       return { success: true };
     }),
@@ -670,7 +749,7 @@ const usersRouter = router({
   updateRole: superAdminProcedure
     .input(z.object({
       userId: z.number(),
-      role: z.enum(['user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes']),
+      role: z.enum(['user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes', 'admin_patisserie', 'admin_terroir']),
     }))
     .mutation(async ({ input }) => {
       await supabaseServices.updateUserRoleSupabase(input.userId, input.role);
@@ -1159,35 +1238,53 @@ const restaurantModuleRouter = router({
       const supabase = getSupabaseAdminClient();
       if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
 
-      // Validate that brasserie or jardin is allowed for particuliers (not corpo)
-      if (input.displayChoice === 'corpo' as any) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Espace non disponible pour les particuliers' });
+      // Fetch slot and validate capacity
+      const { data: slot } = await supabase.from('restaurant_slots').select('*').eq('id', input.slotId).single();
+      if (!slot) throw new TRPCError({ code: 'NOT_FOUND', message: 'Créneau introuvable' });
+      if (slot.is_closed) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Créneau fermé' });
+
+      // Allocation: Particulier -> brasserie or jardin(jardin_libre->brasserie)
+      const allocations: { bucket: string; seats: number }[] = [];
+      if (input.displayChoice === 'brasserie') {
+        const remaining = slot.cap_brasserie - slot.booked_brasserie;
+        if (remaining < input.seats) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Capacité insuffisante en Brasserie' });
+        allocations.push({ bucket: 'brasserie', seats: input.seats });
+      } else {
+        // Jardin: jardin_libre first, then brasserie
+        const remJardin = slot.cap_jardin_libre - slot.booked_jardin_libre;
+        const remBrasserie = slot.cap_brasserie - slot.booked_brasserie;
+        const inJardin = Math.min(input.seats, remJardin);
+        const inBrasserie = input.seats - inJardin;
+        if (inBrasserie > remBrasserie) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Capacité insuffisante' });
+        if (inJardin > 0) allocations.push({ bucket: 'jardin_libre', seats: inJardin });
+        if (inBrasserie > 0) allocations.push({ bucket: 'brasserie', seats: inBrasserie });
       }
+      // Check global
+      const remGlobal = slot.cap_jardin_global - slot.booked_jardin_global;
+      if (remGlobal < input.seats) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Capacité globale insuffisante' });
 
       const reference = `RES-P-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
       const qrToken = `rp-${Date.now()}-${Math.random().toString(36).substring(2, 14)}`;
 
-      const { data, error } = await supabase
-        .from('restaurant_reservations')
-        .insert({
-          reference,
-          type: 'particulier',
-          slot_id: input.slotId,
-          display_choice: input.displayChoice,
-          seats_total: input.seats,
-          name: input.name,
-          phone: input.phone,
-          email: input.email,
-          notes: input.notes,
-          status: 'submitted',
-          payment_status: 'pending',
-          qr_token: qrToken,
-          qr_status: 'inactive',
-        })
-        .select()
-        .single();
-
+      const { data, error } = await supabase.from('restaurant_reservations').insert({
+        reference, type: 'particulier', slot_id: input.slotId, display_choice: input.displayChoice,
+        seats_total: input.seats, name: input.name, phone: input.phone, email: input.email,
+        notes: input.notes, status: 'submitted', payment_status: 'pending', qr_token: qrToken, qr_status: 'inactive',
+      }).select().single();
       if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+
+      // Create allocations
+      for (const alloc of allocations) {
+        await supabase.from('restaurant_reservation_allocations').insert({ reservation_id: data.id, bucket: alloc.bucket, seats: alloc.seats });
+      }
+      // Update slot counters
+      const updates: any = { booked_jardin_global: slot.booked_jardin_global + input.seats };
+      for (const alloc of allocations) {
+        if (alloc.bucket === 'brasserie') updates.booked_brasserie = slot.booked_brasserie + alloc.seats;
+        if (alloc.bucket === 'jardin_libre') updates.booked_jardin_libre = slot.booked_jardin_libre + alloc.seats;
+      }
+      await supabase.from('restaurant_slots').update(updates).eq('id', input.slotId);
+
       return data;
     }),
 
@@ -1207,35 +1304,49 @@ const restaurantModuleRouter = router({
       const supabase = getSupabaseAdminClient();
       if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
 
-      if (input.displayChoice === 'brasserie' as any) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Espace non disponible pour les entreprises' });
+      const { data: slot } = await supabase.from('restaurant_slots').select('*').eq('id', input.slotId).single();
+      if (!slot) throw new TRPCError({ code: 'NOT_FOUND', message: 'Créneau introuvable' });
+      if (slot.is_closed) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Créneau fermé' });
+
+      // Allocation: Entreprise -> corpo or jardin(jardin_libre->corpo)
+      const allocations: { bucket: string; seats: number }[] = [];
+      if (input.displayChoice === 'corpo') {
+        const remaining = slot.cap_corpo - slot.booked_corpo;
+        if (remaining < input.seats) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Capacité insuffisante en Corpo' });
+        allocations.push({ bucket: 'corpo', seats: input.seats });
+      } else {
+        const remJardin = slot.cap_jardin_libre - slot.booked_jardin_libre;
+        const remCorpo = slot.cap_corpo - slot.booked_corpo;
+        const inJardin = Math.min(input.seats, remJardin);
+        const inCorpo = input.seats - inJardin;
+        if (inCorpo > remCorpo) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Capacité insuffisante' });
+        if (inJardin > 0) allocations.push({ bucket: 'jardin_libre', seats: inJardin });
+        if (inCorpo > 0) allocations.push({ bucket: 'corpo', seats: inCorpo });
       }
+      const remGlobal = slot.cap_jardin_global - slot.booked_jardin_global;
+      if (remGlobal < input.seats) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Capacité globale insuffisante' });
 
       const reference = `RES-E-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
       const qrToken = `re-${Date.now()}-${Math.random().toString(36).substring(2, 14)}`;
 
-      const { data, error } = await supabase
-        .from('restaurant_reservations')
-        .insert({
-          reference,
-          type: 'entreprise',
-          slot_id: input.slotId,
-          display_choice: input.displayChoice,
-          seats_total: input.seats,
-          name: input.name,
-          phone: input.phone,
-          email: input.email,
-          company_name: input.companyName,
-          notes: input.notes,
-          status: 'pending_confirmation',
-          payment_status: 'not_applicable',
-          qr_token: qrToken,
-          qr_status: 'inactive',
-        })
-        .select()
-        .single();
-
+      const { data, error } = await supabase.from('restaurant_reservations').insert({
+        reference, type: 'entreprise', slot_id: input.slotId, display_choice: input.displayChoice,
+        seats_total: input.seats, name: input.name, phone: input.phone, email: input.email,
+        company_name: input.companyName, notes: input.notes,
+        status: 'pending_confirmation', payment_status: 'not_applicable', qr_token: qrToken, qr_status: 'inactive',
+      }).select().single();
       if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+
+      for (const alloc of allocations) {
+        await supabase.from('restaurant_reservation_allocations').insert({ reservation_id: data.id, bucket: alloc.bucket, seats: alloc.seats });
+      }
+      const updates: any = { booked_jardin_global: slot.booked_jardin_global + input.seats };
+      for (const alloc of allocations) {
+        if (alloc.bucket === 'corpo') updates.booked_corpo = slot.booked_corpo + alloc.seats;
+        if (alloc.bucket === 'jardin_libre') updates.booked_jardin_libre = slot.booked_jardin_libre + alloc.seats;
+      }
+      await supabase.from('restaurant_slots').update(updates).eq('id', input.slotId);
+
       return data;
     }),
 
@@ -1256,36 +1367,49 @@ const restaurantModuleRouter = router({
       const supabase = getSupabaseAdminClient();
       if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
 
-      if (input.displayChoice === 'corpo' as any) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Espace non disponible pour les groupes' });
+      const { data: slot } = await supabase.from('restaurant_slots').select('*').eq('id', input.slotId).single();
+      if (!slot) throw new TRPCError({ code: 'NOT_FOUND', message: 'Créneau introuvable' });
+      if (slot.is_closed) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Créneau fermé' });
+
+      // Allocation: Groupe -> brasserie or jardin(jardin_libre->brasserie)
+      const allocations: { bucket: string; seats: number }[] = [];
+      if (input.displayChoice === 'brasserie') {
+        const remaining = slot.cap_brasserie - slot.booked_brasserie;
+        if (remaining < input.seats) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Capacité insuffisante en Brasserie' });
+        allocations.push({ bucket: 'brasserie', seats: input.seats });
+      } else {
+        const remJardin = slot.cap_jardin_libre - slot.booked_jardin_libre;
+        const remBrasserie = slot.cap_brasserie - slot.booked_brasserie;
+        const inJardin = Math.min(input.seats, remJardin);
+        const inBrasserie = input.seats - inJardin;
+        if (inBrasserie > remBrasserie) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Capacité insuffisante' });
+        if (inJardin > 0) allocations.push({ bucket: 'jardin_libre', seats: inJardin });
+        if (inBrasserie > 0) allocations.push({ bucket: 'brasserie', seats: inBrasserie });
       }
+      const remGlobal = slot.cap_jardin_global - slot.booked_jardin_global;
+      if (remGlobal < input.seats) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Capacité globale insuffisante' });
 
       const reference = `RES-G-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
       const qrToken = `rg-${Date.now()}-${Math.random().toString(36).substring(2, 14)}`;
 
-      const { data, error } = await supabase
-        .from('restaurant_reservations')
-        .insert({
-          reference,
-          type: 'groupe',
-          slot_id: input.slotId,
-          display_choice: input.displayChoice,
-          seats_total: input.seats,
-          name: input.name,
-          phone: input.phone,
-          email: input.email,
-          group_name: input.groupName,
-          group_type: input.groupType,
-          notes: input.notes,
-          status: 'pending_confirmation',
-          payment_status: 'not_applicable',
-          qr_token: qrToken,
-          qr_status: 'inactive',
-        })
-        .select()
-        .single();
-
+      const { data, error } = await supabase.from('restaurant_reservations').insert({
+        reference, type: 'groupe', slot_id: input.slotId, display_choice: input.displayChoice,
+        seats_total: input.seats, name: input.name, phone: input.phone, email: input.email,
+        group_name: input.groupName, group_type: input.groupType, notes: input.notes,
+        status: 'pending_confirmation', payment_status: 'not_applicable', qr_token: qrToken, qr_status: 'inactive',
+      }).select().single();
       if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+
+      for (const alloc of allocations) {
+        await supabase.from('restaurant_reservation_allocations').insert({ reservation_id: data.id, bucket: alloc.bucket, seats: alloc.seats });
+      }
+      const updates: any = { booked_jardin_global: slot.booked_jardin_global + input.seats };
+      for (const alloc of allocations) {
+        if (alloc.bucket === 'brasserie') updates.booked_brasserie = slot.booked_brasserie + alloc.seats;
+        if (alloc.bucket === 'jardin_libre') updates.booked_jardin_libre = slot.booked_jardin_libre + alloc.seats;
+      }
+      await supabase.from('restaurant_slots').update(updates).eq('id', input.slotId);
+
       return data;
     }),
 
@@ -1452,6 +1576,358 @@ const restaurantModuleRouter = router({
     if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
     return data || [];
   }),
+});
+
+// ============================================
+// TERROIR MODULE ROUTER
+// ============================================
+
+const terroirModuleRouter = router({
+  // --- Public: list active products ---
+  listProducts: publicProcedure.query(async () => {
+    const supabase = getSupabaseAdminClient();
+    if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+    const { data, error } = await supabase
+      .from('terroir_products')
+      .select('*, terroir_product_variants(*)')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+    if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+    return data || [];
+  }),
+
+  // --- Public: list pickup slots ---
+  listPickupSlots: publicProcedure.query(async () => {
+    const supabase = getSupabaseAdminClient();
+    if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+    const { data, error } = await supabase
+      .from('terroir_pickup_slots')
+      .select('*')
+      .eq('is_closed', false)
+      .order('date', { ascending: true });
+    if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+    return data || [];
+  }),
+
+  // --- Public: create order ---
+  createOrder: publicProcedure
+    .input(z.object({
+      customerName: z.string().min(2),
+      customerPhone: z.string().min(8),
+      customerEmail: z.string().email().optional(),
+      pickupSlotId: z.number().optional(),
+      notes: z.string().optional(),
+      items: z.array(z.object({
+        productId: z.number(),
+        variantId: z.number().optional(),
+        quantity: z.number().min(1),
+        unitPrice: z.number().min(0),
+      })).min(1),
+    }))
+    .mutation(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+
+      // Validate stock for each item with a variant
+      for (const item of input.items) {
+        if (item.variantId) {
+          const { data: variant } = await supabase
+            .from('terroir_product_variants')
+            .select('stock_total, stock_reserved')
+            .eq('id', item.variantId)
+            .single();
+          if (!variant) throw new TRPCError({ code: 'NOT_FOUND', message: `Variante ${item.variantId} introuvable` });
+          const available = variant.stock_total - variant.stock_reserved;
+          if (available < item.quantity) {
+            throw new TRPCError({ code: 'BAD_REQUEST', message: `Stock insuffisant pour la variante ${item.variantId}` });
+          }
+        }
+      }
+
+      const totalAmount = input.items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
+      const reference = `TER-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      const qrToken = `ter-${Date.now()}-${Math.random().toString(36).substring(2, 14)}`;
+
+      const { data: order, error } = await supabase.from('terroir_orders').insert({
+        order_reference: reference,
+        customer_name: input.customerName,
+        customer_phone: input.customerPhone,
+        customer_email: input.customerEmail,
+        pickup_slot_id: input.pickupSlotId,
+        total_amount: totalAmount,
+        status: 'created',
+        payment_status: 'pending',
+        qr_token: qrToken,
+        qr_status: 'inactive',
+        notes: input.notes,
+      }).select().single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+
+      // Create order items and update stock
+      for (const item of input.items) {
+        await supabase.from('terroir_order_items').insert({
+          order_id: order.id,
+          product_id: item.productId,
+          variant_id: item.variantId,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          total_price: item.quantity * item.unitPrice,
+        });
+
+        // Increment stock_reserved on variant
+        if (item.variantId) {
+          const { data: variant } = await supabase
+            .from('terroir_product_variants')
+            .select('stock_reserved')
+            .eq('id', item.variantId)
+            .single();
+          if (variant) {
+            await supabase.from('terroir_product_variants')
+              .update({ stock_reserved: variant.stock_reserved + item.quantity })
+              .eq('id', item.variantId);
+          }
+        }
+      }
+
+      return order;
+    }),
+
+  // --- Admin: list all orders ---
+  adminListOrders: adminTerroirProcedure
+    .input(z.object({
+      status: z.string().optional(),
+      search: z.string().optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      let query = supabase.from('terroir_orders').select('*, terroir_order_items(*, terroir_products(*), terroir_product_variants(*))').order('created_at', { ascending: false });
+      if (input?.status) query = query.eq('status', input.status);
+      if (input?.search) query = query.or(`customer_name.ilike.%${input.search}%,customer_phone.ilike.%${input.search}%,order_reference.ilike.%${input.search}%`);
+      const { data, error } = await query;
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data || [];
+    }),
+
+  // --- Admin: update order status ---
+  adminUpdateOrderStatus: adminTerroirProcedure
+    .input(z.object({
+      id: z.number(),
+      status: z.enum(['created', 'paid', 'ready', 'picked_up', 'cancelled', 'no_show']),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+
+      const updateData: any = {
+        status: input.status,
+        processed_by: ctx.user?.id,
+        processed_at: new Date().toISOString(),
+      };
+
+      // Activate QR when paid
+      if (input.status === 'paid') {
+        updateData.qr_status = 'active';
+        updateData.payment_status = 'paid';
+      }
+      // Mark QR used when picked_up
+      if (input.status === 'picked_up') {
+        updateData.qr_status = 'used';
+      }
+      // Revoke QR and release stock when cancelled
+      if (input.status === 'cancelled') {
+        updateData.qr_status = 'revoked';
+        // Release reserved stock
+        const { data: orderItems } = await supabase
+          .from('terroir_order_items')
+          .select('variant_id, quantity')
+          .eq('order_id', input.id);
+        if (orderItems) {
+          for (const item of orderItems) {
+            if (item.variant_id) {
+              const { data: variant } = await supabase
+                .from('terroir_product_variants')
+                .select('stock_reserved')
+                .eq('id', item.variant_id)
+                .single();
+              if (variant) {
+                await supabase.from('terroir_product_variants')
+                  .update({ stock_reserved: Math.max(0, variant.stock_reserved - item.quantity) })
+                  .eq('id', item.variant_id);
+              }
+            }
+          }
+        }
+      }
+
+      const { error } = await supabase.from('terroir_orders').update(updateData).eq('id', input.id);
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return { success: true };
+    }),
+
+  // --- Admin: stats ---
+  adminStats: adminTerroirProcedure.query(async () => {
+    const supabase = getSupabaseAdminClient();
+    if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+    const { data, error } = await supabase.from('terroir_orders').select('status, total_amount');
+    if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+    const orders = data || [];
+    return {
+      total: orders.length,
+      totalRevenue: orders.reduce((sum: number, o: any) => sum + parseFloat(o.total_amount || 0), 0),
+      byStatus: {
+        created: orders.filter((o: any) => o.status === 'created').length,
+        paid: orders.filter((o: any) => o.status === 'paid').length,
+        ready: orders.filter((o: any) => o.status === 'ready').length,
+        picked_up: orders.filter((o: any) => o.status === 'picked_up').length,
+        cancelled: orders.filter((o: any) => o.status === 'cancelled').length,
+        no_show: orders.filter((o: any) => o.status === 'no_show').length,
+      },
+    };
+  }),
+
+  // --- Admin: CRUD products ---
+  adminListProducts: adminTerroirProcedure.query(async () => {
+    const supabase = getSupabaseAdminClient();
+    if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+    const { data, error } = await supabase
+      .from('terroir_products')
+      .select('*, terroir_product_variants(*)')
+      .order('sort_order', { ascending: true });
+    if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+    return data || [];
+  }),
+
+  adminCreateProduct: adminTerroirProcedure
+    .input(z.object({
+      name: z.string().min(2),
+      description: z.string().optional(),
+      category: z.string().optional(),
+      imageUrl: z.string().optional(),
+      isActive: z.boolean().default(true),
+      sortOrder: z.number().default(0),
+    }))
+    .mutation(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      const { data, error } = await supabase.from('terroir_products').insert({
+        name: input.name,
+        description: input.description,
+        category: input.category,
+        image_url: input.imageUrl,
+        is_active: input.isActive,
+        sort_order: input.sortOrder,
+      }).select().single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data;
+    }),
+
+  adminUpdateProduct: adminTerroirProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().min(2).optional(),
+      description: z.string().optional(),
+      category: z.string().optional(),
+      imageUrl: z.string().optional(),
+      isActive: z.boolean().optional(),
+      sortOrder: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      const { id, ...fields } = input;
+      const updateData: any = {};
+      if (fields.name !== undefined) updateData.name = fields.name;
+      if (fields.description !== undefined) updateData.description = fields.description;
+      if (fields.category !== undefined) updateData.category = fields.category;
+      if (fields.imageUrl !== undefined) updateData.image_url = fields.imageUrl;
+      if (fields.isActive !== undefined) updateData.is_active = fields.isActive;
+      if (fields.sortOrder !== undefined) updateData.sort_order = fields.sortOrder;
+      const { error } = await supabase.from('terroir_products').update(updateData).eq('id', id);
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return { success: true };
+    }),
+
+  // --- Admin: CRUD variants ---
+  adminCreateVariant: adminTerroirProcedure
+    .input(z.object({
+      productId: z.number(),
+      label: z.string().min(1),
+      sku: z.string().optional(),
+      priceUnit: z.number().min(0),
+      stockTotal: z.number().min(0).default(0),
+      isActive: z.boolean().default(true),
+    }))
+    .mutation(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      const { data, error } = await supabase.from('terroir_product_variants').insert({
+        product_id: input.productId,
+        label: input.label,
+        sku: input.sku,
+        price_unit: input.priceUnit,
+        stock_total: input.stockTotal,
+        stock_reserved: 0,
+        is_active: input.isActive,
+      }).select().single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data;
+    }),
+
+  adminUpdateVariant: adminTerroirProcedure
+    .input(z.object({
+      id: z.number(),
+      label: z.string().optional(),
+      sku: z.string().optional(),
+      priceUnit: z.number().min(0).optional(),
+      stockTotal: z.number().min(0).optional(),
+      isActive: z.boolean().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      const { id, ...fields } = input;
+      const updateData: any = {};
+      if (fields.label !== undefined) updateData.label = fields.label;
+      if (fields.sku !== undefined) updateData.sku = fields.sku;
+      if (fields.priceUnit !== undefined) updateData.price_unit = fields.priceUnit;
+      if (fields.stockTotal !== undefined) updateData.stock_total = fields.stockTotal;
+      if (fields.isActive !== undefined) updateData.is_active = fields.isActive;
+      const { error } = await supabase.from('terroir_product_variants').update(updateData).eq('id', id);
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return { success: true };
+    }),
+
+  // --- Admin: manage pickup slots ---
+  adminListPickupSlots: adminTerroirProcedure.query(async () => {
+    const supabase = getSupabaseAdminClient();
+    if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+    const { data, error } = await supabase.from('terroir_pickup_slots').select('*').order('date', { ascending: true });
+    if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+    return data || [];
+  }),
+
+  adminCreatePickupSlot: adminTerroirProcedure
+    .input(z.object({
+      date: z.string(),
+      startTime: z.string().optional(),
+      endTime: z.string().optional(),
+      maxOrders: z.number().optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      const { data, error } = await supabase.from('terroir_pickup_slots').insert({
+        date: input.date,
+        start_time: input.startTime,
+        end_time: input.endTime,
+        max_orders: input.maxOrders,
+        notes: input.notes,
+      }).select().single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data;
+    }),
 });
 
 // ============================================
@@ -1968,6 +2444,7 @@ export const appRouterUpdated = router({
   qr: qrRouter,
   companyBookings: companyBookingsRouter,
   restaurantModule: restaurantModuleRouter,
+  terroirModule: terroirModuleRouter,
 });
 
 export type AppRouter = typeof appRouterUpdated;
