@@ -324,16 +324,7 @@ export const en: Translations = {
     optional: "(optional)",
     quantity: "Quantity",
     unitPrice: "Unit price",
-    total: "Total",
-    finalizeReservation: "Finalize reservation",
-    backToPastries: "Back to Pastries",
-    expressCheckout: "Express checkout",
-    productNotFound: "Product not found",
-    completeOrder: "Complete order",
-    customerInfo: "Customer information",
-    optional: "(optional)",
-    quantity: "Quantity",
-    unitPrice: "Unit price"
+    backToGoodies: "Back to Goodies"
   },
 
   // Donations Page

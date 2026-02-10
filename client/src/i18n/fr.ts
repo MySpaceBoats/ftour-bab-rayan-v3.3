@@ -272,14 +272,7 @@ export const fr = {
     optional: '(optionnel)',
     quantity: 'Quantité',
     unitPrice: 'Prix unitaire',
-    backToGoodies: 'Retour aux Goodies',
-    expressCheckout: 'Achat express',
-    productNotFound: 'Produit non trouvé',
-    completeOrder: 'Finaliser la commande',
-    customerInfo: 'Informations client',
-    optional: '(optionnel)',
-    quantity: 'Quantité',
-    unitPrice: 'Prix unitaire'
+    backToGoodies: 'Retour aux Goodies'
   },
 
   // Pastries Page

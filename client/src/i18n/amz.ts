@@ -324,19 +324,8 @@ export const amz: Translations = {
     optional: "(afran)",
     quantity: "Amḍan",
     unitPrice: "Taqimt n yiwen",
-    total: "Amsum",
-    finalizeReservation: "Smed taladdit",
-    backToPastries: "Uɣal ar tiqsiwin",
-    expressCheckout: "Azren aqaṛun",
-    productNotFound: "Taɣawsa ur nufa",
-    completeOrder: "Smed taladdit",
-    customerInfo: "Talɣut n umeslay",
-    optional: "(afran)",
-    quantity: "Amḍan",
-    unitPrice: "Taqimt n yiwen"
   },
 
-  // Donations Page
   donations: {
     title: 'Make a Donation',
     subtitle: 'Your generosity helps provide meals to people in need during Ramadan',
