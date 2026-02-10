@@ -4,7 +4,11 @@ import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, decimal,
 // USERS & AUTHENTICATION
 // ============================================
 
-export const userRoleEnum = mysqlEnum("role", ["user", "admin", "super_admin", "admin_ops", "admin_boutique", "admin_dons", "scanner"]);
+export const userRoleEnum = mysqlEnum("role", [
+  "user", "admin", "super_admin", "admin_ops", "admin_boutique", "admin_dons", "scanner",
+  "admin_restaurant_particuliers", "admin_restaurant_entreprises", "admin_restaurant_groupes",
+  "admin_patisserie", "admin_terroir"
+]);
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -661,3 +665,207 @@ export const companyBookingScans = mysqlTable("company_booking_scans", {
 
 export type CompanyBookingScan = typeof companyBookingScans.$inferSelect;
 export type InsertCompanyBookingScan = typeof companyBookingScans.$inferInsert;
+
+// ============================================
+// RESTAURANT MODULE - SLOTS
+// ============================================
+
+export const restaurantSlots = mysqlTable("restaurant_slots", {
+  id: int("id").autoincrement().primaryKey(),
+  startAt: timestamp("startAt").notNull(),
+  endAt: timestamp("endAt").notNull(),
+  // Capacities
+  capJardinGlobal: int("capJardinGlobal").notNull().default(120),
+  capBrasserie: int("capBrasserie").notNull().default(50),
+  capCorpo: int("capCorpo").notNull().default(50),
+  capJardinLibre: int("capJardinLibre").notNull().default(20),
+  // Counters (denormalized for performance)
+  bookedJardinGlobal: int("bookedJardinGlobal").notNull().default(0),
+  bookedBrasserie: int("bookedBrasserie").notNull().default(0),
+  bookedCorpo: int("bookedCorpo").notNull().default(0),
+  bookedJardinLibre: int("bookedJardinLibre").notNull().default(0),
+  isClosed: boolean("isClosed").notNull().default(false),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type RestaurantSlot = typeof restaurantSlots.$inferSelect;
+export type InsertRestaurantSlot = typeof restaurantSlots.$inferInsert;
+
+// ============================================
+// RESTAURANT MODULE - RESERVATIONS
+// ============================================
+
+export const restaurantReservationTypeEnum = mysqlEnum("restaurant_reservation_type", ["particulier", "entreprise", "groupe"]);
+export const restaurantDisplayChoiceEnum = mysqlEnum("restaurant_display_choice", ["jardin", "brasserie", "corpo"]);
+export const restaurantReservationStatusEnum = mysqlEnum("restaurant_reservation_status", [
+  "submitted", "pending_confirmation", "confirmed", "rejected", "cancelled", "completed", "no_show"
+]);
+export const restaurantPaymentStatusEnum = mysqlEnum("restaurant_payment_status", [
+  "not_applicable", "pending", "paid", "failed", "refunded"
+]);
+export const restaurantQrStatusEnum = mysqlEnum("restaurant_qr_status", ["inactive", "active", "used", "revoked"]);
+
+export const restaurantReservations = mysqlTable("restaurant_reservations", {
+  id: int("id").autoincrement().primaryKey(),
+  reference: varchar("reference", { length: 50 }).notNull().unique(), // RES-P-XXXXX / RES-E-XXXXX / RES-G-XXXXX
+  type: restaurantReservationTypeEnum.notNull(),
+  slotId: int("slotId").notNull(),
+  displayChoice: restaurantDisplayChoiceEnum.notNull(),
+  seatsTotal: int("seatsTotal").notNull(),
+  // Contact info (common)
+  name: varchar("name", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  email: varchar("email", { length: 320 }),
+  // Company fields (entreprise)
+  companyName: varchar("companyName", { length: 255 }),
+  // Group fields (groupe)
+  groupName: varchar("groupName", { length: 255 }),
+  groupType: varchar("groupType", { length: 50 }), // asso, famille, tourisme, autre
+  // Status
+  status: restaurantReservationStatusEnum.default("submitted").notNull(),
+  paymentStatus: restaurantPaymentStatusEnum.default("not_applicable").notNull(),
+  paymentAmount: decimal("paymentAmount", { precision: 10, scale: 2 }),
+  paymentProvider: varchar("paymentProvider", { length: 50 }),
+  paymentReference: varchar("paymentReference", { length: 100 }),
+  // QR
+  qrToken: varchar("qrToken", { length: 64 }).unique(),
+  qrStatus: restaurantQrStatusEnum.default("inactive"),
+  // Hold expiration (for pending_confirmation)
+  expiresAt: timestamp("expiresAt"),
+  // Tracking
+  processedBy: int("processedBy"),
+  processedAt: timestamp("processedAt"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type RestaurantReservation = typeof restaurantReservations.$inferSelect;
+export type InsertRestaurantReservation = typeof restaurantReservations.$inferInsert;
+
+// ============================================
+// RESTAURANT MODULE - ALLOCATION PER SUB-SPACE
+// ============================================
+
+export const restaurantBucketEnum = mysqlEnum("restaurant_bucket", ["brasserie", "corpo", "jardin_libre"]);
+
+export const restaurantReservationAllocations = mysqlTable("restaurant_reservation_allocations", {
+  id: int("id").autoincrement().primaryKey(),
+  reservationId: int("reservationId").notNull(),
+  bucket: restaurantBucketEnum.notNull(),
+  seats: int("seats").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type RestaurantReservationAllocation = typeof restaurantReservationAllocations.$inferSelect;
+export type InsertRestaurantReservationAllocation = typeof restaurantReservationAllocations.$inferInsert;
+
+// ============================================
+// TERROIR MODULE - PRODUCTS
+// ============================================
+
+export const terroirProducts = mysqlTable("terroir_products", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 100 }), // huile, miel, epices, etc.
+  imageUrl: text("imageUrl"),
+  isActive: boolean("isActive").notNull().default(true),
+  sortOrder: int("sortOrder").notNull().default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TerroirProduct = typeof terroirProducts.$inferSelect;
+export type InsertTerroirProduct = typeof terroirProducts.$inferInsert;
+
+// ============================================
+// TERROIR MODULE - PRODUCT VARIANTS
+// ============================================
+
+export const terroirProductVariants = mysqlTable("terroir_product_variants", {
+  id: int("id").autoincrement().primaryKey(),
+  productId: int("productId").notNull(),
+  label: varchar("label", { length: 100 }).notNull(), // "250g", "500ml", "Pack 3"
+  sku: varchar("sku", { length: 50 }),
+  priceUnit: decimal("priceUnit", { precision: 10, scale: 2 }).notNull(),
+  stockTotal: int("stockTotal").notNull().default(0),
+  stockReserved: int("stockReserved").notNull().default(0),
+  isActive: boolean("isActive").notNull().default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TerroirProductVariant = typeof terroirProductVariants.$inferSelect;
+export type InsertTerroirProductVariant = typeof terroirProductVariants.$inferInsert;
+
+// ============================================
+// TERROIR MODULE - PICKUP SLOTS
+// ============================================
+
+export const terroirPickupSlots = mysqlTable("terroir_pickup_slots", {
+  id: int("id").autoincrement().primaryKey(),
+  date: timestamp("date").notNull(),
+  startTime: varchar("startTime", { length: 10 }),
+  endTime: varchar("endTime", { length: 10 }),
+  maxOrders: int("maxOrders"),
+  isClosed: boolean("isClosed").notNull().default(false),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TerroirPickupSlot = typeof terroirPickupSlots.$inferSelect;
+export type InsertTerroirPickupSlot = typeof terroirPickupSlots.$inferInsert;
+
+// ============================================
+// TERROIR MODULE - ORDERS
+// ============================================
+
+export const terroirOrderStatusEnum = mysqlEnum("terroirOrderStatus", ["created", "paid", "ready", "picked_up", "cancelled", "no_show"]);
+export const terroirPaymentStatusEnum = mysqlEnum("terroirPaymentStatus", ["pending", "paid", "failed", "refunded"]);
+export const terroirQrStatusEnum = mysqlEnum("terroirQrStatus", ["inactive", "active", "used", "revoked"]);
+
+export const terroirOrders = mysqlTable("terroir_orders", {
+  id: int("id").autoincrement().primaryKey(),
+  orderReference: varchar("orderReference", { length: 50 }).notNull().unique(),
+  customerName: varchar("customerName", { length: 255 }).notNull(),
+  customerPhone: varchar("customerPhone", { length: 20 }).notNull(),
+  customerEmail: varchar("customerEmail", { length: 320 }),
+  pickupSlotId: int("pickupSlotId"),
+  status: terroirOrderStatusEnum.default("created").notNull(),
+  paymentStatus: terroirPaymentStatusEnum.default("pending").notNull(),
+  totalAmount: decimal("totalAmount", { precision: 10, scale: 2 }).notNull(),
+  paymentProvider: varchar("paymentProvider", { length: 50 }),
+  paymentReference: varchar("paymentReference", { length: 100 }),
+  qrToken: varchar("qrToken", { length: 64 }).unique(),
+  qrStatus: terroirQrStatusEnum.default("inactive"),
+  processedBy: int("processedBy"),
+  processedAt: timestamp("processedAt"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TerroirOrder = typeof terroirOrders.$inferSelect;
+export type InsertTerroirOrder = typeof terroirOrders.$inferInsert;
+
+// ============================================
+// TERROIR MODULE - ORDER ITEMS
+// ============================================
+
+export const terroirOrderItems = mysqlTable("terroir_order_items", {
+  id: int("id").autoincrement().primaryKey(),
+  orderId: int("orderId").notNull(),
+  productId: int("productId").notNull(),
+  variantId: int("variantId"),
+  quantity: int("quantity").notNull().default(1),
+  unitPrice: decimal("unitPrice", { precision: 10, scale: 2 }).notNull(),
+  totalPrice: decimal("totalPrice", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type TerroirOrderItem = typeof terroirOrderItems.$inferSelect;
+export type InsertTerroirOrderItem = typeof terroirOrderItems.$inferInsert;

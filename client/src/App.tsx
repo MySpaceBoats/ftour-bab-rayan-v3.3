@@ -49,6 +49,11 @@ import AdminPayments from "./pages/AdminPayments";
 import AdminScanProduct from "./pages/AdminScanProduct";
 import AdminPastries from "./pages/AdminPastries";
 import AdminUnifiedDashboard from "./pages/AdminUnifiedDashboard";
+import AdminRestaurantParticuliers from "./pages/AdminRestaurantParticuliers";
+import AdminRestaurantEntreprises from "./pages/AdminRestaurantEntreprises";
+import AdminRestaurantGroupes from "./pages/AdminRestaurantGroupes";
+import AdminTerroirOrders from "./pages/AdminTerroirOrders";
+import AdminTerroirProducts from "./pages/AdminTerroirProducts";
 import CheckinReservation from "./pages/CheckinReservation";
 import CompanyBooking from "./pages/CompanyBooking";
 import CompanyBookingConfirmation from "./pages/CompanyBookingConfirmation";
@@ -100,6 +105,12 @@ function LocalizedRoutes() {
       <Route path="/admin/scan-product" component={AdminScanProduct} />
       <Route path="/admin/pastries" component={AdminPastries} />
       <Route path="/admin/unified-dashboard" component={AdminUnifiedDashboard} />
+      <Route path="/admin/restaurant/particuliers" component={AdminRestaurantParticuliers} />
+      <Route path="/admin/restaurant/entreprises" component={AdminRestaurantEntreprises} />
+      <Route path="/admin/restaurant/groupes" component={AdminRestaurantGroupes} />
+      <Route path="/admin/terroir/orders" component={AdminTerroirOrders} />
+      <Route path="/admin/terroir/products" component={AdminTerroirProducts} />
+      <Route path="/admin/company-bookings" component={AdminCompanyBookings} />
       
       {/* Scanner (mobile-first) - no locale prefix */}
       <Route path="/scanner" component={Scanner} />

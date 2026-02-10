@@ -5,36 +5,308 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
-import { 
-  Users, ShoppingBag, Heart, Calendar, QrCode, Settings, 
+import {
+  Users, ShoppingBag, Heart, Calendar, QrCode,
   ArrowRight, Loader2, BarChart3, Package, MessageSquare,
-  UserCog, FileText, Home, LogOut, UtensilsCrossed, Store
+  UserCog, FileText, Home, LogOut, UtensilsCrossed, Store,
+  Building2, UsersRound, type LucideIcon
 } from "lucide-react";
+
+// ============================================
+// MODULE REGISTRY
+// ============================================
+
+type ModuleDefinition = {
+  label: string;
+  description: string;
+  route: string;
+  icon: LucideIcon;
+  iconColor: string;
+  iconBg: string;
+  allowedRoles: string[];
+  variant?: 'default' | 'primary' | 'accent';
+  buttonClass?: string;
+};
+
+type SectionDefinition = {
+  title: string;
+  icon?: LucideIcon;
+  iconColor?: string;
+  modules: ModuleDefinition[];
+  borderClass?: string;
+};
+
+const ALL_ADMIN_ROLES = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes', 'admin_patisserie', 'admin_terroir'];
+
+const sections: SectionDefinition[] = [
+  {
+    title: "Restaurant",
+    icon: UtensilsCrossed,
+    iconColor: "text-[#5d5a3c]",
+    borderClass: "border-[#5d5a3c]/20",
+    modules: [
+      {
+        label: "Réservations Particuliers",
+        description: "Réservations individuelles (max 10 places, paiement direct)",
+        route: "/admin/restaurant/particuliers",
+        icon: UtensilsCrossed,
+        iconColor: "text-[#5d5a3c]",
+        iconBg: "bg-[#5d5a3c]/10",
+        allowedRoles: ['admin', 'super_admin', 'admin_restaurant_particuliers'],
+        buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
+      },
+      {
+        label: "Réservations Entreprises",
+        description: "Réservations corporate soumises à confirmation admin",
+        route: "/admin/restaurant/entreprises",
+        icon: Building2,
+        iconColor: "text-[#5d5a3c]",
+        iconBg: "bg-[#5d5a3c]/10",
+        allowedRoles: ['admin', 'super_admin', 'admin_restaurant_entreprises'],
+        buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
+      },
+      {
+        label: "Réservations Groupes",
+        description: "Réservations groupes (assos, familles, délégations) soumises à confirmation",
+        route: "/admin/restaurant/groupes",
+        icon: UsersRound,
+        iconColor: "text-[#5d5a3c]",
+        iconBg: "bg-[#5d5a3c]/10",
+        allowedRoles: ['admin', 'super_admin', 'admin_restaurant_groupes'],
+        buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
+      },
+      {
+        label: "Réservations Ftour",
+        description: "Gérer les réservations pour les repas Ftour Solidaires",
+        route: "/admin/reservations",
+        icon: UtensilsCrossed,
+        iconColor: "text-[#5d5a3c]",
+        iconBg: "bg-[#5d5a3c]/10",
+        allowedRoles: ['admin', 'super_admin', 'admin_ops'],
+        buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
+      },
+      {
+        label: "Restaurants",
+        description: "Configurer les restaurants et leurs capacités",
+        route: "/admin/restaurants",
+        icon: Store,
+        iconColor: "text-[#5d5a3c]",
+        iconBg: "bg-[#5d5a3c]/10",
+        allowedRoles: ['super_admin'],
+        buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
+      },
+      {
+        label: "Scanner Réservations",
+        description: "Scanner les QR codes des réservations Ftour",
+        route: "/admin/scan-reservation",
+        icon: QrCode,
+        iconColor: "text-[#5d5a3c]",
+        iconBg: "bg-[#5d5a3c]/10",
+        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'scanner'],
+        variant: 'primary',
+        buttonClass: "bg-[#5d5a3c] hover:bg-[#5d5a3c]/90 text-white",
+      },
+    ],
+  },
+  {
+    title: "Commerce",
+    modules: [
+      {
+        label: "Commandes Goodies",
+        description: "Gérer les réservations de goodies et leur statut",
+        route: "/admin/commandes",
+        icon: Package,
+        iconColor: "text-secondary-foreground",
+        iconBg: "bg-secondary/20",
+        allowedRoles: ['admin', 'super_admin', 'admin_boutique'],
+      },
+      {
+        label: "Catalogue Goodies",
+        description: "Gérer les produits, variantes et stocks",
+        route: "/admin/goodies",
+        icon: ShoppingBag,
+        iconColor: "text-secondary-foreground",
+        iconBg: "bg-secondary/20",
+        allowedRoles: ['admin', 'super_admin', 'admin_boutique'],
+      },
+      {
+        label: "Pâtisserie",
+        description: "Gérer les commandes et billets de pâtisserie",
+        route: "/admin/pastries",
+        icon: UtensilsCrossed,
+        iconColor: "text-amber-600",
+        iconBg: "bg-amber-100",
+        allowedRoles: ['admin', 'super_admin', 'admin_boutique', 'admin_patisserie'],
+      },
+      {
+        label: "Commandes Terroir",
+        description: "Suivi des commandes de produits du terroir",
+        route: "/admin/terroir/orders",
+        icon: Package,
+        iconColor: "text-emerald-700",
+        iconBg: "bg-emerald-100",
+        allowedRoles: ['admin', 'super_admin', 'admin_terroir'],
+      },
+      {
+        label: "Catalogue Terroir",
+        description: "Gérer les produits du terroir, variantes et stocks",
+        route: "/admin/terroir/products",
+        icon: ShoppingBag,
+        iconColor: "text-emerald-700",
+        iconBg: "bg-emerald-100",
+        allowedRoles: ['admin', 'super_admin', 'admin_terroir'],
+      },
+      {
+        label: "Réservation Entreprise",
+        description: "Gérer les réservations groupe avec QR codes individuels",
+        route: "/admin/company-bookings",
+        icon: Users,
+        iconColor: "text-purple-600",
+        iconBg: "bg-purple-100",
+        allowedRoles: ['admin', 'super_admin', 'admin_boutique'],
+      },
+      {
+        label: "Paiements",
+        description: "Suivi et gestion de tous les paiements avec filtres et export",
+        route: "/admin/payments",
+        icon: BarChart3,
+        iconColor: "text-green-600",
+        iconBg: "bg-green-100",
+        allowedRoles: ['admin', 'super_admin', 'admin_boutique', 'admin_dons', 'admin_terroir'],
+      },
+    ],
+  },
+  {
+    title: "Solidarité",
+    modules: [
+      {
+        label: "Dons",
+        description: "Suivre les promesses de dons et marquer les paiements reçus",
+        route: "/admin/dons",
+        icon: Heart,
+        iconColor: "text-accent",
+        iconBg: "bg-accent/10",
+        allowedRoles: ['admin', 'super_admin', 'admin_dons'],
+      },
+    ],
+  },
+  {
+    title: "Engagement",
+    modules: [
+      {
+        label: "Bénévoles",
+        description: "Gérer les inscriptions et suivre les présences par jour",
+        route: "/admin/benevoles",
+        icon: Users,
+        iconColor: "text-primary",
+        iconBg: "bg-primary/10",
+        allowedRoles: ['admin', 'super_admin', 'admin_ops'],
+      },
+      {
+        label: "Scanner QR",
+        description: "Scanner les QR codes des bénévoles pour valider leur présence",
+        route: "/scanner",
+        icon: QrCode,
+        iconColor: "text-primary",
+        iconBg: "bg-primary/10",
+        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'scanner'],
+        variant: 'primary',
+      },
+    ],
+  },
+  {
+    title: "Ops",
+    modules: [
+      {
+        label: "Calendrier",
+        description: "Configurer les jours du Ramadan et leurs capacités",
+        route: "/admin/jours",
+        icon: Calendar,
+        iconColor: "text-blue-600",
+        iconBg: "bg-blue-100",
+        allowedRoles: ['super_admin'],
+      },
+      {
+        label: "Scanner Produits",
+        description: "Scanner les QR codes des produits et commandes",
+        route: "/admin/scan-product",
+        icon: QrCode,
+        iconColor: "text-orange-600",
+        iconBg: "bg-orange-100",
+        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'scanner'],
+      },
+    ],
+  },
+  {
+    title: "Système",
+    modules: [
+      {
+        label: "Utilisateurs",
+        description: "Gérer les rôles et permissions des utilisateurs",
+        route: "/admin/utilisateurs",
+        icon: UserCog,
+        iconColor: "text-purple-600",
+        iconBg: "bg-purple-100",
+        allowedRoles: ['super_admin'],
+      },
+      {
+        label: "Messages",
+        description: "Consulter les messages de contact reçus",
+        route: "/admin/messages",
+        icon: MessageSquare,
+        iconColor: "text-green-600",
+        iconBg: "bg-green-100",
+        allowedRoles: ['super_admin'],
+      },
+      {
+        label: "Contenu",
+        description: "Gérer les partenaires, témoignages et FAQ",
+        route: "/admin/contenu",
+        icon: FileText,
+        iconColor: "text-orange-600",
+        iconBg: "bg-orange-100",
+        allowedRoles: ['super_admin'],
+      },
+      {
+        label: "Tableau de bord unifié",
+        description: "Statistiques et gestion unifiées pour tous les modules",
+        route: "/admin/unified-dashboard",
+        icon: BarChart3,
+        iconColor: "text-blue-600",
+        iconBg: "bg-blue-100",
+        allowedRoles: ['super_admin'],
+      },
+    ],
+  },
+];
+
+// ============================================
+// COMPONENT
+// ============================================
 
 export default function Admin() {
   const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
   const [, navigate] = useLocation();
-  
-  const { data: volunteerStats } = trpc.volunteers.stats.useQuery(undefined, {
-    enabled: isAuthenticated && !!user?.role && ['admin', 'super_admin', 'admin_ops'].includes(user.role),
-  });
-  
-  const { data: orderStats } = trpc.orders.stats.useQuery(undefined, {
-    enabled: isAuthenticated && !!user?.role && ['admin', 'super_admin', 'admin_boutique'].includes(user.role),
-  });
-  
-  const { data: donationStats } = trpc.donations.stats.useQuery(undefined, {
-    enabled: isAuthenticated && !!user?.role && ['admin', 'super_admin', 'admin_dons'].includes(user.role),
-  });
-  
-  const { data: days } = trpc.days.list.useQuery();
 
-  const isAdmin = user?.role && ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner'].includes(user.role);
+  const isAdmin = user?.role && ALL_ADMIN_ROLES.includes(user.role);
   const isSuperAdmin = user?.role === 'super_admin';
   const canManageVolunteers = user?.role && ['admin', 'super_admin', 'admin_ops'].includes(user.role);
   const canManageOrders = user?.role && ['admin', 'super_admin', 'admin_boutique'].includes(user.role);
   const canManageDonations = user?.role && ['admin', 'super_admin', 'admin_dons'].includes(user.role);
-  const canScan = user?.role && ['admin', 'super_admin', 'admin_ops', 'scanner'].includes(user.role);
+
+  const { data: volunteerStats } = trpc.volunteers.stats.useQuery(undefined, {
+    enabled: isAuthenticated && !!canManageVolunteers,
+  });
+
+  const { data: orderStats } = trpc.orders.stats.useQuery(undefined, {
+    enabled: isAuthenticated && !!canManageOrders,
+  });
+
+  const { data: donationStats } = trpc.donations.stats.useQuery(undefined, {
+    enabled: isAuthenticated && !!canManageDonations,
+  });
+
+  const { data: days } = trpc.days.list.useQuery();
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -76,8 +348,17 @@ export default function Admin() {
     );
   }
 
+  const userRole = user?.role || '';
   const activeDays = days?.filter(d => d.isOpen).length || 0;
   const totalDays = days?.length || 0;
+
+  // Filter sections: only show sections that have at least one visible module
+  const visibleSections = sections
+    .map(section => ({
+      ...section,
+      modules: section.modules.filter(m => m.allowedRoles.includes(userRole)),
+    }))
+    .filter(section => section.modules.length > 0);
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -98,7 +379,7 @@ export default function Admin() {
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="text-sm font-medium">{user?.name || user?.email}</p>
-              <p className="text-xs text-muted-foreground capitalize">{user?.role?.replace('_', ' ')}</p>
+              <p className="text-xs text-muted-foreground capitalize">{user?.role?.replace(/_/g, ' ')}</p>
             </div>
             <Button variant="ghost" size="icon" onClick={handleLogout}>
               <LogOut className="h-5 w-5" />
@@ -185,426 +466,43 @@ export default function Admin() {
           </Card>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Scanner */}
-          {canScan && (
-            <Card className="card-hover">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <QrCode className="h-5 w-5 text-primary" />
-                  </div>
-                  Scanner QR
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Scanner les QR codes des bénévoles pour valider leur présence
-                </p>
-                <Link href="/scanner">
-                  <Button className="w-full">
-                    Ouvrir le scanner
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Volunteers Management */}
-          {canManageVolunteers && (
-            <Card className="card-hover">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Users className="h-5 w-5 text-primary" />
-                  </div>
-                  Bénévoles
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Gérer les inscriptions et suivre les présences par jour
-                </p>
-                <Link href="/admin/benevoles">
-                  <Button variant="outline" className="w-full">
-                    Gérer les bénévoles
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Orders Management */}
-          {canManageOrders && (
-            <Card className="card-hover">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-secondary/20 flex items-center justify-center">
-                    <Package className="h-5 w-5 text-secondary-foreground" />
-                  </div>
-                  Commandes
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Gérer les réservations de goodies et leur statut
-                </p>
-                <Link href="/admin/commandes">
-                  <Button variant="outline" className="w-full">
-                    Gérer les commandes
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Donations Management */}
-          {canManageDonations && (
-            <Card className="card-hover">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                    <Heart className="h-5 w-5 text-accent" />
-                  </div>
-                  Dons
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Suivre les promesses de dons et marquer les paiements reçus
-                </p>
-                <Link href="/admin/dons">
-                  <Button variant="outline" className="w-full">
-                    Gérer les dons
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Goodies Management */}
-          {canManageOrders && (
-            <Card className="card-hover">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-secondary/20 flex items-center justify-center">
-                    <ShoppingBag className="h-5 w-5 text-secondary-foreground" />
-                  </div>
-                  Catalogue Goodies
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Gérer les produits, variantes et stocks
-                </p>
-                <Link href="/admin/goodies">
-                  <Button variant="outline" className="w-full">
-                    Gérer le catalogue
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Pastries Management */}
-          {canManageOrders && (
-            <Card className="card-hover">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
-                    <UtensilsCrossed className="h-5 w-5 text-amber-600" />
-                  </div>
-                  Pâtisserie
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Gérer les commandes et billets de pâtisserie
-                </p>
-                <Link href="/admin/pastries">
-                  <Button variant="outline" className="w-full">
-                    Gérer la pâtisserie
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Company Bookings Management */}
-          {canManageOrders && (
-            <Card className="card-hover">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                    <Users className="h-5 w-5 text-purple-600" />
-                  </div>
-                  Réservation Entreprise
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Gérer les réservations groupe avec QR codes individuels
-                </p>
-                <Link href="/admin/company-bookings">
-                  <Button variant="outline" className="w-full">
-                    Gérer les réservations
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Payments Management */}
-          {(canManageOrders || canManageDonations) && (
-            <Card className="card-hover">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                    <BarChart3 className="h-5 w-5 text-green-600" />
-                  </div>
-                  Paiements
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Suivi et gestion de tous les paiements avec filtres et export
-                </p>
-                <Link href="/admin/payments">
-                  <Button variant="outline" className="w-full">
-                    Gérer les paiements
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Days Management */}
-          {isSuperAdmin && (
-            <Card className="card-hover">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <Calendar className="h-5 w-5 text-blue-600" />
-                  </div>
-                  Calendrier
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Configurer les jours du Ramadan et leurs capacités
-                </p>
-                <Link href="/admin/jours">
-                  <Button variant="outline" className="w-full">
-                    Gérer le calendrier
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Users Management */}
-          {isSuperAdmin && (
-            <Card className="card-hover">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                    <UserCog className="h-5 w-5 text-purple-600" />
-                  </div>
-                  Utilisateurs
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Gérer les rôles et permissions des utilisateurs
-                </p>
-                <Link href="/admin/utilisateurs">
-                  <Button variant="outline" className="w-full">
-                    Gérer les utilisateurs
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Messages */}
-          {isSuperAdmin && (
-            <Card className="card-hover">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                    <MessageSquare className="h-5 w-5 text-green-600" />
-                  </div>
-                  Messages
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Consulter les messages de contact reçus
-                </p>
-                <Link href="/admin/messages">
-                  <Button variant="outline" className="w-full">
-                    Voir les messages
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Content Management */}
-          {isSuperAdmin && (
-            <Card className="card-hover">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-orange-600" />
-                  </div>
-                  Contenu
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Gérer les partenaires, témoignages et FAQ
-                </p>
-                <Link href="/admin/contenu">
-                  <Button variant="outline" className="w-full">
-                    Gérer le contenu
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Ftour Solidaire Section */}
-        <div className="mt-8">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <UtensilsCrossed className="h-5 w-5 text-[#5d5a3c]" />
-            Ftour Solidaire
-          </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Réservations Management */}
-            {canManageVolunteers && (
-              <Card className="card-hover border-[#5d5a3c]/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-[#5d5a3c]/10 flex items-center justify-center">
-                      <UtensilsCrossed className="h-5 w-5 text-[#5d5a3c]" />
-                    </div>
-                    Réservations Ftour
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Gérer les réservations pour les repas Restaurant Solidaires
-                  </p>
-                  <Link href="/admin/reservations">
-                    <Button variant="outline" className="w-full border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10">
-                      Gérer les réservations
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Restaurants Management */}
-            {isSuperAdmin && (
-              <Card className="card-hover border-[#5d5a3c]/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-[#5d5a3c]/10 flex items-center justify-center">
-                      <Store className="h-5 w-5 text-[#5d5a3c]" />
-                    </div>
-                    Restaurants
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Configurer les restaurants et leurs capacités
-                  </p>
-                  <Link href="/admin/restaurants">
-                    <Button variant="outline" className="w-full border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10">
-                      Gérer les restaurants
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Scanner Réservations */}
-            {canScan && (
-              <Card className="card-hover border-[#5d5a3c]/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-[#5d5a3c]/10 flex items-center justify-center">
-                      <QrCode className="h-5 w-5 text-[#5d5a3c]" />
-                    </div>
-                    Scanner Réservations
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Scanner les QR codes des réservations Ftour
-                  </p>
-                  <Link href="/admin/scan-reservation">
-                    <Button className="w-full bg-[#5d5a3c] hover:bg-[#5d5a3c]/90">
-                      Ouvrir le scanner
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            )}
+        {/* Module Sections */}
+        {visibleSections.map((section) => (
+          <div key={section.title} className="mb-8">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              {section.icon && <section.icon className={`h-5 w-5 ${section.iconColor || ''}`} />}
+              {section.title}
+            </h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {section.modules.map((mod) => (
+                <Card key={mod.route} className={`card-hover ${section.borderClass || ''}`}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg ${mod.iconBg} flex items-center justify-center`}>
+                        <mod.icon className={`h-5 w-5 ${mod.iconColor}`} />
+                      </div>
+                      {mod.label}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {mod.description}
+                    </p>
+                    <Link href={mod.route}>
+                      <Button
+                        variant={mod.variant === 'primary' ? 'default' : 'outline'}
+                        className={`w-full ${mod.buttonClass || ''}`}
+                      >
+                        {mod.variant === 'primary' ? 'Ouvrir' : 'Gérer'}
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
-
-        {/* Unified Dashboard Section */}
-        <div className="mt-8">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-blue-600" />
-            Tableau de bord unifié
-          </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Unified Dashboard */}
-            {isSuperAdmin && (
-              <Card className="card-hover">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                      <BarChart3 className="h-5 w-5 text-blue-600" />
-                    </div>
-                    Tous les services
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Statistiques et gestion unifiées pour tous les modules (Goodies, Pâtisserie, Dons, Ftour)
-                  </p>
-                  <Link href="/admin/unified-dashboard">
-                    <Button variant="outline" className="w-full">
-                      Voir le tableau de bord
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
+        ))}
       </main>
     </div>
   );
