@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(320),
   phone VARCHAR(20),
   login_method VARCHAR(64),
-  role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin', 'super_admin', 'admin_operations', 'admin_boutique', 'admin_dons', 'scanner')),
+  role VARCHAR(40) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   last_signed_in TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -327,3 +327,103 @@ $$ language 'plpgsql';
 
 CREATE TRIGGER update_volunteer_count AFTER INSERT OR DELETE OR UPDATE OF day_id ON volunteers
   FOR EACH ROW EXECUTE FUNCTION update_registered_count();
+
+-- ============================================
+-- RESTAURANT SLOTS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS restaurant_slots (
+  id SERIAL PRIMARY KEY,
+  start_at TIMESTAMPTZ NOT NULL,
+  end_at TIMESTAMPTZ NOT NULL,
+  cap_jardin_global INTEGER NOT NULL DEFAULT 120,
+  cap_brasserie INTEGER NOT NULL DEFAULT 50,
+  cap_corpo INTEGER NOT NULL DEFAULT 50,
+  cap_jardin_libre INTEGER NOT NULL DEFAULT 20,
+  booked_jardin_global INTEGER NOT NULL DEFAULT 0,
+  booked_brasserie INTEGER NOT NULL DEFAULT 0,
+  booked_corpo INTEGER NOT NULL DEFAULT 0,
+  booked_jardin_libre INTEGER NOT NULL DEFAULT 0,
+  is_closed BOOLEAN NOT NULL DEFAULT false,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_restaurant_slots_start_at ON restaurant_slots(start_at);
+CREATE INDEX idx_restaurant_slots_is_closed ON restaurant_slots(is_closed);
+
+-- ============================================
+-- RESTAURANT RESERVATIONS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS restaurant_reservations (
+  id SERIAL PRIMARY KEY,
+  reference VARCHAR(50) NOT NULL UNIQUE,
+  type VARCHAR(20) NOT NULL CHECK (type IN ('particulier', 'entreprise', 'groupe')),
+  slot_id INTEGER NOT NULL REFERENCES restaurant_slots(id),
+  display_choice VARCHAR(20) NOT NULL CHECK (display_choice IN ('jardin', 'brasserie', 'corpo')),
+  seats_total INTEGER NOT NULL,
+  -- Contact
+  name VARCHAR(255) NOT NULL,
+  phone VARCHAR(20) NOT NULL,
+  email VARCHAR(320),
+  -- Company (entreprise)
+  company_name VARCHAR(255),
+  -- Group (groupe)
+  group_name VARCHAR(255),
+  group_type VARCHAR(50),
+  -- Status
+  status VARCHAR(30) NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted', 'pending_confirmation', 'confirmed', 'rejected', 'cancelled', 'completed', 'no_show')),
+  payment_status VARCHAR(20) NOT NULL DEFAULT 'not_applicable' CHECK (payment_status IN ('not_applicable', 'pending', 'paid', 'failed', 'refunded')),
+  payment_amount DECIMAL(10,2),
+  payment_provider VARCHAR(50),
+  payment_reference VARCHAR(100),
+  -- QR
+  qr_token VARCHAR(64) UNIQUE,
+  qr_status VARCHAR(20) DEFAULT 'inactive' CHECK (qr_status IN ('inactive', 'active', 'used', 'revoked')),
+  -- Hold expiration
+  expires_at TIMESTAMPTZ,
+  -- Tracking
+  processed_by INTEGER REFERENCES users(id),
+  processed_at TIMESTAMPTZ,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_restaurant_reservations_reference ON restaurant_reservations(reference);
+CREATE INDEX idx_restaurant_reservations_type ON restaurant_reservations(type);
+CREATE INDEX idx_restaurant_reservations_slot_id ON restaurant_reservations(slot_id);
+CREATE INDEX idx_restaurant_reservations_status ON restaurant_reservations(status);
+
+-- ============================================
+-- RESTAURANT RESERVATION ALLOCATIONS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS restaurant_reservation_allocations (
+  id SERIAL PRIMARY KEY,
+  reservation_id INTEGER NOT NULL REFERENCES restaurant_reservations(id) ON DELETE CASCADE,
+  bucket VARCHAR(20) NOT NULL CHECK (bucket IN ('brasserie', 'corpo', 'jardin_libre')),
+  seats INTEGER NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_restaurant_allocations_reservation ON restaurant_reservation_allocations(reservation_id);
+
+-- RLS for restaurant tables
+ALTER TABLE restaurant_slots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE restaurant_reservations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE restaurant_reservation_allocations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public can read open restaurant slots" ON restaurant_slots
+  FOR SELECT USING (is_closed = false);
+CREATE POLICY "Public can create restaurant reservations" ON restaurant_reservations
+  FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public can read restaurant reservations" ON restaurant_reservations
+  FOR SELECT USING (true);
+CREATE POLICY "Service role full access restaurant_slots" ON restaurant_slots FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access restaurant_reservations" ON restaurant_reservations FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access restaurant_reservation_allocations" ON restaurant_reservation_allocations FOR ALL USING (true) WITH CHECK (true);
+
+CREATE TRIGGER update_restaurant_slots_updated_at BEFORE UPDATE ON restaurant_slots
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_restaurant_reservations_updated_at BEFORE UPDATE ON restaurant_reservations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

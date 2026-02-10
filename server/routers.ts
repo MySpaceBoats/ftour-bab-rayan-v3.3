@@ -16,7 +16,7 @@ import { companyBookingsRouter } from "./company-booking-routers";
 // ============================================
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_operations', 'admin_boutique', 'admin_dons'];
+  const allowedRoles = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes'];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès administrateur requis' });
   }
@@ -31,7 +31,7 @@ const superAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 const scannerProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_operations', 'scanner'];
+  const allowedRoles = ['admin', 'super_admin', 'admin_ops', 'scanner'];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès scanner requis' });
   }
@@ -39,7 +39,7 @@ const scannerProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 const adminOpsProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_operations'];
+  const allowedRoles = ['admin', 'super_admin', 'admin_ops'];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès opérations requis' });
   }
@@ -58,6 +58,30 @@ const adminDonsProcedure = protectedProcedure.use(({ ctx, next }) => {
   const allowedRoles = ['admin', 'super_admin', 'admin_dons'];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès dons requis' });
+  }
+  return next({ ctx });
+});
+
+const adminRestaurantPartProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_particuliers'];
+  if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès réservations particuliers requis' });
+  }
+  return next({ ctx });
+});
+
+const adminRestaurantEntProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_entreprises'];
+  if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès réservations entreprises requis' });
+  }
+  return next({ ctx });
+});
+
+const adminRestaurantGroupProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_groupes'];
+  if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès réservations groupes requis' });
   }
   return next({ ctx });
 });
@@ -646,7 +670,7 @@ const usersRouter = router({
   updateRole: superAdminProcedure
     .input(z.object({
       userId: z.number(),
-      role: z.enum(['user', 'admin', 'super_admin', 'admin_operations', 'admin_boutique', 'admin_dons', 'scanner']),
+      role: z.enum(['user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes']),
     }))
     .mutation(async ({ input }) => {
       await supabaseServices.updateUserRoleSupabase(input.userId, input.role);
@@ -1093,6 +1117,342 @@ function generateReservationConfirmationEmail(reservation: any) {
     subject: `✅ Réservation confirmée - ${reservation.referenceCode} - Ftour Bab Rayan`,
   };
 }
+
+// ============================================
+// RESTAURANT MODULE ROUTER (Particuliers / Entreprises / Groupes)
+// ============================================
+
+const restaurantModuleRouter = router({
+  // --- Public: list available slots ---
+  listSlots: publicProcedure
+    .input(z.object({
+      fromDate: z.string().optional(),
+      toDate: z.string().optional(),
+    }).optional())
+    .query(async () => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      const { data, error } = await supabase
+        .from('restaurant_slots')
+        .select('*')
+        .eq('is_closed', false)
+        .order('start_at', { ascending: true });
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data || [];
+    }),
+
+  // --- Public: create reservation (particulier) ---
+  createParticulier: publicProcedure
+    .input(z.object({
+      slotId: z.number(),
+      displayChoice: z.enum(['jardin', 'brasserie']),
+      seats: z.number().min(1).max(10),
+      name: z.string().min(1),
+      phone: z.string().min(1),
+      email: z.string().email().optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      if (input.seats > 10) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Maximum 10 places par réservation particulier' });
+      }
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+
+      // Validate that brasserie or jardin is allowed for particuliers (not corpo)
+      if (input.displayChoice === 'corpo' as any) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Espace non disponible pour les particuliers' });
+      }
+
+      const reference = `RES-P-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      const qrToken = `rp-${Date.now()}-${Math.random().toString(36).substring(2, 14)}`;
+
+      const { data, error } = await supabase
+        .from('restaurant_reservations')
+        .insert({
+          reference,
+          type: 'particulier',
+          slot_id: input.slotId,
+          display_choice: input.displayChoice,
+          seats_total: input.seats,
+          name: input.name,
+          phone: input.phone,
+          email: input.email,
+          notes: input.notes,
+          status: 'submitted',
+          payment_status: 'pending',
+          qr_token: qrToken,
+          qr_status: 'inactive',
+        })
+        .select()
+        .single();
+
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data;
+    }),
+
+  // --- Public: create reservation (entreprise) ---
+  createEntreprise: publicProcedure
+    .input(z.object({
+      slotId: z.number(),
+      displayChoice: z.enum(['jardin', 'corpo']),
+      seats: z.number().min(1).max(120),
+      companyName: z.string().min(1),
+      name: z.string().min(1),
+      phone: z.string().min(1),
+      email: z.string().email().optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+
+      if (input.displayChoice === 'brasserie' as any) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Espace non disponible pour les entreprises' });
+      }
+
+      const reference = `RES-E-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      const qrToken = `re-${Date.now()}-${Math.random().toString(36).substring(2, 14)}`;
+
+      const { data, error } = await supabase
+        .from('restaurant_reservations')
+        .insert({
+          reference,
+          type: 'entreprise',
+          slot_id: input.slotId,
+          display_choice: input.displayChoice,
+          seats_total: input.seats,
+          name: input.name,
+          phone: input.phone,
+          email: input.email,
+          company_name: input.companyName,
+          notes: input.notes,
+          status: 'pending_confirmation',
+          payment_status: 'not_applicable',
+          qr_token: qrToken,
+          qr_status: 'inactive',
+        })
+        .select()
+        .single();
+
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data;
+    }),
+
+  // --- Public: create reservation (groupe) ---
+  createGroupe: publicProcedure
+    .input(z.object({
+      slotId: z.number(),
+      displayChoice: z.enum(['jardin', 'brasserie']),
+      seats: z.number().min(1).max(120),
+      groupName: z.string().min(1),
+      groupType: z.string().optional(),
+      name: z.string().min(1),
+      phone: z.string().min(1),
+      email: z.string().email().optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+
+      if (input.displayChoice === 'corpo' as any) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Espace non disponible pour les groupes' });
+      }
+
+      const reference = `RES-G-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      const qrToken = `rg-${Date.now()}-${Math.random().toString(36).substring(2, 14)}`;
+
+      const { data, error } = await supabase
+        .from('restaurant_reservations')
+        .insert({
+          reference,
+          type: 'groupe',
+          slot_id: input.slotId,
+          display_choice: input.displayChoice,
+          seats_total: input.seats,
+          name: input.name,
+          phone: input.phone,
+          email: input.email,
+          group_name: input.groupName,
+          group_type: input.groupType,
+          notes: input.notes,
+          status: 'pending_confirmation',
+          payment_status: 'not_applicable',
+          qr_token: qrToken,
+          qr_status: 'inactive',
+        })
+        .select()
+        .single();
+
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data;
+    }),
+
+  // --- Admin: list reservations by type ---
+  adminListParticuliers: adminRestaurantPartProcedure
+    .input(z.object({
+      status: z.string().optional(),
+      fromDate: z.string().optional(),
+      toDate: z.string().optional(),
+      search: z.string().optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      let query = supabase.from('restaurant_reservations').select('*').eq('type', 'particulier').order('created_at', { ascending: false });
+      if (input?.status) query = query.eq('status', input.status);
+      if (input?.search) query = query.or(`name.ilike.%${input.search}%,phone.ilike.%${input.search}%,reference.ilike.%${input.search}%`);
+      const { data, error } = await query;
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data || [];
+    }),
+
+  adminListEntreprises: adminRestaurantEntProcedure
+    .input(z.object({
+      status: z.string().optional(),
+      fromDate: z.string().optional(),
+      toDate: z.string().optional(),
+      search: z.string().optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      let query = supabase.from('restaurant_reservations').select('*').eq('type', 'entreprise').order('created_at', { ascending: false });
+      if (input?.status) query = query.eq('status', input.status);
+      if (input?.search) query = query.or(`name.ilike.%${input.search}%,company_name.ilike.%${input.search}%,reference.ilike.%${input.search}%`);
+      const { data, error } = await query;
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data || [];
+    }),
+
+  adminListGroupes: adminRestaurantGroupProcedure
+    .input(z.object({
+      status: z.string().optional(),
+      fromDate: z.string().optional(),
+      toDate: z.string().optional(),
+      search: z.string().optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      let query = supabase.from('restaurant_reservations').select('*').eq('type', 'groupe').order('created_at', { ascending: false });
+      if (input?.status) query = query.eq('status', input.status);
+      if (input?.search) query = query.or(`name.ilike.%${input.search}%,group_name.ilike.%${input.search}%,reference.ilike.%${input.search}%`);
+      const { data, error } = await query;
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data || [];
+    }),
+
+  // --- Admin: update reservation status ---
+  adminUpdateStatus: adminProcedure
+    .input(z.object({
+      id: z.number(),
+      status: z.enum(['submitted', 'pending_confirmation', 'confirmed', 'rejected', 'cancelled', 'completed', 'no_show']),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+
+      const updateData: any = {
+        status: input.status,
+        processed_by: ctx.user?.id,
+        processed_at: new Date().toISOString(),
+      };
+
+      // Activate QR when confirmed
+      if (input.status === 'confirmed') {
+        updateData.qr_status = 'active';
+      }
+      // Revoke QR when cancelled/rejected
+      if (input.status === 'cancelled' || input.status === 'rejected') {
+        updateData.qr_status = 'revoked';
+      }
+
+      const { error } = await supabase
+        .from('restaurant_reservations')
+        .update(updateData)
+        .eq('id', input.id);
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return { success: true };
+    }),
+
+  // --- Admin: stats ---
+  adminStats: adminProcedure
+    .input(z.object({
+      type: z.enum(['particulier', 'entreprise', 'groupe']).optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+
+      let query = supabase.from('restaurant_reservations').select('type, status, seats_total');
+      if (input?.type) query = query.eq('type', input.type);
+      const { data, error } = await query;
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+
+      const reservations = data || [];
+      return {
+        total: reservations.length,
+        totalSeats: reservations.reduce((sum: number, r: any) => sum + (r.seats_total || 0), 0),
+        byStatus: {
+          submitted: reservations.filter((r: any) => r.status === 'submitted').length,
+          pending_confirmation: reservations.filter((r: any) => r.status === 'pending_confirmation').length,
+          confirmed: reservations.filter((r: any) => r.status === 'confirmed').length,
+          rejected: reservations.filter((r: any) => r.status === 'rejected').length,
+          cancelled: reservations.filter((r: any) => r.status === 'cancelled').length,
+          completed: reservations.filter((r: any) => r.status === 'completed').length,
+        },
+        byType: {
+          particulier: reservations.filter((r: any) => r.type === 'particulier').length,
+          entreprise: reservations.filter((r: any) => r.type === 'entreprise').length,
+          groupe: reservations.filter((r: any) => r.type === 'groupe').length,
+        },
+      };
+    }),
+
+  // --- Admin: manage slots ---
+  adminCreateSlot: superAdminProcedure
+    .input(z.object({
+      startAt: z.string(),
+      endAt: z.string(),
+      capJardinGlobal: z.number().default(120),
+      capBrasserie: z.number().default(50),
+      capCorpo: z.number().default(50),
+      capJardinLibre: z.number().default(20),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      const { data, error } = await supabase
+        .from('restaurant_slots')
+        .insert({
+          start_at: input.startAt,
+          end_at: input.endAt,
+          cap_jardin_global: input.capJardinGlobal,
+          cap_brasserie: input.capBrasserie,
+          cap_corpo: input.capCorpo,
+          cap_jardin_libre: input.capJardinLibre,
+          notes: input.notes,
+        })
+        .select()
+        .single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data;
+    }),
+
+  adminListSlots: adminProcedure.query(async () => {
+    const supabase = getSupabaseAdminClient();
+    if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+    const { data, error } = await supabase
+      .from('restaurant_slots')
+      .select('*')
+      .order('start_at', { ascending: true });
+    if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+    return data || [];
+  }),
+});
 
 // ============================================
 // PAYMENTS ROUTER
@@ -1607,6 +1967,7 @@ export const appRouterUpdated = router({
   pastryOrders: pastryOrdersRouter,
   qr: qrRouter,
   companyBookings: companyBookingsRouter,
+  restaurantModule: restaurantModuleRouter,
 });
 
 export type AppRouter = typeof appRouterUpdated;
