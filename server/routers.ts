@@ -10,6 +10,7 @@ import * as supabaseServices from "./supabase-services";
 import * as reservationServices from "./reservation-services";
 import { getSupabaseAdminClient } from "./supabase";
 import { companyBookingsRouter } from "./company-booking-routers";
+import { restaurantReservationsRouter } from "./restaurant-reservation-routers";
 
 // ============================================
 // ROLE-BASED PROCEDURES
@@ -2443,6 +2444,7 @@ export const appRouterUpdated = router({
   pastryOrders: pastryOrdersRouter,
   qr: qrRouter,
   companyBookings: companyBookingsRouter,
+  restaurantReservations: restaurantReservationsRouter,
   restaurantModule: restaurantModuleRouter,
   terroirModule: terroirModuleRouter,
 });

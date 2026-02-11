@@ -2,25 +2,19 @@ import { z } from "zod";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { sendEmail, generateParticulierReservationRequestEmail, generateParticulierReservationConfirmedEmail, generateParticulierReservationRefusedEmail, generateNewBookingNotificationEmail } from "./email";
+import * as reservationServices from "./restaurant-reservation-services";
 import crypto from "crypto";
 
 // ============================================
 // HELPERS
 // ============================================
 
-/**
- * Génère une référence unique pour une réservation
- * Format: RES-P-XXXXX (Particulier), RES-E-XXXXX (Entreprise), RES-G-XXXXX (Groupe)
- */
 function generateReservationReference(type: 'particulier' | 'entreprise' | 'groupe'): string {
   const typeCode = type === 'particulier' ? 'P' : type === 'entreprise' ? 'E' : 'G';
   const randomPart = crypto.randomBytes(3).toString('hex').toUpperCase();
   return `RES-${typeCode}-${randomPart}`;
 }
 
-/**
- * Génère un token QR sécurisé (128 bits = 32 caractères hex)
- */
 function generateQrToken(): string {
   return crypto.randomBytes(16).toString('hex');
 }
@@ -30,14 +24,6 @@ function generateQrToken(): string {
 // ============================================
 
 export const restaurantReservationsRouter = router({
-  // ============================================
-  // PARTICULIERS
-  // ============================================
-
-  /**
-   * Créer une nouvelle réservation particulier
-   * Email 1 envoyé automatiquement (accusé de réception)
-   */
   particulier: router({
     create: publicProcedure
       .input(
@@ -51,15 +37,22 @@ export const restaurantReservationsRouter = router({
       )
       .mutation(async ({ input }) => {
         try {
-          // Générer référence et token
           const reference = generateReservationReference('particulier');
           const qrToken = generateQrToken();
 
-          // TODO: Créer la réservation dans la BDD avec statut pending_validation
-          // const reservation = await db.insert(restaurantReservations).values({...})
+          const reservation = await reservationServices.createRestaurantReservation({
+            reference,
+            type: 'particulier',
+            name: input.firstName,
+            email: input.email,
+            phone: input.phone,
+            date: new Date(input.date),
+            seatsTotal: input.participantsCount,
+            qrToken,
+            displayChoice: 'jardin',
+          });
 
-          // Envoyer Email 1 : Accusé de réception (SANS QR)
-          const emailResult = await sendEmail({
+          await sendEmail({
             to: input.email,
             subject: generateParticulierReservationRequestEmail({
               firstName: input.firstName,
@@ -78,7 +71,6 @@ export const restaurantReservationsRouter = router({
             cc: ['heartfulness@myspace.boats'],
           });
 
-          // Envoyer email interne à l'équipe
           await sendEmail({
             to: 'digital@myspace.boats',
             subject: generateNewBookingNotificationEmail({
@@ -103,8 +95,7 @@ export const restaurantReservationsRouter = router({
 
           return {
             success: true,
-            reference,
-            qrToken,
+            reservation,
             message: "Demande reçue. Vérifiez votre email.",
           };
         } catch (error) {
@@ -116,25 +107,13 @@ export const restaurantReservationsRouter = router({
         }
       }),
 
-    /**
-     * Récupérer une réservation particulier par référence
-     */
     getByReference: publicProcedure
       .input(z.object({ reference: z.string() }))
       .query(async ({ input }) => {
-        // TODO: Récupérer de la BDD
-        return null;
+        return await reservationServices.getRestaurantReservationByReference(input.reference);
       }),
   }),
 
-  // ============================================
-  // ENTREPRISES
-  // ============================================
-
-  /**
-   * Créer une nouvelle réservation entreprise
-   * Email 1 envoyé automatiquement (accusé de réception)
-   */
   entreprise: router({
     create: publicProcedure
       .input(
@@ -151,13 +130,23 @@ export const restaurantReservationsRouter = router({
       )
       .mutation(async ({ input }) => {
         try {
-          // Générer référence et token
           const reference = generateReservationReference('entreprise');
           const qrToken = generateQrToken();
 
-          // TODO: Créer la réservation dans la BDD avec statut pending_validation
+          const reservation = await reservationServices.createRestaurantReservation({
+            reference,
+            type: 'entreprise',
+            name: input.contactName,
+            email: input.email,
+            phone: input.phone,
+            date: new Date(input.date),
+            seatsTotal: input.participantsCount,
+            qrToken,
+            displayChoice: 'jardin',
+            companyName: input.companyName,
+            notes: input.companyNotes,
+          });
 
-          // Envoyer Email 1 : Accusé de réception (SANS QR)
           await sendEmail({
             to: input.email,
             subject: `📬 Demande de réservation entreprise reçue`,
@@ -174,7 +163,6 @@ export const restaurantReservationsRouter = router({
             cc: ['heartfulness@myspace.boats'],
           });
 
-          // Envoyer email interne à l'équipe
           await sendEmail({
             to: 'digital@myspace.boats',
             subject: `📬 Nouvelle demande Entreprise - ${input.date}`,
@@ -192,8 +180,7 @@ export const restaurantReservationsRouter = router({
 
           return {
             success: true,
-            reference,
-            qrToken,
+            reservation,
             message: "Demande reçue. Vérifiez votre email.",
           };
         } catch (error) {
@@ -205,25 +192,13 @@ export const restaurantReservationsRouter = router({
         }
       }),
 
-    /**
-     * Récupérer une réservation entreprise par référence
-     */
     getByReference: publicProcedure
       .input(z.object({ reference: z.string() }))
       .query(async ({ input }) => {
-        // TODO: Récupérer de la BDD
-        return null;
+        return await reservationServices.getRestaurantReservationByReference(input.reference);
       }),
   }),
 
-  // ============================================
-  // GROUPES
-  // ============================================
-
-  /**
-   * Créer une nouvelle réservation groupe
-   * Email 1 envoyé automatiquement (accusé de réception)
-   */
   groupe: router({
     create: publicProcedure
       .input(
@@ -239,13 +214,23 @@ export const restaurantReservationsRouter = router({
       )
       .mutation(async ({ input }) => {
         try {
-          // Générer référence et token
           const reference = generateReservationReference('groupe');
           const qrToken = generateQrToken();
 
-          // TODO: Créer la réservation dans la BDD avec statut pending_validation
+          const reservation = await reservationServices.createRestaurantReservation({
+            reference,
+            type: 'groupe',
+            name: input.contactName,
+            email: input.email,
+            phone: input.phone,
+            date: new Date(input.date),
+            seatsTotal: input.participantsCount,
+            qrToken,
+            displayChoice: 'jardin',
+            groupName: input.groupName,
+            groupType: input.groupType,
+          });
 
-          // Envoyer Email 1 : Accusé de réception (SANS QR)
           await sendEmail({
             to: input.email,
             subject: `📬 Demande de réservation groupe reçue`,
@@ -261,7 +246,6 @@ export const restaurantReservationsRouter = router({
             cc: ['heartfulness@myspace.boats'],
           });
 
-          // Envoyer email interne à l'équipe
           await sendEmail({
             to: 'digital@myspace.boats',
             subject: `📬 Nouvelle demande Groupe - ${input.date}`,
@@ -278,8 +262,7 @@ export const restaurantReservationsRouter = router({
 
           return {
             success: true,
-            reference,
-            qrToken,
+            reservation,
             message: "Demande reçue. Vérifiez votre email.",
           };
         } catch (error) {
@@ -291,26 +274,13 @@ export const restaurantReservationsRouter = router({
         }
       }),
 
-    /**
-     * Récupérer une réservation groupe par référence
-     */
     getByReference: publicProcedure
       .input(z.object({ reference: z.string() }))
       .query(async ({ input }) => {
-        // TODO: Récupérer de la BDD
-        return null;
+        return await reservationServices.getRestaurantReservationByReference(input.reference);
       }),
   }),
 
-  // ============================================
-  // ADMIN PROCEDURES
-  // ============================================
-
-  /**
-   * Valider une réservation (admin)
-   * Email 2 envoyé (confirmation + QR CODE)
-   * QR activé immédiatement
-   */
   validate: protectedProcedure
     .input(
       z.object({
@@ -319,21 +289,42 @@ export const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      // Vérifier les permissions
       const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes'];
       if (!allowedRoles.includes(ctx.user?.role || '')) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
       }
 
       try {
-        // TODO: Récupérer la réservation de la BDD
-        // const reservation = await db.query.restaurantReservations.findFirst({...})
+        const reservation = await reservationServices.getRestaurantReservationByReference(input.reference);
+        if (!reservation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Réservation non trouvée' });
+        }
 
-        // TODO: Mettre à jour le statut à validated_pending_payment
-        // await db.update(restaurantReservations).set({...})
+        await reservationServices.updateRestaurantReservationStatus(reservation.id, 'validated_pending_payment');
+        await reservationServices.updateRestaurantReservationPaymentStatus(reservation.id, 'pending_payment');
 
-        // TODO: Envoyer Email 2 : Confirmation + QR CODE
-        // await sendEmail({...})
+        await sendEmail({
+          to: reservation.email,
+          subject: generateParticulierReservationConfirmedEmail({
+            firstName: reservation.name,
+            email: reservation.email,
+            date: reservation.date.toISOString().split('T')[0],
+            participantsCount: reservation.seatsTotal,
+            reference: reservation.reference,
+            qrToken: reservation.qrToken,
+            baseUrl: input.baseUrl,
+          }).subject,
+          html: generateParticulierReservationConfirmedEmail({
+            firstName: reservation.name,
+            email: reservation.email,
+            date: reservation.date.toISOString().split('T')[0],
+            participantsCount: reservation.seatsTotal,
+            reference: reservation.reference,
+            qrToken: reservation.qrToken,
+            baseUrl: input.baseUrl,
+          }).html,
+          cc: ['heartfulness@myspace.boats'],
+        });
 
         return {
           success: true,
@@ -348,28 +339,36 @@ export const restaurantReservationsRouter = router({
       }
     }),
 
-  /**
-   * Refuser une réservation (admin)
-   * Email 3 envoyé (refus)
-   */
   refuse: protectedProcedure
     .input(z.object({ reference: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      // Vérifier les permissions
       const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes'];
       if (!allowedRoles.includes(ctx.user?.role || '')) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
       }
 
       try {
-        // TODO: Récupérer la réservation de la BDD
-        // const reservation = await db.query.restaurantReservations.findFirst({...})
+        const reservation = await reservationServices.getRestaurantReservationByReference(input.reference);
+        if (!reservation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Réservation non trouvée' });
+        }
 
-        // TODO: Mettre à jour le statut à refused
-        // await db.update(restaurantReservations).set({...})
+        await reservationServices.updateRestaurantReservationStatus(reservation.id, 'refused');
 
-        // TODO: Envoyer Email 3 : Refus
-        // await sendEmail({...})
+        await sendEmail({
+          to: reservation.email,
+          subject: generateParticulierReservationRefusedEmail({
+            firstName: reservation.name,
+            email: reservation.email,
+            date: reservation.date.toISOString().split('T')[0],
+          }).subject,
+          html: generateParticulierReservationRefusedEmail({
+            firstName: reservation.name,
+            email: reservation.email,
+            date: reservation.date.toISOString().split('T')[0],
+          }).html,
+          cc: ['heartfulness@myspace.boats'],
+        });
 
         return {
           success: true,
