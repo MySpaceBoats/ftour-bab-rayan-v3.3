@@ -1,8 +1,8 @@
-import { restaurantReservations } from "../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { ENV } from "./_core/env";
 import mysql from "mysql2/promise";
 import { drizzle } from "drizzle-orm/mysql2";
+import { restaurantReservations } from "../drizzle/schema";
 
 // Initialize Drizzle ORM with MySQL connection
 let db: any;
@@ -73,9 +73,11 @@ export async function createRestaurantReservation(data: {
 export async function getRestaurantReservationByReference(reference: string) {
   try {
     const database = await getDb();
-    return await database.query.restaurantReservations.findFirst({
-      where: eq(restaurantReservations.reference, reference),
-    });
+    return await database
+      .select()
+      .from(restaurantReservations)
+      .where(eq(restaurantReservations.reference, reference))
+      .limit(1);
   } catch (error) {
     console.error("[getRestaurantReservationByReference] Error:", error);
     throw error;

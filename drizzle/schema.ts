@@ -721,8 +721,8 @@ export const restaurantReservations = mysqlTable("restaurant_reservations", {
   id: int("id").autoincrement().primaryKey(),
   reference: varchar("reference", { length: 50 }).notNull().unique(), // RES-P-XXXXX / RES-E-XXXXX / RES-G-XXXXX
   type: restaurantReservationTypeEnum.notNull(),
-  slotId: int("slotId").notNull(),
-  displayChoice: restaurantDisplayChoiceEnum.notNull(),
+  slotId: int("slotId").notNull().default(1),
+  displayChoice: restaurantDisplayChoiceEnum.notNull().default('jardin'),
   seatsTotal: int("seatsTotal").notNull(),
   // Contact info (common)
   name: varchar("name", { length: 255 }).notNull(),
