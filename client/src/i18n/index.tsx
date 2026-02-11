@@ -2,11 +2,10 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { fr, Translations } from './fr';
 import { ar } from './ar';
 import { en } from './en';
-import { amz } from './amz';
 
-export type Language = 'fr' | 'ar' | 'en' | 'amz';
+export type Language = 'fr' | 'ar' | 'en';
 export type Locale = Language;
-export const SUPPORTED_LOCALES: Locale[] = ['fr', 'ar', 'en', 'amz'];
+export const SUPPORTED_LOCALES: Locale[] = ['fr', 'ar', 'en'];
 
 interface I18nContextType {
   lang: Language;
@@ -20,14 +19,12 @@ const translations: Record<Language, Translations> = {
   fr,
   ar,
   en,
-  amz,
 };
 
 // Langues affichées avec leurs noms natifs uniquement (sans drapeaux)
 const languages = [
   { code: 'fr' as Language, name: 'Français', nativeName: 'Français' },
   { code: 'ar' as Language, name: 'العربية', nativeName: 'العربية' },
-  { code: 'amz' as Language, name: 'ⵜⴰⵎⴰⵣⵉⵖⵜ', nativeName: 'ⵜⴰⵎⴰⵣⵉⵖⵜ' },
   { code: 'en' as Language, name: 'English', nativeName: 'English' },
 ];
 

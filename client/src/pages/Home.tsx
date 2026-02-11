@@ -416,23 +416,23 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Company Booking Card */}
+              {/* Restaurant Solidaire Card */}
               <div className="bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#9B8B6F]/30 transition-all">
                 <div className="h-1 bg-[#9B8B6F]" />
                 <div className="p-8 space-y-4">
                   <div className="w-14 h-14 rounded-2xl bg-[#9B8B6F]/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Users className="h-7 w-7 text-[#9B8B6F]" />
+                    <Utensils className="h-7 w-7 text-[#9B8B6F]" />
                   </div>
-                  <h3 className="text-xl font-bold text-[#F2E9D3]">{t.home.companyBookingTitle || 'Réservation Entreprise'}</h3>
+                  <h3 className="text-xl font-bold text-[#F2E9D3]">{t.nav.restaurant || 'Restaurant Solidaire'}</h3>
                   <p className="text-[#E6DCC3]">
-                    {t.home.companyBookingDesc || 'Réservez pour votre entreprise avec QR codes individuels'}
+                    {t.home.restaurantSolidaireDesc || 'Découvrez notre restaurant solidaire et réservez votre place'}
                   </p>
-                  <Link href={`/${lang}/company-booking`}>
-                    <Button 
-                      variant="outline" 
+                  <Link href={`/${lang}/reservation`}>
+                    <Button
+                      variant="outline"
                       className="w-full mt-4 border-[#9B8B6F] text-[#9B8B6F] bg-transparent hover:bg-[#9B8B6F] hover:text-[#4A4829]"
                     >
-                      {t.home.bookForCompany || 'Réserver'}
+                      {t.home.reserveNow || 'Réserver'}
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
                   </Link>
