@@ -869,3 +869,42 @@ export const terroirOrderItems = mysqlTable("terroir_order_items", {
 
 export type TerroirOrderItem = typeof terroirOrderItems.$inferSelect;
 export type InsertTerroirOrderItem = typeof terroirOrderItems.$inferInsert;
+
+
+// ============================================
+// UNIFIED BOOKING SYSTEM - SPACES
+// ============================================
+
+export const spaceKeyEnum = mysqlEnum("space_key", ["brasserie", "corpo", "jardin_libre", "jardin_global"]);
+
+export const spaces = mysqlTable("spaces", {
+  id: int("id").autoincrement().primaryKey(),
+  key: spaceKeyEnum.notNull().unique(), // brasserie, corpo, jardin_libre, jardin_global
+  name: varchar("name", { length: 255 }).notNull(), // "Brasserie", "Salle Corpo", etc.
+  capacity: int("capacity").notNull(), // 50, 50, 20, 120
+  description: text("description"),
+  isActive: boolean("isActive").notNull().default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Space = typeof spaces.$inferSelect;
+export type InsertSpace = typeof spaces.$inferInsert;
+
+// ============================================
+// UNIFIED BOOKING SYSTEM - HOLD TRACKING
+// ============================================
+
+export const bookingHolds = mysqlTable("booking_holds", {
+  id: int("id").autoincrement().primaryKey(),
+  reservationId: int("reservationId").notNull(),
+  spaceId: int("spaceId").notNull(),
+  seatsHeld: int("seatsHeld").notNull(),
+  holdExpiresAt: timestamp("holdExpiresAt").notNull(), // 48h from creation
+  isExpired: boolean("isExpired").notNull().default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BookingHold = typeof bookingHolds.$inferSelect;
+export type InsertBookingHold = typeof bookingHolds.$inferInsert;
