@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { trpc } from '@/lib/trpc';
 
 export default function RestaurantParticuliers() {
   const { lang } = useI18n();
@@ -31,7 +32,11 @@ export default function RestaurantParticuliers() {
     return date >= startDate && date <= endDate;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reference, setReference] = useState<string | null>(null);
+  const createReservation = trpc.restaurantReservations.particulier.create.useMutation();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.date || !formData.fullName || !formData.phone || !formData.email) {
@@ -49,11 +54,27 @@ export default function RestaurantParticuliers() {
       return;
     }
 
-    // TODO: Send Email 1 (demande reçue) - no QR yet
-    // TODO: Update status to pending_validation in database
-    // TODO: Create reservation record with status = pending_validation
-    
-    setConfirmed(true);
+    try {
+      setIsSubmitting(true);
+      const result = await createReservation.mutateAsync({
+        firstName: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        date: formData.date,
+        participantsCount: formData.seats,
+      });
+      
+      if (result.success && result.reservation) {
+        setReference(result.reservation.reference);
+        toast.success('Demande envoyée avec succès!');
+        setConfirmed(true);
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error('Erreur lors de l\'envoi de la demande');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (confirmed) {
@@ -73,7 +94,7 @@ export default function RestaurantParticuliers() {
               </div>
               <div className="bg-[#4a4830] p-3 rounded">
                 <p className="text-sm font-medium">Référence de votre demande</p>
-                <p className="text-lg font-bold text-[#d4a574]">RES-{Date.now().toString().slice(-6)}</p>
+                <p className="text-lg font-bold text-[#d4a574]">{reference || 'RES-PENDING'}</p>
               </div>
               <Button onClick={() => navigate(`/${lang}`)} className="w-full bg-[#d4a574] text-[#5d5a3c] hover:bg-[#c9955f]">Retour à l'accueil</Button>
             </CardContent>

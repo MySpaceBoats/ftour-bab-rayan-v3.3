@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -9,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { trpc } from '@/lib/trpc';
 
 export default function CompanyBooking() {
   const { lang } = useI18n();
@@ -43,7 +45,11 @@ export default function CompanyBooking() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleNext = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reference, setReference] = useState<string | null>(null);
+  const createReservation = trpc.restaurantReservations.entreprise.create.useMutation();
+
+  const handleNext = async () => {
     // Validation Étape 1
     if (step === 1) {
       if (!formData.companyName || !formData.contactName || !formData.contactEmail || !formData.contactPhone) {
@@ -54,15 +60,10 @@ export default function CompanyBooking() {
       return;
     }
 
-    // Validation Étape 2 et soumission
+    // Validation Étape 2 et envoi
     if (step === 2) {
-      if (!formData.date || !formData.participantsCount) {
-        toast.error('Veuillez remplir tous les champs obligatoires');
-        return;
-      }
-
-      if (!isDateAllowed(formData.date)) {
-        toast.error('Veuillez sélectionner une date entre le 20 février et le 13 mars');
+      if (!formData.date || !isDateAllowed(formData.date)) {
+        toast.error('Veuillez sélectionner une date valide');
         return;
       }
 
@@ -71,11 +72,30 @@ export default function CompanyBooking() {
         return;
       }
 
-      // TODO: Send Email 1 (demande reçue) - no QR yet
-      // TODO: Update status to pending_validation in database
-      // TODO: Create company booking record with status = pending_validation
-
-      setConfirmed(true);
+      try {
+        setIsSubmitting(true);
+        const result = await createReservation.mutateAsync({
+          companyName: formData.companyName,
+          contactName: formData.contactName,
+          email: formData.contactEmail,
+          phone: formData.contactPhone,
+          companyICE: formData.companyICE || undefined,
+          companyNotes: formData.companyNotes || undefined,
+          date: formData.date,
+          participantsCount: formData.participantsCount,
+        });
+        
+        if (result.success && result.reservation) {
+          setReference(result.reservation.reference);
+          toast.success('Demande envoyée avec succès!');
+          setConfirmed(true);
+        }
+      } catch (error) {
+        console.error('Erreur:', error);
+        toast.error('Erreur lors de l\'envoi de la demande');
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -102,7 +122,7 @@ export default function CompanyBooking() {
               </div>
               <div className="bg-[#4a4830] p-3 rounded">
                 <p className="text-sm font-medium">Référence de votre demande</p>
-                <p className="text-lg font-bold text-[#d4a574]">ENT-{Date.now().toString().slice(-6)}</p>
+                <p className="text-lg font-bold text-[#d4a574]">{reference || 'RES-PENDING'}</p>
               </div>
               <Button onClick={() => navigate(`/${lang}`)} className="w-full bg-[#d4a574] text-[#5d5a3c] hover:bg-[#c9955f]">Retour à l'accueil</Button>
             </CardContent>
