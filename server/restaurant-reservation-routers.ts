@@ -133,6 +133,14 @@ export const restaurantReservationsRouter = router({
           const reference = generateReservationReference('entreprise');
           const qrToken = generateQrToken();
 
+          console.info("[Entreprise Reservation] Creating reservation", {
+            reference,
+            date: input.date,
+            participantsCount: input.participantsCount,
+            companyName: input.companyName,
+            contactEmail: input.email,
+          });
+
           const reservation = await reservationServices.createRestaurantReservation({
             reference,
             type: 'entreprise',
@@ -147,7 +155,7 @@ export const restaurantReservationsRouter = router({
             notes: input.companyNotes,
           });
 
-          await sendEmail({
+          const customerEmailResult = await sendEmail({
             to: input.email,
             subject: `📬 Demande de réservation entreprise reçue`,
             html: `
@@ -163,7 +171,7 @@ export const restaurantReservationsRouter = router({
             cc: ['heartfulness@myspace.boats'],
           });
 
-          await sendEmail({
+          const internalEmailResult = await sendEmail({
             to: 'digital@myspace.boats',
             subject: `📬 Nouvelle demande Entreprise - ${input.date}`,
             html: generateNewBookingNotificationEmail({
@@ -178,16 +186,30 @@ export const restaurantReservationsRouter = router({
             }).html,
           });
 
+          if (!customerEmailResult.success || !internalEmailResult.success) {
+            console.warn("[Entreprise Reservation] Reservation created but one or more emails failed", {
+              reference,
+              customerEmailResult,
+              internalEmailResult,
+            });
+          }
+
           return {
             success: true,
             reservation,
             message: "Demande reçue. Vérifiez votre email.",
           };
         } catch (error) {
-          console.error("[Entreprise Reservation] Error:", error);
+          console.error("[Entreprise Reservation] Error while creating reservation", {
+            companyName: input.companyName,
+            contactEmail: input.email,
+            date: input.date,
+            participantsCount: input.participantsCount,
+            error,
+          });
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'Erreur lors de la création de la réservation',
+            message: error instanceof Error ? `Erreur lors de la création de la réservation: ${error.message}` : 'Erreur lors de la création de la réservation',
           });
         }
       }),

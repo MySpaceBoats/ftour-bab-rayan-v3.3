@@ -8,6 +8,10 @@ import { restaurantReservations } from "../drizzle/schema";
 let db: any;
 
 async function getDb() {
+  if (!ENV.databaseUrl) {
+    throw new Error("DATABASE_URL is not configured");
+  }
+
   if (!db) {
     const connection = await mysql.createConnection(ENV.databaseUrl);
     db = drizzle(connection);
