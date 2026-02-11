@@ -35,13 +35,19 @@ export default function CompanyBookingConfirmation() {
   return (
     <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-2xl mx-auto">
-        {/* Success Header */}
+        {/* Request Submitted Header */}
         <div className="text-center mb-8">
-          <CheckCircle2 className="w-16 h-16 text-green-600 mx-auto mb-4" />
-          <h1 className="text-4xl font-bold mb-2">{t.companyBooking.reservationCreated}</h1>
-          <p className="text-lg text-muted-foreground">
-            Référence: <strong>{booking.reference}</strong>
-          </p>
+          <CheckCircle2 className="w-16 h-16 text-[#d4a574] mx-auto mb-4" />
+          <h1 className="text-4xl font-bold mb-2">Demande de réservation envoyée</h1>
+          <div className="space-y-3 mt-4">
+            <p className="text-lg font-medium">Merci pour votre demande.</p>
+            <p className="text-muted-foreground">Notre équipe organisatrice l'étudiera dans les plus brefs délais.</p>
+            <p className="text-muted-foreground">Vous recevrez une confirmation par email sous 48 heures.</p>
+          </div>
+          <div className="bg-[#f5f5f0] p-3 rounded border border-[#d4a574] mt-4 inline-block">
+            <p className="text-sm font-medium text-[#5d5a3c]">Référence de votre demande</p>
+            <p className="text-xl font-bold text-[#5d5a3c]">{booking.reference}</p>
+          </div>
         </div>
 
         {/* Booking Details */}
@@ -69,11 +75,11 @@ export default function CompanyBookingConfirmation() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Statut</p>
-                <p className="font-semibold">{t.companyBooking.statusPending}</p>
+                <p className="font-semibold text-orange-600">En attente de validation</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Paiement</p>
-                <p className="font-semibold">{t.companyBooking.paymentStatusPending}</p>
+                <p className="text-sm text-muted-foreground">QR Code</p>
+                <p className="text-sm text-muted-foreground">Sera envoyé après validation</p>
               </div>
             </div>
           </CardContent>

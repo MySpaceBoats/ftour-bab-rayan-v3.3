@@ -10,6 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+// TODO: Send Email 1 (demande reçue) - no QR yet
+// TODO: Update status to pending_validation in database
 
 export default function RestaurantGroupes() {
   const { lang } = useI18n();
@@ -32,6 +34,9 @@ export default function RestaurantGroupes() {
       toast.error('Merci de remplir tous les champs obligatoires');
       return;
     }
+    // Status = pending_validation (not confirmed yet)
+    // Email 1 sent: "demande reçue"
+    // QR will be sent after admin validation (status = confirmed)
     setSubmitted(true);
   };
 
@@ -48,11 +53,19 @@ export default function RestaurantGroupes() {
         {submitted ? (
           <Card>
             <CardHeader>
-              <CardTitle>Demande reçue ✅</CardTitle>
+              <CardTitle>Demande de réservation envoyée</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <p>Notre équipe va analyser votre demande et vous recontacter rapidement.</p>
-              <p className="text-sm text-muted-foreground">Référence demande: GRP-{Date.now().toString().slice(-6)}</p>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <p className="font-medium">Merci pour votre demande.</p>
+                <p className="text-sm">Notre équipe organisatrice l'étudiera dans les plus brefs délais.</p>
+                <p className="text-sm">Vous recevrez une confirmation par email sous 48 heures.</p>
+              </div>
+              <div className="bg-[#f5f5f0] p-3 rounded border border-[#d4a574]">
+                <p className="text-sm font-medium">Référence de votre demande</p>
+                <p className="text-lg font-bold text-[#5d5a3c]">GRP-{Date.now().toString().slice(-6)}</p>
+              </div>
+              <Button onClick={() => navigate(`/${lang}`)} className="w-full">Retour à l'accueil</Button>
             </CardContent>
           </Card>
         ) : (

@@ -516,3 +516,172 @@ export function generateContactNotificationEmail(data: ContactEmailData): { subj
     html: baseTemplate(content),
   };
 }
+
+
+// ============================================
+// EMAILS POUR RÉSERVATIONS RESTAURANT
+// ============================================
+
+/**
+ * Email 1 : Demande de réservation reçue (SANS QR CODE)
+ * Envoyé immédiatement après soumission du formulaire
+ */
+export interface ReservationRequestEmailData {
+  firstName: string;
+  email: string;
+  reservationType: 'particulier' | 'groupe' | 'entreprise';
+  date: string;
+  time: string;
+  participantsCount: number;
+  reference: string;
+}
+
+export function generateReservationRequestEmail(data: ReservationRequestEmailData): { subject: string; html: string } {
+  const typeLabel = {
+    particulier: 'Réservation particulier',
+    groupe: 'Réservation groupe',
+    entreprise: 'Réservation entreprise',
+  }[data.reservationType];
+
+  const content = `
+    <h2 style="color: #5d5a3c; margin: 0 0 20px 0; font-size: 24px;">
+      Demande de réservation reçue ✅
+    </h2>
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Cher(e) <strong>${data.firstName}</strong>,
+    </p>
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Merci pour votre demande de réservation. Nous avons bien reçu votre demande et notre équipe organisatrice l'étudiera dans les plus brefs délais.
+    </p>
+    
+    <!-- Détails de la demande -->
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f0; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de votre demande</h3>
+          <p style="margin: 5px 0; color: #374151;"><strong>Type :</strong> ${typeLabel}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Heure :</strong> ${data.time}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Nombre de participants :</strong> ${data.participantsCount}</p>
+          <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;"><strong>Référence :</strong> ${data.reference}</p>
+        </td>
+      </tr>
+    </table>
+    
+    <!-- Prochaines étapes -->
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fef3c7; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 18px;">⏱️ Prochaines étapes</h3>
+          <p style="margin: 0; color: #374151; line-height: 1.6;">
+            Vous recevrez une confirmation par email sous <strong>48 heures</strong> avec les détails finaux et votre QR code d'accès.
+          </p>
+        </td>
+      </tr>
+    </table>
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
+      Si vous avez des questions, n'hésitez pas à nous contacter.
+    </p>
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">
+      À très bientôt !<br>
+      <strong>L'équipe Ftour Bab Rayan</strong>
+    </p>
+  `;
+
+  return {
+    subject: `✅ Demande de réservation reçue - Référence ${data.reference}`,
+    html: baseTemplate(content),
+  };
+}
+
+/**
+ * Email 2 : Réservation confirmée (AVEC QR CODE)
+ * Envoyé après validation par l'admin
+ */
+export interface ReservationConfirmationEmailData {
+  firstName: string;
+  email: string;
+  reservationType: 'particulier' | 'groupe' | 'entreprise';
+  date: string;
+  time: string;
+  participantsCount: number;
+  reference: string;
+  qrToken: string;
+  baseUrl: string;
+  space: string;
+}
+
+export function generateReservationConfirmationEmail(data: ReservationConfirmationEmailData): { subject: string; html: string } {
+  const qrCodeUrl = getQrCodeUrl(data.qrToken, data.baseUrl);
+  const checkinUrl = `${data.baseUrl}/checkin/${data.qrToken}`;
+
+  const content = `
+    <h2 style="color: #5d5a3c; margin: 0 0 20px 0; font-size: 24px;">
+      Votre réservation est confirmée ✅
+    </h2>
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Cher(e) <strong>${data.firstName}</strong>,
+    </p>
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Excellente nouvelle ! Votre réservation au Restaurant Solidaire a été confirmée. Nous vous attendons avec impatience !
+    </p>
+    
+    <!-- Détails de la réservation -->
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f0; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de votre réservation</h3>
+          <p style="margin: 5px 0; color: #374151;"><strong>Espace :</strong> ${data.space}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Heure :</strong> ${data.time}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Nombre de participants :</strong> ${data.participantsCount}</p>
+          <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;"><strong>Référence :</strong> ${data.reference}</p>
+        </td>
+      </tr>
+    </table>
+    
+    <!-- QR Code -->
+    <div style="text-align: center; margin: 30px 0; padding: 20px; background-color: #ffffff; border: 2px dashed #d4a574; border-radius: 8px;">
+      <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">🎫 Votre QR Code d'accès</h3>
+      <img src="${qrCodeUrl}" alt="QR Code" style="width: 200px; height: 200px; margin: 10px 0;" />
+      <p style="color: #6b7280; font-size: 14px; margin: 10px 0 0 0;">
+        Présentez ce QR code à l'entrée le jour de votre visite
+      </p>
+    </div>
+    
+    <!-- Consignes -->
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fef3c7; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 18px;">📋 Consignes importantes</h3>
+          <ul style="margin: 0; padding-left: 20px; color: #374151;">
+            <li style="margin-bottom: 8px;">Arrivez 15 minutes avant l'heure de votre réservation</li>
+            <li style="margin-bottom: 8px;">Présentez votre QR code à l'entrée</li>
+            <li style="margin-bottom: 8px;">En cas d'annulation, prévenez-nous au moins 24h à l'avance</li>
+            <li style="margin-bottom: 8px;">Apportez votre bonne humeur et votre sourire !</li>
+          </ul>
+        </td>
+      </tr>
+    </table>
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
+      Si vous avez des questions, n'hésitez pas à nous contacter.
+    </p>
+    
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">
+      À très bientôt !<br>
+      <strong>L'équipe Ftour Bab Rayan</strong>
+    </p>
+  `;
+
+  return {
+    subject: `✅ Réservation confirmée - ${data.date} à ${data.time}`,
+    html: baseTemplate(content),
+  };
+}

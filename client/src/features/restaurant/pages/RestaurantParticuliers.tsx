@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+// TODO: Send Email 1 (demande reçue) - no QR yet
+// TODO: Update status to pending_validation in database
 
 export default function RestaurantParticuliers() {
   const { lang } = useI18n();
@@ -32,6 +34,9 @@ export default function RestaurantParticuliers() {
       toast.error('Merci de compléter tous les champs requis');
       return;
     }
+    // Status = pending_validation (not confirmed yet)
+    // Email 1 sent: "demande reçue"
+    // QR will be sent after admin validation (status = confirmed)
     setConfirmed(true);
   };
 
@@ -42,12 +47,19 @@ export default function RestaurantParticuliers() {
         <main className="container py-12 max-w-2xl">
           <Card>
             <CardHeader>
-              <CardTitle>Réservation confirmée</CardTitle>
+              <CardTitle>Demande de réservation envoyée</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <p>Votre demande a été enregistrée et un QR de confirmation sera envoyé par email.</p>
-              <p className="text-sm text-muted-foreground">Référence provisoire: RES-{Date.now().toString().slice(-6)}</p>
-              <Button onClick={() => navigate(`/${lang}`)}>Retour à l'accueil</Button>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <p className="font-medium">Merci pour votre demande.</p>
+                <p className="text-sm">Notre équipe organisatrice l'étudiera dans les plus brefs délais.</p>
+                <p className="text-sm">Vous recevrez une confirmation par email sous 48 heures.</p>
+              </div>
+              <div className="bg-[#f5f5f0] p-3 rounded border border-[#d4a574]">
+                <p className="text-sm font-medium">Référence de votre demande</p>
+                <p className="text-lg font-bold text-[#5d5a3c]">RES-{Date.now().toString().slice(-6)}</p>
+              </div>
+              <Button onClick={() => navigate(`/${lang}`)} className="w-full">Retour à l'accueil</Button>
             </CardContent>
           </Card>
         </main>
