@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useI18n } from '@/i18n';
@@ -8,122 +8,252 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-// TODO: Send Email 1 (demande reçue) - no QR yet
-// TODO: Update status to pending_validation in database
+import { trpc } from '@/lib/trpc';
 
 export default function RestaurantGroupes() {
   const { lang } = useI18n();
-  const [submitted, setSubmitted] = useState(false);
+  const [, navigate] = useLocation();
+  const [confirmed, setConfirmed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reference, setReference] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     date: '',
-    time: '',
-    space: 'brasserie',
-    groupSize: 20,
-    organization: '',
+    groupSize: '',
+    organizationName: '',
     contactName: '',
     phone: '',
     email: '',
     notes: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.date || !formData.time || !formData.organization || !formData.contactName || !formData.phone || !formData.email) {
-      toast.error('Merci de remplir tous les champs obligatoires');
-      return;
-    }
-    // Status = pending_validation (not confirmed yet)
-    // Email 1 sent: "demande reçue"
-    // QR will be sent after admin validation (status = confirmed)
-    setSubmitted(true);
+  // Dates autorisées : 20 février - 13 mars 2026
+  const startDate = new Date(2026, 1, 20);
+  const endDate = new Date(2026, 2, 13);
+
+  const isDateAllowed = (dateStr: string) => {
+    if (!dateStr) return false;
+    const date = new Date(dateStr);
+    return date >= startDate && date <= endDate;
   };
 
-  return (
-    <div className="min-h-screen bg-[#f5f5f0]">
-      <Navbar />
-      <main className="container py-12 max-w-3xl">
-        <div className="mb-6">
-          <Link href={`/${lang}/reservation`} className="text-sm text-[#5d5a3c] underline">← Retour au hub réservation</Link>
-          <h1 className="text-3xl font-bold text-[#5d5a3c] mt-2">Restaurant - Groupes</h1>
-          <p className="text-muted-foreground">Demande de réservation sans paiement immédiat (validation manuelle).</p>
-        </div>
+  const handleInputChange = (field: string, value: any) => {
+    if (field === 'groupSize') {
+      // Autoriser l'édition libre du champ (string)
+      setFormData(prev => ({ ...prev, [field]: value }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
+  };
 
-        {submitted ? (
-          <Card>
+  const createReservation = trpc.restaurantReservations.groupe.create.useMutation();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validation
+    if (!formData.date || !formData.contactName || !formData.phone || !formData.email) {
+      toast.error('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
+    if (!isDateAllowed(formData.date)) {
+      toast.error('Veuillez sélectionner une date valide (20 février - 13 mars)');
+      return;
+    }
+
+    // Normaliser groupSize
+    const groupSizeNum = parseInt(formData.groupSize, 10);
+    if (isNaN(groupSizeNum) || groupSizeNum < 1 || groupSizeNum > 120) {
+      toast.error('Le nombre de participants doit être entre 1 et 120');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const result = await createReservation.mutateAsync({
+        date: formData.date,
+        seatsTotal: groupSizeNum,
+        name: formData.contactName,
+        email: formData.email,
+        phone: formData.phone,
+        organizationName: formData.organizationName || undefined,
+        notes: formData.notes || undefined,
+      });
+
+      if (result.success && result.reservation) {
+        setReference(result.reservation.reference);
+        toast.success('Demande envoyée avec succès!');
+        setConfirmed(true);
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error('Erreur lors de l\'envoi de la demande');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (confirmed) {
+    return (
+      <div className="min-h-screen bg-[#f5f5f0]">
+        <Navbar />
+        <main className="container py-12 max-w-2xl">
+          <Card className="bg-[#5d5a3c] text-white border-0">
             <CardHeader>
-              <CardTitle>Demande de réservation envoyée</CardTitle>
+              <CardTitle className="text-2xl">Demande de réservation envoyée</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <p className="font-medium">Merci pour votre demande.</p>
                 <p className="text-sm">Notre équipe organisatrice l'étudiera dans les plus brefs délais.</p>
-                <p className="text-sm">Vous recevrez une confirmation par email sous 48 heures.</p>
+                <p className="text-sm">Vous recevrez une confirmation par email sous 48 heures avec les instructions de paiement et votre QR d'accès.</p>
               </div>
-              <div className="bg-[#f5f5f0] p-3 rounded border border-[#d4a574]">
+              <div className="bg-[#4a4830] p-3 rounded">
                 <p className="text-sm font-medium">Référence de votre demande</p>
-                <p className="text-lg font-bold text-[#5d5a3c]">GRP-{Date.now().toString().slice(-6)}</p>
+                <p className="text-lg font-bold text-[#d4a574]">{reference || 'GRP-PENDING'}</p>
               </div>
-              <Button onClick={() => navigate(`/${lang}`)} className="w-full">Retour à l'accueil</Button>
+              <Button onClick={() => navigate(`/${lang}`)} className="w-full bg-[#d4a574] text-[#5d5a3c] hover:bg-[#c9955f]">Retour à l'accueil</Button>
             </CardContent>
           </Card>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <Card>
-              <CardHeader>
-                <CardTitle>Informations du groupe</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label>Date</Label>
-                  <Input type="date" value={formData.date} onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))} required />
-                </div>
-                <div>
-                  <Label>Heure</Label>
-                  <Input type="time" value={formData.time} onChange={(e) => setFormData((p) => ({ ...p, time: e.target.value }))} required />
-                </div>
-                <div>
-                  <Label>Espace</Label>
-                  <Select value={formData.space} onValueChange={(value) => setFormData((p) => ({ ...p, space: value }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="brasserie">Brasserie</SelectItem>
-                      <SelectItem value="table-du-jardin">Table du Jardin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Taille du groupe (max 120)</Label>
-                  <Input type="number" min={1} max={120} value={formData.groupSize} onChange={(e) => setFormData((p) => ({ ...p, groupSize: Math.min(120, Number(e.target.value) || 1) }))} required />
-                </div>
-                <div>
-                  <Label>Nom du groupe / organisation</Label>
-                  <Input value={formData.organization} onChange={(e) => setFormData((p) => ({ ...p, organization: e.target.value }))} required />
-                </div>
-                <div>
-                  <Label>Nom du contact</Label>
-                  <Input value={formData.contactName} onChange={(e) => setFormData((p) => ({ ...p, contactName: e.target.value }))} required />
-                </div>
-                <div>
-                  <Label>Téléphone</Label>
-                  <Input value={formData.phone} onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))} required />
-                </div>
-                <div>
-                  <Label>Email</Label>
-                  <Input type="email" value={formData.email} onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))} required />
-                </div>
-                <div className="md:col-span-2">
-                  <Label>Informations complémentaires</Label>
-                  <Textarea value={formData.notes} onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))} placeholder="Besoins spécifiques, contexte, etc." />
-                </div>
-                <div className="md:col-span-2">
-                  <Button type="submit" className="w-full">Soumettre la demande</Button>
-                </div>
-              </CardContent>
-            </Card>
-          </form>
-        )}
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#f5f5f0]">
+      <Navbar />
+      <main className="container py-12 max-w-2xl">
+        <Link href={`/${lang}/reservation`} className="text-sm text-[#5d5a3c] underline">← Retour</Link>
+        
+        <div className="mb-8 mt-6">
+          <h1 className="text-3xl font-bold text-[#5d5a3c] italic">Restaurant – Groupes</h1>
+          <p className="text-[#8b8b7a] mt-2">Demande de réservation groupe pour le ftour solidaire.</p>
+          <p className="text-[#8b8b7a] text-sm mt-1">Service unique à partir de 18h45.</p>
+          <p className="text-[#8b8b7a] text-sm mt-1">Les demandes sont ouvertes du 20 février au 13 mars.</p>
+          <p className="text-[#8b8b7a] text-sm mt-1">Confirmation sous 48 heures par notre équipe.</p>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <Card>
+            <CardHeader>
+              <CardTitle>Formulaire de demande</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Date */}
+              <div>
+                <Label htmlFor="date">Date *</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => handleInputChange('date', e.target.value)}
+                  min={startDate.toISOString().split('T')[0]}
+                  max={endDate.toISOString().split('T')[0]}
+                  required
+                />
+                <p className="text-xs text-[#8b8b7a] mt-1">Entre le 20 février et le 13 mars 2026</p>
+              </div>
+
+              {/* Taille du groupe */}
+              <div>
+                <Label htmlFor="groupSize">Nombre de participants * (1-120)</Label>
+                <Input
+                  id="groupSize"
+                  type="number"
+                  min="1"
+                  max="120"
+                  value={formData.groupSize}
+                  onChange={(e) => handleInputChange('groupSize', e.target.value)}
+                  placeholder="Ex: 45"
+                  required
+                />
+              </div>
+
+              {/* Nom du groupe (optionnel) */}
+              <div>
+                <Label htmlFor="organizationName">Nom du groupe / organisation (optionnel)</Label>
+                <Input
+                  id="organizationName"
+                  type="text"
+                  value={formData.organizationName}
+                  onChange={(e) => handleInputChange('organizationName', e.target.value)}
+                  placeholder="Ex: Association Culturelle"
+                />
+              </div>
+
+              {/* Nom du contact */}
+              <div>
+                <Label htmlFor="contactName">Nom du contact *</Label>
+                <Input
+                  id="contactName"
+                  type="text"
+                  value={formData.contactName}
+                  onChange={(e) => handleInputChange('contactName', e.target.value)}
+                  placeholder="Ex: Jean Dupont"
+                  required
+                />
+              </div>
+
+              {/* Téléphone */}
+              <div>
+                <Label htmlFor="phone">Téléphone *</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  placeholder="Ex: +212612345678"
+                  required
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <Label htmlFor="email">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  placeholder="Ex: contact@example.com"
+                  required
+                />
+              </div>
+
+              {/* Notes (optionnel) */}
+              <div>
+                <Label htmlFor="notes">Informations complémentaires (optionnel)</Label>
+                <Textarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => handleInputChange('notes', e.target.value)}
+                  placeholder="Ex: Besoins spéciaux, régimes alimentaires, etc."
+                  rows={3}
+                />
+              </div>
+
+              {/* Bloc informatif */}
+              <div className="bg-[#f9f9f5] p-4 rounded border border-[#d4a574]">
+                <p className="text-sm text-[#5d5a3c]">
+                  Après validation de votre demande, vous recevrez un email de confirmation avec les instructions de paiement et votre QR d'accès.
+                </p>
+              </div>
+
+              {/* Bouton */}
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-[#5d5a3c] text-white hover:bg-[#4a4830]"
+              >
+                {isSubmitting ? 'Envoi en cours...' : 'Envoyer ma demande →'}
+              </Button>
+            </CardContent>
+          </Card>
+        </form>
       </main>
       <Footer />
     </div>
