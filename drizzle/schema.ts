@@ -700,10 +700,20 @@ export type InsertRestaurantSlot = typeof restaurantSlots.$inferInsert;
 export const restaurantReservationTypeEnum = mysqlEnum("restaurant_reservation_type", ["particulier", "entreprise", "groupe"]);
 export const restaurantDisplayChoiceEnum = mysqlEnum("restaurant_display_choice", ["jardin", "brasserie", "corpo"]);
 export const restaurantReservationStatusEnum = mysqlEnum("restaurant_reservation_status", [
-  "submitted", "pending_confirmation", "confirmed", "rejected", "cancelled", "completed", "no_show"
+  "pending_validation",        // Demande reçue (Email 1 envoye)
+  "validated_pending_payment", // Confirmee, en attente paiement (Email 2 envoye)
+  "paid_confirmed",            // Paiement reçu, QR genere
+  "refused",                   // Refusee (Email 3 envoye)
+  "cancelled",                 // Annulee par l'utilisateur
+  "completed",                 // Ftour termine
+  "no_show"                    // Absent
 ]);
 export const restaurantPaymentStatusEnum = mysqlEnum("restaurant_payment_status", [
-  "not_applicable", "pending", "paid", "failed", "refunded"
+  "not_requested",  // Pas encore demande
+  "pending_payment", // Paiement demande, en attente
+  "paid",            // Paiement reçu
+  "failed",          // Paiement echoue
+  "refunded"         // Rembourse
 ]);
 export const restaurantQrStatusEnum = mysqlEnum("restaurant_qr_status", ["inactive", "active", "used", "revoked"]);
 
@@ -724,8 +734,8 @@ export const restaurantReservations = mysqlTable("restaurant_reservations", {
   groupName: varchar("groupName", { length: 255 }),
   groupType: varchar("groupType", { length: 50 }), // asso, famille, tourisme, autre
   // Status
-  status: restaurantReservationStatusEnum.default("submitted").notNull(),
-  paymentStatus: restaurantPaymentStatusEnum.default("not_applicable").notNull(),
+  status: restaurantReservationStatusEnum.default("pending_validation").notNull(),
+  paymentStatus: restaurantPaymentStatusEnum.default("not_requested").notNull(),
   paymentAmount: decimal("paymentAmount", { precision: 10, scale: 2 }),
   paymentProvider: varchar("paymentProvider", { length: 50 }),
   paymentReference: varchar("paymentReference", { length: 100 }),
