@@ -9,21 +9,21 @@ import { ArrowRight, Building2, Users, UtensilsCrossed } from 'lucide-react';
 const OPTIONS = [
   {
     title: 'Particuliers',
-    description: 'Réservation individuelle (max 10 places) avec passage au paiement.',
+    description: 'Demande de réservation individuelle (jusqu\u0027à 10 personnes). Confirmation sous 48 heures.',
     href: (lang: string) => `/${lang}/restaurant/particuliers`,
     icon: UtensilsCrossed,
-    cta: 'Réserver en tant que particulier',
+    cta: 'Faire une demande individuelle',
   },
   {
     title: 'Entreprises',
-    description: 'Réservation corporate avec gestion des participants et QR code.',
+    description: 'Demande de réservation pour événements d\u0027entreprise avec gestion des participants.',
     href: (lang: string) => `/${lang}/company-booking`,
     icon: Building2,
-    cta: 'Réserver pour une entreprise',
+    cta: 'Faire une demande entreprise',
   },
   {
     title: 'Groupes',
-    description: 'Demande de réservation groupe (max 120 personnes), sans paiement immédiat.',
+    description: 'Demande de réservation pour associations, familles ou délégations (jusqu\u0027à 120 personnes).',
     href: (lang: string) => `/${lang}/restaurant/groupes`,
     icon: Users,
     cta: 'Soumettre une demande groupe',
@@ -38,8 +38,8 @@ export default function Reservation() {
       <Navbar />
       <main className="container py-12">
         <div className="max-w-3xl mx-auto text-center mb-8">
-          <h1 className="text-4xl font-bold text-[#5d5a3c] mb-3">Hub de réservation</h1>
-          <p className="text-muted-foreground">Choisissez votre parcours pour lancer la bonne expérience de réservation.</p>
+          <h1 className="text-4xl font-bold text-[#5d5a3c] mb-3">Restaurant solidaire</h1>
+          <p className="text-muted-foreground">Sélectionnez le format adapté à votre demande. Toutes les réservations sont soumises à validation par notre équipe.</p>
         </div>
 
         <div className="max-w-4xl mx-auto grid md:grid-cols-3 gap-4">

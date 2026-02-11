@@ -550,7 +550,18 @@ export const fr = {
   },
 
   // Reservation
-  reservation: {
+  restaurant: {
+    hubTitle: 'Restaurant solidaire',
+    hubSubtitle: 'Sélectionnez le format adapté à votre demande. Toutes les réservations sont soumises à validation par notre équipe.',
+    particulierTitle: 'Particuliers',
+    particulierDesc: 'Demande de réservation individuelle (jusqu\u0027à 10 personnes). Confirmation sous 48 heures.',
+    particulierCta: 'Faire une demande individuelle',
+    entrepriseTitle: 'Entreprises',
+    entrepriseDesc: 'Demande de réservation pour événements d\u0027entreprise avec gestion des participants.',
+    entrepriseCta: 'Faire une demande entreprise',
+    groupeTitle: 'Groupes',
+    groupeDesc: 'Demande de réservation pour associations, familles ou délégations (jusqu\u0027à 120 personnes).',
+    groupeCta: 'Soumettre une demande groupe',
     title: 'Réservation Ftour',
     subtitle: 'Réservez votre place pour un Restaurant Solidaire',
     step1: 'Choisir la date',
