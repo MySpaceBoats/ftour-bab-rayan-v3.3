@@ -40,6 +40,7 @@ import AdminRestaurantEntreprises from "@/features/restaurant/admin/AdminRestaur
 import AdminRestaurantGroupes from "@/features/restaurant/admin/AdminRestaurantGroupes";
 import AdminRestaurants from "@/features/restaurant/admin/AdminRestaurants";
 import AdminReservations from "@/features/restaurant/admin/AdminReservations";
+import AdminRestaurantReservations from "@/features/restaurant/admin/AdminRestaurantReservations";
 import AdminCompanyBookings from "@/features/restaurant/admin/AdminCompanyBookings";
 import AdminScanReservation from "@/features/restaurant/admin/AdminScanReservation";
 
@@ -145,6 +146,7 @@ function LocalizedRoutes() {
       <Route path="/admin/restaurant/entreprises" component={AdminRestaurantEntreprises} />
       <Route path="/admin/restaurant/groupes" component={AdminRestaurantGroupes} />
       <Route path="/admin/restaurants" component={AdminRestaurants} />
+      <Route path="/admin/restaurant-reservations" component={AdminRestaurantReservations} />
       <Route path="/admin/reservations" component={AdminReservations} />
       <Route path="/admin/company-bookings" component={AdminCompanyBookings} />
       <Route path="/admin/scan-reservation" component={AdminScanReservation} />

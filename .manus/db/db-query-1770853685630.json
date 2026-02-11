@@ -1,0 +1,13 @@
+{
+  "query": "SELECT COUNT(*) as total_reservations FROM restaurant_reservations;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AcjZqcYK3EX3uxV.dd54fc6940c5 --database axVHSEMeXtqmA9TfobQFiG --execute SELECT COUNT(*) as total_reservations FROM restaurant_reservations;",
+  "rows": [
+    {
+      "total_reservations": "3"
+    }
+  ],
+  "messages": [],
+  "stdout": "total_reservations\n3\n",
+  "stderr": "",
+  "execution_time_ms": 1911
+}
