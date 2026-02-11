@@ -9,6 +9,7 @@ import { getLoginUrl } from "@/const";
 import { toast } from "sonner";
 import { QrCode, CheckCircle, XCircle, AlertTriangle, Camera, Keyboard, ArrowLeft, User, Calendar, Clock, Loader2 } from "lucide-react";
 import jsQR from "jsqr";
+import { hasRouteAccess } from "@/shared/rbac/permissions";
 
 export default function Scanner() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -59,8 +60,8 @@ export default function Scanner() {
     },
   });
 
-  // Check authorization
-  const isAuthorized = user?.role && ['admin', 'super_admin', 'admin_ops', 'scanner'].includes(user.role);
+  // Check authorization via centralized RBAC
+  const isAuthorized = hasRouteAccess(user?.role, '/scanner');
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {

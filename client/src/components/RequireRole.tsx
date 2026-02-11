@@ -6,16 +6,36 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Users, Loader2 } from "lucide-react";
 import { Link } from "wouter";
+import { getRolesForRoute } from "@/shared/rbac/permissions";
 
 interface RequireRoleProps {
-  allowedRoles: string[];
+  /**
+   * Liste explicite de rôles autorisés (legacy).
+   * Préférer `route` pour résoudre via le RBAC centralisé.
+   */
+  allowedRoles?: string[];
+  /**
+   * Route admin à résoudre via shared/rbac/permissions.ts.
+   * Si fourni, les rôles sont résolus automatiquement.
+   */
+  route?: string;
   children: React.ReactNode;
   redirectTo?: string;
 }
 
-export default function RequireRole({ allowedRoles, children, redirectTo = "/admin" }: RequireRoleProps) {
+export default function RequireRole({
+  allowedRoles,
+  route,
+  children,
+  redirectTo = "/admin",
+}: RequireRoleProps) {
   const { user, isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
+
+  // Résoudre les rôles : RBAC centralisé (route) > allowedRoles explicite
+  const resolvedRoles: readonly string[] = route
+    ? getRolesForRoute(route)
+    : (allowedRoles ?? []);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -31,7 +51,7 @@ export default function RequireRole({ allowedRoles, children, redirectTo = "/adm
     );
   }
 
-  if (!isAuthenticated || !user?.role || !allowedRoles.includes(user.role)) {
+  if (!isAuthenticated || !user?.role || !resolvedRoles.includes(user.role)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="max-w-md w-full">

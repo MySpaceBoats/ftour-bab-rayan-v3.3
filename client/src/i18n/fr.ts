@@ -262,8 +262,6 @@ export const fr = {
     loading: 'Chargement...',
     error: 'Erreur',
     orderNotFound: 'Commande non trouvée',
-    total: 'Total',
-    finalizeReservation: 'Finaliser la réservation',
     backToPastries: 'Retour aux Pâtisseries',
     expressCheckout: 'Achat express',
     productNotFound: 'Produit non trouvé',
@@ -336,8 +334,6 @@ export const fr = {
     loading: 'Chargement...',
     error: 'Erreur',
     orderNotFound: 'Commande non trouvée',
-    total: 'Total',
-    finalizeReservation: 'Finaliser la réservation',
     backToPastries: 'Retour aux Pâtisseries',
     expressCheckout: 'Achat express',
     productNotFound: 'Produit non trouvé',
@@ -731,6 +727,68 @@ export const fr = {
     checkedInCount: 'Participants présents',
     absentCount: 'Participants absents',
     cancelledCount: 'Participants annulés',
+  },
+  // ============================================
+  // STATUTS NORMALISÉS (section 6 du cahier des charges)
+  // ============================================
+  status: {
+    // 6.1 Transactionnel
+    submitted: 'Soumis',
+    pending_confirmation: 'En attente de confirmation',
+    confirmed: 'Confirmé',
+    paid: 'Payé',
+    ready: 'Prêt',
+    completed: 'Terminé',
+    cancelled: 'Annulé',
+    rejected: 'Rejeté',
+    // 6.2 Paiement
+    payment_pending: 'En attente',
+    payment_paid: 'Payé',
+    payment_failed: 'Échoué',
+    payment_refunded: 'Remboursé',
+    // 6.3 QR
+    qr_inactive: 'Inactif',
+    qr_active: 'Actif',
+    qr_used: 'Utilisé',
+    qr_revoked: 'Révoqué',
+  },
+
+  // ============================================
+  // ADMIN (section 7 — labels communs admin)
+  // ============================================
+  admin: {
+    dashboard: 'Tableau de bord',
+    list: 'Liste',
+    filters: 'Filtres',
+    search: 'Rechercher...',
+    filterByDate: 'Filtrer par date',
+    filterByStatus: 'Filtrer par statut',
+    exportCSV: 'Exporter CSV',
+    actions: 'Actions',
+    details: 'Détails',
+    confirm: 'Confirmer',
+    reject: 'Rejeter',
+    cancel: 'Annuler',
+    noResults: 'Aucun résultat',
+    total: 'Total',
+    created: 'Créé le',
+    updated: 'Mis à jour le',
+  },
+
+  // ============================================
+  // ERREURS
+  // ============================================
+  errors: {
+    generic: 'Une erreur est survenue',
+    network: 'Erreur de connexion',
+    unauthorized: 'Accès non autorisé',
+    notFound: 'Page non trouvée',
+    validation: 'Erreur de validation',
+    required: 'Ce champ est requis',
+    invalidEmail: 'Adresse email invalide',
+    invalidPhone: 'Numéro de téléphone invalide',
+    minLength: 'Minimum {min} caractères',
+    maxLength: 'Maximum {max} caractères',
   },
 };
 
