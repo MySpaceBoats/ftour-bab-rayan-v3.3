@@ -21,10 +21,14 @@ import MentionsLegales from "./pages/MentionsLegales";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Reservation from "./pages/Reservation";
+import Cart from "./pages/Cart";
+import { Checkout as UnifiedCheckout } from "./pages/Checkout";
 import Pastries from "./pages/Pastries";
 import ProduitsTerroir from "./pages/ProduitsTerroir";
 import BuyGoodie from "./pages/BuyGoodie";
 import BuyPastry from "./pages/BuyPastry";
+import RestaurantParticuliers from "./pages/RestaurantParticuliers";
+import RestaurantGroupes from "./pages/RestaurantGroupes";
 
 // Scanner
 import Scanner from "./pages/Scanner";
@@ -59,6 +63,8 @@ import CompanyBooking from "./pages/CompanyBooking";
 import CompanyBookingConfirmation from "./pages/CompanyBookingConfirmation";
 import CompanyBookingSpace from "./pages/CompanyBookingSpace";
 import AdminCompanyBookings from "./pages/AdminCompanyBookings";
+import AdminMessages from "./pages/AdminMessages";
+import AdminContenu from "./pages/AdminContenu";
 import WhatsAppFloatingButton from "./components/WhatsAppFloatingButton";
 
 // Language-aware route wrapper
@@ -112,6 +118,8 @@ function LocalizedRoutes() {
       <Route path="/admin/terroir/orders" component={AdminTerroirOrders} />
       <Route path="/admin/terroir/products" component={AdminTerroirProducts} />
       <Route path="/admin/company-bookings" component={AdminCompanyBookings} />
+      <Route path="/admin/messages" component={AdminMessages} />
+      <Route path="/admin/contenu" component={AdminContenu} />
       
       {/* Scanner (mobile-first) - no locale prefix */}
       <Route path="/scanner" component={Scanner} />
@@ -144,9 +152,13 @@ function LocalizedRoutes() {
       <Route path="/:lang/connexion" component={Login} />
       <Route path="/:lang/inscription" component={Signup} />
       <Route path="/:lang/reservation" component={Reservation} />
+      <Route path="/:lang/restaurant/particuliers" component={RestaurantParticuliers} />
+      <Route path="/:lang/restaurant/groupes" component={RestaurantGroupes} />
       <Route path="/:lang/company-booking" component={CompanyBooking} />
       <Route path="/:lang/company-booking-confirmation/:reference" component={CompanyBookingConfirmation} />
       <Route path="/:lang/company-booking-space/:token" component={CompanyBookingSpace} />
+      <Route path="/:lang/cart/:type" component={Cart} />
+      <Route path="/:lang/checkout/:type" component={UnifiedCheckout} />
       <Route path="/:lang/buy/goodie/:id" component={BuyGoodie} />
       <Route path="/:lang/buy/pastry/:id" component={BuyPastry} />
       
