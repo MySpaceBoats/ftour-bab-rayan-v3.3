@@ -723,3 +723,17 @@
   - [ ] 6.5.2 Accepter une réservation (déclenche envoi email avec QR chargé)
   - [ ] 6.5.3 Gérer les statuts et détails
   - [ ] 6.5.4 Mêmes options que module Réservation Ftour particulier
+
+
+## Phase 22 : Refactorisation Module Particuliers (Formulaire minimaliste événementiel)
+
+- [ ] 22.1 Supprimer champ Heure (fixé en dur à 18h45)
+- [ ] 22.2 Supprimer champ Espace (attribué automatiquement côté admin)
+- [ ] 22.3 Supprimer Récapitulatif prix et logique CMI
+- [ ] 22.4 Implémenter calendrier bloqué (20 février - 13 mars uniquement)
+- [ ] 22.5 Limiter places à 12 maximum (au lieu de 10)
+- [ ] 22.6 Simplifier formulaire (Date, Places, Nom, Tél, Email uniquement)
+- [ ] 22.7 Mettre à jour texte intro : "Demande de réservation pour le ftour solidaire. Service unique à partir de 18h45."
+- [ ] 22.8 Mettre à jour bouton CTA : "Envoyer ma demande" (au lieu de "Confirmer ma réservation")
+- [ ] 22.9 Tester le formulaire minimaliste
+- [ ] 22.10 Synchroniser traductions i18n (FR uniquement)
