@@ -11,6 +11,7 @@ import * as reservationServices from "./reservation-services";
 import { getSupabaseAdminClient } from "./supabase";
 import { companyBookingsRouter } from "./company-booking-routers";
 import { restaurantReservationsRouter } from "./restaurant-reservation-routers";
+import { restaurantModuleRouter } from "./restaurant-module-routers";
 
 // ============================================
 // ROLE-BASED PROCEDURES
