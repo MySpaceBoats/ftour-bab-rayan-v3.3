@@ -74,12 +74,11 @@ export default function RestaurantGroupes() {
       setIsSubmitting(true);
       const result = await createReservation.mutateAsync({
         date: formData.date,
-        seatsTotal: groupSizeNum,
-        name: formData.contactName,
+        participantsCount: groupSizeNum,
+        contactName: formData.contactName,
         email: formData.email,
         phone: formData.phone,
-        organizationName: formData.organizationName || undefined,
-        notes: formData.notes || undefined,
+        groupName: formData.organizationName || '',
       });
 
       if (result.success && result.reservation) {
