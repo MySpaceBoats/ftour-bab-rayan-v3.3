@@ -6,9 +6,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n";
-import { 
-  Menu, Heart, Users, ShoppingBag, Home, Info, Phone, Building2, 
-  LogOut, LayoutDashboard, Search, Globe, X, ChevronDown
+import {
+  Menu, Heart, Users, ShoppingBag, Home, Info, Phone, Building2,
+  LogOut, LayoutDashboard, Search, Globe, X, Lock
 } from "lucide-react";
 
 export default function Navbar() {
@@ -104,9 +104,9 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Admin Link - pointe vers la page de connexion pour les admins */}
-          <Link href={localizedHref('/connexion')} className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors">
-            {t.nav.admin}
+          {/* Admin Link - icône cadenas avec tooltip "Privé" */}
+          <Link href={localizedHref('/connexion')} className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors" title="Privé">
+            <Lock className="h-4 w-4" />
           </Link>
           
           {/* Admin Link - visible uniquement pour les admins connectés */}
@@ -117,22 +117,11 @@ export default function Navbar() {
             </Link>
           )}
 
-          {/* Téléphone */}
-          <a 
-            href="tel:+212664887978" 
-            className="hidden sm:flex items-center gap-1 text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors"
-          >
-            <Phone className="h-3 w-3" />
-            <span>+212 664-887978</span>
-          </a>
-
           {/* Sélecteur de langue */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-1 text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors">
+              <button className="flex items-center text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors">
                 <Globe className="h-4 w-4" />
-                <span className="hidden sm:inline">{languages.find(l => l.code === lang)?.name}</span>
-                <ChevronDown className="h-3 w-3" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align={dir === 'rtl' ? 'start' : 'end'} className="bg-[#4A4829] border-[#F2E9D3]/20">
@@ -287,17 +276,6 @@ export default function Navbar() {
                     );
                   })}
                 </nav>
-
-                <div className="border-t border-[#F2E9D3]/20" />
-
-                {/* Phone */}
-                <a 
-                  href="tel:+212664887978" 
-                  className="flex items-center gap-2 text-[#CDBB8A] hover:text-[#F2E9D3] px-4"
-                >
-                  <Phone className="h-4 w-4" />
-                  <span>+212 664-887978</span>
-                </a>
 
                 <div className="border-t border-[#F2E9D3]/20" />
 
