@@ -59,6 +59,7 @@ import CompanyBooking from "./pages/CompanyBooking";
 import CompanyBookingConfirmation from "./pages/CompanyBookingConfirmation";
 import CompanyBookingSpace from "./pages/CompanyBookingSpace";
 import AdminCompanyBookings from "./pages/AdminCompanyBookings";
+import WhatsAppFloatingButton from "./components/WhatsAppFloatingButton";
 
 // Language-aware route wrapper
 function LocalizedRoutes() {
@@ -204,6 +205,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <LocalizedRoutes />
+          <WhatsAppFloatingButton />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
