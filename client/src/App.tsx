@@ -42,6 +42,7 @@ import AdminRestaurants from "@/features/restaurant/admin/AdminRestaurants";
 import AdminRestaurantReservations from "@/features/restaurant/admin/AdminRestaurantReservations";
 import AdminScanReservation from "@/features/restaurant/admin/AdminScanReservation";
 import AdminReservationsConsolidated from "@/features/restaurant/admin/AdminReservationsConsolidated";
+import AdminReservationsPage from "@/features/restaurant/admin/AdminReservationsPage";
 
 // ============================================
 // PATISSERIE — features/patisserie
@@ -67,12 +68,14 @@ import { Checkout as UnifiedCheckout } from "@/features/goodies/pages/Checkout";
 import AdminGoodies from "@/features/goodies/admin/AdminGoodies";
 import AdminCommandes from "@/features/goodies/admin/AdminCommandes";
 import AdminCommerceConsolidated from "@/features/commerce/admin/AdminCommerceConsolidated";
+import AdminCommercePage from "@/features/commerce/admin/AdminCommercePage";
 
 // ============================================
 // DONS — features/dons
 // ============================================
 import Dons from "@/features/dons/pages/Dons";
 import AdminDons from "@/features/dons/admin/AdminDons";
+import AdminDonsPage from "@/features/dons/admin/AdminDonsPage";
 
 // ============================================
 // OPS — features/ops
@@ -85,6 +88,7 @@ import AdminPayments from "@/features/ops/admin/AdminPayments";
 import AdminUtilisateurs from "@/features/ops/admin/AdminUtilisateurs";
 import AdminUnifiedDashboard from "@/features/ops/admin/AdminUnifiedDashboard";
 import AdminScannerConsolidated from "@/features/ops/admin/AdminScannerConsolidated";
+import AdminBenevolePage from "@/features/ops/admin/AdminBenevolePage";
 
 // ============================================
 // SCANNER — features/scanner
@@ -141,8 +145,8 @@ function LocalizedRoutes() {
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/unified-dashboard" component={AdminUnifiedDashboard} />
 
-      {/* Admin Restaurant — Consolidated */}
-      <Route path="/admin/reservations" component={AdminReservationsConsolidated} />
+      {/* Admin Restaurant — Unified Back Office */}
+      <Route path="/admin/reservations" component={AdminReservationsPage} />
       {/* Legacy routes — redirects to consolidated */}
       <Route path="/admin/restaurant/particuliers" component={AdminRestaurantParticuliers} />
       <Route path="/admin/restaurant/entreprises" component={AdminRestaurantEntreprises} />
@@ -151,8 +155,8 @@ function LocalizedRoutes() {
       <Route path="/admin/restaurant-reservations" component={AdminRestaurantReservations} />
       <Route path="/admin/scan-reservation" component={AdminScanReservation} />
 
-      {/* Admin Commerce — Consolidated */}
-      <Route path="/admin/commerce" component={AdminCommerceConsolidated} />
+      {/* Admin Commerce — Unified Back Office */}
+      <Route path="/admin/commerce" component={AdminCommercePage} />
       {/* Legacy routes */}
       <Route path="/admin/patisserie" component={AdminPastries} />
       <Route path="/admin/terroir/products" component={AdminTerroirProducts} />
@@ -160,11 +164,11 @@ function LocalizedRoutes() {
       <Route path="/admin/goodies" component={AdminGoodies} />
       <Route path="/admin/commandes" component={AdminCommandes} />
 
-      {/* Admin Dons */}
-      <Route path="/admin/dons" component={AdminDons} />
+      {/* Admin Dons — Unified Back Office */}
+      <Route path="/admin/dons" component={AdminDonsPage} />
 
-      {/* Admin Ops */}
-      <Route path="/admin/benevoles" component={AdminBenevoles} />
+      {/* Admin Ops — Unified Back Office */}
+      <Route path="/admin/benevoles" component={AdminBenevolePage} />
       <Route path="/admin/calendrier" component={AdminJours} />
       <Route path="/admin/jours" component={AdminJours} />
       {/* Scanner — Consolidated */}
