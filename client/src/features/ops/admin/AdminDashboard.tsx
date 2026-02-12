@@ -1,5 +1,5 @@
-import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
@@ -9,11 +9,11 @@ import {
   Users, ShoppingBag, Heart, Calendar, QrCode,
   ArrowRight, Loader2, BarChart3, Package, MessageSquare,
   UserCog, FileText, Home, LogOut, UtensilsCrossed, Store,
-  Building2, UsersRound, type LucideIcon
+  Building2, UsersRound, TrendingUp, type LucideIcon
 } from "lucide-react";
 
 // ============================================
-// MODULE REGISTRY
+// MODULE REGISTRY — NEW 3-BLOC STRUCTURE
 // ============================================
 
 type ModuleDefinition = {
@@ -30,6 +30,7 @@ type ModuleDefinition = {
 
 type SectionDefinition = {
   title: string;
+  description?: string;
   icon?: LucideIcon;
   iconColor?: string;
   modules: ModuleDefinition[];
@@ -39,149 +40,38 @@ type SectionDefinition = {
 const ALL_ADMIN_ROLES = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes', 'admin_patisserie', 'admin_terroir'];
 
 const sections: SectionDefinition[] = [
+  // ============================================
+  // BLOC 1 : REVENUS & RÉSERVATIONS
+  // ============================================
   {
-    title: "Restaurant",
-    icon: UtensilsCrossed,
-    iconColor: "text-[#5d5a3c]",
-    borderClass: "border-[#5d5a3c]/20",
+    title: "🔴 Revenus & Réservations",
+    description: "Tout ce qui génère des flux financiers directs",
+    icon: TrendingUp,
+    iconColor: "text-red-600",
+    borderClass: "border-red-100",
     modules: [
       {
-        label: "Réservations Particuliers",
-        description: "Réservations individuelles (max 10 places, paiement direct)",
+        label: "Réservations",
+        description: "Gérer réservations particuliers, entreprises, groupes",
         route: "/admin/restaurant/particuliers",
         icon: UtensilsCrossed,
         iconColor: "text-[#5d5a3c]",
         iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_restaurant_particuliers'],
+        allowedRoles: ['admin', 'super_admin', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes'],
         buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
       },
       {
-        label: "Réservations Entreprises",
-        description: "Réservations corporate soumises à confirmation admin",
-        route: "/admin/restaurant/entreprises",
-        icon: Building2,
-        iconColor: "text-[#5d5a3c]",
-        iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_restaurant_entreprises'],
-        buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
-      },
-      {
-        label: "Réservations Groupes",
-        description: "Réservations groupes (assos, familles, délégations) soumises à confirmation",
-        route: "/admin/restaurant/groupes",
-        icon: UsersRound,
-        iconColor: "text-[#5d5a3c]",
-        iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_restaurant_groupes'],
-        buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
-      },
-      {
-        label: "Réservations Ftour",
-        description: "Gérer les réservations pour les repas Ftour Solidaires",
-        route: "/admin/reservations",
-        icon: UtensilsCrossed,
-        iconColor: "text-[#5d5a3c]",
-        iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_ops'],
-        buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
-      },
-      {
-        label: "Restaurants",
-        description: "Configurer les restaurants et leurs capacités",
-        route: "/admin/restaurants",
-        icon: Store,
-        iconColor: "text-[#5d5a3c]",
-        iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ['super_admin'],
-        buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
-      },
-      {
-        label: "Scanner Réservations",
-        description: "Scanner les QR codes des réservations Ftour",
-        route: "/admin/scan-reservation",
-        icon: QrCode,
-        iconColor: "text-[#5d5a3c]",
-        iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'scanner'],
-        variant: 'primary',
-        buttonClass: "bg-[#5d5a3c] hover:bg-[#5d5a3c]/90 text-white",
-      },
-    ],
-  },
-  {
-    title: "Commerce",
-    modules: [
-      {
-        label: "Commandes Goodies",
-        description: "Gérer les réservations de goodies et leur statut",
+        label: "Commerce",
+        description: "Goodies, Terroir, Pâtisserie, Paiements",
         route: "/admin/commandes",
-        icon: Package,
-        iconColor: "text-secondary-foreground",
-        iconBg: "bg-secondary/20",
-        allowedRoles: ['admin', 'super_admin', 'admin_boutique'],
-      },
-      {
-        label: "Catalogue Goodies",
-        description: "Gérer les produits, variantes et stocks",
-        route: "/admin/goodies",
         icon: ShoppingBag,
         iconColor: "text-secondary-foreground",
         iconBg: "bg-secondary/20",
-        allowedRoles: ['admin', 'super_admin', 'admin_boutique'],
+        allowedRoles: ['admin', 'super_admin', 'admin_boutique', 'admin_patisserie', 'admin_terroir'],
       },
-      {
-        label: "Pâtisserie",
-        description: "Gérer les commandes et billets de pâtisserie",
-        route: "/admin/pastries",
-        icon: UtensilsCrossed,
-        iconColor: "text-amber-600",
-        iconBg: "bg-amber-100",
-        allowedRoles: ['admin', 'super_admin', 'admin_boutique', 'admin_patisserie'],
-      },
-      {
-        label: "Commandes Terroir",
-        description: "Suivi des commandes de produits du terroir",
-        route: "/admin/terroir/orders",
-        icon: Package,
-        iconColor: "text-emerald-700",
-        iconBg: "bg-emerald-100",
-        allowedRoles: ['admin', 'super_admin', 'admin_terroir'],
-      },
-      {
-        label: "Catalogue Terroir",
-        description: "Gérer les produits du terroir, variantes et stocks",
-        route: "/admin/terroir/products",
-        icon: ShoppingBag,
-        iconColor: "text-emerald-700",
-        iconBg: "bg-emerald-100",
-        allowedRoles: ['admin', 'super_admin', 'admin_terroir'],
-      },
-      {
-        label: "Réservation Entreprise",
-        description: "Gérer les réservations groupe avec QR codes individuels",
-        route: "/admin/company-bookings",
-        icon: Users,
-        iconColor: "text-purple-600",
-        iconBg: "bg-purple-100",
-        allowedRoles: ['admin', 'super_admin', 'admin_boutique'],
-      },
-      {
-        label: "Paiements",
-        description: "Suivi et gestion de tous les paiements avec filtres et export",
-        route: "/admin/payments",
-        icon: BarChart3,
-        iconColor: "text-green-600",
-        iconBg: "bg-green-100",
-        allowedRoles: ['admin', 'super_admin', 'admin_boutique', 'admin_dons', 'admin_terroir'],
-      },
-    ],
-  },
-  {
-    title: "Solidarité",
-    modules: [
       {
         label: "Dons",
-        description: "Suivre les promesses de dons et marquer les paiements reçus",
+        description: "Suivre promesses et paiements reçus",
         route: "/admin/dons",
         icon: Heart,
         iconColor: "text-accent",
@@ -190,12 +80,20 @@ const sections: SectionDefinition[] = [
       },
     ],
   },
+
+  // ============================================
+  // BLOC 2 : EXÉCUTION TERRAIN
+  // ============================================
   {
-    title: "Engagement",
+    title: "🟢 Exécution Terrain",
+    description: "Pilotage opérationnel du Ramadan",
+    icon: Users,
+    iconColor: "text-green-600",
+    borderClass: "border-green-100",
     modules: [
       {
         label: "Bénévoles",
-        description: "Gérer les inscriptions et suivre les présences par jour",
+        description: "Gérer inscriptions et présences par jour",
         route: "/admin/benevoles",
         icon: Users,
         iconColor: "text-primary",
@@ -203,46 +101,41 @@ const sections: SectionDefinition[] = [
         allowedRoles: ['admin', 'super_admin', 'admin_ops'],
       },
       {
-        label: "Scanner QR",
-        description: "Scanner les QR codes des bénévoles pour valider leur présence",
-        route: "/scanner",
+        label: "Scanner",
+        description: "Valider réservations, produits, bénévoles",
+        route: "/admin/scan-product",
         icon: QrCode,
-        iconColor: "text-primary",
-        iconBg: "bg-primary/10",
+        iconColor: "text-orange-600",
+        iconBg: "bg-orange-100",
         allowedRoles: ['admin', 'super_admin', 'admin_ops', 'scanner'],
         variant: 'primary',
+        buttonClass: "bg-orange-600 hover:bg-orange-700 text-white",
       },
-    ],
-  },
-  {
-    title: "Ops",
-    modules: [
       {
         label: "Calendrier",
-        description: "Configurer les jours du Ramadan et leurs capacités",
+        description: "Configurer jours Ramadan et capacités",
         route: "/admin/jours",
         icon: Calendar,
         iconColor: "text-blue-600",
         iconBg: "bg-blue-100",
         allowedRoles: ['super_admin'],
       },
-      {
-        label: "Scanner Produits",
-        description: "Scanner les QR codes des produits et commandes",
-        route: "/admin/scan-product",
-        icon: QrCode,
-        iconColor: "text-orange-600",
-        iconBg: "bg-orange-100",
-        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'scanner'],
-      },
     ],
   },
+
+  // ============================================
+  // BLOC 3 : ADMINISTRATION SYSTÈME
+  // ============================================
   {
-    title: "Système",
+    title: "🟣 Administration Système",
+    description: "Gestion interne et configuration",
+    icon: UserCog,
+    iconColor: "text-purple-600",
+    borderClass: "border-purple-100",
     modules: [
       {
         label: "Utilisateurs",
-        description: "Gérer les rôles et permissions des utilisateurs",
+        description: "Gérer rôles et permissions",
         route: "/admin/utilisateurs",
         icon: UserCog,
         iconColor: "text-purple-600",
@@ -250,17 +143,8 @@ const sections: SectionDefinition[] = [
         allowedRoles: ['super_admin'],
       },
       {
-        label: "Messages",
-        description: "Consulter les messages de contact reçus",
-        route: "/admin/messages",
-        icon: MessageSquare,
-        iconColor: "text-green-600",
-        iconBg: "bg-green-100",
-        allowedRoles: ['super_admin'],
-      },
-      {
         label: "Contenu",
-        description: "Gérer les partenaires, témoignages et FAQ",
+        description: "Partenaires, témoignages, FAQ",
         route: "/admin/contenu",
         icon: FileText,
         iconColor: "text-orange-600",
@@ -268,12 +152,12 @@ const sections: SectionDefinition[] = [
         allowedRoles: ['super_admin'],
       },
       {
-        label: "Tableau de bord unifié",
-        description: "Statistiques et gestion unifiées pour tous les modules",
-        route: "/admin/unified-dashboard",
-        icon: BarChart3,
-        iconColor: "text-blue-600",
-        iconBg: "bg-blue-100",
+        label: "Messages",
+        description: "Consulter messages de contact",
+        route: "/admin/messages",
+        icon: MessageSquare,
+        iconColor: "text-green-600",
+        iconBg: "bg-green-100",
         allowedRoles: ['super_admin'],
       },
     ],
@@ -373,7 +257,7 @@ export default function Admin() {
             </Link>
             <div>
               <h1 className="font-bold text-lg">Administration</h1>
-              <p className="text-xs text-muted-foreground">Ftour Bab Rayan</p>
+              <p className="text-xs text-muted-foreground">Ftour Bab Rayan — Dashboard Simplifié</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -390,7 +274,7 @@ export default function Admin() {
 
       <main className="container py-8">
         {/* Quick Stats */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           {canManageVolunteers && (
             <Card>
               <CardContent className="p-6">
@@ -466,13 +350,18 @@ export default function Admin() {
           </Card>
         </div>
 
-        {/* Module Sections */}
+        {/* Module Sections — 3 Blocs Métier */}
         {visibleSections.map((section) => (
-          <div key={section.title} className="mb-8">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              {section.icon && <section.icon className={`h-5 w-5 ${section.iconColor || ''}`} />}
-              {section.title}
-            </h2>
+          <div key={section.title} className="mb-12">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold mb-2 flex items-center gap-3">
+                {section.icon && <section.icon className={`h-6 w-6 ${section.iconColor || ''}`} />}
+                {section.title}
+              </h2>
+              {section.description && (
+                <p className="text-sm text-muted-foreground ml-9">{section.description}</p>
+              )}
+            </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {section.modules.map((mod) => (
                 <Card key={mod.route} className={`card-hover ${section.borderClass || ''}`}>
