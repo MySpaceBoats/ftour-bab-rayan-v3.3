@@ -11,6 +11,7 @@ import * as reservationServices from "./reservation-services";
 import { getSupabaseAdminClient } from "./supabase";
 import { companyBookingsRouter } from "./company-booking-routers";
 import { restaurantReservationsRouter } from "./restaurant-reservation-routers";
+import { backofficeReservationsRouter, backofficeCommerceRouter, backofficeDonsRouter, backofficeBenevolesRouter } from "./backoffice-routers";
 
 // ============================================
 // ROLE-BASED PROCEDURES
@@ -2447,6 +2448,12 @@ export const appRouterUpdated = router({
   restaurantReservations: restaurantReservationsRouter,
   restaurantModule: restaurantModuleRouter,
   terroirModule: terroirModuleRouter,
+  backoffice: router({
+    reservations: backofficeReservationsRouter,
+    commerce: backofficeCommerceRouter,
+    dons: backofficeDonsRouter,
+    benevoles: backofficeBenevolesRouter,
+  }),
 });
 
 export type AppRouter = typeof appRouterUpdated;
