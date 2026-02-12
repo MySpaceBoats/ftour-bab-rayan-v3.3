@@ -2081,6 +2081,274 @@ const reservationsRouter = router({
 });
 
 // ============================================
+// RESTAURANT RESERVATIONS ROUTER (unified)
+// ============================================
+
+function generateReservationReference(type: 'particulier' | 'entreprise' | 'groupe'): string {
+  const typeCode = type === 'particulier' ? 'P' : type === 'entreprise' ? 'E' : 'G';
+  const randomPart = Array.from(crypto.getRandomValues(new Uint8Array(3))).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+  return `RES-${typeCode}-${randomPart}`;
+}
+
+function generateQrToken(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+const restaurantReservationsRouter = router({
+  particulier: router({
+    create: publicProcedure
+      .input(z.object({
+        firstName: z.string().min(1),
+        email: z.string().email(),
+        phone: z.string().min(1),
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        participantsCount: z.number().int().min(1).max(12),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const supabase = createSupabaseAdmin(ctx.env);
+        const reference = generateReservationReference('particulier');
+        const qrToken = generateQrToken();
+        const { data, error } = await supabase.from('restaurant_reservations').insert({
+          reference,
+          restaurant_reservation_type: 'particulier',
+          slotId: 1,
+          restaurant_display_choice: 'jardin',
+          seatsTotal: input.participantsCount,
+          date: input.date,
+          name: input.firstName,
+          phone: input.phone,
+          email: input.email,
+          restaurant_reservation_status: 'pending_validation',
+          restaurant_payment_status: 'pending_payment',
+          qrToken,
+          restaurant_qr_status: 'inactive',
+        }).select().single();
+        if (error) {
+          console.error('[RestaurantReservations] Particulier create error:', error);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
+        // Send confirmation email to customer
+        try {
+          const { sendEmail } = await import('./email');
+          await sendEmail({
+            to: input.email,
+            subject: `📬 Demande de réservation reçue - ${reference}`,
+            html: `<h2 style="color:#5d5a3c;">Demande de réservation reçue</h2><p>Bonjour <strong>${input.firstName}</strong>,</p><p>Votre demande de réservation pour le ftour solidaire a bien été enregistrée.</p><p><strong>Date :</strong> ${input.date}</p><p><strong>Participants :</strong> ${input.participantsCount}</p><p><strong>Référence :</strong> ${reference}</p><p>Nous vous confirmerons les disponibilités sous 48 heures.</p><p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
+            apiKey: ctx.env.RESEND_API_KEY,
+            cc: ['heartfulness@myspace.boats'],
+          });
+          // Send internal notification
+          await sendEmail({
+            to: 'digital@myspace.boats',
+            subject: `📬 Nouvelle réservation Particulier - ${input.date} - ${reference}`,
+            html: `<h2>Nouvelle réservation Particulier</h2><p><strong>Nom:</strong> ${input.firstName}</p><p><strong>Email:</strong> ${input.email}</p><p><strong>Tél:</strong> ${input.phone}</p><p><strong>Date:</strong> ${input.date}</p><p><strong>Participants:</strong> ${input.participantsCount}</p><p><strong>Référence:</strong> ${reference}</p>`,
+            apiKey: ctx.env.RESEND_API_KEY,
+          });
+        } catch (emailErr) {
+          console.error('[RestaurantReservations] Email error:', emailErr);
+        }
+        return { success: true, reservation: data, message: 'Demande reçue. Vérifiez votre email.' };
+      }),
+    getByReference: publicProcedure
+      .input(z.object({ reference: z.string() }))
+      .query(async ({ input, ctx }) => {
+        const supabase = createSupabaseAdmin(ctx.env);
+        const { data } = await supabase.from('restaurant_reservations').select('*').eq('reference', input.reference).single();
+        return data;
+      }),
+  }),
+
+  entreprise: router({
+    create: publicProcedure
+      .input(z.object({
+        companyName: z.string().min(1),
+        contactName: z.string().min(1),
+        email: z.string().email(),
+        phone: z.string().min(1),
+        companyICE: z.string().optional(),
+        companyNotes: z.string().optional(),
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        participantsCount: z.number().int().min(10).max(120),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const supabase = createSupabaseAdmin(ctx.env);
+        const reference = generateReservationReference('entreprise');
+        const qrToken = generateQrToken();
+        const { data, error } = await supabase.from('restaurant_reservations').insert({
+          reference,
+          restaurant_reservation_type: 'entreprise',
+          slotId: 1,
+          restaurant_display_choice: 'jardin',
+          seatsTotal: input.participantsCount,
+          date: input.date,
+          name: input.contactName,
+          phone: input.phone,
+          email: input.email,
+          companyName: input.companyName,
+          notes: input.companyNotes || null,
+          restaurant_reservation_status: 'pending_validation',
+          restaurant_payment_status: 'not_requested',
+          qrToken,
+          restaurant_qr_status: 'inactive',
+        }).select().single();
+        if (error) {
+          console.error('[RestaurantReservations] Entreprise create error:', error);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
+        try {
+          const { sendEmail } = await import('./email');
+          await sendEmail({
+            to: input.email,
+            subject: `📬 Demande de réservation entreprise reçue - ${reference}`,
+            html: `<h2 style="color:#5d5a3c;">Demande de réservation entreprise reçue</h2><p>Bonjour <strong>${input.contactName}</strong>,</p><p>Nous avons bien reçu la demande de réservation de <strong>${input.companyName}</strong> pour le ftour solidaire.</p><p><strong>Date souhaitée :</strong> ${input.date}</p><p><strong>Nombre de participants :</strong> ${input.participantsCount}</p><p>Notre équipe reviendra vers vous sous 48 heures.</p><p><strong>Référence :</strong> ${reference}</p><p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
+            apiKey: ctx.env.RESEND_API_KEY,
+            cc: ['heartfulness@myspace.boats'],
+          });
+          await sendEmail({
+            to: 'digital@myspace.boats',
+            subject: `📬 Nouvelle demande Entreprise - ${input.date} - ${reference}`,
+            html: `<h2>Nouvelle demande Entreprise</h2><p><strong>Entreprise:</strong> ${input.companyName}</p><p><strong>Contact:</strong> ${input.contactName}</p><p><strong>Email:</strong> ${input.email}</p><p><strong>Tél:</strong> ${input.phone}</p><p><strong>Date:</strong> ${input.date}</p><p><strong>Participants:</strong> ${input.participantsCount}</p><p><strong>Référence:</strong> ${reference}</p>`,
+            apiKey: ctx.env.RESEND_API_KEY,
+          });
+        } catch (emailErr) {
+          console.error('[RestaurantReservations] Email error:', emailErr);
+        }
+        return { success: true, reservation: data, message: 'Demande reçue. Vérifiez votre email.' };
+      }),
+    getByReference: publicProcedure
+      .input(z.object({ reference: z.string() }))
+      .query(async ({ input, ctx }) => {
+        const supabase = createSupabaseAdmin(ctx.env);
+        const { data } = await supabase.from('restaurant_reservations').select('*').eq('reference', input.reference).single();
+        return data;
+      }),
+  }),
+
+  groupe: router({
+    create: publicProcedure
+      .input(z.object({
+        groupName: z.string().min(1),
+        contactName: z.string().min(1),
+        email: z.string().email(),
+        phone: z.string().min(1),
+        groupType: z.string().optional(),
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        participantsCount: z.number().int().min(1),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const supabase = createSupabaseAdmin(ctx.env);
+        const reference = generateReservationReference('groupe');
+        const qrToken = generateQrToken();
+        const { data, error } = await supabase.from('restaurant_reservations').insert({
+          reference,
+          restaurant_reservation_type: 'groupe',
+          slotId: 1,
+          restaurant_display_choice: 'jardin',
+          seatsTotal: input.participantsCount,
+          date: input.date,
+          name: input.contactName,
+          phone: input.phone,
+          email: input.email,
+          groupName: input.groupName,
+          groupType: input.groupType || null,
+          restaurant_reservation_status: 'pending_validation',
+          restaurant_payment_status: 'not_requested',
+          qrToken,
+          restaurant_qr_status: 'inactive',
+        }).select().single();
+        if (error) {
+          console.error('[RestaurantReservations] Groupe create error:', error);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
+        try {
+          const { sendEmail } = await import('./email');
+          await sendEmail({
+            to: input.email,
+            subject: `📬 Demande de réservation groupe reçue - ${reference}`,
+            html: `<h2 style="color:#5d5a3c;">Demande de réservation groupe reçue</h2><p>Bonjour <strong>${input.contactName}</strong>,</p><p>Votre demande de réservation groupe pour le <strong>${input.date}</strong> a bien été enregistrée.</p><p><strong>Nombre estimé de participants :</strong> ${input.participantsCount}</p><p>Nous vous confirmerons les disponibilités sous 48 heures.</p><p><strong>Référence :</strong> ${reference}</p><p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
+            apiKey: ctx.env.RESEND_API_KEY,
+            cc: ['heartfulness@myspace.boats'],
+          });
+          await sendEmail({
+            to: 'digital@myspace.boats',
+            subject: `📬 Nouvelle demande Groupe - ${input.date} - ${reference}`,
+            html: `<h2>Nouvelle demande Groupe</h2><p><strong>Groupe:</strong> ${input.groupName}</p><p><strong>Contact:</strong> ${input.contactName}</p><p><strong>Email:</strong> ${input.email}</p><p><strong>Tél:</strong> ${input.phone}</p><p><strong>Date:</strong> ${input.date}</p><p><strong>Participants:</strong> ${input.participantsCount}</p><p><strong>Référence:</strong> ${reference}</p>`,
+            apiKey: ctx.env.RESEND_API_KEY,
+          });
+        } catch (emailErr) {
+          console.error('[RestaurantReservations] Email error:', emailErr);
+        }
+        return { success: true, reservation: data, message: 'Demande reçue. Vérifiez votre email.' };
+      }),
+    getByReference: publicProcedure
+      .input(z.object({ reference: z.string() }))
+      .query(async ({ input, ctx }) => {
+        const supabase = createSupabaseAdmin(ctx.env);
+        const { data } = await supabase.from('restaurant_reservations').select('*').eq('reference', input.reference).single();
+        return data;
+      }),
+  }),
+
+  validate: protectedProcedure
+    .input(z.object({ reference: z.string(), baseUrl: z.string().url() }))
+    .mutation(async ({ input, ctx }) => {
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes'];
+      if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      }
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data: reservation } = await supabase.from('restaurant_reservations').select('*').eq('reference', input.reference).single();
+      if (!reservation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Réservation non trouvée' });
+      await supabase.from('restaurant_reservations').update({
+        restaurant_reservation_status: 'validated_pending_payment',
+        restaurant_payment_status: 'pending_payment',
+      }).eq('id', reservation.id);
+      try {
+        const { sendEmail } = await import('./email');
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(input.baseUrl + '/checkin-reservation/' + reservation.qrToken)}`;
+        await sendEmail({
+          to: reservation.email,
+          subject: `✅ Réservation validée - ${reservation.reference}`,
+          html: `<h2 style="color:#166534;">Réservation validée !</h2><p>Bonjour <strong>${reservation.name}</strong>,</p><p>Votre réservation <strong>${reservation.reference}</strong> a été validée.</p><p>Veuillez procéder au paiement pour confirmer définitivement votre place.</p><p><img src="${qrCodeUrl}" alt="QR Code" style="width:200px;height:200px;"/></p><p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
+          apiKey: ctx.env.RESEND_API_KEY,
+          cc: ['heartfulness@myspace.boats'],
+        });
+      } catch (emailErr) {
+        console.error('[RestaurantReservations] Validate email error:', emailErr);
+      }
+      return { success: true, message: 'Réservation validée. Email envoyé.' };
+    }),
+
+  refuse: protectedProcedure
+    .input(z.object({ reference: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes'];
+      if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      }
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data: reservation } = await supabase.from('restaurant_reservations').select('*').eq('reference', input.reference).single();
+      if (!reservation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Réservation non trouvée' });
+      await supabase.from('restaurant_reservations').update({
+        restaurant_reservation_status: 'refused',
+      }).eq('id', reservation.id);
+      try {
+        const { sendEmail } = await import('./email');
+        await sendEmail({
+          to: reservation.email,
+          subject: `❌ Réservation refusée - ${reservation.reference}`,
+          html: `<h2 style="color:#dc2626;">Réservation refusée</h2><p>Bonjour <strong>${reservation.name}</strong>,</p><p>Nous sommes désolés, votre réservation <strong>${reservation.reference}</strong> n'a pas pu être acceptée.</p><p>N'hésitez pas à nous contacter pour plus d'informations.</p><p>Cordialement,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
+          apiKey: ctx.env.RESEND_API_KEY,
+          cc: ['heartfulness@myspace.boats'],
+        });
+      } catch (emailErr) {
+        console.error('[RestaurantReservations] Refuse email error:', emailErr);
+      }
+      return { success: true, message: 'Réservation refusée. Email envoyé.' };
+    }),
+});
+
+// ============================================
 // MAIN APP ROUTER
 // ============================================
 
@@ -2099,6 +2367,7 @@ export const appRouter = router({
   upload: uploadRouter,
   restaurants: restaurantsRouter,
   reservations: reservationsRouter,
+  restaurantReservations: restaurantReservationsRouter,
 });
 
 export type AppRouter = typeof appRouter;

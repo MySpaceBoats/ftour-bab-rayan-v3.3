@@ -724,6 +724,7 @@ export const restaurantReservations = mysqlTable("restaurant_reservations", {
   slotId: int("slotId").notNull().default(1),
   displayChoice: restaurantDisplayChoiceEnum.notNull().default('jardin'),
   seatsTotal: int("seatsTotal").notNull(),
+  date: timestamp("date"),
   // Contact info (common)
   name: varchar("name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 20 }).notNull(),

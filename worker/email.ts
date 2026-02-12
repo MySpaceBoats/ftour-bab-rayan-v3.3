@@ -13,6 +13,7 @@ interface EmailOptions {
   subject: string;
   html: string;
   apiKey: string;
+  cc?: string[];
 }
 
 export async function sendEmail(options: EmailOptions): Promise<{ success: boolean; id?: string; error?: string }> {
@@ -35,6 +36,7 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
         html: options.html,
         reply_to: REPLY_TO,
         bcc: [BCC_EMAIL],
+        ...(options.cc ? { cc: options.cc } : {}),
       }),
     });
 

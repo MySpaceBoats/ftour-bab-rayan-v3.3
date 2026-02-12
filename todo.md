@@ -783,3 +783,12 @@
 ## Bug Cloudflare Pages Deploy - 12/02/2026
 - [x] Corriger wrangler.toml : supprimer section "build" non supportée par Pages
 - [x] Corriger commande deploy : utiliser "wrangler pages deploy" au lieu de "wrangler deploy" (déjà correct dans package.json)
+
+## Bug Formulaire Réservation Entreprise - 12/02/2026
+- [x] Erreur 404 : "No procedure found on path restaurantReservations.entreprise.create"
+- [x] Vérifier que la procédure existe dans le router local (server/routers.ts) — OK
+- [x] Ajouté restaurantReservationsRouter complet dans worker/routers.ts (particulier, entreprise, groupe, validate, refuse)
+- [x] Ajouté colonne `date` à la table restaurant_reservations
+- [x] Ajouté support CC dans worker/email.ts
+- [x] Build + worker TS compile OK
+- [ ] Push vers GitHub

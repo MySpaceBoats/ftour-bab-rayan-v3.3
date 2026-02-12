@@ -1,0 +1,210 @@
+{
+  "query": "DESCRIBE restaurant_reservations;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user AcjZqcYK3EX3uxV.dd54fc6940c5 --database axVHSEMeXtqmA9TfobQFiG --execute DESCRIBE restaurant_reservations;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int(11)",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "reference",
+      "Type": "varchar(50)",
+      "Null": "NO",
+      "Key": "UNI",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "restaurant_reservation_type",
+      "Type": "enum('particulier','entreprise','groupe')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "slotId",
+      "Type": "int(11)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "1",
+      "Extra": ""
+    },
+    {
+      "Field": "restaurant_display_choice",
+      "Type": "enum('brasserie','jardin')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "jardin",
+      "Extra": ""
+    },
+    {
+      "Field": "seatsTotal",
+      "Type": "int(11)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "name",
+      "Type": "varchar(255)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "phone",
+      "Type": "varchar(20)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "email",
+      "Type": "varchar(320)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "companyName",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "groupName",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "groupType",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "restaurant_reservation_status",
+      "Type": "enum('pending_validation','validated_pending_payment','paid_confirmed','refused','cancelled','completed','no_show')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "pending_validation",
+      "Extra": ""
+    },
+    {
+      "Field": "restaurant_payment_status",
+      "Type": "enum('not_requested','pending_payment','paid','failed','refunded')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "not_requested",
+      "Extra": ""
+    },
+    {
+      "Field": "paymentAmount",
+      "Type": "decimal(10,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "paymentProvider",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "paymentReference",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "qrToken",
+      "Type": "varchar(64)",
+      "Null": "YES",
+      "Key": "UNI",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "restaurant_qr_status",
+      "Type": "enum('inactive','active','used','revoked')",
+      "Null": "YES",
+      "Key": "",
+      "Default": "inactive",
+      "Extra": ""
+    },
+    {
+      "Field": "expiresAt",
+      "Type": "timestamp",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "processedBy",
+      "Type": "int(11)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "processedAt",
+      "Type": "timestamp",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "notes",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "createdAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    },
+    {
+      "Field": "updatedAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint(11)\tNO\tPRI\tNULL\tauto_increment\nreference\tvarchar(50)\tNO\tUNI\tNULL\t\nrestaurant_reservation_type\tenum('particulier','entreprise','groupe')\tNO\t\tNULL\t\nslotId\tint(11)\tNO\t\t1\t\nrestaurant_display_choice\tenum('brasserie','jardin')\tNO\t\tjardin\t\nseatsTotal\tint(11)\tNO\t\tNULL\t\nname\tvarchar(255)\tNO\t\tNULL\t\nphone\tvarchar(20)\tNO\t\tNULL\t\nemail\tvarchar(320)\tYES\t\tNULL\t\ncompanyName\tvarchar(255)\tYES\t\tNULL\t\ngroupName\tvarchar(255)\tYES\t\tNULL\t\ngroupType\tvarchar(50)\tYES\t\tNULL\t\nrestaurant_reservation_status\tenum('pending_validation','validated_pending_payment','paid_confirmed','refused','cancelled','completed','no_show')\tNO\t\tpending_validation\t\nrestaurant_payment_status\tenum('not_requested','pending_payment','paid','failed','refunded')\tNO\t\tnot_requested\t\npaymentAmount\tdecimal(10,2)\tYES\t\tNULL\t\npaymentProvider\tvarchar(50)\tYES\t\tNULL\t\npaymentReference\tvarchar(100)\tYES\t\tNULL\t\nqrToken\tvarchar(64)\tYES\tUNI\tNULL\t\nrestaurant_qr_status\tenum('inactive','active','used','revoked')\tYES\t\tinactive\t\nexpiresAt\ttimestamp\tYES\t\tNULL\t\nprocessedBy\tint(11)\tYES\t\tNULL\t\nprocessedAt\ttimestamp\tYES\t\tNULL\t\nnotes\ttext\tYES\t\tNULL\t\ncreatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\t\nupdatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\tDEFAULT_GENERATED on update CURRENT_TIMESTAMP\n",
+  "stderr": "",
+  "execution_time_ms": 1972
+}
