@@ -86,9 +86,17 @@ export default function RestaurantGroupes() {
         toast.success('Demande envoyée avec succès!');
         setConfirmed(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur:', error);
-      toast.error('Erreur lors de l\'envoi de la demande');
+      const errorMessage = error?.message || 'Erreur lors de l\'envoi de la demande';
+      const zodErrors = error?.data?.zodError?.fieldErrors;
+
+      if (zodErrors) {
+        const fields = Object.keys(zodErrors).join(', ');
+        toast.error(`Erreur de validation: ${fields}`);
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsSubmitting(false);
     }

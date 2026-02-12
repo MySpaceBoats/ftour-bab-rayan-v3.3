@@ -7,6 +7,7 @@ import { z } from 'zod';
 import superjson from 'superjson';
 import type { WorkerContext, WorkerUser } from './context';
 import { createSupabaseAdmin } from './supabase';
+import { restaurantReservationsRouter } from './restaurant-reservation-router';
 
 // Initialize tRPC
 const t = initTRPC.context<WorkerContext>().create({
@@ -2099,6 +2100,7 @@ export const appRouter = router({
   upload: uploadRouter,
   restaurants: restaurantsRouter,
   reservations: reservationsRouter,
+  restaurantReservations: restaurantReservationsRouter,
 });
 
 export type AppRouter = typeof appRouter;

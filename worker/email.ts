@@ -559,7 +559,7 @@ export function generateReservationAdminNotificationEmail(data: ReservationEmail
     <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
       Nouvelle réservation Ftour
     </h2>
-    
+
     <div style="background-color: #f0fdf4; border-radius: 8px; padding: 20px; margin: 20px 0;">
       <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de la réservation</h3>
       <p style="margin: 5px 0; color: #374151;"><strong>Référence :</strong> ${data.referenceCode}</p>
@@ -568,14 +568,14 @@ export function generateReservationAdminNotificationEmail(data: ReservationEmail
       ${data.email ? `<p style="margin: 5px 0; color: #374151;"><strong>Email :</strong> <a href="mailto:${data.email}" style="color: #166534;">${data.email}</a></p>` : ''}
       <p style="margin: 5px 0; color: #374151;"><strong>Places :</strong> ${data.seats}</p>
     </div>
-    
+
     <div style="background-color: #fef3c7; border-radius: 8px; padding: 20px; margin: 20px 0;">
       <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 18px;">📍 Lieu et date</h3>
       <p style="margin: 5px 0; color: #374151;"><strong>Restaurant :</strong> ${data.restaurantName}</p>
       <p style="margin: 5px 0; color: #374151;"><strong>Adresse :</strong> ${data.restaurantAddress}</p>
       <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
     </div>
-    
+
     <p style="color: #6b7280; font-size: 14px; margin: 20px 0 0 0;">
       Gérez cette réservation depuis le <a href="https://ftourbabrayan.ma/admin/reservations" style="color: #166534;">dashboard admin</a>.
     </p>
@@ -583,6 +583,124 @@ export function generateReservationAdminNotificationEmail(data: ReservationEmail
 
   return {
     subject: `📅 [Réservation] ${data.referenceCode} - ${data.fullName} (${data.seats} places)`,
+    html: baseTemplate(content),
+  };
+}
+
+// ============================================
+// RESTAURANT RESERVATION EMAILS
+// ============================================
+
+export interface ParticulierReservationRequestEmailData {
+  firstName: string;
+  email: string;
+  date: string;
+  participantsCount: number;
+  reference: string;
+}
+
+export function generateParticulierReservationRequestEmail(data: ParticulierReservationRequestEmailData): { subject: string; html: string } {
+  const content = `
+    <h2 style="color: #5d5a3c; margin: 0 0 20px 0; font-size: 24px;">
+      Votre demande de réservation a bien été reçue
+    </h2>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Bonjour <strong>${data.firstName}</strong>,
+    </p>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Nous avons bien reçu votre demande de réservation pour le ftour solidaire du <strong>${data.date}</strong>.
+    </p>
+
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f0; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de votre demande</h3>
+          <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Nombre de places :</strong> ${data.participantsCount}</p>
+          <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;"><strong>Référence :</strong> ${data.reference}</p>
+        </td>
+      </tr>
+    </table>
+
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #e0f2fe; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <p style="margin: 0; color: #0369a1; font-size: 16px;">
+            <strong>⏳ Notre équipe étudiera votre demande et vous confirmera la disponibilité sous 48 heures.</strong>
+          </p>
+          <p style="margin: 10px 0 0 0; color: #0369a1; font-size: 14px;">
+            Aucun paiement n'est requis à ce stade.
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
+      Si vous avez des questions, n'hésitez pas à nous contacter.
+    </p>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">
+      À très bientôt !<br>
+      <strong>L'équipe Ftour Bab Rayan</strong>
+    </p>
+  `;
+
+  return {
+    subject: `📬 Votre demande de réservation a bien été reçue`,
+    html: baseTemplate(content),
+  };
+}
+
+export interface NewBookingNotificationData {
+  type: 'particulier' | 'entreprise' | 'groupe';
+  date: string;
+  participantsCount: number;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+  reference: string;
+  companyName?: string;
+  groupName?: string;
+}
+
+export function generateNewBookingNotificationEmail(data: NewBookingNotificationData): { subject: string; html: string } {
+  const typeLabel = {
+    particulier: 'Particulier',
+    entreprise: 'Entreprise',
+    groupe: 'Groupe',
+  }[data.type];
+
+  const content = `
+    <h2 style="color: #5d5a3c; margin: 0 0 20px 0; font-size: 24px;">
+      📬 Nouvelle demande reçue
+    </h2>
+
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f0; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de la demande</h3>
+          <p style="margin: 5px 0; color: #374151;"><strong>Type :</strong> ${typeLabel}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Participants :</strong> ${data.participantsCount}</p>
+          ${data.companyName ? `<p style="margin: 5px 0; color: #374151;"><strong>Entreprise :</strong> ${data.companyName}</p>` : ''}
+          ${data.groupName ? `<p style="margin: 5px 0; color: #374151;"><strong>Groupe :</strong> ${data.groupName}</p>` : ''}
+          <p style="margin: 5px 0; color: #374151;"><strong>Contact :</strong> ${data.contactName}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Email :</strong> ${data.contactEmail}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Téléphone :</strong> ${data.contactPhone}</p>
+          <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;"><strong>Référence :</strong> ${data.reference}</p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
+      ⏳ À traiter dans les 48 heures.
+    </p>
+  `;
+
+  return {
+    subject: `📬 Nouvelle demande ${typeLabel} - ${data.date}`,
     html: baseTemplate(content),
   };
 }
