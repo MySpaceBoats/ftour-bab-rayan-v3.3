@@ -49,39 +49,11 @@ export default {
       return new Response(null, { headers: baseCorsHeaders });
     }
 
-    // Health check endpoint
-    if (url.pathname === '/health' || url.pathname === '/api/health') {
-      const healthData = {
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        worker: 'ftour-bab-rayan-v2',
-        version: '2.0.0',
-        environment: env.NODE_ENV || 'production',
-        endpoints: {
-          trpc: '/api/trpc',
-          cms: '/api/cms',
-          health: '/health',
-        },
-        features: {
-          restaurantReservations: true,
-          emailNotifications: !!env.RESEND_API_KEY,
-          database: !!env.SUPABASE_URL,
-        },
-      };
-
-      return new Response(JSON.stringify(healthData, null, 2), {
-        headers: {
-          'Content-Type': 'application/json',
-          ...baseCorsHeaders,
-        },
-      });
-    }
-
     // Handle CMS API requests (must be before tRPC)
     if (url.pathname.startsWith('/api/cms')) {
       const cmsPath = url.pathname.substring(8); // Remove '/api/cms'
       const response = await handleCMSRequest(request, env, cmsPath);
-
+      
       // Merge CORS headers
       const newHeaders = new Headers(response.headers);
       Object.entries(baseCorsHeaders).forEach(([key, value]) => {
@@ -89,7 +61,7 @@ export default {
           newHeaders.set(key, value);
         }
       });
-
+      
       return new Response(response.body, {
         status: response.status,
         statusText: response.statusText,

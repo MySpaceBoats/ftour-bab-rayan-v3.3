@@ -69,17 +69,9 @@ export default function RestaurantParticuliers() {
         toast.success('Demande envoyée avec succès!');
         setConfirmed(true);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur:', error);
-      const errorMessage = error?.message || 'Erreur lors de l\'envoi de la demande';
-      const zodErrors = error?.data?.zodError?.fieldErrors;
-
-      if (zodErrors) {
-        const fields = Object.keys(zodErrors).join(', ');
-        toast.error(`Erreur de validation: ${fields}`);
-      } else {
-        toast.error(errorMessage);
-      }
+      toast.error('Erreur lors de l\'envoi de la demande');
     } finally {
       setIsSubmitting(false);
     }
