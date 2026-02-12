@@ -1,108 +1,146 @@
-import { useState, useMemo } from 'react';
+'use client';
+
 import { useSearchParams } from 'wouter';
+import { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingBag, Plus, Edit2, Package, Eye, ToggleLeft, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ShoppingBag, Plus, Eye, Edit, Trash2, Loader2, Package } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/_core/hooks/useAuth';
 import DataTable, { Column } from '@/features/admin/components/DataTable';
 import FilterPanel, { FilterOption } from '@/features/admin/components/FilterPanel';
 
 // ============================================
-// ADMIN COMMERCE — UNIFIED VIEW
+// ADMIN COMMERCE — UNIFIED VIEW WITH tRPC
 // ============================================
 
 interface Product {
   id: string;
-  type: 'goodie' | 'terroir' | 'pastry';
+  type: 'goodies' | 'terroir' | 'patisserie';
   name: string;
   price: number;
   stock: number;
-  status: 'active' | 'inactive' | 'discontinued';
+  status: 'active' | 'inactive';
   created_at: string;
 }
 
 interface Order {
   id: string;
-  type: 'goodie' | 'terroir' | 'pastry';
-  customer_name: string;
-  products: string;
-  amount: number;
-  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+  type: 'goodies' | 'terroir' | 'patisserie';
+  product_name: string;
+  quantity: number;
+  total: number;
+  status: 'pending' | 'confirmed' | 'delivered' | 'cancelled';
+  customer_email: string;
   created_at: string;
 }
 
-// Mock data
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: 'prod-001',
-    type: 'goodie',
-    name: 'T-shirt Ftour Bab Rayan',
-    price: 150,
-    stock: 45,
-    status: 'active',
-    created_at: '2026-01-15',
-  },
-  {
-    id: 'prod-002',
-    type: 'terroir',
-    name: 'Miel du Rif',
-    price: 250,
-    stock: 12,
-    status: 'active',
-    created_at: '2026-01-20',
-  },
-  {
-    id: 'prod-003',
-    type: 'pastry',
-    name: 'Cornes de Gazelle',
-    price: 80,
-    stock: 0,
-    status: 'active',
-    created_at: '2026-02-01',
-  },
-];
-
-const MOCK_ORDERS: Order[] = [
-  {
-    id: 'ord-001',
-    type: 'goodie',
-    customer_name: 'Mohammed Alaoui',
-    products: 'T-shirt (2x)',
-    amount: 300,
-    status: 'confirmed',
-    created_at: '2026-02-10',
-  },
-  {
-    id: 'ord-002',
-    type: 'terroir',
-    customer_name: 'Fatima Bennani',
-    products: 'Miel (1x)',
-    amount: 250,
-    status: 'shipped',
-    created_at: '2026-02-09',
-  },
-];
-
 export default function AdminCommercePage() {
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'products' | 'orders'>('products');
-  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
-  const [productFilters, setProductFilters] = useState({
+  const [activeTab, setActiveTab] = useState<'products' | 'orders'>(
+    (searchParams.tab as 'products' | 'orders') || 'products'
+  );
+  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [filters, setFilters] = useState({
     type: searchParams.type || '',
     status: searchParams.status || '',
-    stock_status: searchParams.stock_status || '',
+    search: searchParams.search || '',
   });
+
+  // Fetch products from tRPC
+  const { data: products = [], isLoading: productsLoading } = trpc.backoffice.commerce.listProducts.useQuery(
+    { type: filters.type as any },
+    { enabled: !!user && activeTab === 'products' }
+  );
+
+  // Fetch orders from tRPC
+  const { data: orders = [], isLoading: ordersLoading } = trpc.backoffice.commerce.listOrders.useQuery(
+    { type: filters.type as any },
+    { enabled: !!user && activeTab === 'orders' }
+  );
+
+  // Mutations
+  const updateStockMutation = trpc.backoffice.commerce.updateStock.useMutation();
+  const toggleProductMutation = trpc.backoffice.commerce.toggleProduct.useMutation();
+  const deleteProductMutation = trpc.backoffice.commerce.deleteProduct.useMutation();
+  const updateOrderStatusMutation = trpc.backoffice.commerce.updateOrderStatus.useMutation();
 
   // Filter products
   const filteredProducts = useMemo(() => {
-    return MOCK_PRODUCTS.filter((prod) => {
-      if (productFilters.type && prod.type !== productFilters.type) return false;
-      if (productFilters.status && prod.status !== productFilters.status) return false;
-      if (productFilters.stock_status === 'in_stock' && prod.stock === 0) return false;
-      if (productFilters.stock_status === 'out_of_stock' && prod.stock > 0) return false;
+    return (products as Product[]).filter((prod) => {
+      if (filters.type && prod.type !== filters.type) return false;
+      if (filters.status && prod.status !== filters.status) return false;
+      if (filters.search && !prod.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
       return true;
     });
-  }, [productFilters]);
+  }, [products, filters]);
+
+  // Filter orders
+  const filteredOrders = useMemo(() => {
+    return (orders as Order[]).filter((ord) => {
+      if (filters.type && ord.type !== filters.type) return false;
+      if (filters.search && !ord.product_name.toLowerCase().includes(filters.search.toLowerCase())) return false;
+      return true;
+    });
+  }, [orders, filters]);
+
+  // Handle filter change
+  const handleFilterChange = (key: string, value: any) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+    const newParams = new URLSearchParams(searchParams);
+    if (value) {
+      newParams.set(key, value);
+    } else {
+      newParams.delete(key);
+    }
+    setSearchParams(newParams.toString());
+  };
+
+  // Reset filters
+  const handleResetFilters = () => {
+    setFilters({ type: '', status: '', search: '' });
+    setSearchParams('');
+  };
+
+  // Actions
+  const handleToggleProduct = useCallback(async (id: string, currentStatus: string) => {
+    try {
+      await toggleProductMutation.mutateAsync({
+        id,
+        status: currentStatus === 'active' ? 'inactive' : 'active',
+      });
+      window.location.reload();
+    } catch (error) {
+      console.error('Erreur lors de la modification:', error);
+    }
+  }, [toggleProductMutation]);
+
+  const handleDeleteProduct = useCallback(async (id: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
+    try {
+      await deleteProductMutation.mutateAsync({ id });
+      window.location.reload();
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+    }
+  }, [deleteProductMutation]);
+
+  const handleUpdateOrderStatus = useCallback(async (id: string, newStatus: string) => {
+    try {
+      await updateOrderStatusMutation.mutateAsync({ id, status: newStatus as any });
+      window.location.reload();
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour:', error);
+    }
+  }, [updateOrderStatusMutation]);
+
+  const handleViewProduct = (product: Product) => {
+    setSelectedProduct(product);
+    setDetailDrawerOpen(true);
+  };
 
   // Product columns
   const productColumns: Column<Product>[] = [
@@ -112,7 +150,7 @@ export default function AdminCommercePage() {
       sortable: true,
       width: '100px',
       render: (value) => {
-        const labels = { goodie: 'Goodie', terroir: 'Terroir', pastry: 'Pâtisserie' };
+        const labels = { goodies: 'Goodies', terroir: 'Terroir', patisserie: 'Pâtisserie' };
         return <span className="capitalize">{labels[value as keyof typeof labels]}</span>;
       },
     },
@@ -133,30 +171,68 @@ export default function AdminCommercePage() {
       label: 'Stock',
       sortable: true,
       width: '80px',
-      render: (value) => (
-        <span className={value === 0 ? 'text-red-600 font-semibold' : ''}>
-          {value} {value === 0 && '(Rupture)'}
-        </span>
-      ),
     },
     {
       key: 'status',
       label: 'Statut',
       sortable: true,
-      width: '120px',
+      width: '100px',
       render: (value) => {
         const styles = {
           active: 'bg-green-100 text-green-800',
-          inactive: 'bg-yellow-100 text-yellow-800',
-          discontinued: 'bg-red-100 text-red-800',
+          inactive: 'bg-gray-100 text-gray-800',
         };
-        const labels = { active: 'Actif', inactive: 'Inactif', discontinued: 'Discontinué' };
+        const labels = { active: 'Actif', inactive: 'Inactif' };
         return (
           <span className={`px-2 py-1 rounded text-sm ${styles[value as keyof typeof styles]}`}>
             {labels[value as keyof typeof labels]}
           </span>
         );
       },
+    },
+    {
+      key: 'id',
+      label: 'Actions',
+      width: '200px',
+      render: (_, row: Product) => (
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleViewProduct(row)}
+            title="Voir détails"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleToggleProduct(row.id, row.status)}
+            disabled={toggleProductMutation.isPending}
+            title={row.status === 'active' ? 'Désactiver' : 'Activer'}
+          >
+            {toggleProductMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Edit className="h-4 w-4" />
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-red-600 hover:text-red-700"
+            onClick={() => handleDeleteProduct(row.id)}
+            disabled={deleteProductMutation.isPending}
+            title="Supprimer"
+          >
+            {deleteProductMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      ),
     },
   ];
 
@@ -168,23 +244,24 @@ export default function AdminCommercePage() {
       sortable: true,
       width: '100px',
       render: (value) => {
-        const labels = { goodie: 'Goodie', terroir: 'Terroir', pastry: 'Pâtisserie' };
+        const labels = { goodies: 'Goodies', terroir: 'Terroir', patisserie: 'Pâtisserie' };
         return <span className="capitalize">{labels[value as keyof typeof labels]}</span>;
       },
     },
     {
-      key: 'customer_name',
-      label: 'Client',
+      key: 'product_name',
+      label: 'Produit',
       sortable: true,
     },
     {
-      key: 'products',
-      label: 'Produits',
-      sortable: false,
+      key: 'quantity',
+      label: 'Qté',
+      sortable: true,
+      width: '60px',
     },
     {
-      key: 'amount',
-      label: 'Montant',
+      key: 'total',
+      label: 'Total',
       sortable: true,
       width: '100px',
       render: (value) => `${value} DH`,
@@ -197,15 +274,13 @@ export default function AdminCommercePage() {
       render: (value) => {
         const styles = {
           pending: 'bg-yellow-100 text-yellow-800',
-          confirmed: 'bg-blue-100 text-blue-800',
-          shipped: 'bg-purple-100 text-purple-800',
-          delivered: 'bg-green-100 text-green-800',
+          confirmed: 'bg-green-100 text-green-800',
+          delivered: 'bg-blue-100 text-blue-800',
           cancelled: 'bg-red-100 text-red-800',
         };
         const labels = {
           pending: 'En attente',
           confirmed: 'Confirmée',
-          shipped: 'Expédiée',
           delivered: 'Livrée',
           cancelled: 'Annulée',
         };
@@ -216,40 +291,94 @@ export default function AdminCommercePage() {
         );
       },
     },
+    {
+      key: 'customer_email',
+      label: 'Client',
+      sortable: true,
+    },
+    {
+      key: 'id',
+      label: 'Actions',
+      width: '150px',
+      render: (_, row: Order) => (
+        <div className="flex gap-2">
+          {row.status === 'pending' && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-green-600 hover:text-green-700"
+              onClick={() => handleUpdateOrderStatus(row.id, 'confirmed')}
+              disabled={updateOrderStatusMutation.isPending}
+            >
+              {updateOrderStatusMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'Confirmer'
+              )}
+            </Button>
+          )}
+          {row.status === 'confirmed' && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-blue-600 hover:text-blue-700"
+              onClick={() => handleUpdateOrderStatus(row.id, 'delivered')}
+              disabled={updateOrderStatusMutation.isPending}
+            >
+              {updateOrderStatusMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'Livrer'
+              )}
+            </Button>
+          )}
+        </div>
+      ),
+    },
   ];
 
   // Filter options
-  const productFilterOptions: FilterOption[] = [
+  const filterOptions: FilterOption[] = [
     {
       id: 'type',
       label: 'Type',
       type: 'select',
       options: [
-        { value: 'goodie', label: 'Goodies' },
+        { value: 'goodies', label: 'Goodies' },
         { value: 'terroir', label: 'Terroir' },
-        { value: 'pastry', label: 'Pâtisserie' },
+        { value: 'patisserie', label: 'Pâtisserie' },
       ],
     },
+    ...(activeTab === 'products'
+      ? [
+          {
+            id: 'status',
+            label: 'Statut',
+            type: 'select' as const,
+            options: [
+              { value: 'active', label: 'Actif' },
+              { value: 'inactive', label: 'Inactif' },
+            ],
+          },
+        ]
+      : []),
     {
-      id: 'status',
-      label: 'Statut',
-      type: 'select',
-      options: [
-        { value: 'active', label: 'Actif' },
-        { value: 'inactive', label: 'Inactif' },
-        { value: 'discontinued', label: 'Discontinué' },
-      ],
-    },
-    {
-      id: 'stock_status',
-      label: 'Stock',
-      type: 'select',
-      options: [
-        { value: 'in_stock', label: 'En stock' },
-        { value: 'out_of_stock', label: 'Rupture' },
-      ],
+      id: 'search',
+      label: 'Recherche',
+      type: 'text',
+      placeholder: 'Nom du produit...',
     },
   ];
+
+  const isLoading = activeTab === 'products' ? productsLoading : ordersLoading;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -258,150 +387,136 @@ export default function AdminCommercePage() {
         <div className="container">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
-              <ShoppingBag className="w-8 h-8 text-blue-600" />
-              <h1 className="text-3xl font-bold text-foreground">Commerce</h1>
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <ShoppingBag className="h-6 w-6 text-blue-700" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Commerce</h1>
+                <p className="text-sm text-gray-600">Gérer produits et commandes</p>
+              </div>
             </div>
-            {activeTab === 'products' && (
-              <Button className="gap-2">
-                <Plus className="w-4 h-4" />
-                Nouveau produit
-              </Button>
-            )}
           </div>
-          <p className="text-muted-foreground">Gérer produits et commandes (Goodies, Terroir, Pâtisserie)</p>
         </div>
       </div>
 
-      <div className="container py-12">
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8">
-            <TabsTrigger value="products">Produits</TabsTrigger>
-            <TabsTrigger value="orders">Commandes</TabsTrigger>
-          </TabsList>
-
-          {/* Products Tab */}
-          <TabsContent value="products" className="space-y-8">
-            {/* Stats */}
-            <div className="grid md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">Total produits</p>
-                  <p className="text-2xl font-bold">{MOCK_PRODUCTS.length}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">Actifs</p>
-                  <p className="text-2xl font-bold">{MOCK_PRODUCTS.filter((p) => p.status === 'active').length}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">En rupture</p>
-                  <p className="text-2xl font-bold">{MOCK_PRODUCTS.filter((p) => p.stock === 0).length}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">Stock total</p>
-                  <p className="text-2xl font-bold">{MOCK_PRODUCTS.reduce((sum, p) => sum + p.stock, 0)}</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Filters */}
-            <FilterPanel
-              filters={productFilterOptions}
-              values={productFilters}
-              onFilterChange={(key, value) => setProductFilters((prev) => ({ ...prev, [key]: value }))}
-              onReset={() => setProductFilters({ type: '', status: '', stock_status: '' })}
-            />
-
-            {/* Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Produits ({filteredProducts.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DataTable<Product>
-                  data={filteredProducts}
-                  columns={productColumns}
-                  selectable={true}
-                  onSelectionChange={setSelectedProducts}
-                  emptyMessage="Aucun produit trouvé"
-                />
-
-                {/* Bulk Actions */}
-                {selectedProducts.length > 0 && (
-                  <div className="mt-6 p-4 bg-muted rounded-lg flex items-center justify-between">
-                    <p className="text-sm font-semibold">{selectedProducts.length} produit(s) sélectionné(s)</p>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <ToggleLeft className="w-4 h-4" />
-                        Activer/Désactiver
-                      </Button>
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <Package className="w-4 h-4" />
-                        Gérer stock
-                      </Button>
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <Trash2 className="w-4 h-4" />
-                        Supprimer
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Orders Tab */}
-          <TabsContent value="orders" className="space-y-8">
-            {/* Stats */}
-            <div className="grid md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">Total commandes</p>
-                  <p className="text-2xl font-bold">{MOCK_ORDERS.length}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">En attente</p>
-                  <p className="text-2xl font-bold">{MOCK_ORDERS.filter((o) => o.status === 'pending').length}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">Montant total</p>
-                  <p className="text-2xl font-bold">{MOCK_ORDERS.reduce((sum, o) => sum + o.amount, 0)} DH</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">Livrées</p>
-                  <p className="text-2xl font-bold">{MOCK_ORDERS.filter((o) => o.status === 'delivered').length}</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Commandes ({MOCK_ORDERS.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DataTable<Order>
-                  data={MOCK_ORDERS}
-                  columns={orderColumns}
-                  emptyMessage="Aucune commande trouvée"
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+      {/* Tabs */}
+      <div className="container py-6 border-b">
+        <div className="flex gap-4">
+          <button
+            onClick={() => {
+              setActiveTab('products');
+              setSearchParams('tab=products');
+            }}
+            className={`px-4 py-2 font-medium border-b-2 transition ${
+              activeTab === 'products'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Produits ({filteredProducts.length})
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('orders');
+              setSearchParams('tab=orders');
+            }}
+            className={`px-4 py-2 font-medium border-b-2 transition ${
+              activeTab === 'orders'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Commandes ({filteredOrders.length})
+          </button>
+        </div>
       </div>
+
+      {/* Filters */}
+      <div className="container py-6">
+        <FilterPanel
+          options={filterOptions}
+          values={filters}
+          onChange={handleFilterChange}
+          onReset={handleResetFilters}
+        />
+      </div>
+
+      {/* Content */}
+      <div className="container pb-12">
+        {activeTab === 'products' ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Liste des produits</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {filteredProducts.length === 0 ? (
+                <div className="text-center py-12">
+                  <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Aucun produit trouvé</p>
+                </div>
+              ) : (
+                <DataTable columns={productColumns} data={filteredProducts} />
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Liste des commandes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {filteredOrders.length === 0 ? (
+                <div className="text-center py-12">
+                  <ShoppingBag className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Aucune commande trouvée</p>
+                </div>
+              ) : (
+                <DataTable columns={orderColumns} data={filteredOrders} />
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Detail Drawer */}
+      <Dialog open={detailDrawerOpen} onOpenChange={setDetailDrawerOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Détails du produit</DialogTitle>
+          </DialogHeader>
+          {selectedProduct && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Type</label>
+                  <p className="text-lg font-semibold capitalize">{selectedProduct.type}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Statut</label>
+                  <p className="text-lg font-semibold">{selectedProduct.status === 'active' ? 'Actif' : 'Inactif'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Prix</label>
+                  <p className="text-lg font-semibold">{selectedProduct.price} DH</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Stock</label>
+                  <p className="text-lg font-semibold">{selectedProduct.stock}</p>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <label className="text-sm font-medium text-muted-foreground">Nom du produit</label>
+                <p className="text-lg font-semibold">{selectedProduct.name}</p>
+              </div>
+
+              <div className="flex gap-2 pt-4 border-t">
+                <Button onClick={() => setDetailDrawerOpen(false)}>Fermer</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

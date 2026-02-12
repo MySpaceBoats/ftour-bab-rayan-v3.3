@@ -1,131 +1,112 @@
-import { useState, useMemo } from 'react';
+'use client';
+
+import { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Plus, QrCode, Check, Mail, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Users, Eye, Check, X, Loader2, QrCode } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/_core/hooks/useAuth';
 import DataTable, { Column } from '@/features/admin/components/DataTable';
 import FilterPanel, { FilterOption } from '@/features/admin/components/FilterPanel';
-
-// ============================================
-// ADMIN BÉNÉVOLES — UNIFIED VIEW
-// ============================================
 
 interface Volunteer {
   id: string;
   name: string;
   email: string;
   phone: string;
-  status: 'active' | 'inactive';
+  shift_date: string;
+  shift_time: string;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  qr_generated: boolean;
+  present: boolean;
   created_at: string;
 }
 
-interface VolunteerShift {
-  id: string;
-  volunteer_id: string;
-  volunteer_name: string;
-  date: string;
-  shift: 'morning' | 'afternoon' | 'evening';
-  confirmed: boolean;
-  qr_generated: boolean;
-  present: boolean;
-}
-
-// Mock data
-const MOCK_VOLUNTEERS: Volunteer[] = [
-  {
-    id: 'vol-001',
-    name: 'Ahmed Bennani',
-    email: 'ahmed@example.com',
-    phone: '+212 6 12 34 56 78',
-    status: 'active',
-    created_at: '2026-01-15',
-  },
-  {
-    id: 'vol-002',
-    name: 'Fatima Alaoui',
-    email: 'fatima@example.com',
-    phone: '+212 6 98 76 54 32',
-    status: 'active',
-    created_at: '2026-01-20',
-  },
-  {
-    id: 'vol-003',
-    name: 'Mohammed Idrissi',
-    email: 'mohammed@example.com',
-    phone: '+212 6 55 44 33 22',
-    status: 'inactive',
-    created_at: '2025-12-01',
-  },
-];
-
-const MOCK_SHIFTS: VolunteerShift[] = [
-  {
-    id: 'shift-001',
-    volunteer_id: 'vol-001',
-    volunteer_name: 'Ahmed Bennani',
-    date: '2026-03-15',
-    shift: 'morning',
-    confirmed: true,
-    qr_generated: true,
-    present: false,
-  },
-  {
-    id: 'shift-002',
-    volunteer_id: 'vol-002',
-    volunteer_name: 'Fatima Alaoui',
-    date: '2026-03-15',
-    shift: 'afternoon',
-    confirmed: true,
-    qr_generated: true,
-    present: true,
-  },
-  {
-    id: 'shift-003',
-    volunteer_id: 'vol-001',
-    volunteer_name: 'Ahmed Bennani',
-    date: '2026-03-16',
-    shift: 'evening',
-    confirmed: false,
-    qr_generated: false,
-    present: false,
-  },
-];
-
 export default function AdminBenevolePage() {
-  const [activeTab, setActiveTab] = useState<'volunteers' | 'shifts'>('volunteers');
-  const [selectedVolunteers, setSelectedVolunteers] = useState<Volunteer[]>([]);
-  const [selectedShifts, setSelectedShifts] = useState<VolunteerShift[]>([]);
-  const [volunteerFilters, setVolunteerFilters] = useState({
+  const { user } = useAuth();
+  const [selectedVolunteers, setSelectedVolunteers] = useState<string[]>([]);
+  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
+  const [selectedVolunteer, setSelectedVolunteer] = useState<Volunteer | null>(null);
+  const [filters, setFilters] = useState({
     status: '',
-  });
-  const [shiftFilters, setShiftFilters] = useState({
-    shift: '',
-    confirmed: '',
-    present: '',
+    qr_status: '',
+    presence_status: '',
+    search: '',
   });
 
-  // Filter volunteers
-  const filteredVolunteers = useMemo(() => {
-    return MOCK_VOLUNTEERS.filter((vol) => {
-      if (volunteerFilters.status && vol.status !== volunteerFilters.status) return false;
+  const { data: volunteers = [], isLoading } = trpc.backoffice.benevoles.list.useQuery({}, { enabled: !!user });
+  const confirmMutation = trpc.backoffice.benevoles.confirm.useMutation();
+  const generateQRMutation = trpc.backoffice.benevoles.generateQR.useMutation();
+  const markPresentMutation = trpc.backoffice.benevoles.markPresent.useMutation();
+  const cancelMutation = trpc.backoffice.benevoles.cancel.useMutation();
+
+  const filteredData = useMemo(() => {
+    return (volunteers as Volunteer[]).filter((vol) => {
+      if (filters.status && vol.status !== filters.status) return false;
+      if (filters.qr_status === 'with_qr' && !vol.qr_generated) return false;
+      if (filters.qr_status === 'without_qr' && vol.qr_generated) return false;
+      if (filters.presence_status === 'present' && !vol.present) return false;
+      if (filters.presence_status === 'absent' && vol.present) return false;
+      if (filters.search) {
+        const search = filters.search.toLowerCase();
+        return vol.name.toLowerCase().includes(search) || vol.email.toLowerCase().includes(search);
+      }
       return true;
     });
-  }, [volunteerFilters]);
+  }, [volunteers, filters]);
 
-  // Filter shifts
-  const filteredShifts = useMemo(() => {
-    return MOCK_SHIFTS.filter((shift) => {
-      if (shiftFilters.shift && shift.shift !== shiftFilters.shift) return false;
-      if (shiftFilters.confirmed === 'confirmed' && !shift.confirmed) return false;
-      if (shiftFilters.confirmed === 'not_confirmed' && shift.confirmed) return false;
-      if (shiftFilters.present === 'present' && !shift.present) return false;
-      if (shiftFilters.present === 'absent' && shift.present) return false;
-      return true;
-    });
-  }, [shiftFilters]);
+  const handleFilterChange = (key: string, value: any) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
 
-  // Volunteer columns
-  const volunteerColumns: Column<Volunteer>[] = [
+  const handleResetFilters = () => {
+    setFilters({ status: '', qr_status: '', presence_status: '', search: '' });
+  };
+
+  const handleConfirm = useCallback(async (id: string) => {
+    try {
+      await confirmMutation.mutateAsync({ id });
+      window.location.reload();
+    } catch (error) {
+      console.error('Erreur:', error);
+    }
+  }, [confirmMutation]);
+
+  const handleGenerateQR = useCallback(async (id: string) => {
+    try {
+      await generateQRMutation.mutateAsync({ id });
+      window.location.reload();
+    } catch (error) {
+      console.error('Erreur:', error);
+    }
+  }, [generateQRMutation]);
+
+  const handleMarkPresent = useCallback(async (id: string) => {
+    try {
+      await markPresentMutation.mutateAsync({ id });
+      window.location.reload();
+    } catch (error) {
+      console.error('Erreur:', error);
+    }
+  }, [markPresentMutation]);
+
+  const handleCancel = useCallback(async (id: string) => {
+    if (!confirm('Êtes-vous sûr ?')) return;
+    try {
+      await cancelMutation.mutateAsync({ id });
+      window.location.reload();
+    } catch (error) {
+      console.error('Erreur:', error);
+    }
+  }, [cancelMutation]);
+
+  const handleViewDetail = (volunteer: Volunteer) => {
+    setSelectedVolunteer(volunteer);
+    setDetailDrawerOpen(true);
+  };
+
+  const columns: Column<Volunteer>[] = [
     {
       key: 'name',
       label: 'Nom',
@@ -137,131 +118,94 @@ export default function AdminBenevolePage() {
       sortable: true,
     },
     {
-      key: 'phone',
-      label: 'Téléphone',
+      key: 'shift_date',
+      label: 'Date',
       sortable: true,
+      width: '100px',
+      render: (value) => new Date(value).toLocaleDateString('fr-FR'),
+    },
+    {
+      key: 'shift_time',
+      label: 'Créneau',
+      sortable: true,
+      width: '100px',
     },
     {
       key: 'status',
       label: 'Statut',
       sortable: true,
-      width: '100px',
+      width: '120px',
       render: (value) => {
         const styles = {
-          active: 'bg-green-100 text-green-800',
-          inactive: 'bg-gray-100 text-gray-800',
+          pending: 'bg-yellow-100 text-yellow-800',
+          confirmed: 'bg-green-100 text-green-800',
+          cancelled: 'bg-red-100 text-red-800',
         };
-        const labels = { active: 'Actif', inactive: 'Inactif' };
-        return (
-          <span className={`px-2 py-1 rounded text-sm ${styles[value as keyof typeof styles]}`}>
-            {labels[value as keyof typeof labels]}
-          </span>
-        );
+        const labels = { pending: 'En attente', confirmed: 'Confirmé', cancelled: 'Annulé' };
+        return <span className={`px-2 py-1 rounded text-sm ${styles[value as keyof typeof styles]}`}>{labels[value as keyof typeof labels]}</span>;
       },
-    },
-    {
-      key: 'created_at',
-      label: 'Inscrit',
-      sortable: true,
-      width: '120px',
-      render: (value) => new Date(value).toLocaleDateString('fr-FR'),
-    },
-  ];
-
-  // Shift columns
-  const shiftColumns: Column<VolunteerShift>[] = [
-    {
-      key: 'volunteer_name',
-      label: 'Bénévole',
-      sortable: true,
-    },
-    {
-      key: 'date',
-      label: 'Date',
-      sortable: true,
-      width: '120px',
-      render: (value) => new Date(value).toLocaleDateString('fr-FR'),
-    },
-    {
-      key: 'shift',
-      label: 'Créneau',
-      sortable: true,
-      width: '100px',
-      render: (value) => {
-        const labels = { morning: 'Matin', afternoon: 'Midi', evening: 'Soir' };
-        return labels[value as keyof typeof labels];
-      },
-    },
-    {
-      key: 'confirmed',
-      label: 'Confirmé',
-      sortable: true,
-      width: '100px',
-      render: (value) => (
-        <span className={value ? 'text-green-600 font-semibold' : 'text-yellow-600'}>
-          {value ? '✓ Oui' : '✗ Non'}
-        </span>
-      ),
-    },
-    {
-      key: 'qr_generated',
-      label: 'QR',
-      sortable: true,
-      width: '80px',
-      render: (value) => (
-        <span className={value ? 'text-green-600' : 'text-gray-500'}>
-          {value ? '✓' : '✗'}
-        </span>
-      ),
     },
     {
       key: 'present',
       label: 'Présent',
       sortable: true,
-      width: '100px',
-      render: (value) => (
-        <span className={value ? 'text-green-600 font-semibold' : 'text-gray-500'}>
-          {value ? '✓ Oui' : '✗ Non'}
-        </span>
+      width: '80px',
+      render: (value) => <span className={value ? 'text-green-600 font-semibold' : 'text-red-600'}>{value ? 'Oui' : 'Non'}</span>,
+    },
+    {
+      key: 'id',
+      label: 'Actions',
+      width: '250px',
+      render: (_, row: Volunteer) => (
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => handleViewDetail(row)}>
+            <Eye className="h-4 w-4" />
+          </Button>
+          {row.status === 'pending' && (
+            <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleConfirm(row.id)} disabled={confirmMutation.isPending}>
+              {confirmMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            </Button>
+          )}
+          {!row.qr_generated && (
+            <Button size="sm" variant="outline" className="text-blue-600" onClick={() => handleGenerateQR(row.id)} disabled={generateQRMutation.isPending}>
+              {generateQRMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
+            </Button>
+          )}
+          {row.status === 'confirmed' && !row.present && (
+            <Button size="sm" variant="outline" className="text-purple-600" onClick={() => handleMarkPresent(row.id)} disabled={markPresentMutation.isPending}>
+              {markPresentMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Présent'}
+            </Button>
+          )}
+          <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleCancel(row.id)} disabled={cancelMutation.isPending}>
+            {cancelMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+          </Button>
+        </div>
       ),
     },
   ];
 
-  // Filter options
-  const volunteerFilterOptions: FilterOption[] = [
+  const filterOptions: FilterOption[] = [
     {
       id: 'status',
       label: 'Statut',
       type: 'select',
       options: [
-        { value: 'active', label: 'Actif' },
-        { value: 'inactive', label: 'Inactif' },
-      ],
-    },
-  ];
-
-  const shiftFilterOptions: FilterOption[] = [
-    {
-      id: 'shift',
-      label: 'Créneau',
-      type: 'select',
-      options: [
-        { value: 'morning', label: 'Matin' },
-        { value: 'afternoon', label: 'Midi' },
-        { value: 'evening', label: 'Soir' },
-      ],
-    },
-    {
-      id: 'confirmed',
-      label: 'Confirmé',
-      type: 'select',
-      options: [
+        { value: 'pending', label: 'En attente' },
         { value: 'confirmed', label: 'Confirmé' },
-        { value: 'not_confirmed', label: 'Non confirmé' },
+        { value: 'cancelled', label: 'Annulé' },
       ],
     },
     {
-      id: 'present',
+      id: 'qr_status',
+      label: 'QR Code',
+      type: 'select',
+      options: [
+        { value: 'with_qr', label: 'Avec QR' },
+        { value: 'without_qr', label: 'Sans QR' },
+      ],
+    },
+    {
+      id: 'presence_status',
       label: 'Présence',
       type: 'select',
       options: [
@@ -269,180 +213,117 @@ export default function AdminBenevolePage() {
         { value: 'absent', label: 'Absent' },
       ],
     },
+    {
+      id: 'search',
+      label: 'Recherche',
+      type: 'text',
+      placeholder: 'Nom ou email...',
+    },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 py-8 border-b">
+      <div className="bg-gradient-to-r from-purple-50 to-blue-50 py-8 border-b">
         <div className="container">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <Users className="w-8 h-8 text-green-700" />
-              <h1 className="text-3xl font-bold text-foreground">Bénévoles</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <Users className="h-6 w-6 text-purple-700" />
             </div>
-            {activeTab === 'volunteers' && (
-              <Button className="gap-2">
-                <Plus className="w-4 h-4" />
-                Nouveau bénévole
-              </Button>
-            )}
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Bénévoles</h1>
+              <p className="text-sm text-gray-600">Gérer les bénévoles et créneaux</p>
+            </div>
           </div>
-          <p className="text-muted-foreground">Gérer bénévoles et créneaux</p>
+          <p className="text-sm text-gray-600 mt-4">
+            Total: <strong>{filteredData.length}</strong> bénévole(s) | Confirmés: <strong>{filteredData.filter(v => v.status === 'confirmed').length}</strong>
+          </p>
         </div>
       </div>
 
-      <div className="container py-12">
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8">
-            <TabsTrigger value="volunteers">Bénévoles</TabsTrigger>
-            <TabsTrigger value="shifts">Créneaux</TabsTrigger>
-          </TabsList>
-
-          {/* Volunteers Tab */}
-          <TabsContent value="volunteers" className="space-y-8">
-            {/* Stats */}
-            <div className="grid md:grid-cols-3 gap-4">
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">Total bénévoles</p>
-                  <p className="text-2xl font-bold">{MOCK_VOLUNTEERS.length}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">Actifs</p>
-                  <p className="text-2xl font-bold">{MOCK_VOLUNTEERS.filter((v) => v.status === 'active').length}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">Créneaux assignés</p>
-                  <p className="text-2xl font-bold">{MOCK_SHIFTS.length}</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Filters */}
-            <FilterPanel
-              filters={volunteerFilterOptions}
-              values={volunteerFilters}
-              onFilterChange={(key, value) => setVolunteerFilters((prev) => ({ ...prev, [key]: value }))}
-              onReset={() => setVolunteerFilters({ status: '' })}
-            />
-
-            {/* Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Bénévoles ({filteredVolunteers.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DataTable<Volunteer>
-                  data={filteredVolunteers}
-                  columns={volunteerColumns}
-                  selectable={true}
-                  onSelectionChange={setSelectedVolunteers}
-                  emptyMessage="Aucun bénévole trouvé"
-                />
-
-                {/* Bulk Actions */}
-                {selectedVolunteers.length > 0 && (
-                  <div className="mt-6 p-4 bg-muted rounded-lg flex items-center justify-between">
-                    <p className="text-sm font-semibold">{selectedVolunteers.length} bénévole(s) sélectionné(s)</p>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <Mail className="w-4 h-4" />
-                        Envoyer email
-                      </Button>
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <Trash2 className="w-4 h-4" />
-                        Supprimer
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Shifts Tab */}
-          <TabsContent value="shifts" className="space-y-8">
-            {/* Stats */}
-            <div className="grid md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">Total créneaux</p>
-                  <p className="text-2xl font-bold">{MOCK_SHIFTS.length}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">Confirmés</p>
-                  <p className="text-2xl font-bold">{MOCK_SHIFTS.filter((s) => s.confirmed).length}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">QR générés</p>
-                  <p className="text-2xl font-bold">{MOCK_SHIFTS.filter((s) => s.qr_generated).length}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">Présents</p>
-                  <p className="text-2xl font-bold">{MOCK_SHIFTS.filter((s) => s.present).length}</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Filters */}
-            <FilterPanel
-              filters={shiftFilterOptions}
-              values={shiftFilters}
-              onFilterChange={(key, value) => setShiftFilters((prev) => ({ ...prev, [key]: value }))}
-              onReset={() => setShiftFilters({ shift: '', confirmed: '', present: '' })}
-            />
-
-            {/* Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Créneaux ({filteredShifts.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DataTable<VolunteerShift>
-                  data={filteredShifts}
-                  columns={shiftColumns}
-                  selectable={true}
-                  onSelectionChange={setSelectedShifts}
-                  emptyMessage="Aucun créneau trouvé"
-                />
-
-                {/* Bulk Actions */}
-                {selectedShifts.length > 0 && (
-                  <div className="mt-6 p-4 bg-muted rounded-lg flex items-center justify-between">
-                    <p className="text-sm font-semibold">{selectedShifts.length} créneau(x) sélectionné(s)</p>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <Check className="w-4 h-4" />
-                        Confirmer
-                      </Button>
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <QrCode className="w-4 h-4" />
-                        Générer QR
-                      </Button>
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <Check className="w-4 h-4" />
-                        Marquer présent
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+      <div className="container py-6">
+        <FilterPanel options={filterOptions} values={filters} onChange={handleFilterChange} onReset={handleResetFilters} />
       </div>
+
+      <div className="container pb-12">
+        <Card>
+          <CardHeader>
+            <CardTitle>Liste des bénévoles</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {filteredData.length === 0 ? (
+              <div className="text-center py-12">
+                <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">Aucun bénévole trouvé</p>
+              </div>
+            ) : (
+              <DataTable columns={columns} data={filteredData} selectable selectedIds={selectedVolunteers} onSelectionChange={setSelectedVolunteers} />
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Dialog open={detailDrawerOpen} onOpenChange={setDetailDrawerOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Détails du bénévole</DialogTitle>
+          </DialogHeader>
+          {selectedVolunteer && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Statut</label>
+                  <p className="text-lg font-semibold">{selectedVolunteer.status}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Présent</label>
+                  <p className="text-lg font-semibold">{selectedVolunteer.present ? 'Oui' : 'Non'}</p>
+                </div>
+              </div>
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-4">Informations personnelles</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Nom</label>
+                    <p>{selectedVolunteer.name}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Email</label>
+                    <p>{selectedVolunteer.email}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Téléphone</label>
+                    <p>{selectedVolunteer.phone}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-4">Créneau</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Date</label>
+                    <p>{new Date(selectedVolunteer.shift_date).toLocaleDateString('fr-FR')}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Heure</label>
+                    <p>{selectedVolunteer.shift_time}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-4 border-t">
+                <Button onClick={() => setDetailDrawerOpen(false)}>Fermer</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,77 +1,96 @@
-import { useState, useMemo } from 'react';
+'use client';
+
+import { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Heart, Mail, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Heart, Eye, Trash2, Loader2, Download } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/_core/hooks/useAuth';
 import DataTable, { Column } from '@/features/admin/components/DataTable';
 import FilterPanel, { FilterOption } from '@/features/admin/components/FilterPanel';
 
-// ============================================
-// ADMIN DONS — UNIFIED VIEW
-// ============================================
-
 interface Donation {
   id: string;
+  amount: number;
   donor_name: string;
   donor_email: string;
-  amount: number;
-  payment_status: 'pending' | 'paid' | 'failed';
+  status: 'pending' | 'confirmed' | 'received';
   receipt_generated: boolean;
   created_at: string;
 }
 
-// Mock data
-const MOCK_DONATIONS: Donation[] = [
-  {
-    id: 'don-001',
-    donor_name: 'Ahmed Bennani',
-    donor_email: 'ahmed@example.com',
-    amount: 500,
-    payment_status: 'paid',
-    receipt_generated: true,
-    created_at: '2026-02-10',
-  },
-  {
-    id: 'don-002',
-    donor_name: 'Fatima Alaoui',
-    donor_email: 'fatima@example.com',
-    amount: 1000,
-    payment_status: 'paid',
-    receipt_generated: true,
-    created_at: '2026-02-09',
-  },
-  {
-    id: 'don-003',
-    donor_name: 'Mohammed Idrissi',
-    donor_email: 'mohammed@example.com',
-    amount: 250,
-    payment_status: 'pending',
-    receipt_generated: false,
-    created_at: '2026-02-08',
-  },
-];
-
 export default function AdminDonsPage() {
-  const [selectedDonations, setSelectedDonations] = useState<Donation[]>([]);
+  const { user } = useAuth();
+  const [selectedDonations, setSelectedDonations] = useState<string[]>([]);
+  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
+  const [selectedDonation, setSelectedDonation] = useState<Donation | null>(null);
   const [filters, setFilters] = useState({
-    payment_status: '',
+    status: '',
     receipt_status: '',
-    amount_min: '',
-    amount_max: '',
+    search: '',
   });
 
-  // Filter data
+  const { data: donations = [], isLoading } = trpc.backoffice.dons.list.useQuery({}, { enabled: !!user });
+  const confirmMutation = trpc.backoffice.dons.confirm.useMutation();
+  const generateReceiptMutation = trpc.backoffice.dons.generateReceipt.useMutation();
+  const deleteMutation = trpc.backoffice.dons.delete.useMutation();
+  const exportMutation = trpc.backoffice.dons.export.useMutation();
+
   const filteredData = useMemo(() => {
-    return MOCK_DONATIONS.filter((don) => {
-      if (filters.payment_status && don.payment_status !== filters.payment_status) return false;
-      if (filters.receipt_status === 'generated' && !don.receipt_generated) return false;
-      if (filters.receipt_status === 'not_generated' && don.receipt_generated) return false;
-      if (filters.amount_min && don.amount < parseInt(filters.amount_min)) return false;
-      if (filters.amount_max && don.amount > parseInt(filters.amount_max)) return false;
+    return (donations as Donation[]).filter((don) => {
+      if (filters.status && don.status !== filters.status) return false;
+      if (filters.receipt_status === 'with_receipt' && !don.receipt_generated) return false;
+      if (filters.receipt_status === 'without_receipt' && don.receipt_generated) return false;
+      if (filters.search) {
+        const search = filters.search.toLowerCase();
+        return don.donor_name.toLowerCase().includes(search) || don.donor_email.toLowerCase().includes(search);
+      }
       return true;
     });
-  }, [filters]);
+  }, [donations, filters]);
 
-  // Table columns
+  const handleFilterChange = (key: string, value: any) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleResetFilters = () => {
+    setFilters({ status: '', receipt_status: '', search: '' });
+  };
+
+  const handleConfirm = useCallback(async (id: string) => {
+    try {
+      await confirmMutation.mutateAsync({ id });
+      window.location.reload();
+    } catch (error) {
+      console.error('Erreur:', error);
+    }
+  }, [confirmMutation]);
+
+  const handleGenerateReceipt = useCallback(async (id: string) => {
+    try {
+      await generateReceiptMutation.mutateAsync({ id });
+      window.location.reload();
+    } catch (error) {
+      console.error('Erreur:', error);
+    }
+  }, [generateReceiptMutation]);
+
+  const handleDelete = useCallback(async (id: string) => {
+    if (!confirm('Êtes-vous sûr ?')) return;
+    try {
+      await deleteMutation.mutateAsync({ id });
+      window.location.reload();
+    } catch (error) {
+      console.error('Erreur:', error);
+    }
+  }, [deleteMutation]);
+
+  const handleViewDetail = (donation: Donation) => {
+    setSelectedDonation(donation);
+    setDetailDrawerOpen(true);
+  };
+
   const columns: Column<Donation>[] = [
     {
       key: 'donor_name',
@@ -87,58 +106,67 @@ export default function AdminDonsPage() {
       key: 'amount',
       label: 'Montant',
       sortable: true,
-      width: '120px',
+      width: '100px',
       render: (value) => `${value} DH`,
     },
     {
-      key: 'payment_status',
-      label: 'Paiement',
+      key: 'status',
+      label: 'Statut',
       sortable: true,
       width: '120px',
       render: (value) => {
         const styles = {
           pending: 'bg-yellow-100 text-yellow-800',
-          paid: 'bg-green-100 text-green-800',
-          failed: 'bg-red-100 text-red-800',
+          confirmed: 'bg-green-100 text-green-800',
+          received: 'bg-blue-100 text-blue-800',
         };
-        const labels = { pending: 'En attente', paid: 'Payé', failed: 'Échoué' };
-        return (
-          <span className={`px-2 py-1 rounded text-sm ${styles[value as keyof typeof styles]}`}>
-            {labels[value as keyof typeof labels]}
-          </span>
-        );
+        const labels = { pending: 'En attente', confirmed: 'Confirmé', received: 'Reçu' };
+        return <span className={`px-2 py-1 rounded text-sm ${styles[value as keyof typeof styles]}`}>{labels[value as keyof typeof labels]}</span>;
       },
     },
     {
       key: 'receipt_generated',
       label: 'Reçu',
       sortable: true,
-      width: '100px',
-      render: (value) => (
-        <span className={value ? 'text-green-600 font-semibold' : 'text-gray-500'}>
-          {value ? '✓ Généré' : '✗ Non généré'}
-        </span>
-      ),
+      width: '80px',
+      render: (value) => <span className={value ? 'text-green-600 font-semibold' : 'text-red-600'}>{value ? 'Généré' : 'Non'}</span>,
     },
     {
-      key: 'created_at',
-      label: 'Date',
-      sortable: true,
-      width: '120px',
-      render: (value) => new Date(value).toLocaleDateString('fr-FR'),
+      key: 'id',
+      label: 'Actions',
+      width: '250px',
+      render: (_, row: Donation) => (
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => handleViewDetail(row)}>
+            <Eye className="h-4 w-4" />
+          </Button>
+          {row.status === 'pending' && (
+            <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleConfirm(row.id)} disabled={confirmMutation.isPending}>
+              {confirmMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirmer'}
+            </Button>
+          )}
+          {!row.receipt_generated && (
+            <Button size="sm" variant="outline" className="text-blue-600" onClick={() => handleGenerateReceipt(row.id)} disabled={generateReceiptMutation.isPending}>
+              {generateReceiptMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            </Button>
+          )}
+          <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDelete(row.id)} disabled={deleteMutation.isPending}>
+            {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+          </Button>
+        </div>
+      ),
     },
   ];
 
-  // Filter options
   const filterOptions: FilterOption[] = [
     {
-      id: 'payment_status',
-      label: 'Statut paiement',
+      id: 'status',
+      label: 'Statut',
       type: 'select',
       options: [
         { value: 'pending', label: 'En attente' },
-        { value: 'paid', label: 'Payé' },
-        { value: 'failed', label: 'Échoué' },
+        { value: 'confirmed', label: 'Confirmé' },
+        { value: 'received', label: 'Reçu' },
       ],
     },
     {
@@ -146,99 +174,117 @@ export default function AdminDonsPage() {
       label: 'Reçu',
       type: 'select',
       options: [
-        { value: 'generated', label: 'Généré' },
-        { value: 'not_generated', label: 'Non généré' },
+        { value: 'with_receipt', label: 'Avec reçu' },
+        { value: 'without_receipt', label: 'Sans reçu' },
       ],
+    },
+    {
+      id: 'search',
+      label: 'Recherche',
+      type: 'text',
+      placeholder: 'Nom ou email...',
     },
   ];
 
-  const totalDonations = filteredData.reduce((sum, don) => sum + don.amount, 0);
-  const paidDonations = filteredData.filter((d) => d.payment_status === 'paid').reduce((sum, d) => sum + d.amount, 0);
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-pink-50 to-red-50 py-8 border-b">
+      <div className="bg-gradient-to-r from-red-50 to-pink-50 py-8 border-b">
         <div className="container">
-          <div className="flex items-center gap-3 mb-2">
-            <Heart className="w-8 h-8 text-red-600" />
-            <h1 className="text-3xl font-bold text-foreground">Dons</h1>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <Heart className="h-6 w-6 text-red-700" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Dons</h1>
+                <p className="text-sm text-gray-600">Gérer les donations</p>
+              </div>
+            </div>
+            <Button onClick={() => exportMutation.mutateAsync({})} disabled={exportMutation.isPending}>
+              {exportMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+              Exporter
+            </Button>
           </div>
-          <p className="text-muted-foreground">Gérer les dons et générer les reçus</p>
+          <p className="text-sm text-gray-600 mt-4">
+            Total: <strong>{filteredData.length}</strong> don(s) | Montant: <strong>{filteredData.reduce((sum, d) => sum + d.amount, 0)} DH</strong>
+          </p>
         </div>
       </div>
 
-      <div className="container py-12">
-        {/* Stats */}
-        <div className="grid md:grid-cols-4 gap-4 mb-8">
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Total dons</p>
-              <p className="text-2xl font-bold">{filteredData.length}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Montant total</p>
-              <p className="text-2xl font-bold">{totalDonations} DH</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Montant reçu</p>
-              <p className="text-2xl font-bold">{paidDonations} DH</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Reçus générés</p>
-              <p className="text-2xl font-bold">{filteredData.filter((d) => d.receipt_generated).length}</p>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="container py-6">
+        <FilterPanel options={filterOptions} values={filters} onChange={handleFilterChange} onReset={handleResetFilters} />
+      </div>
 
-        {/* Filters */}
-        <FilterPanel
-          filters={filterOptions}
-          values={filters}
-          onFilterChange={(key, value) => setFilters((prev) => ({ ...prev, [key]: value }))}
-          onReset={() => setFilters({ payment_status: '', receipt_status: '', amount_min: '', amount_max: '' })}
-          className="mb-8"
-        />
-
-        {/* Table */}
+      <div className="container pb-12">
         <Card>
           <CardHeader>
-            <CardTitle>Liste des dons ({filteredData.length})</CardTitle>
+            <CardTitle>Liste des dons</CardTitle>
           </CardHeader>
           <CardContent>
-            <DataTable<Donation>
-              data={filteredData}
-              columns={columns}
-              selectable={true}
-              onSelectionChange={setSelectedDonations}
-              emptyMessage="Aucun don trouvé"
-            />
-
-            {/* Bulk Actions */}
-            {selectedDonations.length > 0 && (
-              <div className="mt-6 p-4 bg-muted rounded-lg flex items-center justify-between">
-                <p className="text-sm font-semibold">{selectedDonations.length} don(s) sélectionné(s)</p>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Mail className="w-4 h-4" />
-                    Envoyer reçu
-                  </Button>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Trash2 className="w-4 h-4" />
-                    Supprimer
-                  </Button>
-                </div>
+            {filteredData.length === 0 ? (
+              <div className="text-center py-12">
+                <Heart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">Aucun don trouvé</p>
               </div>
+            ) : (
+              <DataTable columns={columns} data={filteredData} selectable selectedIds={selectedDonations} onSelectionChange={setSelectedDonations} />
             )}
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={detailDrawerOpen} onOpenChange={setDetailDrawerOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Détails du don</DialogTitle>
+          </DialogHeader>
+          {selectedDonation && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Montant</label>
+                  <p className="text-lg font-semibold">{selectedDonation.amount} DH</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Statut</label>
+                  <p className="text-lg font-semibold">{selectedDonation.status}</p>
+                </div>
+              </div>
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-4">Informations du donateur</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Nom</label>
+                    <p>{selectedDonation.donor_name}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Email</label>
+                    <p>{selectedDonation.donor_email}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-4">Reçu</h3>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Statut du reçu</label>
+                  <p>{selectedDonation.receipt_generated ? 'Généré' : 'Non généré'}</p>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-4 border-t">
+                <Button onClick={() => setDetailDrawerOpen(false)}>Fermer</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
