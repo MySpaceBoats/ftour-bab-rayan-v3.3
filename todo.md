@@ -749,3 +749,21 @@
 - [ ] Fix AdminScanProduct.tsx — TS errors
 - [ ] Fix Home.tsx — 2 TS errors (missing translation keys)
 - [ ] Fix i18n translations — en.ts, ar.ts, amz.ts missing keys
+
+## Dashboard Validation & New Features (Feb 12, 2026)
+- [ ] Audit fonctionnel de chaque module dashboard admin
+- [ ] Corriger modules défaillants identifiés
+- [ ] Tester formulaires réservation (Particulier/Entreprise/Groupe)
+- [ ] Consolider Scanner en module unique multi-types
+- [ ] Compléter module Messages (/admin/messages)
+- [ ] Validation finale et checkpoint
+
+## Dashboard Admin — Modules Complets (Feb 12, 2026)
+- [x] AdminPayments: Remplacer mock data par tRPC réel (payments.list/validate/cancel/markChequeAsCashed/getStats)
+- [x] AdminPayments: Filtres (statut, méthode, date, recherche), détail panel, export CSV
+- [x] AdminContenu: Créer content-router.ts avec CRUD tRPC pour Partners, Testimonials, FAQ
+- [x] AdminContenu: Ajouter services Supabase CRUD (create/update/delete/toggleActive) pour 3 sections
+- [x] AdminContenu: Remplacer état local par tRPC réel (content.partners/testimonials/faq)
+- [x] AdminContenu: Formulaire création/édition, toggle actif/inactif, recherche, suppression
+- [x] Enregistrer contentRouter dans appRouterUpdated
+- [x] pnpm build réussi (0 erreurs TypeScript)

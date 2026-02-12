@@ -1027,20 +1027,40 @@ export async function createContactMessageSupabase(data: ContactMessageData) {
     .single();
 
   if (error) throw error;
-  return message;
+   return message;
 }
 
 export async function getAllContactMessagesSupabase() {
   const client = getSupabaseAdminClient();
   if (!client) return [];
-
   const { data, error } = await client
     .from('contact_messages')
     .select('*')
     .order('created_at', { ascending: false });
-
   if (error) throw error;
   return data || [];
+}
+
+export async function markContactMessageReadSupabase(id: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  const { error } = await client
+    .from('contact_messages')
+    .update({ isRead: true })
+    .eq('id', id);
+  if (error) throw error;
+  return { success: true };
+}
+
+export async function deleteContactMessageSupabase(id: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  const { error } = await client
+    .from('contact_messages')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+  return { success: true };
 }
 
 // ============================================
@@ -1691,4 +1711,175 @@ export async function getPastryOrderStatsSupabase() {
   };
 
   return stats;
+}
+
+// ============================================
+// CONTENT MANAGEMENT SERVICES (Partners, Testimonials, FAQ)
+// ============================================
+
+// --- PARTNERS ADMIN ---
+export async function getAllPartnersAdminSupabase() {
+  const client = getSupabaseAdminClient();
+  if (!client) return [];
+  const { data, error } = await client
+    .from('partners')
+    .select('*')
+    .order('sort_order', { ascending: true });
+  if (error) { console.error('[Supabase] Error fetching partners (admin):', error); return []; }
+  return (data || []).map(p => ({
+    id: p.id, name: p.name, logoUrl: p.logo_url, websiteUrl: p.website_url,
+    description: p.description || '', isActive: p.is_active, sortOrder: p.sort_order,
+    createdAt: p.created_at, updatedAt: p.updated_at,
+  }));
+}
+
+export async function createPartnerSupabase(input: { name: string; logoUrl?: string; websiteUrl?: string; description?: string }) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  const { data, error } = await client.from('partners').insert({
+    name: input.name, logo_url: input.logoUrl || null, website_url: input.websiteUrl || null,
+    description: input.description || null, is_active: true, sort_order: 0,
+  }).select().single();
+  if (error) throw new Error(`Erreur création partenaire: ${error.message}`);
+  return data;
+}
+
+export async function updatePartnerSupabase(id: number, input: { name?: string; logoUrl?: string; websiteUrl?: string; description?: string; isActive?: boolean; sortOrder?: number }) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  const updateData: any = { updated_at: new Date().toISOString() };
+  if (input.name !== undefined) updateData.name = input.name;
+  if (input.logoUrl !== undefined) updateData.logo_url = input.logoUrl;
+  if (input.websiteUrl !== undefined) updateData.website_url = input.websiteUrl;
+  if (input.description !== undefined) updateData.description = input.description;
+  if (input.isActive !== undefined) updateData.is_active = input.isActive;
+  if (input.sortOrder !== undefined) updateData.sort_order = input.sortOrder;
+  const { data, error } = await client.from('partners').update(updateData).eq('id', id).select().single();
+  if (error) throw new Error(`Erreur mise à jour partenaire: ${error.message}`);
+  return data;
+}
+
+export async function deletePartnerSupabase(id: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  const { error } = await client.from('partners').delete().eq('id', id);
+  if (error) throw new Error(`Erreur suppression partenaire: ${error.message}`);
+  return { success: true };
+}
+
+// --- TESTIMONIALS ADMIN ---
+export async function getAllTestimonialsAdminSupabase() {
+  const client = getSupabaseAdminClient();
+  if (!client) return [];
+  const { data, error } = await client
+    .from('testimonials')
+    .select('*')
+    .order('sort_order', { ascending: true });
+  if (error) { console.error('[Supabase] Error fetching testimonials (admin):', error); return []; }
+  return (data || []).map(t => ({
+    id: t.id, content: t.content, authorName: t.author_name, authorRole: t.author_role,
+    rating: t.rating, isActive: t.is_active, sortOrder: t.sort_order,
+    createdAt: t.created_at, updatedAt: t.updated_at,
+  }));
+}
+
+export async function createTestimonialSupabase(input: { content: string; authorName: string; authorRole?: string; rating?: number }) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  const { data, error } = await client.from('testimonials').insert({
+    content: input.content, author_name: input.authorName, author_role: input.authorRole || null,
+    rating: input.rating || 5, is_active: true, sort_order: 0,
+  }).select().single();
+  if (error) throw new Error(`Erreur création témoignage: ${error.message}`);
+  return data;
+}
+
+export async function updateTestimonialSupabase(id: number, input: { content?: string; authorName?: string; authorRole?: string; rating?: number; isActive?: boolean; sortOrder?: number }) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  const updateData: any = { updated_at: new Date().toISOString() };
+  if (input.content !== undefined) updateData.content = input.content;
+  if (input.authorName !== undefined) updateData.author_name = input.authorName;
+  if (input.authorRole !== undefined) updateData.author_role = input.authorRole;
+  if (input.rating !== undefined) updateData.rating = input.rating;
+  if (input.isActive !== undefined) updateData.is_active = input.isActive;
+  if (input.sortOrder !== undefined) updateData.sort_order = input.sortOrder;
+  const { data, error } = await client.from('testimonials').update(updateData).eq('id', id).select().single();
+  if (error) throw new Error(`Erreur mise à jour témoignage: ${error.message}`);
+  return data;
+}
+
+export async function deleteTestimonialSupabase(id: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  const { error } = await client.from('testimonials').delete().eq('id', id);
+  if (error) throw new Error(`Erreur suppression témoignage: ${error.message}`);
+  return { success: true };
+}
+
+// --- FAQ ADMIN ---
+export async function getAllFaqsAdminSupabase() {
+  const client = getSupabaseAdminClient();
+  if (!client) return [];
+  const { data, error } = await client
+    .from('faq')
+    .select('*')
+    .order('sort_order', { ascending: true });
+  if (error) {
+    // Table might not exist yet — return empty
+    console.error('[Supabase] Error fetching FAQ (admin):', error);
+    return [];
+  }
+  return (data || []).map(f => ({
+    id: f.id, question: f.question, answer: f.answer, category: f.category,
+    isActive: f.is_active, sortOrder: f.sort_order,
+    createdAt: f.created_at, updatedAt: f.updated_at,
+  }));
+}
+
+export async function getAllFaqsPublicSupabase() {
+  const client = getSupabaseAdminClient();
+  if (!client) return [];
+  const { data, error } = await client
+    .from('faq')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true });
+  if (error) return [];
+  return (data || []).map(f => ({
+    id: f.id, question: f.question, answer: f.answer, category: f.category,
+  }));
+}
+
+export async function createFaqSupabase(input: { question: string; answer: string; category: string }) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  const { data, error } = await client.from('faq').insert({
+    question: input.question, answer: input.answer, category: input.category,
+    is_active: true, sort_order: 0,
+  }).select().single();
+  if (error) throw new Error(`Erreur création FAQ: ${error.message}`);
+  return data;
+}
+
+export async function updateFaqSupabase(id: number, input: { question?: string; answer?: string; category?: string; isActive?: boolean; sortOrder?: number }) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  const updateData: any = { updated_at: new Date().toISOString() };
+  if (input.question !== undefined) updateData.question = input.question;
+  if (input.answer !== undefined) updateData.answer = input.answer;
+  if (input.category !== undefined) updateData.category = input.category;
+  if (input.isActive !== undefined) updateData.is_active = input.isActive;
+  if (input.sortOrder !== undefined) updateData.sort_order = input.sortOrder;
+  const { data, error } = await client.from('faq').update(updateData).eq('id', id).select().single();
+  if (error) throw new Error(`Erreur mise à jour FAQ: ${error.message}`);
+  return data;
+}
+
+export async function deleteFaqSupabase(id: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  const { error } = await client.from('faq').delete().eq('id', id);
+  if (error) throw new Error(`Erreur suppression FAQ: ${error.message}`);
+  return { success: true };
 }

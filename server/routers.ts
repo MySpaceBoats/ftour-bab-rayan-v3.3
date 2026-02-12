@@ -11,6 +11,7 @@ import * as reservationServices from "./reservation-services";
 import { getSupabaseAdminClient } from "./supabase";
 import { companyBookingsRouter } from "./company-booking-routers";
 import { restaurantReservationsRouter } from "./restaurant-reservation-routers";
+import { contentRouter } from "./content-router";
 
 // ============================================
 // ROLE-BASED PROCEDURES
@@ -736,6 +737,18 @@ const contactRouter = router({
   list: adminProcedure.query(async () => {
     return supabaseServices.getAllContactMessagesSupabase();
   }),
+
+  markRead: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      return supabaseServices.markContactMessageReadSupabase(input.id);
+    }),
+
+  delete: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      return supabaseServices.deleteContactMessageSupabase(input.id);
+    }),
 });
 
 // ============================================
@@ -2447,6 +2460,7 @@ export const appRouterUpdated = router({
   restaurantReservations: restaurantReservationsRouter,
   restaurantModule: restaurantModuleRouter,
   terroirModule: terroirModuleRouter,
+  content: contentRouter,
 });
 
 export type AppRouter = typeof appRouterUpdated;
