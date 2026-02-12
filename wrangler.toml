@@ -1,10 +1,6 @@
-name = "ftour-bab-rayan-v2"
+name = "ftour-bab-rayan-v3.3"
 main = "dist/index.js"
 compatibility_date = "2026-02-12"
-compatibility_flags = ["nodejs_compat"]
-
-[vars]
-NODE_ENV = "production"
 
 [assets]
 directory = "dist/public"
