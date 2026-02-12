@@ -9,10 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
-import {
-  ArrowLeft, Search, Loader2, CheckCircle, XCircle,
+import { ArrowLeft, Search, Loader2, CheckCircle, XCircle,
   Clock, UtensilsCrossed, Users, CreditCard
 } from "lucide-react";
+import { ReservationStats } from "./ReservationStats";
 
 const statusLabels: Record<string, string> = {
   submitted: "Soumise",
@@ -45,6 +45,14 @@ export default function AdminRestaurantParticuliers() {
       toast.error(error.message);
     },
   });
+
+  const stats = {
+    total: reservations?.length || 0,
+    pending: reservations?.filter(r => r.status === 'pending_validation').length || 0,
+    confirmed: reservations?.filter(r => r.status === 'validated_pending_payment' || r.status === 'paid_confirmed').length || 0,
+    refused: reservations?.filter(r => r.status === 'refused').length || 0,
+    totalParticipants: reservations?.reduce((sum, r) => sum + (r.seatsTotal || 0), 0) || 0,
+  };
 
   if (!hasAccess) {
     return (
@@ -119,6 +127,15 @@ export default function AdminRestaurantParticuliers() {
       </header>
 
       <main className="container py-8">
+        {/* Stats */}
+        <ReservationStats
+          total={stats.total}
+          pending={stats.pending}
+          confirmed={stats.confirmed}
+          refused={stats.refused}
+          totalParticipants={stats.totalParticipants}
+        />
+
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">
