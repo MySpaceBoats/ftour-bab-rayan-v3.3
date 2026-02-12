@@ -1046,7 +1046,7 @@ export async function markContactMessageReadSupabase(id: number) {
   if (!client) throw new Error('Supabase not configured');
   const { error } = await client
     .from('contact_messages')
-    .update({ isRead: true })
+    .update({ is_read: true })
     .eq('id', id);
   if (error) throw error;
   return { success: true };

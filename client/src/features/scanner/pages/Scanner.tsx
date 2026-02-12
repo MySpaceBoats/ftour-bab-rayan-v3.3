@@ -3,13 +3,31 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { toast } from "sonner";
-import { QrCode, CheckCircle, XCircle, AlertTriangle, Camera, Keyboard, ArrowLeft, User, Calendar, Clock, Loader2 } from "lucide-react";
+import {
+  QrCode, CheckCircle, XCircle, AlertTriangle, Camera, Keyboard,
+  ArrowLeft, User, Calendar, MapPin, Loader2, ShoppingBag, Users,
+  Utensils, Package, RefreshCw, Phone, Mail, Hash, Clock,
+} from "lucide-react";
 import jsQR from "jsqr";
 import { hasRouteAccess } from "@/shared/rbac/permissions";
+
+type QrType = 'volunteer' | 'reservation_particulier' | 'reservation_entreprise' | 'reservation_groupe' | 'pastry' | 'terroir' | 'goodies' | 'unknown';
+
+const TYPE_CONFIG: Record<QrType, { label: string; icon: typeof Users; color: string; bg: string }> = {
+  volunteer: { label: 'Bénévole', icon: Users, color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
+  reservation_particulier: { label: 'Réservation Particulier', icon: Utensils, color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
+  reservation_entreprise: { label: 'Réservation Entreprise', icon: Utensils, color: 'text-indigo-700', bg: 'bg-indigo-50 border-indigo-200' },
+  reservation_groupe: { label: 'Réservation Groupe', icon: Utensils, color: 'text-purple-700', bg: 'bg-purple-50 border-purple-200' },
+  pastry: { label: 'Pâtisserie', icon: ShoppingBag, color: 'text-pink-700', bg: 'bg-pink-50 border-pink-200' },
+  terroir: { label: 'Terroir', icon: Package, color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
+  goodies: { label: 'Goodies', icon: ShoppingBag, color: 'text-orange-700', bg: 'bg-orange-50 border-orange-200' },
+  unknown: { label: 'Inconnu', icon: QrCode, color: 'text-gray-700', bg: 'bg-gray-50 border-gray-200' },
+};
 
 export default function Scanner() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -18,49 +36,45 @@ export default function Scanner() {
   const [manualCode, setManualCode] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
-  const [scanResult, setScanResult] = useState<{
-    success: boolean;
-    volunteer?: {
-      firstName: string;
-      lastName: string;
-      status: string;
-    };
-    day?: {
-      dayNumber: number;
-      date: Date;
-    };
-    message?: string;
-  } | null>(null);
-  
+
+  // Identified entity state
+  const [identifiedResult, setIdentifiedResult] = useState<any>(null);
+  const [validationDone, setValidationDone] = useState<{ success: boolean; message: string } | null>(null);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
-  const checkInMutation = trpc.volunteers.checkIn.useMutation({
+  // ============ MUTATIONS ============
+  const identifyMutation = trpc.scanner.identify.useMutation({
     onSuccess: (data) => {
-      setScanResult({
-        success: true,
-        volunteer: data.volunteer ? {
-          firstName: data.volunteer.firstName,
-          lastName: data.volunteer.lastName,
-          status: data.volunteer.status,
-        } : undefined,
-      });
-      toast.success("Présence validée !");
+      setIdentifiedResult(data);
+      if (!data.found) {
+        toast.error(data.error || 'QR code non reconnu');
+      } else {
+        toast.success(`${data.typeLabel} détecté`);
+      }
       stopCamera();
     },
-    onError: (error) => {
-      setScanResult({
-        success: false,
-        message: error.message,
-      });
-      toast.error(error.message);
+    onError: (err) => {
+      toast.error(err.message);
       stopCamera();
     },
   });
 
-  // Check authorization via centralized RBAC
+  const validateMutation = trpc.scanner.validate.useMutation({
+    onSuccess: (data) => {
+      setValidationDone({ success: true, message: data.message });
+      toast.success(data.message);
+    },
+    onError: (err) => {
+      setValidationDone({ success: false, message: err.message });
+      toast.error(err.message);
+    },
+  });
+
+  // Check authorization
   const isAuthorized = hasRouteAccess(user?.role, '/scanner');
 
   useEffect(() => {
@@ -70,175 +84,99 @@ export default function Scanner() {
   }, [authLoading, isAuthenticated]);
 
   useEffect(() => {
-    if (mode === 'camera' && isAuthorized && !scanResult) {
+    if (mode === 'camera' && isAuthorized && !identifiedResult) {
       startCamera();
     }
-    return () => {
-      stopCamera();
-    };
-  }, [mode, isAuthorized, scanResult]);
+    return () => { stopCamera(); };
+  }, [mode, isAuthorized, identifiedResult]);
 
-  // Extract QR code from URL if it's a validation URL
-  const extractQrCodeFromUrl = (url: string): string | null => {
-    try {
-      // Check if it's a ftourbabrayan.ma validation URL (supports /checkin/, /validation/, /v/)
-      if (url.includes('ftourbabrayan.ma/checkin/') || url.includes('ftourbabrayan.ma/validation/') || url.includes('ftourbabrayan.ma/v/')) {
-        const parts = url.split('/');
-        return parts[parts.length - 1];
-      }
-      // Check if it's a localhost or dev URL with /checkin/
-      if (url.includes('/checkin/')) {
-        const parts = url.split('/checkin/');
-        return parts[parts.length - 1];
-      }
-      // Check if it's just a token
-      if (url.match(/^[a-zA-Z0-9_-]{20,}$/)) {
-        return url;
-      }
-      return url;
-    } catch {
-      return url;
-    }
-  };
-
-  // QR Code scanning function
+  // ============ QR SCANNING ============
   const scanQRCode = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current || !isScanning || scanResult) {
-      return;
-    }
-
+    if (!videoRef.current || !canvasRef.current || !isScanning || identifiedResult) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-
     if (!ctx || video.readyState !== video.HAVE_ENOUGH_DATA) {
       animationFrameRef.current = requestAnimationFrame(scanQRCode);
       return;
     }
-
-    // Set canvas size to match video
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-
-    // Draw video frame to canvas
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    // Get image data for QR detection
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-    // Detect QR code
-    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: "dontInvert",
-    });
-
-    if (code && code.data) {
-      const qrData = code.data;
-      const qrCode = extractQrCodeFromUrl(qrData);
-      
-      // Avoid scanning the same code multiple times
-      if (qrCode && qrCode !== lastScannedCode) {
-        setLastScannedCode(qrCode);
-        setIsScanning(false);
-        
-        // Vibrate on successful scan (if supported)
-        if (navigator.vibrate) {
-          navigator.vibrate(200);
-        }
-        
-        // Play a success sound
-        try {
-          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-          const oscillator = audioContext.createOscillator();
-          const gainNode = audioContext.createGain();
-          oscillator.connect(gainNode);
-          gainNode.connect(audioContext.destination);
-          oscillator.frequency.value = 800;
-          oscillator.type = 'sine';
-          gainNode.gain.value = 0.3;
-          oscillator.start();
-          oscillator.stop(audioContext.currentTime + 0.1);
-        } catch (e) {
-          // Audio not supported
-        }
-
-        toast.info("QR code détecté, vérification...");
-        checkInMutation.mutate({ qrCode });
-        return;
-      }
+    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+    if (code && code.data && code.data !== lastScannedCode) {
+      setLastScannedCode(code.data);
+      setIsScanning(false);
+      if (navigator.vibrate) navigator.vibrate(200);
+      try {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.connect(gain); gain.connect(audioContext.destination);
+        osc.frequency.value = 800; osc.type = 'sine'; gain.gain.value = 0.3;
+        osc.start(); osc.stop(audioContext.currentTime + 0.1);
+      } catch {}
+      toast.info("QR code détecté, identification...");
+      identifyMutation.mutate({ rawCode: code.data });
+      return;
     }
-
-    // Continue scanning
     animationFrameRef.current = requestAnimationFrame(scanQRCode);
-  }, [isScanning, scanResult, lastScannedCode, checkInMutation]);
+  }, [isScanning, identifiedResult, lastScannedCode, identifyMutation]);
 
-  // Start scanning loop when camera is ready
   useEffect(() => {
-    if (isScanning && mode === 'camera' && !scanResult) {
+    if (isScanning && mode === 'camera' && !identifiedResult) {
       animationFrameRef.current = requestAnimationFrame(scanQRCode);
     }
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [isScanning, mode, scanResult, scanQRCode]);
+    return () => { if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current); };
+  }, [isScanning, mode, identifiedResult, scanQRCode]);
 
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
       });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          setIsScanning(true);
-        };
+        videoRef.current.onloadedmetadata = () => setIsScanning(true);
       }
-    } catch (error) {
-      console.error('Camera error:', error);
+    } catch {
       toast.error("Impossible d'accéder à la caméra");
       setMode('manual');
     }
   };
 
   const stopCamera = () => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
+    if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null; }
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
     setIsScanning(false);
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!manualCode.trim()) {
-      toast.error("Veuillez entrer un code QR");
-      return;
-    }
-    const qrCode = extractQrCodeFromUrl(manualCode.trim());
-    if (qrCode) {
-      checkInMutation.mutate({ qrCode });
-    }
+    if (!manualCode.trim()) { toast.error("Veuillez entrer un code QR"); return; }
+    identifyMutation.mutate({ rawCode: manualCode.trim() });
+  };
+
+  const handleValidate = () => {
+    if (!identifiedResult?.found || !identifiedResult.entity) return;
+    validateMutation.mutate({
+      token: identifiedResult.token,
+      type: identifiedResult.type,
+      entityId: identifiedResult.entity.id,
+    });
   };
 
   const handleNewScan = () => {
-    setScanResult(null);
+    setIdentifiedResult(null);
+    setValidationDone(null);
     setManualCode("");
     setLastScannedCode(null);
-    if (mode === 'camera') {
-      startCamera();
-    }
+    if (mode === 'camera') startCamera();
   };
 
+  // ============ RENDER HELPERS ============
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -256,18 +194,15 @@ export default function Scanner() {
               <XCircle className="h-8 w-8 text-red-600" />
             </div>
             <h1 className="text-xl font-bold">Accès non autorisé</h1>
-            <p className="text-muted-foreground">
-              Vous n'avez pas les droits nécessaires pour accéder au scanner.
-            </p>
-            <Button onClick={() => navigate('/')} variant="outline">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour à l'accueil
-            </Button>
+            <p className="text-muted-foreground">Vous n'avez pas les droits nécessaires pour accéder au scanner.</p>
+            <Button onClick={() => navigate('/')} variant="outline"><ArrowLeft className="h-4 w-4 mr-2" />Retour à l'accueil</Button>
           </CardContent>
         </Card>
       </div>
     );
   }
+
+  const typeConfig = identifiedResult ? TYPE_CONFIG[identifiedResult.type as QrType] || TYPE_CONFIG.unknown : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -277,85 +212,214 @@ export default function Scanner() {
           <Button variant="ghost" size="icon" onClick={() => navigate('/admin')} className="text-primary-foreground hover:bg-primary-foreground/10">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="font-bold text-lg">Scanner QR</h1>
+          <div className="text-center">
+            <h1 className="font-bold text-lg">Scanner Unifié</h1>
+            <p className="text-xs opacity-80">Bénévoles · Réservations · Commandes</p>
+          </div>
           <div className="w-10" />
         </div>
       </header>
 
       <main className="p-4 max-w-lg mx-auto">
         {/* Mode Toggle */}
-        <div className="flex gap-2 mb-6">
-          <Button
-            variant={mode === 'camera' ? 'default' : 'outline'}
-            onClick={() => setMode('camera')}
-            className="flex-1"
-          >
-            <Camera className="h-4 w-4 mr-2" />
-            Caméra
-          </Button>
-          <Button
-            variant={mode === 'manual' ? 'default' : 'outline'}
-            onClick={() => { setMode('manual'); stopCamera(); }}
-            className="flex-1"
-          >
-            <Keyboard className="h-4 w-4 mr-2" />
-            Manuel
-          </Button>
-        </div>
-
-        {/* Scan Result */}
-        {scanResult && (
-          <Card className={`mb-6 border-2 ${scanResult.success ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}`}>
-            <CardContent className="p-6 text-center space-y-4">
-              <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center ${scanResult.success ? 'bg-green-100' : 'bg-red-100'}`}>
-                {scanResult.success ? (
-                  <CheckCircle className="h-8 w-8 text-green-600" />
-                ) : (
-                  <XCircle className="h-8 w-8 text-red-600" />
-                )}
-              </div>
-              
-              {scanResult.success && scanResult.volunteer ? (
-                <div className="space-y-2">
-                  <h2 className="text-xl font-bold text-green-800">Présence validée</h2>
-                  <div className="bg-white rounded-lg p-4 space-y-2">
-                    <div className="flex items-center justify-center gap-2">
-                      <User className="h-5 w-5 text-muted-foreground" />
-                      <span className="font-medium">
-                        {scanResult.volunteer.firstName} {scanResult.volunteer.lastName}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <h2 className="text-xl font-bold text-red-800">Erreur</h2>
-                  <p className="text-red-700">{scanResult.message}</p>
-                </div>
-              )}
-
-              <Button onClick={handleNewScan} className="w-full">
-                <QrCode className="h-4 w-4 mr-2" />
-                Nouveau scan
-              </Button>
-            </CardContent>
-          </Card>
+        {!identifiedResult && (
+          <div className="flex gap-2 mb-6">
+            <Button variant={mode === 'camera' ? 'default' : 'outline'} onClick={() => setMode('camera')} className="flex-1">
+              <Camera className="h-4 w-4 mr-2" />Caméra
+            </Button>
+            <Button variant={mode === 'manual' ? 'default' : 'outline'} onClick={() => { setMode('manual'); stopCamera(); }} className="flex-1">
+              <Keyboard className="h-4 w-4 mr-2" />Manuel
+            </Button>
+          </div>
         )}
 
-        {/* Camera Mode */}
-        {mode === 'camera' && !scanResult && (
+        {/* ============ IDENTIFIED RESULT ============ */}
+        {identifiedResult && (
+          <div className="space-y-4">
+            {/* Type Badge */}
+            {typeConfig && (
+              <div className={`rounded-lg border p-4 ${typeConfig.bg}`}>
+                <div className="flex items-center gap-3">
+                  <typeConfig.icon className={`h-6 w-6 ${typeConfig.color}`} />
+                  <div>
+                    <Badge variant="outline" className={typeConfig.color}>{identifiedResult.typeLabel}</Badge>
+                    {identifiedResult.found && identifiedResult.entity?.reference && (
+                      <p className="text-xs mt-1 opacity-70">Réf: {identifiedResult.entity.reference}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Not Found */}
+            {!identifiedResult.found && (
+              <Card className="border-red-200 bg-red-50">
+                <CardContent className="p-6 text-center space-y-3">
+                  <XCircle className="h-12 w-12 text-red-500 mx-auto" />
+                  <h2 className="font-bold text-red-800">QR code non trouvé</h2>
+                  <p className="text-sm text-red-600">{identifiedResult.error}</p>
+                  <Button onClick={handleNewScan} className="w-full"><RefreshCw className="h-4 w-4 mr-2" />Nouveau scan</Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Found: Entity Details */}
+            {identifiedResult.found && identifiedResult.entity && (
+              <Card>
+                <CardContent className="p-5 space-y-4">
+                  {/* Person info */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <User className="h-5 w-5 text-muted-foreground" />
+                      <span className="font-semibold text-lg">{identifiedResult.entity.name}</span>
+                    </div>
+                    {identifiedResult.entity.email && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Mail className="h-4 w-4" />{identifiedResult.entity.email}
+                      </div>
+                    )}
+                    {identifiedResult.entity.phone && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Phone className="h-4 w-4" />{identifiedResult.entity.phone}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Type-specific details */}
+                  <div className="border-t pt-3 space-y-2">
+                    {/* Volunteer */}
+                    {identifiedResult.type === 'volunteer' && (
+                      <>
+                        {identifiedResult.entity.dayNumber && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span>Jour {identifiedResult.entity.dayNumber} — {identifiedResult.entity.dayDate}</span>
+                          </div>
+                        )}
+                        {identifiedResult.entity.location && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />{identifiedResult.entity.location}
+                          </div>
+                        )}
+                        {identifiedResult.entity.iftarTime && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Clock className="h-4 w-4 text-muted-foreground" />Iftar: {identifiedResult.entity.iftarTime}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 text-sm">
+                          <Hash className="h-4 w-4 text-muted-foreground" />Statut: <Badge variant="outline">{identifiedResult.entity.status}</Badge>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Reservation */}
+                    {identifiedResult.type.startsWith('reservation_') && (
+                      <>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />{identifiedResult.entity.date}
+                        </div>
+                        {identifiedResult.entity.guests && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Users className="h-4 w-4 text-muted-foreground" />{identifiedResult.entity.guests} convives
+                          </div>
+                        )}
+                        {identifiedResult.entity.restaurantName && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />{identifiedResult.entity.restaurantName}
+                          </div>
+                        )}
+                        {identifiedResult.entity.slotTime && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Clock className="h-4 w-4 text-muted-foreground" />{identifiedResult.entity.slotTime}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 text-sm">
+                          <Hash className="h-4 w-4 text-muted-foreground" />Statut: <Badge variant="outline">{identifiedResult.entity.status}</Badge>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Pastry / Terroir / Goodies */}
+                    {(identifiedResult.type === 'pastry' || identifiedResult.type === 'terroir' || identifiedResult.type === 'goodies') && (
+                      <>
+                        {identifiedResult.entity.totalAmount != null && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                            Montant: <span className="font-semibold">{identifiedResult.entity.totalAmount} MAD</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 text-sm">
+                          <Hash className="h-4 w-4 text-muted-foreground" />Statut: <Badge variant="outline">{identifiedResult.entity.status}</Badge>
+                        </div>
+                        {identifiedResult.entity.items?.map((item: any, i: number) => (
+                          <div key={i} className="text-sm pl-6">• {item.name} × {item.quantity}</div>
+                        ))}
+                        {identifiedResult.entity.usesCount != null && (
+                          <div className="text-sm text-muted-foreground">
+                            Utilisations: {identifiedResult.entity.usesCount}/{identifiedResult.entity.maxUses}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  {/* Already validated warning */}
+                  {identifiedResult.entity.alreadyValidated && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+                      <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-medium text-amber-800">Déjà validé</p>
+                        <p className="text-sm text-amber-600">
+                          {identifiedResult.entity.scannedAt
+                            ? `Validé le ${new Date(identifiedResult.entity.scannedAt).toLocaleString('fr-FR')}`
+                            : 'Ce QR code a déjà été utilisé.'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Validation result */}
+                  {validationDone && (
+                    <div className={`rounded-lg p-4 flex items-center gap-3 ${validationDone.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                      {validationDone.success ? (
+                        <CheckCircle className="h-6 w-6 text-green-600" />
+                      ) : (
+                        <XCircle className="h-6 w-6 text-red-600" />
+                      )}
+                      <span className={validationDone.success ? 'text-green-800 font-medium' : 'text-red-800 font-medium'}>
+                        {validationDone.message}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2 pt-2">
+                    {!validationDone && !identifiedResult.entity.alreadyValidated && (
+                      <Button onClick={handleValidate} disabled={validateMutation.isPending} className="flex-1" size="lg">
+                        {validateMutation.isPending ? (
+                          <><Loader2 className="h-5 w-5 mr-2 animate-spin" />Validation...</>
+                        ) : (
+                          <><CheckCircle className="h-5 w-5 mr-2" />Valider</>
+                        )}
+                      </Button>
+                    )}
+                    <Button onClick={handleNewScan} variant="outline" className={validationDone || identifiedResult.entity.alreadyValidated ? 'flex-1' : ''} size="lg">
+                      <RefreshCw className="h-4 w-4 mr-2" />Nouveau scan
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* ============ CAMERA MODE ============ */}
+        {mode === 'camera' && !identifiedResult && (
           <Card className="overflow-hidden">
             <CardContent className="p-0">
               <div className="relative aspect-square bg-black">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover"
-                />
+                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
                 <canvas ref={canvasRef} className="hidden" />
-                
                 {/* Scan overlay */}
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-64 h-64 border-2 border-white/50 rounded-2xl relative">
@@ -363,8 +427,6 @@ export default function Scanner() {
                     <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-lg" />
                     <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-lg" />
                     <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg" />
-                    
-                    {/* Scanning animation */}
                     {isScanning && (
                       <div className="absolute inset-0 overflow-hidden rounded-xl">
                         <div className="absolute w-full h-1 bg-primary/70 animate-scan-line" />
@@ -372,32 +434,24 @@ export default function Scanner() {
                     )}
                   </div>
                 </div>
-
-                {/* Scanning indicator */}
                 {isScanning && (
                   <div className="absolute bottom-4 left-0 right-0 text-center">
                     <span className="bg-black/50 text-white px-4 py-2 rounded-full text-sm flex items-center justify-center gap-2 mx-auto w-fit">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Recherche du QR code...
+                      <Loader2 className="h-4 w-4 animate-spin" />Recherche du QR code...
                     </span>
                   </div>
                 )}
-
-                {/* Loading indicator */}
-                {checkInMutation.isPending && (
+                {identifyMutation.isPending && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                     <div className="bg-white rounded-lg p-4 flex items-center gap-3">
-                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                      <span>Vérification...</span>
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" /><span>Identification...</span>
                     </div>
                   </div>
                 )}
               </div>
-              
               <div className="p-4 text-center text-sm text-muted-foreground">
                 <p className="flex items-center justify-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  Détection automatique activée
+                  <CheckCircle className="h-4 w-4 text-green-500" />Détection automatique multi-types
                 </p>
                 <p className="mt-1">Placez le QR code dans le cadre</p>
               </div>
@@ -405,8 +459,8 @@ export default function Scanner() {
           </Card>
         )}
 
-        {/* Manual Mode */}
-        {mode === 'manual' && !scanResult && (
+        {/* ============ MANUAL MODE ============ */}
+        {mode === 'manual' && !identifiedResult && (
           <Card>
             <CardContent className="p-6 space-y-6">
               <div className="text-center space-y-2">
@@ -414,35 +468,21 @@ export default function Scanner() {
                   <Keyboard className="h-8 w-8 text-primary" />
                 </div>
                 <h2 className="font-semibold">Saisie manuelle</h2>
-                <p className="text-sm text-muted-foreground">
-                  Entrez le code QR ou l'URL de validation du bénévole
-                </p>
+                <p className="text-sm text-muted-foreground">Entrez le code QR, l'URL de validation, ou la référence</p>
               </div>
-
               <form onSubmit={handleManualSubmit} className="space-y-4">
                 <Input
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value)}
-                  placeholder="Code QR ou URL de validation"
+                  placeholder="Code QR, URL ou référence"
                   className="text-center font-mono"
                   autoFocus
                 />
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  size="lg"
-                  disabled={checkInMutation.isPending}
-                >
-                  {checkInMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Vérification...
-                    </>
+                <Button type="submit" className="w-full" size="lg" disabled={identifyMutation.isPending}>
+                  {identifyMutation.isPending ? (
+                    <><Loader2 className="h-5 w-5 mr-2 animate-spin" />Identification...</>
                   ) : (
-                    <>
-                      <CheckCircle className="h-5 w-5 mr-2" />
-                      Valider la présence
-                    </>
+                    <><QrCode className="h-5 w-5 mr-2" />Identifier et valider</>
                   )}
                 </Button>
               </form>
@@ -451,22 +491,23 @@ export default function Scanner() {
         )}
 
         {/* Instructions */}
-        <Card className="mt-6 bg-muted/50">
-          <CardContent className="p-4 space-y-3">
-            <h3 className="font-semibold flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
-              Instructions
-            </h3>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• Vérifiez que le QR code correspond au jour actuel</li>
-              <li>• Un QR code ne peut être scanné qu'une seule fois</li>
-              <li>• En cas de problème, contactez un administrateur</li>
-            </ul>
-          </CardContent>
-        </Card>
+        {!identifiedResult && (
+          <Card className="mt-6 bg-muted/50">
+            <CardContent className="p-4 space-y-3">
+              <h3 className="font-semibold flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />Instructions
+              </h3>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Ce scanner détecte automatiquement le type de QR code</li>
+                <li>• Types supportés : bénévoles, réservations, goodies, pâtisserie, terroir</li>
+                <li>• Un QR code ne peut être validé qu'une seule fois</li>
+                <li>• En cas de problème, contactez un administrateur</li>
+              </ul>
+            </CardContent>
+          </Card>
+        )}
       </main>
 
-      {/* CSS for scan line animation */}
       <style>{`
         @keyframes scan-line {
           0% { transform: translateY(0); }

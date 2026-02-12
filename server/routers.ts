@@ -12,6 +12,7 @@ import { getSupabaseAdminClient } from "./supabase";
 import { companyBookingsRouter } from "./company-booking-routers";
 import { restaurantReservationsRouter } from "./restaurant-reservation-routers";
 import { contentRouter } from "./content-router";
+import { scannerRouter } from "./scanner-router";
 
 // ============================================
 // ROLE-BASED PROCEDURES
@@ -2461,6 +2462,7 @@ export const appRouterUpdated = router({
   restaurantModule: restaurantModuleRouter,
   terroirModule: terroirModuleRouter,
   content: contentRouter,
+  scanner: scannerRouter,
 });
 
 export type AppRouter = typeof appRouterUpdated;

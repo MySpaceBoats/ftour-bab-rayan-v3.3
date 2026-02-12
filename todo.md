@@ -754,8 +754,8 @@
 - [ ] Audit fonctionnel de chaque module dashboard admin
 - [ ] Corriger modules défaillants identifiés
 - [ ] Tester formulaires réservation (Particulier/Entreprise/Groupe)
-- [ ] Consolider Scanner en module unique multi-types
-- [ ] Compléter module Messages (/admin/messages)
+- [x] Consolider Scanner en module unique multi-types
+- [x] Compléter module Messages (/admin/messages)
 - [ ] Validation finale et checkpoint
 
 ## Dashboard Admin — Modules Complets (Feb 12, 2026)
@@ -767,3 +767,15 @@
 - [x] AdminContenu: Formulaire création/édition, toggle actif/inactif, recherche, suppression
 - [x] Enregistrer contentRouter dans appRouterUpdated
 - [x] pnpm build réussi (0 erreurs TypeScript)
+
+## Phase 23 : Scanner Unifié + Tests E2E (Feb 12, 2026)
+- [x] Auditer les scanners existants et types de QR codes
+- [x] Créer scanner unifié à /scanner avec détection automatique du type de QR
+- [x] Supporter les types : bénévole, réservation, goodies, pâtisserie, terroir
+- [x] UI de validation adaptée selon le type détecté
+- [x] Tester workflow E2E : inscription bénévole → email → QR → scan → validation admin
+- [x] Tester workflow E2E : réservation particulier → admin confirmation
+- [x] Tester workflow E2E : commande goodies → admin gestion
+- [x] Tester workflow E2E : promesse de don → admin confirmation
+- [x] Corriger les problèmes identifiés (isRead → is_read dans messages)
+- [x] Build réussi + checkpoint
