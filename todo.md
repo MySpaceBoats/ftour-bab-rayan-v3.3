@@ -779,3 +779,7 @@
 - [x] Tester workflow E2E : promesse de don → admin confirmation
 - [x] Corriger les problèmes identifiés (isRead → is_read dans messages)
 - [x] Build réussi + checkpoint
+
+## Bug Cloudflare Pages Deploy - 12/02/2026
+- [x] Corriger wrangler.toml : supprimer section "build" non supportée par Pages
+- [x] Corriger commande deploy : utiliser "wrangler pages deploy" au lieu de "wrangler deploy" (déjà correct dans package.json)
