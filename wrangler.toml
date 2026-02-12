@@ -1,12 +1,11 @@
-name = "ftour-bab-rayan-v2"
-main = "worker/index.ts"
+name = "ftour-bab-rayan"
+pages_build_output_dir = "dist/public"
 
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
-# Workers Builds uses this implicitly, but keep for clarity
 [build]
-command = "pnpm run build"
+command = "pnpm run build:cloudflare"
 
 [vars]
 NODE_ENV = "production"
