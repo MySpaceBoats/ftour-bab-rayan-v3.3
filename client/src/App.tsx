@@ -38,10 +38,7 @@ import CheckinReservation from "@/features/restaurant/pages/CheckinReservation";
 import AdminRestaurantParticuliers from "@/features/restaurant/admin/AdminRestaurantParticuliers";
 import AdminRestaurantEntreprises from "@/features/restaurant/admin/AdminRestaurantEntreprises";
 import AdminRestaurantGroupes from "@/features/restaurant/admin/AdminRestaurantGroupes";
-import AdminRestaurants from "@/features/restaurant/admin/AdminRestaurants";
-import AdminRestaurantReservations from "@/features/restaurant/admin/AdminRestaurantReservations";
 import AdminScanReservation from "@/features/restaurant/admin/AdminScanReservation";
-import AdminReservationsConsolidated from "@/features/restaurant/admin/AdminReservationsConsolidated";
 import AdminReservationsPage from "@/features/restaurant/admin/AdminReservationsPage";
 
 // ============================================
@@ -67,26 +64,21 @@ import Cart from "@/features/goodies/pages/Cart";
 import { Checkout as UnifiedCheckout } from "@/features/goodies/pages/Checkout";
 import AdminGoodies from "@/features/goodies/admin/AdminGoodies";
 import AdminCommandes from "@/features/goodies/admin/AdminCommandes";
-import AdminCommerceConsolidated from "@/features/commerce/admin/AdminCommerceConsolidated";
 import AdminCommercePage from "@/features/commerce/admin/AdminCommercePage";
 
 // ============================================
 // DONS — features/dons
 // ============================================
 import Dons from "@/features/dons/pages/Dons";
-import AdminDons from "@/features/dons/admin/AdminDons";
 import AdminDonsPage from "@/features/dons/admin/AdminDonsPage";
 
 // ============================================
 // OPS — features/ops
 // ============================================
 import AdminDashboard from "@/features/ops/admin/AdminDashboard";
-import AdminBenevoles from "@/features/ops/admin/AdminBenevoles";
 import AdminJours from "@/features/ops/admin/AdminJours";
 import AdminScanProduct from "@/features/ops/admin/AdminScanProduct";
-import AdminPayments from "@/features/ops/admin/AdminPayments";
 import AdminUtilisateurs from "@/features/ops/admin/AdminUtilisateurs";
-import AdminUnifiedDashboard from "@/features/ops/admin/AdminUnifiedDashboard";
 import AdminScannerConsolidated from "@/features/ops/admin/AdminScannerConsolidated";
 import AdminBenevolePage from "@/features/ops/admin/AdminBenevolePage";
 
@@ -143,7 +135,6 @@ function LocalizedRoutes() {
           ADMIN ROUTES — sans :lang (section 4.2)
           ================================================ */}
       <Route path="/admin" component={AdminDashboard} />
-      <Route path="/admin/unified-dashboard" component={AdminUnifiedDashboard} />
 
       {/* Admin Restaurant — Unified Back Office */}
       <Route path="/admin/reservations" component={AdminReservationsPage} />
@@ -151,8 +142,6 @@ function LocalizedRoutes() {
       <Route path="/admin/restaurant/particuliers" component={AdminRestaurantParticuliers} />
       <Route path="/admin/restaurant/entreprises" component={AdminRestaurantEntreprises} />
       <Route path="/admin/restaurant/groupes" component={AdminRestaurantGroupes} />
-      <Route path="/admin/restaurants" component={AdminRestaurants} />
-      <Route path="/admin/restaurant-reservations" component={AdminRestaurantReservations} />
       <Route path="/admin/scan-reservation" component={AdminScanReservation} />
 
       {/* Admin Commerce — Unified Back Office */}
@@ -169,13 +158,11 @@ function LocalizedRoutes() {
 
       {/* Admin Ops — Unified Back Office */}
       <Route path="/admin/benevoles" component={AdminBenevolePage} />
-      <Route path="/admin/calendrier" component={AdminJours} />
       <Route path="/admin/jours" component={AdminJours} />
       {/* Scanner — Consolidated */}
       <Route path="/admin/scanner" component={AdminScannerConsolidated} />
       {/* Legacy scanner routes */}
       <Route path="/admin/scan-product" component={AdminScanProduct} />
-      <Route path="/admin/payments" component={AdminPayments} />
       <Route path="/admin/utilisateurs" component={AdminUtilisateurs} />
 
       {/* Admin Contenu */}

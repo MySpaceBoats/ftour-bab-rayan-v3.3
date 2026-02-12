@@ -1,13 +1,18 @@
-import { useState, useMemo } from 'react';
+'use client';
+
 import { useSearchParams } from 'wouter';
+import { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { UtensilsCrossed, Plus, Eye, Check, X, CreditCard, Mail, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { UtensilsCrossed, Plus, Eye, Check, X, CreditCard, Mail, Trash2, Loader2 } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/_core/hooks/useAuth';
 import DataTable, { Column } from '@/features/admin/components/DataTable';
 import FilterPanel, { FilterOption } from '@/features/admin/components/FilterPanel';
 
 // ============================================
-// ADMIN RESERVATIONS — UNIFIED VIEW
+// ADMIN RESERVATIONS — UNIFIED VIEW WITH tRPC
 // ============================================
 
 interface Reservation {
@@ -18,54 +23,17 @@ interface Reservation {
   contact_name: string;
   contact_email: string;
   contact_phone: string;
-  status: 'pending' | 'confirmed' | 'rejected' | 'cancelled';
+  status: 'pending_validation' | 'confirmed' | 'rejected' | 'cancelled';
   payment_status: 'unpaid' | 'paid' | 'refunded';
   created_at: string;
 }
 
-// Mock data — à remplacer par tRPC
-const MOCK_RESERVATIONS: Reservation[] = [
-  {
-    id: 'res-001',
-    type: 'particulier',
-    date: '2026-03-15',
-    places: 4,
-    contact_name: 'Ahmed Bennani',
-    contact_email: 'ahmed@example.com',
-    contact_phone: '+212 6 12 34 56 78',
-    status: 'confirmed',
-    payment_status: 'paid',
-    created_at: '2026-02-10',
-  },
-  {
-    id: 'res-002',
-    type: 'entreprise',
-    date: '2026-03-20',
-    places: 25,
-    contact_name: 'Fatima Alaoui',
-    contact_email: 'fatima@company.com',
-    contact_phone: '+212 6 98 76 54 32',
-    status: 'pending',
-    payment_status: 'unpaid',
-    created_at: '2026-02-11',
-  },
-  {
-    id: 'res-003',
-    type: 'groupe',
-    date: '2026-03-25',
-    places: 50,
-    contact_name: 'Association Solidarité',
-    contact_email: 'contact@asso.com',
-    contact_phone: '+212 5 22 12 34 56',
-    status: 'confirmed',
-    payment_status: 'paid',
-    created_at: '2026-02-09',
-  },
-];
-
 export default function AdminReservationsPage() {
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [selectedReservations, setSelectedReservations] = useState<Reservation[]>([]);
+  const [selectedReservations, setSelectedReservations] = useState<string[]>([]);
+  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [filters, setFilters] = useState({
     type: searchParams.type || '',
     status: searchParams.status || '',
@@ -75,9 +43,21 @@ export default function AdminReservationsPage() {
     search: searchParams.search || '',
   });
 
+  // Fetch reservations from tRPC
+  const { data: reservations = [], isLoading, error } = trpc.backoffice.reservations.list.useQuery(
+    { type: filters.type as any },
+    { enabled: !!user }
+  );
+
+  // Mutations
+  const confirmMutation = trpc.backoffice.reservations.confirm.useMutation();
+  const rejectMutation = trpc.backoffice.reservations.reject.useMutation();
+  const deleteMutation = trpc.backoffice.reservations.delete.useMutation();
+  const markPaidMutation = trpc.backoffice.reservations.markPaid.useMutation();
+
   // Filter data
   const filteredData = useMemo(() => {
-    return MOCK_RESERVATIONS.filter((res) => {
+    return (reservations as Reservation[]).filter((res) => {
       if (filters.type && res.type !== filters.type) return false;
       if (filters.status && res.status !== filters.status) return false;
       if (filters.payment_status && res.payment_status !== filters.payment_status) return false;
@@ -93,12 +73,11 @@ export default function AdminReservationsPage() {
       }
       return true;
     });
-  }, [filters]);
+  }, [reservations, filters]);
 
   // Handle filter change
   const handleFilterChange = (key: string, value: any) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
-    // Update URL params
     const newParams = new URLSearchParams(searchParams);
     if (value) {
       newParams.set(key, value);
@@ -119,6 +98,50 @@ export default function AdminReservationsPage() {
       search: '',
     });
     setSearchParams('');
+  };
+
+  // Actions
+  const handleConfirm = useCallback(async (id: string) => {
+    try {
+      await confirmMutation.mutateAsync({ id });
+      // Refetch data
+      window.location.reload();
+    } catch (error) {
+      console.error('Erreur lors de la confirmation:', error);
+    }
+  }, [confirmMutation]);
+
+  const handleReject = useCallback(async (id: string) => {
+    try {
+      await rejectMutation.mutateAsync({ id });
+      window.location.reload();
+    } catch (error) {
+      console.error('Erreur lors du refus:', error);
+    }
+  }, [rejectMutation]);
+
+  const handleDelete = useCallback(async (id: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette réservation ?')) return;
+    try {
+      await deleteMutation.mutateAsync({ id });
+      window.location.reload();
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+    }
+  }, [deleteMutation]);
+
+  const handleMarkPaid = useCallback(async (id: string) => {
+    try {
+      await markPaidMutation.mutateAsync({ id });
+      window.location.reload();
+    } catch (error) {
+      console.error('Erreur lors du marquage comme payé:', error);
+    }
+  }, [markPaidMutation]);
+
+  const handleViewDetail = (reservation: Reservation) => {
+    setSelectedReservation(reservation);
+    setDetailDrawerOpen(true);
   };
 
   // Table columns
@@ -163,13 +186,13 @@ export default function AdminReservationsPage() {
       width: '120px',
       render: (value) => {
         const styles = {
-          pending: 'bg-yellow-100 text-yellow-800',
+          pending_validation: 'bg-yellow-100 text-yellow-800',
           confirmed: 'bg-green-100 text-green-800',
           rejected: 'bg-red-100 text-red-800',
           cancelled: 'bg-gray-100 text-gray-800',
         };
         const labels = {
-          pending: 'En attente',
+          pending_validation: 'En attente',
           confirmed: 'Confirmée',
           rejected: 'Refusée',
           cancelled: 'Annulée',
@@ -200,6 +223,69 @@ export default function AdminReservationsPage() {
         );
       },
     },
+    {
+      key: 'id',
+      label: 'Actions',
+      width: '200px',
+      render: (_, row: Reservation) => (
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleViewDetail(row)}
+            title="Voir détails"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          {row.status === 'pending_validation' && (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-green-600 hover:text-green-700"
+                onClick={() => handleConfirm(row.id)}
+                disabled={confirmMutation.isPending}
+                title="Confirmer"
+              >
+                {confirmMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-red-600 hover:text-red-700"
+                onClick={() => handleReject(row.id)}
+                disabled={rejectMutation.isPending}
+                title="Refuser"
+              >
+                {rejectMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+              </Button>
+            </>
+          )}
+          {row.payment_status === 'unpaid' && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-blue-600 hover:text-blue-700"
+              onClick={() => handleMarkPaid(row.id)}
+              disabled={markPaidMutation.isPending}
+              title="Marquer comme payé"
+            >
+              {markPaidMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-red-600 hover:text-red-700"
+            onClick={() => handleDelete(row.id)}
+            disabled={deleteMutation.isPending}
+            title="Supprimer"
+          >
+            {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+          </Button>
+        </div>
+      ),
+    },
   ];
 
   // Filter options
@@ -219,7 +305,7 @@ export default function AdminReservationsPage() {
       label: 'Statut',
       type: 'select',
       options: [
-        { value: 'pending', label: 'En attente' },
+        { value: 'pending_validation', label: 'En attente' },
         { value: 'confirmed', label: 'Confirmée' },
         { value: 'rejected', label: 'Refusée' },
         { value: 'cancelled', label: 'Annulée' },
@@ -240,7 +326,55 @@ export default function AdminReservationsPage() {
       label: 'Du',
       type: 'date',
     },
+    {
+      id: 'date_to',
+      label: 'Au',
+      type: 'date',
+    },
+    {
+      id: 'search',
+      label: 'Recherche',
+      type: 'text',
+      placeholder: 'Nom, email, téléphone...',
+    },
   ];
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background p-4">
+        <Card className="max-w-md mx-auto">
+          <CardContent className="p-6 text-center">
+            <p className="text-red-600">Erreur lors du chargement des réservations</p>
+            <p className="text-sm text-muted-foreground mt-2">{error.message}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (filteredData.length === 0 && !isLoading) {
+    return (
+      <div className="min-h-screen bg-background p-4">
+        <Card className="max-w-md mx-auto">
+          <CardContent className="p-6 text-center">
+            <UtensilsCrossed className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">Aucune réservation trouvée</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -249,97 +383,119 @@ export default function AdminReservationsPage() {
         <div className="container">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
-              <UtensilsCrossed className="w-8 h-8 text-amber-700" />
-              <h1 className="text-3xl font-bold text-foreground">Réservations</h1>
+              <div className="p-2 bg-amber-100 rounded-lg">
+                <UtensilsCrossed className="h-6 w-6 text-amber-700" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Réservations</h1>
+                <p className="text-sm text-gray-600">Gérer les réservations restaurant</p>
+              </div>
             </div>
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
-              Nouvelle réservation
-            </Button>
           </div>
-          <p className="text-muted-foreground">Gérer toutes les réservations (Particuliers, Entreprises, Groupes)</p>
+          <p className="text-sm text-gray-600 mt-4">
+            Total: <strong>{filteredData.length}</strong> réservation(s)
+          </p>
         </div>
       </div>
 
-      <div className="container py-12">
-        {/* Stats */}
-        <div className="grid md:grid-cols-4 gap-4 mb-8">
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Total</p>
-              <p className="text-2xl font-bold">{MOCK_RESERVATIONS.length}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">En attente</p>
-              <p className="text-2xl font-bold">{MOCK_RESERVATIONS.filter((r) => r.status === 'pending').length}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Confirmées</p>
-              <p className="text-2xl font-bold">{MOCK_RESERVATIONS.filter((r) => r.status === 'confirmed').length}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Payées</p>
-              <p className="text-2xl font-bold">{MOCK_RESERVATIONS.filter((r) => r.payment_status === 'paid').length}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
+      {/* Filters */}
+      <div className="container py-6">
         <FilterPanel
-          filters={filterOptions}
+          options={filterOptions}
           values={filters}
-          onFilterChange={handleFilterChange}
+          onChange={handleFilterChange}
           onReset={handleResetFilters}
-          className="mb-8"
         />
+      </div>
 
-        {/* Data Table */}
+      {/* Table */}
+      <div className="container pb-12">
         <Card>
           <CardHeader>
-            <CardTitle>Liste des réservations ({filteredData.length})</CardTitle>
+            <CardTitle>Liste des réservations</CardTitle>
           </CardHeader>
           <CardContent>
-            <DataTable<Reservation>
-              data={filteredData}
+            <DataTable
               columns={columns}
-              selectable={true}
+              data={filteredData}
+              selectable
+              selectedIds={selectedReservations}
               onSelectionChange={setSelectedReservations}
-              emptyMessage="Aucune réservation trouvée"
             />
-
-            {/* Bulk Actions */}
-            {selectedReservations.length > 0 && (
-              <div className="mt-6 p-4 bg-muted rounded-lg flex items-center justify-between">
-                <p className="text-sm font-semibold">{selectedReservations.length} réservation(s) sélectionnée(s)</p>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Check className="w-4 h-4" />
-                    Confirmer
-                  </Button>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <X className="w-4 h-4" />
-                    Refuser
-                  </Button>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <CreditCard className="w-4 h-4" />
-                    Marquer payé
-                  </Button>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Mail className="w-4 h-4" />
-                    Envoyer email
-                  </Button>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Detail Drawer */}
+      <Dialog open={detailDrawerOpen} onOpenChange={setDetailDrawerOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Détails de la réservation</DialogTitle>
+          </DialogHeader>
+          {selectedReservation && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Type</label>
+                  <p className="text-lg font-semibold capitalize">
+                    {selectedReservation.type === 'particulier' ? 'Particulier' : selectedReservation.type === 'entreprise' ? 'Entreprise' : 'Groupe'}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Date</label>
+                  <p className="text-lg font-semibold">
+                    {new Date(selectedReservation.date).toLocaleDateString('fr-FR')}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Nombre de places</label>
+                  <p className="text-lg font-semibold">{selectedReservation.places}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Statut</label>
+                  <p className="text-lg font-semibold">{selectedReservation.status}</p>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-4">Informations de contact</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Nom</label>
+                    <p>{selectedReservation.contact_name}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Email</label>
+                    <p>{selectedReservation.contact_email}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Téléphone</label>
+                    <p>{selectedReservation.contact_phone}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-4">Paiement</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Statut de paiement</label>
+                    <p className="capitalize">{selectedReservation.payment_status}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Date de création</label>
+                    <p>{new Date(selectedReservation.created_at).toLocaleDateString('fr-FR')}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-4 border-t">
+                <Button onClick={() => setDetailDrawerOpen(false)}>Fermer</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
