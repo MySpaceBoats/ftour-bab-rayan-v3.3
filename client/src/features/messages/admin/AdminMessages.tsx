@@ -6,18 +6,33 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Download, Mail, Search } from 'lucide-react';
+import { ArrowLeft, Download, Mail, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/_core/hooks/useAuth';
 
 type MessageFilter = 'all' | 'read' | 'unread';
 
 export default function AdminMessages() {
+  const { user } = useAuth();
   const [filter, setFilter] = useState<MessageFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [locallyRead, setLocallyRead] = useState<Record<number, boolean>>({});
 
+  const utils = trpc.useUtils();
   const { data: messages = [], isLoading } = trpc.contact.list.useQuery();
+  const markReadMutation = trpc.contact.markRead.useMutation({
+    onSuccess: async () => {
+      await utils.contact.list.invalidate();
+    },
+  });
+  const deleteMutation = trpc.contact.delete.useMutation({
+    onSuccess: async () => {
+      await utils.contact.list.invalidate();
+      toast.success('Message supprimé');
+      setSelectedId(null);
+    },
+  });
 
   const normalizedMessages = useMemo(() => {
     return messages.map((message: any) => {
@@ -39,7 +54,8 @@ export default function AdminMessages() {
 
   const selectedMessage = filteredMessages.find((message: any) => message.id === selectedId) || null;
 
-  const markAsRead = (id: number) => {
+  const markAsRead = async (id: number) => {
+    await markReadMutation.mutateAsync({ id });
     setLocallyRead((prev) => ({ ...prev, [id]: true }));
     toast.success('Message marqué comme lu');
   };
@@ -158,11 +174,21 @@ export default function AdminMessages() {
                 <Textarea value={selectedMessage.message || ''} readOnly className="min-h-[180px]" />
                 <Button
                   onClick={() => markAsRead(selectedMessage.id)}
-                  disabled={selectedMessage.isRead}
+                  disabled={selectedMessage.isRead || markReadMutation.isPending}
                   className="w-full"
                 >
                   {selectedMessage.isRead ? 'Déjà lu' : 'Marquer comme lu'}
                 </Button>
+                {user?.role === 'super_admin' && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => deleteMutation.mutate({ id: selectedMessage.id })}
+                    disabled={deleteMutation.isPending}
+                    className="w-full"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" /> Supprimer
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>

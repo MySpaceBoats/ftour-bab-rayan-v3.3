@@ -158,7 +158,10 @@ function LocalizedRoutes() {
 
       {/* Admin Ops — Unified Back Office */}
       <Route path="/admin/benevoles" component={AdminBenevolePage} />
-      <Route path="/admin/jours" component={AdminJours} />
+      <Route path="/admin/ops/jours" component={AdminJours} />
+      <Route path="/admin/jours">
+        {() => <Redirect to="/admin/ops/jours" />}
+      </Route>
       {/* Scanner — Consolidated */}
       <Route path="/admin/scanner" component={AdminScannerConsolidated} />
       {/* Legacy scanner routes */}

@@ -53,7 +53,7 @@ const sections: SectionDefinition[] = [
       {
         label: "Réservations",
         description: "Gérer réservations particuliers, entreprises, groupes",
-        route: "/admin/restaurant/particuliers",
+        route: "/admin/reservations",
         icon: UtensilsCrossed,
         iconColor: "text-[#5d5a3c]",
         iconBg: "bg-[#5d5a3c]/10",
@@ -63,7 +63,7 @@ const sections: SectionDefinition[] = [
       {
         label: "Commerce",
         description: "Goodies, Terroir, Pâtisserie, Paiements",
-        route: "/admin/commandes",
+        route: "/admin/commerce",
         icon: ShoppingBag,
         iconColor: "text-secondary-foreground",
         iconBg: "bg-secondary/20",
@@ -103,7 +103,7 @@ const sections: SectionDefinition[] = [
       {
         label: "Scanner",
         description: "Valider réservations, produits, bénévoles",
-        route: "/admin/scan-product",
+        route: "/scanner",
         icon: QrCode,
         iconColor: "text-orange-600",
         iconBg: "bg-orange-100",
@@ -114,7 +114,7 @@ const sections: SectionDefinition[] = [
       {
         label: "Calendrier",
         description: "Configurer jours Ramadan et capacités",
-        route: "/admin/jours",
+        route: "/admin/ops/jours",
         icon: Calendar,
         iconColor: "text-blue-600",
         iconBg: "bg-blue-100",

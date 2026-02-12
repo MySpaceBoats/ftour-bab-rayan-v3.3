@@ -737,6 +737,26 @@ const contactRouter = router({
   list: adminProcedure.query(async () => {
     return supabaseServices.getAllContactMessagesSupabase();
   }),
+
+  markRead: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const client = getSupabaseAdminClient();
+      if (!client) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      const { error } = await client.from('contact_messages').update({ is_read: true }).eq('id', input.id);
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return { success: true };
+    }),
+
+  delete: superAdminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const client = getSupabaseAdminClient();
+      if (!client) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      const { error } = await client.from('contact_messages').delete().eq('id', input.id);
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return { success: true };
+    }),
 });
 
 // ============================================
