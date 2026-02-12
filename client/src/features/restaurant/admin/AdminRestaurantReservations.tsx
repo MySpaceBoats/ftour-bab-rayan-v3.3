@@ -71,14 +71,14 @@ export default function AdminRestaurantReservations() {
   const handleValidate = (id: number) => {
     validateMutation.mutate({
       id,
-      status: 'validated_pending_payment',
+      status: 'confirmed',
     });
   };
 
   const handleRefuse = (id: number) => {
     refuseMutation.mutate({
       id,
-      status: 'refused',
+      status: 'rejected',
     });
   };
 

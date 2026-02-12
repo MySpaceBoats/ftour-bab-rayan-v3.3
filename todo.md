@@ -737,3 +737,15 @@
 - [ ] 22.8 Mettre à jour bouton CTA : "Envoyer ma demande" (au lieu de "Confirmer ma réservation")
 - [ ] 22.9 Tester le formulaire minimaliste
 - [ ] 22.10 Synchroniser traductions i18n (FR uniquement)
+
+
+## Dashboard Module Fixes (Feb 12, 2026)
+- [ ] Fix AdminCompanyBookings.tsx — 8 TS errors (types incompatibles, .data property)
+- [ ] Fix AdminRestaurantReservations.tsx — 2 TS errors (invalid status values)
+- [ ] Fix BuyPastry.tsx — 5 TS errors (getById missing, types, translations)
+- [ ] Fix Pastries.tsx — 2 TS errors (missing translation keys)
+- [ ] Fix BuyGoodie.tsx — TS errors (type mismatch)
+- [ ] Fix PastriesConfirmation.tsx — TS errors (type mismatch)
+- [ ] Fix AdminScanProduct.tsx — TS errors
+- [ ] Fix Home.tsx — 2 TS errors (missing translation keys)
+- [ ] Fix i18n translations — en.ts, ar.ts, amz.ts missing keys

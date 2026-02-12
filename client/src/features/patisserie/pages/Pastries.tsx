@@ -250,7 +250,7 @@ export default function Pastries() {
                         </div>
                       )}
                       <div className="flex justify-between text-lg font-bold pt-2 border-t">
-                        <span>{t.pastries.total}</span>
+                        <span>{t.pastries.cartTotal}</span>
                         <span>{estimatedTotal} DH</span>
                       </div>
                     </div>
@@ -272,7 +272,7 @@ export default function Pastries() {
         {step === 'checkout' && (
           <div className="max-w-2xl mx-auto">
             <Card className="p-8">
-              <h2 className="text-2xl font-bold mb-6">{t.pastries.finalizeReservation}</h2>
+              <h2 className="text-2xl font-bold mb-6">{t.pastries.checkout}</h2>
 
               <div className="space-y-6">
                 {/* Customer Info */}

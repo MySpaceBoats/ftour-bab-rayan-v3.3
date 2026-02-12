@@ -20,7 +20,7 @@ export default function PastriesConfirmation({ order }: PastriesConfirmationProp
     cheque: t.checkout.cheque,
     cash: t.checkout.cash,
     paypal: t.checkout.paypal,
-    cmi: t.checkout.cmi,
+    cmi: (t.checkout as any).cmi || 'CMI',
   };
 
   return (
@@ -91,7 +91,7 @@ export default function PastriesConfirmation({ order }: PastriesConfirmationProp
                 </p>
 
                 {paymentMethod === 'bank_transfer' && (
-                  <p className="text-sm text-amber-800">{t.checkout.bankTransferInstructions}</p>
+                  <p className="text-sm text-amber-800">{(t.checkout as any).bankTransferInstructions || t.checkout.bankTransferDesc}</p>
                 )}
                 {paymentMethod === 'cheque' && (
                   <p className="text-sm text-amber-800">{t.checkout.chequeInstructions}</p>

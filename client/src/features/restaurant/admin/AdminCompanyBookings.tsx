@@ -17,14 +17,20 @@ export default function AdminCompanyBookings() {
     offset: 0,
   });
 
-  const { data: bookings, isLoading } = trpc.companyBookings.list.useQuery(filters);
+  const { data: bookings, isLoading } = trpc.companyBookings.list.useQuery({
+    status: filters.status || undefined,
+    startDate: filters.startDate ? new Date(filters.startDate) : undefined,
+    endDate: filters.endDate ? new Date(filters.endDate) : undefined,
+    limit: filters.limit,
+    offset: filters.offset,
+  });
 
   const handleExportCSV = () => {
-    if (!bookings?.data) return;
+    if (!bookings || bookings.length === 0) return;
 
     const csv = [
       ['Référence', 'Entreprise', 'Contact', 'Email', 'Téléphone', 'Participants', 'Date', 'Statut', 'Paiement'],
-      ...bookings.data.map(b => [
+      ...bookings.map((b: any) => [
         b.reference,
         b.companyName,
         b.contactName,
@@ -109,12 +115,12 @@ export default function AdminCompanyBookings() {
       {/* Bookings Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Réservations ({bookings?.total || 0})</CardTitle>
+          <CardTitle>Réservations ({bookings?.length || 0})</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="text-center py-8">Chargement...</div>
-          ) : bookings?.data && bookings.data.length > 0 ? (
+          ) : bookings && bookings.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -130,7 +136,7 @@ export default function AdminCompanyBookings() {
                   </tr>
                 </thead>
                 <tbody>
-                  {bookings.data.map((booking) => (
+                  {bookings.map((booking: any) => (
                     <tr key={booking.id} className="border-b hover:bg-muted/50">
                       <td className="py-3 px-4 font-mono text-sm">{booking.reference}</td>
                       <td className="py-3 px-4">{booking.companyName}</td>

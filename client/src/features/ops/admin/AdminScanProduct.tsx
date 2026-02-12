@@ -19,10 +19,8 @@ export default function AdminScanProduct() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderCreated, setOrderCreated] = useState(false);
 
-  const { data: product, isLoading: productLoading } = trpc[module === 'goodie' ? 'goodies' : 'pastries'].getById.useQuery(
-    { id: productId ? parseInt(productId) : 0 },
-    { enabled: !!productId }
-  );
+  const { data: productList, isLoading: productLoading } = (trpc as any)[module === 'goodie' ? 'goodies' : 'pastries'].list.useQuery();
+  const product = productList?.find((p: any) => p.id === (productId ? parseInt(productId) : 0)) ?? null;
 
   const createOrderMutation = module === 'goodie' 
     ? trpc.orders.create.useMutation()
@@ -36,14 +34,16 @@ export default function AdminScanProduct() {
     setIsSubmitting(true);
     try {
       if (module === 'goodie') {
-        await createOrderMutation.mutateAsync({
+        await (createOrderMutation as any).mutateAsync({
           customerName,
+          customerEmail: '',
+          customerPhone,
           phone: customerPhone,
           items: [
             {
               goodieId: product.id,
               quantity,
-              price: product.price,
+              unitPrice: product.price,
             },
           ],
           totalAmount: product.price * quantity,
@@ -52,8 +52,10 @@ export default function AdminScanProduct() {
           deliveryMode: 'pickup',
         });
       } else {
-        await createOrderMutation.mutateAsync({
+        await (createOrderMutation as any).mutateAsync({
           customerName,
+          customerEmail: '',
+          customerPhone,
           phone: customerPhone,
           items: [
             {

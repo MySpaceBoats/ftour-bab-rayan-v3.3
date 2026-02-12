@@ -24,10 +24,8 @@ export default function BuyGoodie() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: goodie, isLoading } = trpc.goodies.getById.useQuery(
-    { id: goodieId! },
-    { enabled: !!goodieId }
-  );
+  const { data: goodies, isLoading } = trpc.goodies.list.useQuery();
+  const goodie = goodies?.find((g: any) => g.id === goodieId) ?? null;
 
   const createOrderMutation = trpc.orders.create.useMutation();
 
@@ -40,18 +38,16 @@ export default function BuyGoodie() {
     try {
       await createOrderMutation.mutateAsync({
         customerName: formData.fullName,
-        phone: formData.phone,
-        email: formData.email || undefined,
+        customerEmail: formData.email || '',
+        customerPhone: formData.phone,
         items: [
           {
             goodieId: goodie.id,
             quantity,
-            price: goodie.price,
+            unitPrice: goodie.price,
           },
         ],
-        totalAmount: goodie.price * quantity,
         paymentMethod: formData.paymentMethod as any,
-        channel: 'on_site_qr',
         deliveryMode: 'pickup',
       });
 
@@ -94,9 +90,9 @@ export default function BuyGoodie() {
             {/* Product Details */}
             <div className="lg:col-span-1">
               <Card className="overflow-hidden sticky top-4">
-                {goodie.image_url && (
+                {goodie.imageUrl && (
                   <img
-                    src={goodie.image_url}
+                    src={goodie.imageUrl}
                     alt={goodie.name}
                     className="w-full h-64 object-cover"
                   />
@@ -198,15 +194,15 @@ export default function BuyGoodie() {
                     <h3 className="font-semibold text-lg">{t.checkout?.paymentMethod || 'Payment Method'}</h3>
                     <PaymentMethodSelector
                       value={formData.paymentMethod}
-                      onChange={method => setFormData({ ...formData, paymentMethod: method })}
-                      availableMethods={['cash', 'bank_transfer', 'check', 'paypal']}
+                      onChange={(method: any) => setFormData({ ...formData, paymentMethod: method })}
+                      availableMethods={['cash', 'bank_transfer', 'check', 'paypal'] as any}
                     />
                   </div>
 
                   {/* Info Message */}
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <p className="text-sm text-blue-900">
-                      {t.goodies?.expressCheckoutInfo || 'This is an express checkout. Your order will be processed immediately.'}
+                      {t.goodies?.expressCheckout || 'This is an express checkout. Your order will be processed immediately.'}
                     </p>
                   </div>
                 </div>

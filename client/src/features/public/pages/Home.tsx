@@ -425,14 +425,14 @@ export default function Home() {
                   </div>
                   <h3 className="text-xl font-bold text-[#F2E9D3]">{t.nav.restaurant || 'Restaurant Solidaire'}</h3>
                   <p className="text-[#E6DCC3]">
-                    {t.home.restaurantSolidaireDesc || 'Découvrez notre restaurant solidaire et réservez votre place'}
+                    {'Découvrez notre restaurant solidaire et réservez votre place'}
                   </p>
                   <Link href={`/${lang}/reservation`}>
                     <Button
                       variant="outline"
                       className="w-full mt-4 border-[#9B8B6F] text-[#9B8B6F] bg-transparent hover:bg-[#9B8B6F] hover:text-[#4A4829]"
                     >
-                      {t.home.reserveNow || 'Réserver'}
+                      {'Réserver'}
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
                   </Link>
