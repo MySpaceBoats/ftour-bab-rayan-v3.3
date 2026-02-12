@@ -62,14 +62,14 @@ export const backofficeReservationsRouter = router({
   confirm: adminReservationsProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      await reservationServices.updateReservationStatusSupabase(Number(input.id), 'confirmed', ctx.user?.name || ctx.user?.email);
+      await reservationServices.updateReservationStatusSupabase(Number(input.id), 'confirmed', ctx.user?.name ?? ctx.user?.email ?? undefined);
       return { success: true };
     }),
 
   reject: adminReservationsProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      await reservationServices.updateReservationStatusSupabase(Number(input.id), 'cancelled', ctx.user?.name || ctx.user?.email);
+      await reservationServices.updateReservationStatusSupabase(Number(input.id), 'cancelled', ctx.user?.name ?? ctx.user?.email ?? undefined);
       return { success: true };
     }),
 
