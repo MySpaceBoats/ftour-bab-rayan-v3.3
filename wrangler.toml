@@ -1,8 +1,6 @@
 name = "ftour-bab-rayan-v2"
 compatibility_date = "2026-02-13"
 
-main = "/"
-
 [assets]
 directory = "dist/public"
 
