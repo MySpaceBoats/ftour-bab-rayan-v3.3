@@ -39,7 +39,7 @@ export default function Scanner() {
 
   // Identified entity state
   const [identifiedResult, setIdentifiedResult] = useState<any>(null);
-  const [validationDone, setValidationDone] = useState<{ success: boolean; message: string } | null>(null);
+  const [validationDone, setValidationDone] = useState<{ success: boolean; message: string; state?: string } | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -64,8 +64,8 @@ export default function Scanner() {
   });
 
   const validateMutation = trpc.scanner.validate.useMutation({
-    onSuccess: (data) => {
-      setValidationDone({ success: true, message: data.message });
+    onSuccess: (data: any) => {
+      setValidationDone({ success: true, message: data.message, state: data.state });
       toast.success(data.message);
     },
     onError: (err) => {
@@ -368,10 +368,12 @@ export default function Scanner() {
                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
                       <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-medium text-amber-800">Déjà validé</p>
+                        <p className="font-medium text-amber-800">
+                          {identifiedResult.type === 'volunteer' ? 'Déjà confirmé' : 'Déjà validé'}
+                        </p>
                         <p className="text-sm text-amber-600">
                           {identifiedResult.entity.scannedAt
-                            ? `Validé le ${new Date(identifiedResult.entity.scannedAt).toLocaleString('fr-FR')}`
+                            ? `${identifiedResult.type === 'volunteer' ? 'Confirmé' : 'Validé'} le ${new Date(identifiedResult.entity.scannedAt).toLocaleString('fr-FR')}`
                             : 'Ce QR code a déjà été utilisé.'}
                         </p>
                       </div>
@@ -380,13 +382,27 @@ export default function Scanner() {
 
                   {/* Validation result */}
                   {validationDone && (
-                    <div className={`rounded-lg p-4 flex items-center gap-3 ${validationDone.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                    <div className={`rounded-lg p-4 flex items-center gap-3 ${
+                      validationDone.success
+                        ? validationDone.state === 'already_confirmed'
+                          ? 'bg-amber-50 border border-amber-200'
+                          : 'bg-green-50 border border-green-200'
+                        : 'bg-red-50 border border-red-200'
+                    }`}>
                       {validationDone.success ? (
-                        <CheckCircle className="h-6 w-6 text-green-600" />
+                        validationDone.state === 'already_confirmed'
+                          ? <AlertTriangle className="h-6 w-6 text-amber-600" />
+                          : <CheckCircle className="h-6 w-6 text-green-600" />
                       ) : (
                         <XCircle className="h-6 w-6 text-red-600" />
                       )}
-                      <span className={validationDone.success ? 'text-green-800 font-medium' : 'text-red-800 font-medium'}>
+                      <span className={
+                        validationDone.success
+                          ? validationDone.state === 'already_confirmed'
+                            ? 'text-amber-800 font-medium'
+                            : 'text-green-800 font-medium'
+                          : 'text-red-800 font-medium'
+                      }>
                         {validationDone.message}
                       </span>
                     </div>

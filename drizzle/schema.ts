@@ -72,7 +72,8 @@ export const volunteers = mysqlTable("volunteers", {
   qrStatus: mysqlEnum("qrStatus", ["generated", "validated", "expired", "invalid"]).default("generated").notNull(),
   status: volunteerStatusEnum.default("registered").notNull(),
   
-  // Scan info
+  // Confirmation & Scan info
+  confirmedAt: timestamp("confirmedAt"),
   scannedAt: timestamp("scannedAt"),
   scannedBy: int("scannedBy"), // ID de l'utilisateur qui a scanné
   

@@ -328,6 +328,7 @@ export async function getVolunteerByTokenSupabase(token: string) {
     qrToken: data.qr_token,
     qrStatus: data.qr_status,
     status: data.status,
+    confirmedAt: data.confirmed_at ? new Date(data.confirmed_at) : null,
     scannedAt: data.scanned_at ? new Date(data.scanned_at) : null,
     scannedBy: data.scanned_by,
     acceptedTerms: data.accepted_terms,
@@ -399,40 +400,45 @@ export async function scanAndValidateTokenSupabase(token: string, validatedBy?: 
   // Get volunteer by token
   const volunteer = await getVolunteerByTokenSupabase(token);
   if (!volunteer) {
+    console.log(JSON.stringify({ event: 'volunteer_confirm', token, state: 'invalid_token' }));
     return { success: false, error: 'Token invalide', code: 'INVALID_TOKEN' };
   }
 
-  // Check if already validated (anti-doublon)
+  // Idempotent: already confirmed/validated → return success
   if (volunteer.qrStatus === 'validated') {
-    return { 
-      success: false, 
-      error: 'QR code déjà validé', 
-      code: 'ALREADY_VALIDATED',
+    console.log(JSON.stringify({ event: 'volunteer_confirm', volunteerId: volunteer.id, state: 'already_confirmed' }));
+    return {
+      success: true,
+      state: 'already_confirmed' as const,
       volunteer,
-      scannedAt: volunteer.scannedAt,
     };
   }
 
   // Check if it's the right day
   const today = new Date().toISOString().split('T')[0];
-  if (volunteer.day?.date !== today) {
-    return { 
-      success: false, 
-      error: 'Ce QR code n\'est pas valide pour aujourd\'hui', 
+  const volunteerDate = volunteer.day?.date
+    ? new Date(volunteer.day.date).toISOString().split('T')[0]
+    : null;
+  if (volunteerDate && volunteerDate !== today) {
+    console.log(JSON.stringify({ event: 'volunteer_confirm', volunteerId: volunteer.id, state: 'wrong_day', expected: volunteerDate, actual: today }));
+    return {
+      success: false,
+      error: 'Ce QR code n\'est pas valide pour aujourd\'hui',
       code: 'WRONG_DAY',
       volunteer,
-      expectedDate: volunteer.day?.date,
+      expectedDate: volunteerDate,
     };
   }
 
-  // Validate the volunteer
+  // Confirm the volunteer
   const now = new Date().toISOString();
-  
+
   const { error: updateError } = await client
     .from('volunteers')
     .update({
       qr_status: 'validated',
-      status: 'present',
+      status: 'confirmed',
+      confirmed_at: now,
       scanned_at: now,
       scanned_by: validatedBy,
     })
@@ -451,9 +457,12 @@ export async function scanAndValidateTokenSupabase(token: string, validatedBy?: 
     user_agent: userAgent,
   });
 
-  return { 
-    success: true, 
-    volunteer: { ...volunteer, qrStatus: 'validated', status: 'present', scannedAt: new Date(now) },
+  console.log(JSON.stringify({ event: 'volunteer_confirm', volunteerId: volunteer.id, state: 'confirmed' }));
+
+  return {
+    success: true,
+    state: 'confirmed' as const,
+    volunteer: { ...volunteer, qrStatus: 'validated', status: 'confirmed', confirmedAt: new Date(now), scannedAt: new Date(now) },
   };
 }
 
@@ -474,7 +483,8 @@ export async function manualValidateSupabase(volunteerId: number, validatedBy: n
     .from('volunteers')
     .update({
       qr_status: 'validated',
-      status: 'present',
+      status: 'confirmed',
+      confirmed_at: now,
       scanned_at: now,
       scanned_by: validatedBy,
     })
