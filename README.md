@@ -1,13 +1,13 @@
 # Ftour Bab Rayan
 
-A full-stack web application built with React, Express, and Cloudflare Pages.
+A full-stack web application built with React, Express, and Cloudflare Workers.
 
 ## Tech Stack
 
 - **Frontend:** React 19, Vite, TailwindCSS, Radix UI
-- **Backend:** Express.js, tRPC
+- **Backend:** tRPC API on Cloudflare Workers
 - **Database:** MySQL with Drizzle ORM
-- **Deployment:** Cloudflare Pages (with advanced mode _worker.js)
+- **Deployment:** Cloudflare Workers (with static assets)
 
 ## Development
 
@@ -34,32 +34,32 @@ pnpm build:cloudflare
 
 ## Deployment
 
-### ⚠️ Important: Cloudflare Pages Configuration
+### Cloudflare Workers Configuration
 
-This project **MUST** be deployed to Cloudflare Pages, not Cloudflare Workers.
+This project is deployed to **Cloudflare Workers** with static assets.
 
-#### Fix Required in Cloudflare Dashboard
+#### Build & Deploy Commands
 
-If you're seeing deployment errors, you need to update your Cloudflare Pages project settings:
+The deployment uses `wrangler versions upload` which requires:
+- **Build command:** `pnpm run build`
+- **Worker code:** `dist/worker.js` (API handler)
+- **Static assets:** `dist/public/` (frontend)
 
-1. Go to Cloudflare Dashboard → Pages → Your Project → Settings → Builds & deployments
-2. Set the following:
-   - **Build command:** `pnpm run build`
-   - **Build output directory:** `dist/public`
-   - **Deploy command:** _**Leave this EMPTY**_ (remove `npx wrangler versions upload` if present)
-
-3. Save and redeploy
-
-#### Why This Matters
-
-- ❌ `wrangler versions upload` is for Cloudflare **Workers** (incorrect)
-- ✅ Cloudflare **Pages** handles deployment automatically from the build output
-- ✅ The `_worker.js` file is an advanced mode Pages Function (not a static asset)
+The `wrangler.toml` is configured with:
+```toml
+main = "dist/worker.js"         # Worker entry point
+[assets]
+directory = "dist/public"       # Static assets
+```
 
 ### Manual Deployment
 
 ```bash
-# Deploy manually to Cloudflare Pages
+# Build and deploy to Cloudflare Workers
+pnpm run build
+wrangler versions upload
+
+# Or for legacy Cloudflare Pages deployment
 pnpm run deploy:cloudflare
 ```
 
@@ -68,12 +68,13 @@ pnpm run deploy:cloudflare
 ```
 .
 ├── client/              # React frontend
-├── server/              # Express backend
-├── worker/              # Cloudflare Pages Worker
+├── server/              # Express backend (for Node.js hosting)
+├── worker/              # Cloudflare Workers API (tRPC)
 ├── dist/
-│   ├── public/          # Built frontend + _worker.js (for Pages)
-│   └── index.js         # Built Express server (for Node.js hosting)
-└── wrangler.toml        # Cloudflare configuration
+│   ├── worker.js        # Built Worker (API handler)
+│   ├── public/          # Built frontend (static assets)
+│   └── index.js         # Built Express server (for Node.js)
+└── wrangler.toml        # Cloudflare Workers configuration
 ```
 
 ## Scripts

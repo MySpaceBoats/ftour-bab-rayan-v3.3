@@ -1,22 +1,26 @@
 # Deployment Guide
 
-This project is configured for **Cloudflare Pages** deployment with advanced mode (_worker.js).
+This project is configured for **Cloudflare Workers** deployment with static assets.
 
-## Cloudflare Pages Configuration
+## Cloudflare Workers Configuration
 
-### Build Settings (Cloudflare Dashboard)
+### Build Settings
 
-**Framework preset:** None (Custom)
 **Build command:** `pnpm run build`
-**Build output directory:** `dist/public`
-**Deploy command:** _Leave empty_ (Cloudflare Pages handles deployment automatically)
+**Deploy command:** `wrangler versions upload` (or `npx wrangler versions upload`)
+
+### Architecture
+
+- **Worker code:** `dist/worker.js` - Handles API requests (`/api/*`)
+- **Static assets:** `dist/public/` - React frontend (HTML, CSS, JS)
+- **Configuration:** `wrangler.toml` - Defines worker entry point and assets directory
 
 ### Important Notes
 
-- ⚠️ **Do NOT use** `wrangler versions upload` - this is for Cloudflare Workers, not Pages
-- ✅ Cloudflare Pages will automatically deploy the `dist/public` directory
-- ✅ The `_worker.js` file in `dist/public` is the advanced mode worker (NOT a static asset)
-- ✅ The `wrangler.toml` is configured for Pages with the `[assets]` directive
+- ✅ This is a **Cloudflare Workers** deployment (not Pages)
+- ✅ The `main` field in `wrangler.toml` points to the worker code
+- ✅ The `[assets]` directive serves static files automatically
+- ✅ Worker handles API routes, static assets are served directly by Cloudflare
 
 ### Manual Deployment (if needed)
 
