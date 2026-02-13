@@ -1,8 +1,11 @@
 name = "ftour-bab-rayan"
-pages_build_output_dir = "dist/public"
+main = "dist/worker.js"
 
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./dist/public"
 
 [vars]
 NODE_ENV = "production"
