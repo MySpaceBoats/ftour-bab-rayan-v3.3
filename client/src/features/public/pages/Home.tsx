@@ -51,6 +51,16 @@ export default function Home() {
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+                <Link href={`/${lang}/reservation`}>
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    className="w-full sm:w-auto text-lg px-8 py-6 bg-transparent border-2 border-[#F2E9D3] text-[#F2E9D3] hover:bg-[#F2E9D3] hover:text-[#4A4829]"
+                  >
+                    <Utensils className="h-5 w-5 mr-2" />
+                    Réserver ftour
+                  </Button>
+                </Link>
                 <Link href={`/${lang}/benevole`}>
                   <Button 
                     size="lg" 
