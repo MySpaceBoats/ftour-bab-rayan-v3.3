@@ -307,7 +307,22 @@ export const scannerRouter = router({
         if (!result.success) {
           throw new TRPCError({ code: 'BAD_REQUEST', message: result.error || 'Erreur de validation bénévole' });
         }
-        return { success: true, message: 'Présence bénévole validée !' };
+        const vol = result.volunteer;
+        const fullName = vol ? `${vol.firstName} ${vol.lastName}` : '';
+        if (result.state === 'already_confirmed') {
+          return {
+            success: true,
+            message: `Déjà confirmé — ${fullName}`,
+            state: 'already_confirmed' as const,
+            volunteer: vol ? { id: vol.id, name: fullName, email: vol.email, phone: vol.phone } : undefined,
+          };
+        }
+        return {
+          success: true,
+          message: `Bénévole confirmé — ${fullName}`,
+          state: 'confirmed' as const,
+          volunteer: vol ? { id: vol.id, name: fullName, email: vol.email, phone: vol.phone } : undefined,
+        };
       }
 
       // ---- RESERVATION ----

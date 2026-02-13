@@ -18,7 +18,7 @@ export default function WhatsAppFloatingButton() {
   const telUrl = `tel:+${WHATSAPP_NUMBER}`;
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex flex-wrap justify-end gap-3">
+    <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
       {/* Itinéraire */}
       <a
         href={MAPS_ITINERARY_URL}
