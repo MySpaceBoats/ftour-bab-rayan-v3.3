@@ -5,12 +5,76 @@ import { getSupabaseAdminClient } from './supabase';
 import * as supabaseServices from './supabase-services';
 import * as reservationServices from './reservation-services';
 
-// Scanner access guard
+// ============================================
+// ACTIVE DAY CONFIGURATION
+// ============================================
+/**
+ * ACTIVE TEST DAY: Only this date can perform QR scans
+ * Format: YYYY-MM-DD
+ * Current: October 13, 2024 (Ramadan test day)
+ */
+const ACTIVE_TEST_DATE = '2024-10-13';
+
+/**
+ * Check if today is the active test day
+ * @returns {boolean} true if today is October 13, 2024
+ */
+function isActiveTestDay(): boolean {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  return today === ACTIVE_TEST_DATE;
+}
+
+/**
+ * Validate that today is the active test day
+ * @throws {TRPCError} if today is not the active test day
+ */
+function validateActiveDay(): void {
+  if (!isActiveTestDay()) {
+    const today = new Date().toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const activeDate = new Date(ACTIVE_TEST_DATE).toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `Ce QR code n'est pas valide pour aujourd'hui.\n\nAujourd'hui : ${today}\nDate active : ${activeDate}\n\nLe scanner est uniquement actif le ${activeDate}.`
+    });
+  }
+}
+
+// ============================================
+// SCANNER ACCESS GUARD (Admin Session Required)
+// ============================================
+/**
+ * Scanner access guard - requires active admin session
+ * Allowed roles: admin, super_admin, admin_ops, scanner
+ */
 const scannerProcedure = protectedProcedure.use(({ ctx, next }) => {
   const allowedRoles = ['admin', 'super_admin', 'admin_ops', 'scanner'];
-  if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès scanner requis' });
+
+  // Check if user exists and has valid session
+  if (!ctx.user) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'Accès non autorisé – session administrateur requise.\n\nVeuillez vous connecter avec un compte administrateur pour utiliser le scanner.'
+    });
   }
+
+  // Check if user has required role
+  if (!allowedRoles.includes(ctx.user.role)) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: `Accès refusé – rôle insuffisant.\n\nRôle actuel : ${ctx.user.role}\nRôles autorisés : admin, super_admin, admin_ops, scanner`
+    });
+  }
+
   return next({ ctx });
 });
 
@@ -288,6 +352,12 @@ export const scannerRouter = router({
 
   /**
    * Validate/check-in a QR code based on its type
+   *
+   * SECURITY:
+   * - Requires admin session (scannerProcedure)
+   * - Validates active test day (October 13, 2024 only)
+   * - Updates status atomically in database
+   * - Creates audit trail for all validations
    */
   validate: scannerProcedure
     .input(z.object({
@@ -296,6 +366,11 @@ export const scannerRouter = router({
       entityId: z.number(),
     }))
     .mutation(async ({ input, ctx }) => {
+      // ============================================
+      // STEP 1: VALIDATE ACTIVE TEST DAY
+      // ============================================
+      validateActiveDay(); // Throws error if not October 13, 2024
+
       const supabase = getSupabaseAdminClient();
 
       // ---- VOLUNTEER ----
