@@ -110,7 +110,7 @@ export default function RestaurantParticuliers() {
       <Navbar />
       <main className="container py-12 max-w-2xl">
         <div className="mb-6">
-          <Link href={`/${lang}/reservation`} className="text-sm text-[#5d5a3c] underline">← Retour au hub réservation</Link>
+          <Link href={`/${lang}/reservation`} className="text-sm text-[#5d5a3c] underline">← Retour</Link>
           <h1 className="text-3xl font-bold text-[#5d5a3c] mt-2 italic">Restaurant - Particuliers</h1>
           <p className="text-[#8b8b7a] mt-2">
             Demande de réservation pour le ftour solidaire.<br />
