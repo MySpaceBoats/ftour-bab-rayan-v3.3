@@ -6,9 +6,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n";
+import { useCart } from "@/contexts/CartContext";
 import {
   Menu, Heart, Users, ShoppingBag, Home, Info, Phone, Building2,
-  LogOut, LayoutDashboard, Search, Globe, X, Lock
+  LogOut, LayoutDashboard, Search, Globe, X, Lock, ShoppingCart
 } from "lucide-react";
 
 export default function Navbar() {
@@ -19,6 +20,7 @@ export default function Navbar() {
   const [location] = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const { t, lang, setLang, languages, dir } = useI18n();
+  const { cartCount } = useCart();
 
   const isAdmin = user?.role && ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner'].includes(user.role);
 
@@ -103,6 +105,20 @@ export default function Navbar() {
               </button>
             )}
           </div>
+
+          {/* Cart Icon - Panier goodies */}
+          <Link
+            href={localizedHref('/goodies')}
+            className="relative flex items-center gap-1 text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors"
+            title={t.nav.goodies}
+          >
+            <ShoppingCart className="h-4 w-4" />
+            {cartCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-[#F2E9D3] text-[#4A4829] text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                {cartCount}
+              </span>
+            )}
+          </Link>
 
           {/* Admin Link - icône cadenas avec tooltip "Privé" */}
           <Link href={localizedHref('/connexion')} className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors" title="Privé">
