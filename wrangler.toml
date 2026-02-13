@@ -6,4 +6,8 @@ main = "dist/index.js"
 [assets]
 directory = "dist/public"
 
+[observability]
+[observability.logs]
+enabled = false
+invocation_logs = true
 
