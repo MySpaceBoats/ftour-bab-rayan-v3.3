@@ -76,6 +76,9 @@ export const volunteers = mysqlTable("volunteers", {
   scannedAt: timestamp("scannedAt"),
   scannedBy: int("scannedBy"), // ID de l'utilisateur qui a scanné
   
+  // Créneaux de participation (multi-sélection)
+  volunteerSlots: json("volunteerSlots").$type<string[]>(),
+
   // Métadonnées
   acceptedTerms: boolean("acceptedTerms").notNull().default(false),
   emailSent: boolean("emailSent").notNull().default(false),

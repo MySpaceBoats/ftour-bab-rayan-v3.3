@@ -29,6 +29,7 @@ export default function AdminBenevoles() {
   const [selectedDay, setSelectedDay] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [slotFilter, setSlotFilter] = useState<string>("all");
   const [selectedVolunteer, setSelectedVolunteer] = useState<number | null>(null);
 
   const { data: days } = trpc.days.list.useQuery();
@@ -63,14 +64,24 @@ export default function AdminBenevoles() {
 
   const volunteersList = volunteers?.volunteers || [];
   const filteredVolunteers = volunteersList.filter((v: any) => {
-    const matchesSearch = searchQuery === "" || 
+    const matchesSearch = searchQuery === "" ||
       v.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       v.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       v.email.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesStatus = statusFilter === "all" || v.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
+
+    const slots: string[] = v.volunteerSlots || [];
+    let matchesSlot = true;
+    if (slotFilter === "preparation_ftour") {
+      matchesSlot = slots.includes("preparation_ftour");
+    } else if (slotFilter === "service_ftour") {
+      matchesSlot = slots.includes("service_ftour");
+    } else if (slotFilter === "both") {
+      matchesSlot = slots.includes("preparation_ftour") && slots.includes("service_ftour");
+    }
+
+    return matchesSearch && matchesStatus && matchesSlot;
   });
 
   const getStatusBadge = (status: string) => {
@@ -96,7 +107,11 @@ export default function AdminBenevoles() {
       return;
     }
 
-    const headers = ["Prénom", "Nom", "Email", "Téléphone", "Ville", "Jour", "Statut", "Date inscription"];
+    const slotLabels: Record<string, string> = {
+      preparation_ftour: 'Préparation ftour',
+      service_ftour: 'Service ftour',
+    };
+    const headers = ["Prénom", "Nom", "Email", "Téléphone", "Ville", "Jour", "Créneaux", "Statut", "Date inscription"];
     const rows = filteredVolunteers.map(v => [
       v.firstName,
       v.lastName,
@@ -104,6 +119,7 @@ export default function AdminBenevoles() {
       v.phone,
       v.city || "",
       `Jour ${v.day?.dayNumber || ""}`,
+      (v.volunteerSlots || []).map((s: string) => slotLabels[s] || s).join(" + "),
       v.status,
       new Date(v.createdAt).toLocaleDateString('fr-FR'),
     ]);
@@ -181,6 +197,17 @@ export default function AdminBenevoles() {
                   <SelectItem value="cancelled">Annulé</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={slotFilter} onValueChange={setSlotFilter}>
+                <SelectTrigger className="w-full md:w-[200px]">
+                  <SelectValue placeholder="Tous les créneaux" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les créneaux</SelectItem>
+                  <SelectItem value="preparation_ftour">Préparation ftour</SelectItem>
+                  <SelectItem value="service_ftour">Service ftour</SelectItem>
+                  <SelectItem value="both">Les deux</SelectItem>
+                </SelectContent>
+              </Select>
               <Button variant="outline" onClick={handleExportCSV}>
                 <Download className="h-4 w-4 mr-2" />
                 Export CSV
@@ -246,6 +273,7 @@ export default function AdminBenevoles() {
                       <TableHead>Bénévole</TableHead>
                       <TableHead>Contact</TableHead>
                       <TableHead>Jour</TableHead>
+                      <TableHead>Créneaux</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -275,6 +303,23 @@ export default function AdminBenevoles() {
                           <div className="flex items-center gap-1">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                             Jour {volunteer.day?.dayNumber}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {(volunteer.volunteerSlots || []).includes("preparation_ftour") && (
+                              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-xs">
+                                Préparation
+                              </Badge>
+                            )}
+                            {(volunteer.volunteerSlots || []).includes("service_ftour") && (
+                              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
+                                Service
+                              </Badge>
+                            )}
+                            {(!volunteer.volunteerSlots || volunteer.volunteerSlots.length === 0) && (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>{getStatusBadge(volunteer.status)}</TableCell>
@@ -390,6 +435,24 @@ export default function AdminBenevoles() {
                 <div className="flex justify-between py-2 border-b">
                   <span className="text-muted-foreground">Jour</span>
                   <span>Jour {currentVolunteer.day?.dayNumber}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b">
+                  <span className="text-muted-foreground">Créneaux</span>
+                  <div className="flex flex-wrap gap-1 justify-end">
+                    {(currentVolunteer.volunteerSlots || []).includes("preparation_ftour") && (
+                      <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-xs">
+                        Préparation ftour
+                      </Badge>
+                    )}
+                    {(currentVolunteer.volunteerSlots || []).includes("service_ftour") && (
+                      <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
+                        Service ftour
+                      </Badge>
+                    )}
+                    {(!currentVolunteer.volunteerSlots || currentVolunteer.volunteerSlots.length === 0) && (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex justify-between py-2 border-b">
                   <span className="text-muted-foreground">Inscription</span>
