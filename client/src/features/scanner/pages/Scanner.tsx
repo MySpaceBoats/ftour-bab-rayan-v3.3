@@ -64,7 +64,7 @@ export default function Scanner() {
   });
 
   const validateMutation = trpc.scanner.validate.useMutation({
-    onSuccess: (data: any) => {
+    onSuccess: async (data: any) => {
       setValidationDone({ success: true, message: data.message, state: data.state });
       toast.success(data.message);
     },
