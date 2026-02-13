@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
-    "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && pnpm build:worker",
     "build:worker": "esbuild worker/index.ts --platform=browser --target=esnext --bundle --format=esm --outfile=dist/public/_worker.js --external:__STATIC_CONTENT_MANIFEST",
     "build:cloudflare": "vite build && pnpm build:worker",
     "deploy:cloudflare": "pnpm build:cloudflare && wrangler pages deploy dist/public --project-name=ftour-bab-rayan",
