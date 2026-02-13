@@ -3,7 +3,7 @@
  * Visible sur toutes les pages, position bas-droite
  */
 
-const WHATSAPP_NUMBER = "212664887978"; // +212 664-887978 (sans +)
+const WHATSAPP_NUMBER = "212664216938"; // +212 664-216938 (sans +)
 const DEFAULT_MESSAGE =
   "Bonjour, j'ai une question concernant Ftour Bab Rayan.";
 const MAPS_ITINERARY_URL = "https://share.google/VNwpwHz3v0g9kCpuz";
@@ -46,7 +46,7 @@ export default function WhatsAppFloatingButton() {
       {/* Appeler */}
       <a
         href={telUrl}
-        aria-label="Appeler +212 664-887978"
+        aria-label="Appeler +212 664-216938"
         className={`${BUTTON_BASE} bg-[#EA4335] focus:ring-[#EA4335]`}
       >
         <svg
