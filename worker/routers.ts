@@ -905,6 +905,25 @@ const volunteersRouter = router({
 
       return { success: true };
     }),
+
+  // Suppression d'un bénévole
+  delete: adminOpsProcedure
+    .input(z.object({ volunteerId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      // Delete volunteer
+      const { error } = await supabase
+        .from('volunteers')
+        .delete()
+        .eq('id', input.volunteerId);
+
+      if (error) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      }
+
+      return { success: true };
+    }),
 });
 
 // ============================================

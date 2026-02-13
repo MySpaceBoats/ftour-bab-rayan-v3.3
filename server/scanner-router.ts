@@ -217,15 +217,15 @@ export const scannerRouter = router({
             found: true,
             entity: {
               id: reservation.id,
-            name: reservation.fullName,
-            email: reservation.email,
-            phone: reservation.phone,
-            status: reservation.status,
-            guests: reservation.seats,
-            date: reservation.date,
-            reference: reservation.referenceCode,
-            qrStatus: reservation.status,
-            alreadyValidated: reservation.status === 'checked_in',
+              name: reservation.fullName,
+              email: reservation.email,
+              phone: reservation.phone,
+              status: reservation.status,
+              guests: reservation.seats,
+              date: reservation.date,
+              reference: reservation.referenceCode,
+              qrStatus: reservation.status,
+              alreadyValidated: reservation.status === 'checked_in',
             },
           };
         }
@@ -244,13 +244,12 @@ export const scannerRouter = router({
             entity: {
               id: pastryOrder.id,
               name: pastryOrder.customer_name,
-              phone: pastryOrder.phone,
-              email: pastryOrder.email,
+              phone: pastryOrder.customer_phone,
+              email: pastryOrder.customer_email,
               status: pastryOrder.order_status,
-              reference: pastryOrder.reference,
-              totalAmount: pastryOrder.total_amount,
-              qrStatus: pastryOrder.qr_status || 'active',
-              alreadyValidated: pastryOrder.qr_status === 'validated',
+              qrStatus: pastryOrder.qr_status,
+              alreadyValidated: pastryOrder.order_status === 'handed',
+              reference: pastryOrder.order_reference,
             },
           };
         }
@@ -270,15 +269,15 @@ export const scannerRouter = router({
               id: terroirOrder.id,
               name: terroirOrder.customer_name,
               phone: terroirOrder.customer_phone,
+              email: terroirOrder.customer_email,
               status: terroirOrder.status,
-              reference: terroirOrder.order_reference,
-              totalAmount: terroirOrder.total_amount,
               qrStatus: terroirOrder.qr_status,
               alreadyValidated: terroirOrder.qr_status === 'validated',
+              reference: terroirOrder.order_reference,
             },
           };
         }
-        // Try qr_tokens table (goodies, etc.)
+        // Try QR tokens (goodies)
         const { data: qrTokenRow } = await supabase
           .from('qr_tokens')
           .select('*')
@@ -286,15 +285,14 @@ export const scannerRouter = router({
           .single();
         if (qrTokenRow) {
           return {
-            type: (qrTokenRow.scope === 'pastry' ? 'pastry' : 'goodies') as QrType,
+            type: qrTokenRow.scope === 'pastry' ? 'pastry' as QrType : 'goodies' as QrType,
             typeLabel: qrTokenRow.scope === 'pastry' ? QR_TYPE_LABELS.pastry : QR_TYPE_LABELS.goodies,
             token,
             found: true,
             entity: {
-              id: qrTokenRow.entity_id,
-              name: `Commande #${qrTokenRow.entity_id}`,
+              id: qrTokenRow.id,
               status: qrTokenRow.status,
-              qrStatus: qrTokenRow.status,
+              scope: qrTokenRow.scope,
               alreadyValidated: qrTokenRow.status === 'used',
               usesCount: qrTokenRow.uses_count,
               maxUses: qrTokenRow.max_uses,
