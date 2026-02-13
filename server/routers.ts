@@ -209,13 +209,18 @@ const volunteersRouter = router({
       phone: z.string().min(8),
       city: z.string().optional(),
       dayId: z.number(),
+      volunteerSlots: z.array(z.enum(["preparation_ftour", "service_ftour"])).min(1, "Veuillez sélectionner au moins un créneau"),
       acceptedTerms: z.boolean(),
     }))
     .mutation(async ({ input }) => {
       if (!input.acceptedTerms) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Vous devez accepter les conditions' });
       }
-      
+
+      if (!input.volunteerSlots || input.volunteerSlots.length === 0) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Veuillez sélectionner au moins un créneau de participation' });
+      }
+
       // Check day availability
       const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
       if (!day) {
@@ -224,7 +229,7 @@ const volunteersRouter = router({
       if (!day.isOpen || day.registeredCount >= day.capacity) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ce jour est complet' });
       }
-      
+
       // Create volunteer with QR token
       const volunteer = await supabaseServices.createVolunteerShiftSupabase({
         firstName: input.firstName,
@@ -233,37 +238,39 @@ const volunteersRouter = router({
         phone: input.phone,
         city: input.city,
         dayId: input.dayId,
+        volunteerSlots: input.volunteerSlots,
         acceptedTerms: input.acceptedTerms,
       });
-      
+
       // Check if day is now full and close it
       if (day.registeredCount + 1 >= day.capacity) {
         await supabaseServices.updateRamadanDaySupabase(input.dayId, { isOpen: false });
       }
-      
+
       // Send confirmation email with QR code
       try {
-        const baseUrl = process.env.NODE_ENV === 'production' 
-          ? 'https://ftourbabrayan.ma' 
+        const baseUrl = process.env.NODE_ENV === 'production'
+          ? 'https://ftourbabrayan.ma'
           : 'http://localhost:3000';
-        
+
         const emailData = generateVolunteerConfirmationEmail({
           firstName: input.firstName,
           lastName: input.lastName,
           email: input.email,
           dayNumber: day.dayNumber,
-          dayDate: new Date(day.date).toLocaleDateString('fr-FR', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
+          dayDate: new Date(day.date).toLocaleDateString('fr-FR', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
           }),
           location: day.location || 'Association Bab Rayan, Casablanca',
           startTime: day.iftarTime || '18h00',
+          volunteerSlots: input.volunteerSlots,
           qrToken: volunteer.qrToken,
           baseUrl,
         });
-        
+
         await sendEmail({
           to: input.email,
           subject: emailData.subject,
@@ -272,7 +279,7 @@ const volunteersRouter = router({
       } catch (error) {
         console.error('[Volunteer Registration] Email send failed:', error);
       }
-      
+
       return { id: volunteer.id, qrToken: volunteer.qrToken };
     }),
   

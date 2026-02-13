@@ -258,6 +258,7 @@ export interface VolunteerData {
   phone: string;
   city?: string;
   dayId: number;
+  volunteerSlots?: string[];
   acceptedTerms: boolean;
 }
 
@@ -277,6 +278,7 @@ export async function createVolunteerShiftSupabase(data: VolunteerData) {
       phone: data.phone,
       city: data.city,
       day_id: data.dayId,
+      volunteer_slots: data.volunteerSlots || [],
       qr_token: qrToken,
       qr_status: 'generated',
       status: 'registered',
@@ -287,7 +289,7 @@ export async function createVolunteerShiftSupabase(data: VolunteerData) {
     .single();
 
   if (error) throw error;
-  
+
   return {
     id: volunteer.id,
     firstName: volunteer.first_name,
@@ -296,6 +298,7 @@ export async function createVolunteerShiftSupabase(data: VolunteerData) {
     phone: volunteer.phone,
     city: volunteer.city,
     dayId: volunteer.day_id,
+    volunteerSlots: volunteer.volunteer_slots as string[] || [],
     qrToken: volunteer.qr_token,
     qrStatus: volunteer.qr_status,
     status: volunteer.status,
@@ -325,6 +328,7 @@ export async function getVolunteerByTokenSupabase(token: string) {
     phone: data.phone,
     city: data.city,
     dayId: data.day_id,
+    volunteerSlots: data.volunteer_slots as string[] || [],
     qrToken: data.qr_token,
     qrStatus: data.qr_status,
     status: data.status,
@@ -373,6 +377,7 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
       phone: v.phone,
       city: v.city,
       dayId: v.day_id,
+      volunteerSlots: v.volunteer_slots as string[] || [],
       qrToken: v.qr_token,
       qrStatus: v.qr_status,
       status: v.status,

@@ -190,6 +190,7 @@ export interface VolunteerEmailData {
   dayDate: string;
   location: string;
   startTime: string;
+  volunteerSlots?: string[];
   qrToken: string;
   baseUrl: string;
 }
@@ -197,21 +198,30 @@ export interface VolunteerEmailData {
 export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { subject: string; html: string } {
   const qrCodeUrl = getQrCodeUrl(data.qrToken, data.baseUrl);
   const checkinUrl = `${data.baseUrl}/checkin/${data.qrToken}`;
-  
+
+  // Build slots display
+  const slotLabels: Record<string, string> = {
+    preparation_ftour: 'Préparation ftour (15:30 – 17:45)',
+    service_ftour: 'Service ftour (18:00 – 19:30)',
+  };
+  const slotsHtml = (data.volunteerSlots || []).map(s =>
+    `<li style="margin-bottom: 4px;">${slotLabels[s] || s}</li>`
+  ).join('');
+
   const content = `
     <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
       Merci pour votre inscription !
     </h2>
-    
+
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
       Cher(e) <strong>${data.firstName} ${data.lastName}</strong>,
     </p>
-    
+
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-      Votre inscription en tant que bénévole pour le <strong>Ftour Bab Rayan</strong> a bien été enregistrée. 
+      Votre inscription en tant que bénévole pour le <strong>Ftour Bab Rayan</strong> a bien été enregistrée.
       Nous sommes ravis de vous compter parmi notre équipe !
     </p>
-    
+
     <!-- Détails du jour -->
     <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f0fdf4; border-radius: 8px; margin: 20px 0;">
       <tr>
@@ -221,10 +231,11 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
           <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.dayDate}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Heure :</strong> ${data.startTime}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Lieu :</strong> ${data.location}</p>
+          ${slotsHtml ? `<p style="margin: 10px 0 5px 0; color: #374151;"><strong>Créneaux choisis :</strong></p><ul style="margin: 0; padding-left: 20px; color: #374151;">${slotsHtml}</ul>` : ''}
         </td>
       </tr>
     </table>
-    
+
     <!-- QR Code -->
     <div style="text-align: center; margin: 30px 0; padding: 20px; background-color: #ffffff; border: 2px dashed #166534; border-radius: 8px;">
       <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">🎫 Votre QR Code d'accès</h3>
@@ -233,26 +244,25 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
         Présentez ce QR code à l'entrée le jour de votre participation
       </p>
     </div>
-    
-    <!-- Consignes -->
+
+    <!-- Consignes importantes (obligatoires) -->
     <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fef3c7; border-radius: 8px; margin: 20px 0;">
       <tr>
         <td style="padding: 20px;">
           <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 18px;">📋 Consignes importantes</h3>
           <ul style="margin: 0; padding-left: 20px; color: #374151;">
-            <li style="margin-bottom: 8px;">Arrivez 30 minutes avant l'heure du Ftour</li>
-            <li style="margin-bottom: 8px;">Portez des vêtements confortables</li>
-            <li style="margin-bottom: 8px;">Apportez votre bonne humeur et votre sourire !</li>
-            <li style="margin-bottom: 8px;">En cas d'empêchement, prévenez-nous à l'avance</li>
+            <li style="margin-bottom: 8px;">Les sacs ne sont pas autorisés.</li>
+            <li style="margin-bottom: 8px;">Le port du gilet bénévole est obligatoire au sein de l'association.</li>
+            <li style="margin-bottom: 8px;">Il est interdit de prendre des photos des bénéficiaires.</li>
           </ul>
         </td>
       </tr>
     </table>
-    
+
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
       Si vous avez des questions, n'hésitez pas à nous contacter.
     </p>
-    
+
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">
       À très bientôt !<br>
       <strong>L'équipe Ftour Bab Rayan</strong>

@@ -30,11 +30,12 @@ export default function Benevole() {
     city: "",
     dayId: preselectedDay || "",
     slots: {
-      preparation: false,  // Créneaux Préparation : 15h30 à 16h45
-      service: false,      // Créneaux Service : 17h00 à 19h15
+      preparation_ftour: false,  // Préparation ftour : 15h30 – 17h45
+      service_ftour: false,      // Service ftour : 18h00 – 19h30
     },
     acceptedTerms: false,
   });
+  const [slotsError, setSlotsError] = useState(false);
   
   const [registrationSuccess, setRegistrationSuccess] = useState<{
     qrToken: string;
@@ -67,16 +68,28 @@ export default function Benevole() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.acceptedTerms) {
       toast.error(lang === 'ar' ? 'يرجى قبول الشروط' : lang === 'en' ? 'Please accept the terms' : 'Veuillez accepter les conditions');
       return;
     }
-    
+
     if (!formData.dayId) {
       toast.error(lang === 'ar' ? 'يرجى اختيار يوم' : lang === 'en' ? 'Please select a day' : 'Veuillez sélectionner un jour');
       return;
     }
+
+    // Build volunteer slots array from checkbox state
+    const volunteerSlots: string[] = [];
+    if (formData.slots.preparation_ftour) volunteerSlots.push("preparation_ftour");
+    if (formData.slots.service_ftour) volunteerSlots.push("service_ftour");
+
+    if (volunteerSlots.length === 0) {
+      setSlotsError(true);
+      toast.error(lang === 'ar' ? 'يرجى اختيار فترة واحدة على الأقل' : lang === 'en' ? 'Please select at least one time slot' : 'Veuillez sélectionner au moins un créneau de participation');
+      return;
+    }
+    setSlotsError(false);
 
     registerMutation.mutate({
       firstName: formData.firstName,
@@ -85,6 +98,7 @@ export default function Benevole() {
       phone: formData.phone,
       city: formData.city || undefined,
       dayId: parseInt(formData.dayId),
+      volunteerSlots: volunteerSlots as ("preparation_ftour" | "service_ftour")[],
       acceptedTerms: formData.acceptedTerms,
     });
   };
@@ -140,9 +154,14 @@ export default function Benevole() {
     terms: lang === 'ar' ? 'أوافق على شروط المشاركة وسياسة الخصوصية. أتعهد باحترام التعليمات والحضور في اليوم المختار.' : lang === 'en' ? 'I accept the terms of participation and privacy policy. I commit to respecting the instructions and being present on the chosen day.' : 'J\'accepte les conditions de participation et la politique de confidentialité. Je m\'engage à respecter les consignes et à être présent(e) le jour choisi.',
     registering: lang === 'ar' ? 'جاري التسجيل...' : lang === 'en' ? 'Registering...' : 'Inscription en cours...',
     register: lang === 'ar' ? 'التسجيل كمتطوع' : lang === 'en' ? 'Register as volunteer' : 'S\'inscrire comme bénévole',
-    slotsLabel: lang === 'ar' ? 'اختر الفترات' : lang === 'en' ? 'Choose slots' : 'Choisissez les créneaux',
-    preparationSlot: lang === 'ar' ? 'Préparation 15h30-16h45' : lang === 'en' ? 'Preparation 15h30-16h45' : 'Préparation 15h30-16h45',
-    serviceSlot: lang === 'ar' ? 'Service 17h00-19h15' : lang === 'en' ? 'Service 17h00-19h15' : 'Service 17h00-19h15',
+    slotsLabel: lang === 'ar' ? 'فترات المشاركة (يمكنك اختيار فترة واحدة أو أكثر) *' : lang === 'en' ? 'Participation slots (you can select one or more) *' : 'Créneaux de participation (vous pouvez cocher un ou plusieurs créneaux) *',
+    preparationSlot: lang === 'ar' ? 'تحضير الفطور (15:30 – 17:45)' : lang === 'en' ? 'Ftour preparation (15:30 – 17:45)' : 'Préparation ftour (15:30 – 17:45)',
+    serviceSlot: lang === 'ar' ? 'خدمة الفطور (18:00 – 19:30)' : lang === 'en' ? 'Ftour service (18:00 – 19:30)' : 'Service ftour (18:00 – 19:30)',
+    slotsError: lang === 'ar' ? 'يرجى اختيار فترة واحدة على الأقل' : lang === 'en' ? 'Please select at least one time slot' : 'Veuillez sélectionner au moins un créneau',
+    consignesTitle: lang === 'ar' ? 'تعليمات مهمة' : lang === 'en' ? 'Important instructions' : 'Consignes importantes',
+    consigneNoBags: lang === 'ar' ? 'الحقائب غير مسموح بها.' : lang === 'en' ? 'Bags are not allowed.' : 'Les sacs ne sont pas autorisés.',
+    consigneVest: lang === 'ar' ? 'ارتداء سترة المتطوع إلزامي داخل الجمعية.' : lang === 'en' ? 'Wearing the volunteer vest is mandatory within the association.' : 'Le port du gilet bénévole est obligatoire au sein de l\'association.',
+    consigneNoPhotos: lang === 'ar' ? 'يمنع التقاط صور للمستفيدين.' : lang === 'en' ? 'Taking photos of beneficiaries is prohibited.' : 'Il est interdit de prendre des photos des bénéficiaires.',
   };
 
   if (registrationSuccess) {
@@ -298,6 +317,20 @@ export default function Benevole() {
                     </ul>
                   </CardContent>
                 </Card>
+
+                <Card className="bg-amber-50 border-amber-200">
+                  <CardContent className="p-6 space-y-3">
+                    <div className="flex items-center gap-2 text-amber-700">
+                      <AlertCircle className="h-5 w-5" />
+                      <h3 className="font-semibold">{formTexts.consignesTitle}</h3>
+                    </div>
+                    <ul className="text-sm text-amber-900 space-y-2">
+                      <li>• {formTexts.consigneNoBags}</li>
+                      <li>• {formTexts.consigneVest}</li>
+                      <li>• {formTexts.consigneNoPhotos}</li>
+                    </ul>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Registration Form */}
@@ -397,6 +430,55 @@ export default function Benevole() {
                           onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
                           placeholder={formTexts.cityPlaceholder}
                         />
+                      </div>
+
+                      {/* Volunteer Slots */}
+                      <div className="space-y-3">
+                        <Label>{formTexts.slotsLabel}</Label>
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-3">
+                            <Checkbox
+                              id="slot-preparation"
+                              checked={formData.slots.preparation_ftour}
+                              onCheckedChange={(checked) => {
+                                setFormData(prev => ({ ...prev, slots: { ...prev.slots, preparation_ftour: checked as boolean } }));
+                                setSlotsError(false);
+                              }}
+                            />
+                            <label htmlFor="slot-preparation" className="text-sm cursor-pointer">
+                              {formTexts.preparationSlot}
+                            </label>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            <Checkbox
+                              id="slot-service"
+                              checked={formData.slots.service_ftour}
+                              onCheckedChange={(checked) => {
+                                setFormData(prev => ({ ...prev, slots: { ...prev.slots, service_ftour: checked as boolean } }));
+                                setSlotsError(false);
+                              }}
+                            />
+                            <label htmlFor="slot-service" className="text-sm cursor-pointer">
+                              {formTexts.serviceSlot}
+                            </label>
+                          </div>
+                        </div>
+                        {slotsError && (
+                          <p className="text-sm text-red-500">{formTexts.slotsError}</p>
+                        )}
+                      </div>
+
+                      {/* Consignes importantes */}
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
+                        <h4 className="font-semibold text-amber-700 flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4" />
+                          {formTexts.consignesTitle}
+                        </h4>
+                        <ul className="text-sm text-amber-900 space-y-1">
+                          <li>• {formTexts.consigneNoBags}</li>
+                          <li>• {formTexts.consigneVest}</li>
+                          <li>• {formTexts.consigneNoPhotos}</li>
+                        </ul>
                       </div>
 
                       {/* Terms */}
