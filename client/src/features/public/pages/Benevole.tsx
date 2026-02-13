@@ -361,7 +361,6 @@ export default function Benevole() {
                               availableDays.map((day) => (
                                 <SelectItem key={day.id} value={day.id.toString()}>
                                   {formTexts.day} {day.dayNumber} - {new Date(day.date).toLocaleDateString(dateLocale, { weekday: 'short', day: 'numeric', month: 'short' })}
-                                  {' '}({day.capacity - day.registeredCount} {formTexts.places})
                                 </SelectItem>
                               ))
                             ) : (

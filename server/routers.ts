@@ -404,7 +404,7 @@ const checkinRouter = router({
       };
     }),
   
-  validate: scannerProcedure
+  validate: publicProcedure
     .input(z.object({ token: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const result = await supabaseServices.scanAndValidateTokenSupabase(
@@ -413,7 +413,7 @@ const checkinRouter = router({
         ctx.req.ip,
         ctx.req.headers['user-agent'] as string
       );
-      
+
       return result;
     }),
 });
