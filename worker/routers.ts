@@ -2110,42 +2110,41 @@ const restaurantReservationsRouter = router({
         const qrToken = generateQrToken();
         const { data, error } = await supabase.from('restaurant_reservations').insert({
           reference,
-          restaurant_reservation_type: 'particulier',
-          slotId: 1,
-          restaurant_display_choice: 'jardin',
-          seatsTotal: input.participantsCount,
+          type: 'particulier',
+          slot_id: 1,
+          display_choice: 'jardin',
+          seats_total: input.participantsCount,
           date: input.date,
           name: input.firstName,
           phone: input.phone,
           email: input.email,
-          restaurant_reservation_status: 'pending_validation',
-          restaurant_payment_status: 'pending_payment',
-          qrToken,
-          restaurant_qr_status: 'inactive',
+          status: 'submitted',
+          payment_status: 'not_applicable',
+          qr_token: qrToken,
+          qr_status: 'inactive',
         }).select().single();
         if (error) {
           console.error('[RestaurantReservations] Particulier create error:', error);
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
         }
-        // Send confirmation email to customer
+        // Send confirmation email to customer + internal notification
         try {
           const { sendEmail } = await import('./email');
           await sendEmail({
             to: input.email,
-            subject: `📬 Demande de réservation reçue - ${reference}`,
+            subject: `Demande de reservation recue - ${reference}`,
             html: `<h2 style="color:#5d5a3c;">Demande de réservation reçue</h2><p>Bonjour <strong>${input.firstName}</strong>,</p><p>Votre demande de réservation pour le ftour solidaire a bien été enregistrée.</p><p><strong>Date :</strong> ${input.date}</p><p><strong>Participants :</strong> ${input.participantsCount}</p><p><strong>Référence :</strong> ${reference}</p><p>Nous vous confirmerons les disponibilités sous 48 heures.</p><p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
             apiKey: ctx.env.RESEND_API_KEY,
             cc: ['heartfulness@myspace.boats'],
           });
-          // Send internal notification
           await sendEmail({
             to: 'digital@myspace.boats',
-            subject: `📬 Nouvelle réservation Particulier - ${input.date} - ${reference}`,
+            subject: `Nouvelle reservation Particulier - ${input.date} - ${reference}`,
             html: `<h2>Nouvelle réservation Particulier</h2><p><strong>Nom:</strong> ${input.firstName}</p><p><strong>Email:</strong> ${input.email}</p><p><strong>Tél:</strong> ${input.phone}</p><p><strong>Date:</strong> ${input.date}</p><p><strong>Participants:</strong> ${input.participantsCount}</p><p><strong>Référence:</strong> ${reference}</p>`,
             apiKey: ctx.env.RESEND_API_KEY,
           });
         } catch (emailErr) {
-          console.error('[RestaurantReservations] Email error:', emailErr);
+          console.error('[RestaurantReservations] Email error (reservation created OK):', emailErr);
         }
         return { success: true, reservation: data, message: 'Demande reçue. Vérifiez votre email.' };
       }),
@@ -2176,20 +2175,20 @@ const restaurantReservationsRouter = router({
         const qrToken = generateQrToken();
         const { data, error } = await supabase.from('restaurant_reservations').insert({
           reference,
-          restaurant_reservation_type: 'entreprise',
-          slotId: 1,
-          restaurant_display_choice: 'jardin',
-          seatsTotal: input.participantsCount,
+          type: 'entreprise',
+          slot_id: 1,
+          display_choice: 'jardin',
+          seats_total: input.participantsCount,
           date: input.date,
           name: input.contactName,
           phone: input.phone,
           email: input.email,
-          companyName: input.companyName,
+          company_name: input.companyName,
           notes: input.companyNotes || null,
-          restaurant_reservation_status: 'pending_validation',
-          restaurant_payment_status: 'not_requested',
-          qrToken,
-          restaurant_qr_status: 'inactive',
+          status: 'submitted',
+          payment_status: 'not_applicable',
+          qr_token: qrToken,
+          qr_status: 'inactive',
         }).select().single();
         if (error) {
           console.error('[RestaurantReservations] Entreprise create error:', error);
@@ -2199,19 +2198,19 @@ const restaurantReservationsRouter = router({
           const { sendEmail } = await import('./email');
           await sendEmail({
             to: input.email,
-            subject: `📬 Demande de réservation entreprise reçue - ${reference}`,
+            subject: `Demande de reservation entreprise recue - ${reference}`,
             html: `<h2 style="color:#5d5a3c;">Demande de réservation entreprise reçue</h2><p>Bonjour <strong>${input.contactName}</strong>,</p><p>Nous avons bien reçu la demande de réservation de <strong>${input.companyName}</strong> pour le ftour solidaire.</p><p><strong>Date souhaitée :</strong> ${input.date}</p><p><strong>Nombre de participants :</strong> ${input.participantsCount}</p><p>Notre équipe reviendra vers vous sous 48 heures.</p><p><strong>Référence :</strong> ${reference}</p><p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
             apiKey: ctx.env.RESEND_API_KEY,
             cc: ['heartfulness@myspace.boats'],
           });
           await sendEmail({
             to: 'digital@myspace.boats',
-            subject: `📬 Nouvelle demande Entreprise - ${input.date} - ${reference}`,
+            subject: `Nouvelle demande Entreprise - ${input.date} - ${reference}`,
             html: `<h2>Nouvelle demande Entreprise</h2><p><strong>Entreprise:</strong> ${input.companyName}</p><p><strong>Contact:</strong> ${input.contactName}</p><p><strong>Email:</strong> ${input.email}</p><p><strong>Tél:</strong> ${input.phone}</p><p><strong>Date:</strong> ${input.date}</p><p><strong>Participants:</strong> ${input.participantsCount}</p><p><strong>Référence:</strong> ${reference}</p>`,
             apiKey: ctx.env.RESEND_API_KEY,
           });
         } catch (emailErr) {
-          console.error('[RestaurantReservations] Email error:', emailErr);
+          console.error('[RestaurantReservations] Email error (reservation created OK):', emailErr);
         }
         return { success: true, reservation: data, message: 'Demande reçue. Vérifiez votre email.' };
       }),
@@ -2241,20 +2240,20 @@ const restaurantReservationsRouter = router({
         const qrToken = generateQrToken();
         const { data, error } = await supabase.from('restaurant_reservations').insert({
           reference,
-          restaurant_reservation_type: 'groupe',
-          slotId: 1,
-          restaurant_display_choice: 'jardin',
-          seatsTotal: input.participantsCount,
+          type: 'groupe',
+          slot_id: 1,
+          display_choice: 'jardin',
+          seats_total: input.participantsCount,
           date: input.date,
           name: input.contactName,
           phone: input.phone,
           email: input.email,
-          groupName: input.groupName,
-          groupType: input.groupType || null,
-          restaurant_reservation_status: 'pending_validation',
-          restaurant_payment_status: 'not_requested',
-          qrToken,
-          restaurant_qr_status: 'inactive',
+          group_name: input.groupName,
+          group_type: input.groupType || null,
+          status: 'submitted',
+          payment_status: 'not_applicable',
+          qr_token: qrToken,
+          qr_status: 'inactive',
         }).select().single();
         if (error) {
           console.error('[RestaurantReservations] Groupe create error:', error);
@@ -2264,19 +2263,19 @@ const restaurantReservationsRouter = router({
           const { sendEmail } = await import('./email');
           await sendEmail({
             to: input.email,
-            subject: `📬 Demande de réservation groupe reçue - ${reference}`,
+            subject: `Demande de reservation groupe recue - ${reference}`,
             html: `<h2 style="color:#5d5a3c;">Demande de réservation groupe reçue</h2><p>Bonjour <strong>${input.contactName}</strong>,</p><p>Votre demande de réservation groupe pour le <strong>${input.date}</strong> a bien été enregistrée.</p><p><strong>Nombre estimé de participants :</strong> ${input.participantsCount}</p><p>Nous vous confirmerons les disponibilités sous 48 heures.</p><p><strong>Référence :</strong> ${reference}</p><p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
             apiKey: ctx.env.RESEND_API_KEY,
             cc: ['heartfulness@myspace.boats'],
           });
           await sendEmail({
             to: 'digital@myspace.boats',
-            subject: `📬 Nouvelle demande Groupe - ${input.date} - ${reference}`,
+            subject: `Nouvelle demande Groupe - ${input.date} - ${reference}`,
             html: `<h2>Nouvelle demande Groupe</h2><p><strong>Groupe:</strong> ${input.groupName}</p><p><strong>Contact:</strong> ${input.contactName}</p><p><strong>Email:</strong> ${input.email}</p><p><strong>Tél:</strong> ${input.phone}</p><p><strong>Date:</strong> ${input.date}</p><p><strong>Participants:</strong> ${input.participantsCount}</p><p><strong>Référence:</strong> ${reference}</p>`,
             apiKey: ctx.env.RESEND_API_KEY,
           });
         } catch (emailErr) {
-          console.error('[RestaurantReservations] Email error:', emailErr);
+          console.error('[RestaurantReservations] Email error (reservation created OK):', emailErr);
         }
         return { success: true, reservation: data, message: 'Demande reçue. Vérifiez votre email.' };
       }),
@@ -2300,15 +2299,15 @@ const restaurantReservationsRouter = router({
       const { data: reservation } = await supabase.from('restaurant_reservations').select('*').eq('reference', input.reference).single();
       if (!reservation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Réservation non trouvée' });
       await supabase.from('restaurant_reservations').update({
-        restaurant_reservation_status: 'validated_pending_payment',
-        restaurant_payment_status: 'pending_payment',
+        status: 'pending_confirmation',
+        payment_status: 'pending',
       }).eq('id', reservation.id);
       try {
         const { sendEmail } = await import('./email');
-        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(input.baseUrl + '/checkin-reservation/' + reservation.qrToken)}`;
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(input.baseUrl + '/checkin-reservation/' + reservation.qr_token)}`;
         await sendEmail({
           to: reservation.email,
-          subject: `✅ Réservation validée - ${reservation.reference}`,
+          subject: `Reservation validee - ${reservation.reference}`,
           html: `<h2 style="color:#166534;">Réservation validée !</h2><p>Bonjour <strong>${reservation.name}</strong>,</p><p>Votre réservation <strong>${reservation.reference}</strong> a été validée.</p><p>Veuillez procéder au paiement pour confirmer définitivement votre place.</p><p><img src="${qrCodeUrl}" alt="QR Code" style="width:200px;height:200px;"/></p><p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
           apiKey: ctx.env.RESEND_API_KEY,
           cc: ['heartfulness@myspace.boats'],
@@ -2330,13 +2329,13 @@ const restaurantReservationsRouter = router({
       const { data: reservation } = await supabase.from('restaurant_reservations').select('*').eq('reference', input.reference).single();
       if (!reservation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Réservation non trouvée' });
       await supabase.from('restaurant_reservations').update({
-        restaurant_reservation_status: 'refused',
+        status: 'rejected',
       }).eq('id', reservation.id);
       try {
         const { sendEmail } = await import('./email');
         await sendEmail({
           to: reservation.email,
-          subject: `❌ Réservation refusée - ${reservation.reference}`,
+          subject: `Reservation refusee - ${reservation.reference}`,
           html: `<h2 style="color:#dc2626;">Réservation refusée</h2><p>Bonjour <strong>${reservation.name}</strong>,</p><p>Nous sommes désolés, votre réservation <strong>${reservation.reference}</strong> n'a pas pu être acceptée.</p><p>N'hésitez pas à nous contacter pour plus d'informations.</p><p>Cordialement,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
           apiKey: ctx.env.RESEND_API_KEY,
           cc: ['heartfulness@myspace.boats'],
