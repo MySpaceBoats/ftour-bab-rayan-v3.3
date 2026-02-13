@@ -64,7 +64,13 @@ export async function createRestaurantReservation(data: {
     });
 
     // Récupérer la réservation créée
-    return await getRestaurantReservationByReference(data.reference);
+    const reservation = await getRestaurantReservationByReference(data.reference);
+
+    if (!reservation) {
+      throw new Error('Impossible de récupérer la réservation créée');
+    }
+
+    return reservation;
   } catch (error) {
     console.error("[createRestaurantReservation] Error:", error);
     throw error;
@@ -77,11 +83,14 @@ export async function createRestaurantReservation(data: {
 export async function getRestaurantReservationByReference(reference: string) {
   try {
     const database = await getDb();
-    return await database
+    const result = await database
       .select()
       .from(restaurantReservations)
       .where(eq(restaurantReservations.reference, reference))
       .limit(1);
+
+    // Return single object instead of array
+    return result[0] || null;
   } catch (error) {
     console.error("[getRestaurantReservationByReference] Error:", error);
     throw error;

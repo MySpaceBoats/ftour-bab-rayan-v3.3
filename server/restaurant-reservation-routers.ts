@@ -102,7 +102,7 @@ export const restaurantReservationsRouter = router({
           console.error("[Particulier Reservation] Error:", error);
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'Erreur lors de la création de la réservation',
+            message: error instanceof Error ? `Erreur lors de la création de la réservation: ${error.message}` : 'Erreur lors de la création de la réservation',
           });
         }
       }),
@@ -291,7 +291,7 @@ export const restaurantReservationsRouter = router({
           console.error("[Groupe Reservation] Error:", error);
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'Erreur lors de la création de la réservation',
+            message: error instanceof Error ? `Erreur lors de la création de la réservation: ${error.message}` : 'Erreur lors de la création de la réservation',
           });
         }
       }),
