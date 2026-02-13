@@ -754,7 +754,7 @@ const volunteersRouter = router({
     }),
 
   // Suppression d'un bénévole
-  delete: adminOpsProcedure
+  delete: adminProcedure
     .input(z.object({ volunteerId: z.number() }))
     .mutation(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
