@@ -269,9 +269,24 @@ export default function Benevole() {
                       </div>
                       <h3 className="font-semibold">{formTexts.schedules}</h3>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {formTexts.schedulesDesc}
-                    </p>
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground">
+                        {formTexts.schedulesDesc}
+                      </p>
+                      <div className="bg-primary/5 rounded-lg p-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-primary"></div>
+                          <span className="text-sm font-medium">Préparation ftour</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground ml-4">15h30 – 17h45</p>
+
+                        <div className="flex items-center gap-2 mt-2">
+                          <div className="w-2 h-2 rounded-full bg-primary"></div>
+                          <span className="text-sm font-medium">Service ftour</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground ml-4">18h00 – 19h30</p>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
 
