@@ -345,15 +345,14 @@ export default function Home() {
                   <p className="text-[#E6DCC3]">
                     {t.home.shopDesc}
                   </p>
-                  <Link href={`/${lang}/goodies`}>
-                    <Button 
-                      variant="outline" 
-                      className="w-full mt-4 border-[#CDBB8A] text-[#CDBB8A] bg-transparent hover:bg-[#CDBB8A] hover:text-[#4A4829]"
-                    >
-                      {t.home.viewShop}
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </Link>
+                  <Button
+                    variant="outline"
+                    disabled
+                    className="w-full mt-4 border-[#CDBB8A]/30 text-[#CDBB8A]/30 bg-transparent cursor-not-allowed opacity-50"
+                  >
+                    {t.home.viewShop}
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
                 </div>
               </div>
 
@@ -368,15 +367,14 @@ export default function Home() {
                   <p className="text-[#E6DCC3]">
                     {t.home.pastriesDesc || 'Dégustez nos pâtisseries artisanales solidaires'}
                   </p>
-                  <Link href={`/${lang}/pastries`}>
-                    <Button 
-                      variant="outline" 
-                      className="w-full mt-4 border-[#D4A574] text-[#D4A574] bg-transparent hover:bg-[#D4A574] hover:text-[#4A4829]"
-                    >
-                      {t.home.viewPastries || 'Voir les pâtisseries'}
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </Link>
+                  <Button
+                    variant="outline"
+                    disabled
+                    className="w-full mt-4 border-[#D4A574]/30 text-[#D4A574]/30 bg-transparent cursor-not-allowed opacity-50"
+                  >
+                    {t.home.viewPastries || 'Voir les pâtisseries'}
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
                 </div>
               </div>
 
@@ -391,15 +389,14 @@ export default function Home() {
                   <p className="text-[#E6DCC3]">
                     {t.home.produitsTerroinDesc || 'Découvrez nos produits authentiques du Maroc'}
                   </p>
-                  <Link href={`/${lang}/produits-terroir`}>
-                    <Button 
-                      variant="outline" 
-                      className="w-full mt-4 border-[#9B8B6F] text-[#9B8B6F] bg-transparent hover:bg-[#9B8B6F] hover:text-[#4A4829]"
-                    >
-                      {t.home.viewProducts || 'Voir les produits'}
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </Link>
+                  <Button
+                    variant="outline"
+                    disabled
+                    className="w-full mt-4 border-[#9B8B6F]/30 text-[#9B8B6F]/30 bg-transparent cursor-not-allowed opacity-50"
+                  >
+                    {t.home.viewProducts || 'Voir les produits'}
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
                 </div>
               </div>
 
@@ -437,15 +434,14 @@ export default function Home() {
                   <p className="text-[#E6DCC3]">
                     {'Découvrez notre restaurant solidaire et réservez votre place'}
                   </p>
-                  <Link href={`/${lang}/reservation`}>
-                    <Button
-                      variant="outline"
-                      className="w-full mt-4 border-[#9B8B6F] text-[#9B8B6F] bg-transparent hover:bg-[#9B8B6F] hover:text-[#4A4829]"
-                    >
-                      {'Réserver'}
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </Link>
+                  <Button
+                    variant="outline"
+                    disabled
+                    className="w-full mt-4 border-[#9B8B6F]/30 text-[#9B8B6F]/30 bg-transparent cursor-not-allowed opacity-50"
+                  >
+                    {'Réserver'}
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
                 </div>
               </div>
             </div>

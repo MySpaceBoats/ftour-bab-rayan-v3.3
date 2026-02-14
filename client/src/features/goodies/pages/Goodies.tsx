@@ -12,26 +12,16 @@ import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import { ShoppingBag, Plus, Minus, ShoppingCart, X, CheckCircle, Loader2, Package } from "lucide-react";
 import { useI18n } from "@/i18n";
+import { useCart } from "@/contexts/CartContext";
 import GoodiesConfirmation from "@/components/GoodiesConfirmation";
 import PaymentMethodSelector, { PaymentMethod } from "@/components/PaymentMethodSelector";
-
-type CartItem = {
-  goodieId: number;
-  variantId?: number;
-  name: string;
-  variant?: string;
-  price: number;
-  quantity: number;
-  imageUrl?: string;
-};
 
 export default function Goodies() {
   const { t, lang } = useI18n();
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
-  
+
   const { data: goodies, isLoading } = trpc.goodies.list.useQuery();
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const { cart, cartCount, cartTotal, isCartOpen, setIsCartOpen, addToCart: addToCartContext, updateQuantity, removeFromCart, clearCart } = useCart();
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [selectedGoodie, setSelectedGoodie] = useState<number | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<string>("");
@@ -54,7 +44,7 @@ export default function Goodies() {
   const createOrderMutation = trpc.orders.create.useMutation({
     onSuccess: (data) => {
       setOrderSuccess({ reference: data.orderReference, total: data.totalAmount });
-      setCart([]);
+      clearCart();
       setIsCheckoutOpen(false);
       toast.success(t.goodies.reservationConfirmed);
     },
@@ -66,49 +56,21 @@ export default function Goodies() {
   const addToCart = (goodie: NonNullable<typeof goodies>[number]) => {
     const variant = goodie.variants?.find((v: { id: number }) => v.id.toString() === selectedVariant);
     const price = goodie.price + (variant?.priceModifier ? Number(variant.priceModifier) : 0);
-    
-    const existingIndex = cart.findIndex(
-      item => item.goodieId === goodie.id && item.variantId === (variant?.id || undefined)
-    );
 
-    if (existingIndex >= 0) {
-      const newCart = [...cart];
-      newCart[existingIndex].quantity += 1;
-      setCart(newCart);
-    } else {
-      setCart([...cart, {
-        goodieId: goodie.id,
-        variantId: variant?.id,
-        name: goodie.name,
-        variant: variant ? `${variant.size || ''} ${variant.color || ''}`.trim() : undefined,
-        price,
-        quantity: 1,
-        imageUrl: goodie.imageUrl || undefined,
-      }]);
-    }
-    
+    addToCartContext({
+      goodieId: goodie.id,
+      variantId: variant?.id,
+      name: goodie.name,
+      variant: variant ? `${variant.size || ''} ${variant.color || ''}`.trim() : undefined,
+      price,
+      quantity: 1,
+      imageUrl: goodie.imageUrl || undefined,
+    });
+
     setSelectedGoodie(null);
     setSelectedVariant("");
     toast.success(t.goodies.addedToCart);
   };
-
-  const updateQuantity = (index: number, delta: number) => {
-    const newCart = [...cart];
-    newCart[index].quantity += delta;
-    if (newCart[index].quantity <= 0) {
-      newCart.splice(index, 1);
-    }
-    setCart(newCart);
-  };
-
-  const removeFromCart = (index: number) => {
-    const newCart = [...cart];
-    newCart.splice(index, 1);
-    setCart(newCart);
-  };
-
-  const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const deliveryFee = checkoutForm.deliveryMode === 'home_delivery' ? 30 : 0;
   const cartTotalWithDelivery = cartTotal + deliveryFee;

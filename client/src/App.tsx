@@ -5,6 +5,7 @@ import { Route, Switch, useLocation, Redirect } from "wouter";
 import { useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { CartProvider } from "./contexts/CartContext";
 import { useI18n, SUPPORTED_LOCALES, type Locale } from "./i18n";
 
 // ============================================
@@ -286,11 +287,13 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
-        <TooltipProvider>
-          <Toaster />
-          <LocalizedRoutes />
-          <WhatsAppFloatingButton />
-        </TooltipProvider>
+        <CartProvider>
+          <TooltipProvider>
+            <Toaster />
+            <LocalizedRoutes />
+            <WhatsAppFloatingButton />
+          </TooltipProvider>
+        </CartProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
