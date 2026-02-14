@@ -19,15 +19,15 @@ const scannerProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (!ctx.user) {
     throw new TRPCError({
       code: 'UNAUTHORIZED',
-      message: 'Accès non autorisé – session administrateur requise.\n\nVeuillez vous connecter avec un compte administrateur pour utiliser le scanner.'
+      message: 'Accès non autorisé – session administrateur requise'
     });
   }
 
   // Check if user has required role
   if (!allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: `Accès refusé – rôle insuffisant.\n\nRôle actuel : ${ctx.user.role}\nRôles autorisés : admin, super_admin, admin_ops, scanner`
+      code: 'UNAUTHORIZED',
+      message: 'Accès non autorisé – session administrateur requise'
     });
   }
 

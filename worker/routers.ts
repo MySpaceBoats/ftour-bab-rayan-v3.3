@@ -50,6 +50,159 @@ const scannerProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
+
+
+type WorkerQrType = 'volunteer' | 'reservation_particulier' | 'reservation_entreprise' | 'reservation_groupe' | 'unknown';
+
+function extractTokenFromUrl(rawInput: string): string {
+  try {
+    if (rawInput.includes('/checkin-reservation/')) {
+      const parts = rawInput.split('/checkin-reservation/');
+      return parts[parts.length - 1].split('?')[0];
+    }
+    if (rawInput.includes('/checkin/')) {
+      const parts = rawInput.split('/checkin/');
+      return parts[parts.length - 1].split('?')[0];
+    }
+    return rawInput.trim();
+  } catch {
+    return rawInput.trim();
+  }
+}
+
+function detectWorkerQrType(token: string): WorkerQrType {
+  if (token.startsWith('rp-')) return 'reservation_particulier';
+  if (token.startsWith('re-')) return 'reservation_entreprise';
+  if (token.startsWith('rg-')) return 'reservation_groupe';
+  if (/^[a-f0-9]{32,}$/i.test(token)) return 'volunteer';
+  return 'unknown';
+}
+
+const scannerRouter = router({
+  identify: scannerProcedure
+    .input(z.object({ rawCode: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const token = extractTokenFromUrl(input.rawCode);
+      let type = detectWorkerQrType(token);
+
+      if (type === 'volunteer' || type === 'unknown') {
+        const { data: volunteer } = await supabase
+          .from('volunteers')
+          .select('id, first_name, last_name, email, phone, status, qr_status, scanned_at')
+          .eq('qr_token', token)
+          .single();
+
+        if (volunteer) {
+          return {
+            type: 'volunteer' as const,
+            typeLabel: 'Bénévole',
+            token,
+            found: true,
+            entity: {
+              id: volunteer.id,
+              name: `${volunteer.first_name} ${volunteer.last_name}`,
+              email: volunteer.email,
+              phone: volunteer.phone,
+              status: volunteer.status,
+              qrStatus: volunteer.qr_status,
+              alreadyValidated: volunteer.qr_status === 'validated',
+              scannedAt: volunteer.scanned_at,
+            },
+          };
+        }
+      }
+
+      if (type.startsWith('reservation_') || type === 'unknown') {
+        const { data: reservation } = await supabase
+          .from('restaurant_reservations')
+          .select('id, name, email, phone, status, seats, date, reference, qr_token')
+          .eq('qr_token', token)
+          .single();
+
+        if (reservation) {
+          if (type === 'unknown') type = 'reservation_particulier';
+          return {
+            type,
+            typeLabel: 'Réservation',
+            token,
+            found: true,
+            entity: {
+              id: reservation.id,
+              name: reservation.name,
+              email: reservation.email,
+              phone: reservation.phone,
+              status: reservation.status,
+              guests: reservation.seats,
+              date: reservation.date,
+              reference: reservation.reference,
+              qrStatus: reservation.status,
+              alreadyValidated: reservation.status === 'checked_in',
+            },
+          };
+        }
+      }
+
+      return { type: 'unknown' as const, typeLabel: 'Inconnu', token, found: false, error: 'QR code non reconnu dans le système' };
+    }),
+
+  validate: scannerProcedure
+    .input(z.object({
+      token: z.string().min(1),
+      type: z.enum(['volunteer', 'reservation_particulier', 'reservation_entreprise', 'reservation_groupe', 'pastry', 'terroir', 'goodies', 'unknown']),
+      entityId: z.number(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      if (input.type === 'volunteer') {
+        const { data: volunteer } = await supabase
+          .from('volunteers')
+          .select('id, first_name, last_name, qr_status')
+          .eq('id', input.entityId)
+          .single();
+
+        if (!volunteer) throw new TRPCError({ code: 'NOT_FOUND', message: 'Bénévole introuvable' });
+        if (volunteer.qr_status === 'validated') {
+          return { success: true, message: `Déjà confirmé — ${volunteer.first_name} ${volunteer.last_name}`, state: 'already_confirmed' as const };
+        }
+
+        await supabase.from('volunteers').update({
+          qr_status: 'validated',
+          status: 'confirmed',
+          scanned_at: new Date().toISOString(),
+          scanned_by: ctx.user?.id,
+        }).eq('id', input.entityId);
+
+        return { success: true, message: `Bénévole confirmé — ${volunteer.first_name} ${volunteer.last_name}`, state: 'confirmed' as const };
+      }
+
+      if (input.type.startsWith('reservation_')) {
+        const { data: reservation } = await supabase
+          .from('restaurant_reservations')
+          .select('id, status')
+          .eq('id', input.entityId)
+          .single();
+
+        if (!reservation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Réservation introuvable' });
+        if (reservation.status === 'checked_in') {
+          return { success: true, message: 'Réservation déjà validée', state: 'already_confirmed' as const };
+        }
+
+        await supabase.from('restaurant_reservations').update({ status: 'checked_in' }).eq('id', input.entityId);
+        await supabase.from('reservation_checkins').insert({
+          reservation_id: input.entityId,
+          validation_mode: 'scan',
+          validated_by: ctx.user?.email || ctx.user?.name || 'Scanner',
+        });
+
+        return { success: true, message: 'Check-in réservation validé !', state: 'confirmed' as const };
+      }
+
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Type de QR non supporté pour la validation' });
+    }),
+});
+
 // ============================================
 // AUTH ROUTER
 // ============================================
@@ -2386,6 +2539,7 @@ export const appRouter = router({
   restaurants: restaurantsRouter,
   reservations: reservationsRouter,
   restaurantReservations: restaurantReservationsRouter,
+  scanner: scannerRouter,
 });
 
 export type AppRouter = typeof appRouter;
