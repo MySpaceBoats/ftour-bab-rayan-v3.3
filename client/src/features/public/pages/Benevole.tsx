@@ -133,7 +133,6 @@ export default function Benevole() {
     dress: lang === 'ar' ? 'لباس محتشم مطلوب' : lang === 'en' ? 'Proper dress required' : 'Tenue correcte exigée',
     punctuality: lang === 'ar' ? 'الالتزام بالمواعيد مطلوب' : lang === 'en' ? 'Punctuality required' : 'Ponctualité requise',
     instructions: lang === 'ar' ? 'احترام التعليمات' : lang === 'en' ? 'Respect instructions' : 'Respect des consignes',
-    fitness: lang === 'ar' ? 'لياقة بدنية جيدة' : lang === 'en' ? 'Good physical condition' : 'Bonne condition physique',
     noBags: lang === 'ar' ? 'الحقائب غير مسموحة' : lang === 'en' ? 'No bags allowed' : 'Sac non autorisé',
     formTitle: lang === 'ar' ? 'استمارة التسجيل' : lang === 'en' ? 'Registration form' : 'Formulaire d\'inscription',
     formDesc: lang === 'ar' ? 'املأ هذا النموذج للتسجيل كمتطوع' : lang === 'en' ? 'Fill out this form to register as a volunteer' : 'Remplissez ce formulaire pour vous inscrire comme bénévole',
@@ -328,7 +327,6 @@ export default function Benevole() {
                       <li>• {formTexts.dress}</li>
                       <li>• {formTexts.punctuality}</li>
                       <li>• {formTexts.instructions}</li>
-                      <li>• {formTexts.fitness}</li>
                     </ul>
                   </CardContent>
                 </Card>
