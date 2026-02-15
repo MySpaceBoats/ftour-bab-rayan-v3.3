@@ -180,10 +180,10 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
         <td style="padding: 20px;">
           <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 18px;">📋 Consignes importantes</h3>
           <ul style="margin: 0; padding-left: 20px; color: #374151;">
-            <li style="margin-bottom: 8px;">Arrivez 30 minutes avant l'heure du Ftour</li>
-            <li style="margin-bottom: 8px;">Portez des vêtements confortables</li>
-            <li style="margin-bottom: 8px;">Apportez votre bonne humeur et votre sourire !</li>
+            <li style="margin-bottom: 8px;">Arrivez à l'heure prévu du service (ou)et préparation .</li>
             <li style="margin-bottom: 8px;">En cas d'empêchement, prévenez-nous à l'avance</li>
+            <li style="margin-bottom: 8px;">Portez des vêtements confortables</li>
+            <li style="margin-bottom: 8px;">Et pas de bêtises durant votre présence sur les lieux</li>
           </ul>
         </td>
       </tr>
