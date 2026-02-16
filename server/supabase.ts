@@ -261,6 +261,13 @@ export interface Database {
           pickup_date: string | null;
           pickup_location: string | null;
           notes: string | null;
+          delivery_mode: string;
+          delivery_fee: string;
+          delivery_address: string | null;
+          delivery_phone: string | null;
+          delivery_instructions: string | null;
+          delivered_at: string | null;
+          payment_method: string | null;
           processed_by: number | null;
           created_at: string;
           updated_at: string;

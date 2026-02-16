@@ -24,7 +24,7 @@ export default function BuyGoodie() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: goodies, isLoading } = trpc.goodies.list.useQuery();
+  const { data: goodies, isLoading, isError } = trpc.goodies.list.useQuery();
   const goodie = goodies?.find((g: any) => g.id === goodieId) ?? null;
 
   const createOrderMutation = trpc.orders.create.useMutation();
