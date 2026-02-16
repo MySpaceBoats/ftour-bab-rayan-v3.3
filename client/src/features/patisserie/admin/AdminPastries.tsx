@@ -74,7 +74,7 @@ export default function AdminPastries() {
     const headers = ['Référence', 'Client', 'Téléphone', 'Email', 'Montant', 'Paiement', 'Statut', 'Date'];
     const rows = filteredOrders.map((order: any) => [
       order.reference, order.customer_name, order.phone, order.email || '',
-      order.total_amount, order.payment_method, order.business_status,
+      order.total_amount, order.payment_method, order.order_status,
       new Date(order.created_at).toLocaleDateString('fr-FR'),
     ]);
     const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
@@ -246,7 +246,7 @@ export default function AdminPastries() {
                       <td className="px-4 py-3 text-sm">{order.phone}</td>
                       <td className="px-4 py-3 text-sm font-semibold">{order.total_amount} DH</td>
                       <td className="px-4 py-3">{paymentBadge(order.payment_status)}</td>
-                      <td className="px-4 py-3">{statusBadge(order.business_status)}</td>
+                      <td className="px-4 py-3">{statusBadge(order.order_status)}</td>
                       <td className="px-4 py-3 text-sm text-muted-foreground">
                         {new Date(order.created_at).toLocaleDateString('fr-FR')}
                       </td>
@@ -255,21 +255,21 @@ export default function AdminPastries() {
                           <Button variant="ghost" size="sm" onClick={() => { setSelectedOrder(order); setShowDetail(true); }}>
                             <Eye className="w-4 h-4" />
                           </Button>
-                          {order.business_status === 'reserved' && (
+                          {order.order_status === 'reserved' && (
                             <Button variant="ghost" size="sm" className="text-green-600"
                               onClick={() => handleUpdateStatus(order.id, 'paid', 'confirmed')}
                               disabled={updateStatus.isPending}>
                               <CheckCircle className="w-4 h-4" />
                             </Button>
                           )}
-                          {(order.business_status === 'reserved' || order.business_status === 'paid') && (
+                          {(order.order_status === 'reserved' || order.order_status === 'paid') && (
                             <Button variant="ghost" size="sm" className="text-red-600"
                               onClick={() => handleUpdateStatus(order.id, 'cancelled', 'cancelled')}
                               disabled={updateStatus.isPending}>
                               <XCircle className="w-4 h-4" />
                             </Button>
                           )}
-                          {order.business_status === 'paid' && (
+                          {order.order_status === 'paid' && (
                             <Button variant="ghost" size="sm" className="text-blue-600"
                               onClick={() => handleUpdateStatus(order.id, 'handed')}
                               disabled={updateStatus.isPending}>
@@ -298,7 +298,7 @@ export default function AdminPastries() {
 
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                {statusBadge(selectedOrder.business_status)}
+                {statusBadge(selectedOrder.order_status)}
                 {paymentBadge(selectedOrder.payment_status)}
               </div>
 
@@ -320,7 +320,7 @@ export default function AdminPastries() {
 
               {/* Actions */}
               <div className="flex flex-col gap-2 pt-4">
-                {selectedOrder.business_status === 'reserved' && (
+                {selectedOrder.order_status === 'reserved' && (
                   <>
                     <Button className="w-full bg-green-600 hover:bg-green-700"
                       onClick={() => { handleUpdateStatus(selectedOrder.id, 'paid', 'confirmed'); setShowDetail(false); }}
@@ -335,7 +335,7 @@ export default function AdminPastries() {
                     </Button>
                   </>
                 )}
-                {selectedOrder.business_status === 'paid' && (
+                {selectedOrder.order_status === 'paid' && (
                   <>
                     <Button className="w-full bg-blue-600 hover:bg-blue-700"
                       onClick={() => { handleUpdateStatus(selectedOrder.id, 'handed'); setShowDetail(false); }}
