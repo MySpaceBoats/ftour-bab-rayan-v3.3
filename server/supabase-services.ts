@@ -122,6 +122,18 @@ export async function updateUserRoleSupabase(userId: number, role: string) {
   if (error) throw error;
 }
 
+export async function updateUserRoleByOpenIdSupabase(openId: string, role: string) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const { error } = await client
+    .from('users')
+    .update({ role })
+    .eq('open_id', openId);
+
+  if (error) throw error;
+}
+
 // ============================================
 // RAMADAN DAYS SERVICES
 // ============================================

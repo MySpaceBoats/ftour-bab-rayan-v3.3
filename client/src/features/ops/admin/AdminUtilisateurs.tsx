@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { 
-  ArrowLeft, Search, Users, Loader2, Shield, UserCog, Mail
+import {
+  ArrowLeft, Search, Users, Loader2, Shield, UserCog, Mail, Plus
 } from "lucide-react";
 
 const roleLabels: Record<string, string> = {
@@ -44,6 +46,14 @@ const roleColors: Record<string, string> = {
 
 export default function AdminUtilisateurs() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [newUser, setNewUser] = useState({
+    email: "",
+    password: "",
+    name: "",
+    phone: "",
+    role: "user" as string,
+  });
 
   const { data: users, isLoading, refetch } = trpc.users.list.useQuery();
 
@@ -57,8 +67,20 @@ export default function AdminUtilisateurs() {
     },
   });
 
+  const createUserMutation = trpc.users.create.useMutation({
+    onSuccess: () => {
+      toast.success("Utilisateur créé avec succès");
+      setShowCreateDialog(false);
+      setNewUser({ email: "", password: "", name: "", phone: "", role: "user" });
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erreur lors de la création de l'utilisateur");
+    },
+  });
+
   const filteredUsers = users?.filter((u: any) => {
-    const matchesSearch = searchQuery === "" || 
+    const matchesSearch = searchQuery === "" ||
       (u.name && u.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesSearch;
@@ -66,6 +88,25 @@ export default function AdminUtilisateurs() {
 
   const handleRoleChange = (userId: number, newRole: string) => {
     updateRoleMutation.mutate({ userId, role: newRole as any });
+  };
+
+  const handleCreateUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUser.email || !newUser.password) {
+      toast.error("Email et mot de passe sont obligatoires");
+      return;
+    }
+    if (newUser.password.length < 6) {
+      toast.error("Le mot de passe doit contenir au moins 6 caractères");
+      return;
+    }
+    createUserMutation.mutate({
+      email: newUser.email,
+      password: newUser.password,
+      name: newUser.name || undefined,
+      phone: newUser.phone || undefined,
+      role: newUser.role as any,
+    });
   };
 
   return (
@@ -78,12 +119,117 @@ export default function AdminUtilisateurs() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <div>
+          <div className="flex-1">
             <h1 className="font-bold text-lg">Gestion des utilisateurs</h1>
             <p className="text-xs text-muted-foreground">
               {filteredUsers?.length || 0} utilisateur(s)
             </p>
           </div>
+          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter un utilisateur
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <form onSubmit={handleCreateUser}>
+                <DialogHeader>
+                  <DialogTitle>Nouvel utilisateur</DialogTitle>
+                  <DialogDescription>
+                    Créez un nouveau compte utilisateur avec un email et un mot de passe.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">Nom</Label>
+                    <Input
+                      id="name"
+                      placeholder="Nom complet"
+                      value={newUser.name}
+                      onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="email@exemple.com"
+                      required
+                      value={newUser.email}
+                      onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="password">Mot de passe *</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Minimum 6 caractères"
+                      required
+                      minLength={6}
+                      value={newUser.password}
+                      onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="phone">Téléphone</Label>
+                    <Input
+                      id="phone"
+                      placeholder="06 00 00 00 00"
+                      value={newUser.phone}
+                      onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="role">Rôle</Label>
+                    <Select
+                      value={newUser.role}
+                      onValueChange={(value) => setNewUser({ ...newUser, role: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">Utilisateur</SelectItem>
+                        <SelectItem value="scanner">Scanner</SelectItem>
+                        <SelectItem value="admin_ops">Admin Opérations</SelectItem>
+                        <SelectItem value="admin_boutique">Admin Boutique</SelectItem>
+                        <SelectItem value="admin_dons">Admin Dons</SelectItem>
+                        <SelectItem value="admin_restaurant_particuliers">Admin Restaurant Particuliers</SelectItem>
+                        <SelectItem value="admin_restaurant_entreprises">Admin Restaurant Entreprises</SelectItem>
+                        <SelectItem value="admin_restaurant_groupes">Admin Restaurant Groupes</SelectItem>
+                        <SelectItem value="admin_patisserie">Admin Pâtisserie</SelectItem>
+                        <SelectItem value="admin_terroir">Admin Terroir</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="super_admin">Super Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowCreateDialog(false)}
+                  >
+                    Annuler
+                  </Button>
+                  <Button type="submit" disabled={createUserMutation.isPending}>
+                    {createUserMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Création...
+                      </>
+                    ) : (
+                      "Créer l'utilisateur"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </header>
 
