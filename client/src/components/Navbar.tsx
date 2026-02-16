@@ -17,10 +17,10 @@ export default function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const { t, lang, setLang, languages, dir } = useI18n();
-  const { cartCount } = useCart();
+  const { cartCount, setIsCartOpen } = useCart();
 
   const isAdmin = user?.role && ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner'].includes(user.role);
 
@@ -106,8 +106,15 @@ export default function Navbar() {
           </div>
 
           {/* Cart Icon - Boutique solidaire */}
-          <Link
-            href={localizedHref('/boutique')}
+          <button
+            onClick={() => {
+              if (cartCount > 0) {
+                setIsCartOpen(true);
+                setLocation(localizedHref('/goodies'));
+              } else {
+                setLocation(localizedHref('/boutique'));
+              }
+            }}
             className="relative flex items-center gap-1 text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors"
             title={t.nav.boutique}
           >
@@ -117,7 +124,7 @@ export default function Navbar() {
                 {cartCount}
               </span>
             )}
-          </Link>
+          </button>
 
           {/* Admin Link - icône cadenas avec tooltip "Privé" */}
           <Link href={localizedHref('/connexion')} className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors" title="Privé">
