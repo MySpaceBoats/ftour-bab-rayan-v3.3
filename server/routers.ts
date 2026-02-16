@@ -841,7 +841,27 @@ const usersRouter = router({
   list: superAdminProcedure.query(async () => {
     return supabaseServices.getAllUsersSupabase();
   }),
-  
+
+  create: superAdminProcedure
+    .input(z.object({
+      email: z.string().email(),
+      password: z.string().min(6),
+      name: z.string().optional(),
+      phone: z.string().optional(),
+      role: z.enum(['user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes', 'admin_patisserie', 'admin_terroir']).default('user'),
+    }))
+    .mutation(async ({ input }) => {
+      const result = await signUpUser({ email: input.email, password: input.password, name: input.name, phone: input.phone });
+      if (result.error) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: result.error });
+      }
+      // If a non-default role was specified, update it after creation
+      if (input.role !== 'user' && result.user) {
+        await supabaseServices.updateUserRoleByOpenIdSupabase(result.user.id, input.role);
+      }
+      return { success: true, user: result.user };
+    }),
+
   updateRole: superAdminProcedure
     .input(z.object({
       userId: z.number(),
