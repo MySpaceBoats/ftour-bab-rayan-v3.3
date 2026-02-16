@@ -208,7 +208,7 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
 
   // Build slots display
   const slotLabels: Record<string, string> = {
-    preparation_ftour: 'Préparation ftour (15:30 – 17:45)',
+    preparation_ftour: 'Préparation ftour (15:00 – 17:45)',
     service_ftour: 'Service ftour (18:00 – 19:30)',
   };
   const slotsHtml = (data.volunteerSlots || []).map(s =>
@@ -1001,7 +1001,7 @@ export interface GroupRegistrationEmailData {
 
 export function generateGroupRegistrationEmail(data: GroupRegistrationEmailData): { subject: string; html: string } {
   const slotLabels: Record<string, string> = {
-    preparation_ftour: 'Préparation ftour (15:30 – 17:45)',
+    preparation_ftour: 'Préparation ftour (15:00 – 17:45)',
     service_ftour: 'Service ftour (18:00 – 19:30)',
   };
   const slotsHtml = data.volunteerSlots.map(s =>
