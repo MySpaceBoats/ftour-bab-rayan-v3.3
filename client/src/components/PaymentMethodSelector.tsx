@@ -1,8 +1,8 @@
 import { useI18n } from '@/i18n';
 import { Card, CardContent } from '@/components/ui/card';
-import { CreditCard, Banknote, DollarSign, Wallet } from 'lucide-react';
+import { CreditCard, Banknote, DollarSign } from 'lucide-react';
 
-export type PaymentMethod = 'bank_transfer' | 'check' | 'cash' | 'paypal';
+export type PaymentMethod = 'bank_transfer' | 'cheque' | 'cash';
 
 interface PaymentMethodSelectorProps {
   value: PaymentMethod;
@@ -14,7 +14,7 @@ interface PaymentMethodSelectorProps {
 export default function PaymentMethodSelector({
   value,
   onChange,
-  availableMethods = ['bank_transfer', 'check', 'cash', 'paypal'],
+  availableMethods = ['bank_transfer', 'cheque', 'cash'],
   showDescriptions = true,
 }: PaymentMethodSelectorProps) {
   const { t, lang } = useI18n();
@@ -26,7 +26,7 @@ export default function PaymentMethodSelector({
       label: t.checkout?.bankTransfer || 'Bank Transfer',
       description: t.checkout?.bankTransferDesc || 'Transfer funds to our bank account',
     },
-    check: {
+    cheque: {
       icon: <Banknote className="h-6 w-6" />,
       label: t.checkout?.cheque || 'Cheque',
       description: t.checkout?.chequeDesc || 'Send a cheque by mail',
@@ -35,11 +35,6 @@ export default function PaymentMethodSelector({
       icon: <DollarSign className="h-6 w-6" />,
       label: t.checkout?.cash || 'Cash',
       description: t.checkout?.cashDesc || 'Pay in cash on site',
-    },
-    paypal: {
-      icon: <Wallet className="h-6 w-6" />,
-      label: t.checkout?.paypal || 'PayPal',
-      description: t.checkout?.paypalDesc || 'Pay securely with PayPal',
     },
   };
 

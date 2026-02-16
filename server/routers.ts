@@ -571,7 +571,7 @@ const ordersRouter = router({
       deliveryPostalCode: z.string().optional(),
       deliveryPhone: z.string().optional(),
       deliveryInstructions: z.string().optional(),
-      paymentMethod: z.enum(['bank_transfer', 'check', 'cash', 'paypal']).default('cash'),
+      paymentMethod: z.enum(['bank_transfer', 'cheque', 'cash']).default('cash'),
     }))
     .mutation(async ({ input }) => {
       // Validate stock for items with variants before creating order
