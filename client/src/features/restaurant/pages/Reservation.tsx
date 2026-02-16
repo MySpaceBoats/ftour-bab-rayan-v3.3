@@ -15,22 +15,40 @@ export default function Reservation() {
       <main className="container py-12">
         <div className="max-w-3xl mx-auto text-center mb-8">
           <h1 className="text-4xl font-bold text-[#5d5a3c] mb-3">Ftour solidaire</h1>
-          <p className="text-muted-foreground">Réservez votre place pour le ftour solidaire Bab Rayan. Toutes les réservations sont soumises à validation par notre équipe.</p>
+          <p className="text-muted-foreground">Demande de réservation pour le ftour solidaire (réservation en ligne à partir de 5 couverts). Confirmation sous 48 heures.</p>
         </div>
 
-        <div className="max-w-md mx-auto">
+        <div className="max-w-2xl mx-auto grid gap-6 md:grid-cols-2">
           <Card className="flex flex-col">
             <CardHeader>
               <div className="h-10 w-10 rounded-full bg-[#5d5a3c]/10 text-[#5d5a3c] flex items-center justify-center mb-2">
                 <UtensilsCrossed className="h-5 w-5" />
               </div>
-              <CardTitle>Réservation Ftour</CardTitle>
-              <CardDescription>Demande de réservation pour le ftour solidaire (jusqu'à 12 personnes). Confirmation sous 48 heures.</CardDescription>
+              <CardTitle>Réservation Particuliers</CardTitle>
+              <CardDescription>Demande de réservation pour le ftour solidaire (réservation en ligne à partir de 5 couverts). Confirmation sous 48 heures.</CardDescription>
             </CardHeader>
             <CardContent className="mt-auto">
               <Link href={`/${lang}/restaurant/particuliers`}>
                 <Button className="w-full">
-                  Faire une demande de réservation
+                  Réserver
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card className="flex flex-col">
+            <CardHeader>
+              <div className="h-10 w-10 rounded-full bg-[#5d5a3c]/10 text-[#5d5a3c] flex items-center justify-center mb-2">
+                <UtensilsCrossed className="h-5 w-5" />
+              </div>
+              <CardTitle>Réservation Groupes</CardTitle>
+              <CardDescription>Demande de réservation groupe pour le ftour solidaire (à partir de 5 couverts). Confirmation sous 48 heures.</CardDescription>
+            </CardHeader>
+            <CardContent className="mt-auto">
+              <Link href={`/${lang}/restaurant/groupes`}>
+                <Button className="w-full">
+                  Réserver en groupe
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </Link>

@@ -11,7 +11,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import {
   ArrowLeft, Search, Loader2, CheckCircle, XCircle,
-  Clock, UsersRound, Users
+  Clock, UsersRound, Users, CreditCard
 } from "lucide-react";
 
 export default function AdminRestaurantGroupes() {
@@ -22,11 +22,31 @@ export default function AdminRestaurantGroupes() {
   const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_groupes'];
   const hasAccess = user?.role && allowedRoles.includes(user.role);
 
-  const { data: reservations, isLoading, refetch } = trpc.restaurantModule.adminListGroupes.useQuery(undefined, {
+  const { data: reservations, isLoading, refetch } = trpc.restaurantReservations.adminListGroupes.useQuery(undefined, {
     enabled: !!hasAccess,
   });
 
-  const updateStatusMutation = trpc.restaurantModule.adminUpdateStatus.useMutation({
+  const validateMutation = trpc.restaurantReservations.validate.useMutation({
+    onSuccess: () => {
+      toast.success("Réservation validée, email de confirmation envoyé");
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const refuseMutation = trpc.restaurantReservations.refuse.useMutation({
+    onSuccess: () => {
+      toast.success("Réservation refusée, email de notification envoyé");
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const updateStatusMutation = trpc.restaurantReservations.adminUpdateStatus.useMutation({
     onSuccess: () => {
       toast.success("Statut mis à jour");
       refetch();
@@ -60,7 +80,7 @@ export default function AdminRestaurantGroupes() {
   const filteredReservations = reservations?.filter((r: any) => {
     const matchesSearch = searchQuery === "" ||
       r.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.group_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.groupName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.reference?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || r.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -68,30 +88,28 @@ export default function AdminRestaurantGroupes() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'submitted':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200"><Clock className="h-3 w-3 mr-1" />Soumise</Badge>;
-      case 'pending_confirmation':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200"><Clock className="h-3 w-3 mr-1" />En attente</Badge>;
-      case 'confirmed':
+      case 'pending_validation':
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200"><Clock className="h-3 w-3 mr-1" />En attente</Badge>;
+      case 'validated_pending_payment':
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200"><CreditCard className="h-3 w-3 mr-1" />Paiement attendu</Badge>;
+      case 'paid_confirmed':
         return <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Confirmée</Badge>;
-      case 'rejected':
+      case 'refused':
         return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Refusée</Badge>;
       case 'cancelled':
         return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Annulée</Badge>;
       case 'completed':
         return <Badge className="bg-emerald-600"><CheckCircle className="h-3 w-3 mr-1" />Terminée</Badge>;
+      case 'no_show':
+        return <Badge variant="outline" className="bg-gray-50 text-gray-700">No show</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
 
-  const getGroupTypeLabel = (type: string) => {
-    switch (type) {
-      case 'asso': return 'Association';
-      case 'famille': return 'Famille';
-      case 'tourisme': return 'Tourisme';
-      default: return type || 'Autre';
-    }
+  const formatDate = (date: any) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('fr-FR');
   };
 
   return (
@@ -128,16 +146,18 @@ export default function AdminRestaurantGroupes() {
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Statut" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous les statuts</SelectItem>
-              <SelectItem value="pending_confirmation">En attente</SelectItem>
-              <SelectItem value="confirmed">Confirmée</SelectItem>
-              <SelectItem value="rejected">Refusée</SelectItem>
+              <SelectItem value="pending_validation">En attente</SelectItem>
+              <SelectItem value="validated_pending_payment">Paiement attendu</SelectItem>
+              <SelectItem value="paid_confirmed">Confirmée</SelectItem>
+              <SelectItem value="refused">Refusée</SelectItem>
               <SelectItem value="cancelled">Annulée</SelectItem>
               <SelectItem value="completed">Terminée</SelectItem>
+              <SelectItem value="no_show">No show</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -155,10 +175,11 @@ export default function AdminRestaurantGroupes() {
                   <TableRow>
                     <TableHead>Référence</TableHead>
                     <TableHead>Groupe</TableHead>
-                    <TableHead>Type</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead>Places</TableHead>
+                    <TableHead>Date ftour</TableHead>
                     <TableHead>Statut</TableHead>
+                    <TableHead>Créé le</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -174,42 +195,49 @@ export default function AdminRestaurantGroupes() {
                       <TableRow key={r.id}>
                         <TableCell className="font-mono text-sm">{r.reference}</TableCell>
                         <TableCell>
-                          <div className="font-medium">{r.group_name}</div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{getGroupTypeLabel(r.group_type)}</Badge>
+                          <div className="font-medium">{r.groupName || '-'}</div>
                         </TableCell>
                         <TableCell>
                           <div>{r.name}</div>
                           <div className="text-xs text-muted-foreground">{r.phone}</div>
+                          <div className="text-xs text-muted-foreground">{r.email}</div>
                         </TableCell>
-                        <TableCell>{r.seats_total}</TableCell>
+                        <TableCell>{r.seatsTotal}</TableCell>
+                        <TableCell>{formatDate(r.date)}</TableCell>
                         <TableCell>{getStatusBadge(r.status)}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(r.createdAt)}
+                        </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            {r.status === 'pending_confirmation' && (
+                            {r.status === 'pending_validation' && (
                               <>
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   className="text-green-600"
-                                  onClick={() => updateStatusMutation.mutate({ id: r.id, status: 'confirmed' })}
+                                  onClick={() => validateMutation.mutate({
+                                    reference: r.reference,
+                                    baseUrl: window.location.origin,
+                                  })}
+                                  disabled={validateMutation.isPending}
                                 >
                                   <CheckCircle className="h-3 w-3 mr-1" />
-                                  Confirmer
+                                  Valider
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   className="text-red-600"
-                                  onClick={() => updateStatusMutation.mutate({ id: r.id, status: 'rejected' })}
+                                  onClick={() => refuseMutation.mutate({ reference: r.reference })}
+                                  disabled={refuseMutation.isPending}
                                 >
                                   <XCircle className="h-3 w-3 mr-1" />
                                   Refuser
                                 </Button>
                               </>
                             )}
-                            {r.status === 'confirmed' && (
+                            {(r.status === 'validated_pending_payment' || r.status === 'paid_confirmed') && (
                               <Button
                                 size="sm"
                                 variant="outline"

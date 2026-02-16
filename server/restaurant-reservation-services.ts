@@ -96,6 +96,25 @@ export async function getRestaurantReservationByReference(reference: string) {
 }
 
 /**
+ * Récupérer une réservation par QR token
+ */
+export async function getRestaurantReservationByQrToken(qrToken: string) {
+  try {
+    const database = await getDb();
+    const result = await database
+      .select()
+      .from(restaurantReservations)
+      .where(eq(restaurantReservations.qrToken, qrToken))
+      .limit(1);
+
+    return result[0] || null;
+  } catch (error) {
+    console.error("[getRestaurantReservationByQrToken] Error:", error);
+    throw error;
+  }
+}
+
+/**
  * Récupérer une réservation par ID
  */
 export async function getRestaurantReservationById(id: number) {
@@ -123,14 +142,21 @@ export async function listRestaurantReservations(filters?: {
 }) {
   try {
     const database = await getDb();
-    const limit = filters?.limit || 50;
-    const offset = filters?.offset || 0;
+    const queryLimit = filters?.limit || 200;
+    const queryOffset = filters?.offset || 0;
 
-    const result = await database.query.restaurantReservations.findMany({
-      limit,
-      offset,
-      orderBy: [desc(restaurantReservations.createdAt)],
-    });
+    const conditions = [];
+    if (filters?.type) {
+      conditions.push(eq(restaurantReservations.type, filters.type));
+    }
+
+    const result = await database
+      .select()
+      .from(restaurantReservations)
+      .where(conditions.length > 0 ? (conditions.length === 1 ? conditions[0] : and(...conditions)) : undefined)
+      .orderBy(desc(restaurantReservations.createdAt))
+      .limit(queryLimit)
+      .offset(queryOffset);
 
     return result;
   } catch (error) {
