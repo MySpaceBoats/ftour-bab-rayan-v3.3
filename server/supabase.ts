@@ -148,8 +148,10 @@ export interface Database {
           qr_token: string;
           qr_status: 'generated' | 'validated' | 'expired' | 'invalid';
           status: 'registered' | 'confirmed' | 'present' | 'absent' | 'cancelled';
+          confirmed_at: string | null;
           scanned_at: string | null;
           scanned_by: number | null;
+          volunteer_slots: string[] | null;
           accepted_terms: boolean;
           email_sent: boolean;
           notes: string | null;
