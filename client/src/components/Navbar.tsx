@@ -35,6 +35,7 @@ export default function Navbar() {
     { href: localizedHref('/'), label: t.nav.home, icon: Home },
     { href: localizedHref('/evenement'), label: t.nav.event, icon: Info },
     { href: localizedHref('/benevole'), label: t.nav.volunteer, icon: Users },
+    { href: localizedHref('/boutique'), label: t.nav.boutique, icon: ShoppingBag },
     { href: localizedHref('/association'), label: t.association.title, icon: Building2 },
     { href: localizedHref('/contact'), label: t.nav.contact, icon: Phone },
   ];
@@ -104,11 +105,11 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Cart Icon - Panier goodies */}
+          {/* Cart Icon - Boutique solidaire */}
           <Link
-            href={localizedHref('/goodies')}
+            href={localizedHref('/boutique')}
             className="relative flex items-center gap-1 text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors"
-            title={t.nav.goodies}
+            title={t.nav.boutique}
           >
             <ShoppingCart className="h-4 w-4" />
             {cartCount > 0 && (

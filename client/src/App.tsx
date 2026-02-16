@@ -59,6 +59,11 @@ import AdminTerroirProducts from "@/features/terroir/admin/AdminTerroirProducts"
 import AdminTerroirOrders from "@/features/terroir/admin/AdminTerroirOrders";
 
 // ============================================
+// BOUTIQUE — features/boutique
+// ============================================
+import BoutiqueSolidaire from "@/features/boutique/pages/BoutiqueSolidaire";
+
+// ============================================
 // GOODIES — features/goodies
 // ============================================
 import Goodies from "@/features/goodies/pages/Goodies";
@@ -218,6 +223,9 @@ function LocalizedRoutes() {
       <Route path="/:lang/company-booking" component={CompanyBooking} />
       <Route path="/:lang/company-booking-confirmation/:reference" component={CompanyBookingConfirmation} />
       <Route path="/:lang/company-booking-space/:token" component={CompanyBookingSpace} />
+
+      {/* Boutique Solidaire (hub) */}
+      <Route path="/:lang/boutique" component={BoutiqueSolidaire} />
 
       {/* Commerce public */}
       <Route path="/:lang/patisserie" component={Pastries} />

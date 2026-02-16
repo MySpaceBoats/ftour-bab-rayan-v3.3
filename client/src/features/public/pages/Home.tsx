@@ -1,11 +1,10 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useI18n } from "@/i18n";
-import { Heart, Users, Calendar, ShoppingBag, ArrowRight, Star, Clock, MapPin, HandHeart, Sparkles, Utensils, GraduationCap, Home as HomeIcon, Baby } from "lucide-react";
+import { Heart, Users, Calendar, ShoppingBag, ArrowRight, Star, Clock, MapPin, Utensils, GraduationCap, Home as HomeIcon, Baby } from "lucide-react";
 
 export default function Home() {
   const { t, dir, lang } = useI18n();
@@ -334,69 +333,26 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Goodies Card */}
+              {/* Boutique Solidaire Card */}
               <div className="bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#CDBB8A]/30 transition-all">
                 <div className="h-1 bg-[#CDBB8A]" />
                 <div className="p-8 space-y-4">
                   <div className="w-14 h-14 rounded-2xl bg-[#CDBB8A]/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <ShoppingBag className="h-7 w-7 text-[#CDBB8A]" />
                   </div>
-                  <h3 className="text-xl font-bold text-[#F2E9D3]">{t.home.shopTitle}</h3>
+                  <h3 className="text-xl font-bold text-[#F2E9D3]">{t.home.boutiqueTitle}</h3>
                   <p className="text-[#E6DCC3]">
-                    {t.home.shopDesc}
+                    {t.home.boutiqueDesc}
                   </p>
-                  <Button
-                    variant="outline"
-                    disabled
-                    className="w-full mt-4 border-[#CDBB8A]/30 text-[#CDBB8A]/30 bg-transparent cursor-not-allowed opacity-50"
-                  >
-                    {t.home.viewShop}
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Pastries Card */}
-              <div className="bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#D4A574]/30 transition-all">
-                <div className="h-1 bg-[#D4A574]" />
-                <div className="p-8 space-y-4">
-                  <div className="w-14 h-14 rounded-2xl bg-[#D4A574]/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Utensils className="h-7 w-7 text-[#D4A574]" />
-                  </div>
-                  <h3 className="text-xl font-bold text-[#F2E9D3]">{t.home.pastriesTitle || 'Pâtisserie Solidaire'}</h3>
-                  <p className="text-[#E6DCC3]">
-                    {t.home.pastriesDesc || 'Dégustez nos pâtisseries artisanales solidaires'}
-                  </p>
-                  <Button
-                    variant="outline"
-                    disabled
-                    className="w-full mt-4 border-[#D4A574]/30 text-[#D4A574]/30 bg-transparent cursor-not-allowed opacity-50"
-                  >
-                    {t.home.viewPastries || 'Voir les pâtisseries'}
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Produits du Terroir Card */}
-              <div className="bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#9B8B6F]/30 transition-all">
-                <div className="h-1 bg-[#9B8B6F]" />
-                <div className="p-8 space-y-4">
-                  <div className="w-14 h-14 rounded-2xl bg-[#9B8B6F]/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Sparkles className="h-7 w-7 text-[#9B8B6F]" />
-                  </div>
-                  <h3 className="text-xl font-bold text-[#F2E9D3]">{t.home.produitsTerroir || 'Produits du Terroir'}</h3>
-                  <p className="text-[#E6DCC3]">
-                    {t.home.produitsTerroinDesc || 'Découvrez nos produits authentiques du Maroc'}
-                  </p>
-                  <Button
-                    variant="outline"
-                    disabled
-                    className="w-full mt-4 border-[#9B8B6F]/30 text-[#9B8B6F]/30 bg-transparent cursor-not-allowed opacity-50"
-                  >
-                    {t.home.viewProducts || 'Voir les produits'}
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
+                  <Link href={`/${lang}/boutique`}>
+                    <Button
+                      variant="outline"
+                      className="w-full mt-4 border-[#CDBB8A]/30 text-[#CDBB8A] bg-transparent hover:bg-[#CDBB8A] hover:text-[#4A4829]"
+                    >
+                      {t.home.viewBoutique}
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
                 </div>
               </div>
 

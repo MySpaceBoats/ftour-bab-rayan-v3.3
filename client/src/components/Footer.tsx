@@ -71,7 +71,7 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href={`/${lang}/goodies`} className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
+                <Link href={`/${lang}/boutique`} className="text-[#E6DCC3] hover:text-[#CDBB8A] transition-colors">
                   {t.footer.shop}
                 </Link>
               </li>
