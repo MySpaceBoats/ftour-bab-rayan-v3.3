@@ -35,7 +35,6 @@ export async function createRestaurantReservation(data: {
   date: Date;
   seatsTotal: number;
   qrToken: string;
-  displayChoice?: string;
   companyName?: string;
   groupName?: string;
   groupType?: string;
@@ -52,7 +51,6 @@ export async function createRestaurantReservation(data: {
       date: data.date,
       seatsTotal: data.seatsTotal,
       qrToken: data.qrToken,
-      displayChoice: data.displayChoice || 'jardin',
       companyName: data.companyName,
       groupName: data.groupName,
       groupType: data.groupType,

@@ -158,7 +158,6 @@ export default function AdminRestaurantGroupes() {
                     <TableHead>Type</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead>Places</TableHead>
-                    <TableHead>Espace</TableHead>
                     <TableHead>Statut</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -185,7 +184,6 @@ export default function AdminRestaurantGroupes() {
                           <div className="text-xs text-muted-foreground">{r.phone}</div>
                         </TableCell>
                         <TableCell>{r.seats_total}</TableCell>
-                        <TableCell className="capitalize">{r.display_choice === 'jardin' ? 'Table du Jardin' : 'Brasserie'}</TableCell>
                         <TableCell>{getStatusBadge(r.status)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
