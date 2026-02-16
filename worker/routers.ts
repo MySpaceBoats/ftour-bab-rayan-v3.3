@@ -743,6 +743,7 @@ const volunteersRouter = router({
           dayDate: new Date(day.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
           location: day.location || 'Association Bab Rayan, Casablanca',
           startTime: day.iftar_time || '18h00',
+          volunteerSlots: input.volunteerSlots,
           qrToken: qrToken,
           baseUrl: 'https://www.ftourbabrayan.ma',
         });

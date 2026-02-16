@@ -136,27 +136,36 @@ export interface VolunteerEmailData {
   dayDate: string;
   location: string;
   startTime: string;
+  volunteerSlots?: string[];
   qrToken: string;
   baseUrl: string;
 }
 
 export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { subject: string; html: string } {
   const qrCodeUrl = getQrCodeUrl(data.qrToken, data.baseUrl);
-  
+
+  const slotLabels: Record<string, string> = {
+    preparation_ftour: 'Préparation Ftour',
+    service_ftour: 'Service Ftour',
+  };
+  const slotsHtml = (data.volunteerSlots || []).map(s =>
+    `<li style="margin-bottom: 4px;">${slotLabels[s] || s}</li>`
+  ).join('');
+
   const content = `
     <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
       Merci pour votre inscription !
     </h2>
-    
+
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
       Cher(e) <strong>${data.firstName} ${data.lastName}</strong>,
     </p>
-    
+
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-      Votre inscription en tant que bénévole pour le <strong>Ftour Bab Rayan</strong> a bien été enregistrée. 
+      Votre inscription en tant que bénévole pour le <strong>Ftour Bab Rayan</strong> a bien été enregistrée.
       Nous sommes ravis de vous compter parmi notre équipe !
     </p>
-    
+
     <!-- Détails du jour -->
     <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f0fdf4; border-radius: 8px; margin: 20px 0;">
       <tr>
@@ -166,6 +175,7 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
           <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.dayDate}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Heure :</strong> ${data.startTime}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Lieu :</strong> ${data.location}</p>
+          ${slotsHtml ? `<p style="margin: 10px 0 5px 0; color: #374151;"><strong>Créneaux choisis :</strong></p><ul style="margin: 0; padding-left: 20px; color: #374151;">${slotsHtml}</ul>` : ''}
         </td>
       </tr>
     </table>
