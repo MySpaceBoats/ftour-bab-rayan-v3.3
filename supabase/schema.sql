@@ -264,6 +264,9 @@ CREATE POLICY "Public can read orders" ON orders
 CREATE POLICY "Public can create order items" ON order_items
   FOR INSERT WITH CHECK (true);
 
+CREATE POLICY "Public can read order items" ON order_items
+  FOR SELECT USING (true);
+
 -- Public can create donations
 CREATE POLICY "Public can create donations" ON donations
   FOR INSERT WITH CHECK (true);
@@ -545,6 +548,7 @@ CREATE POLICY "Public can read open terroir pickup slots" ON terroir_pickup_slot
 CREATE POLICY "Public can create terroir orders" ON terroir_orders FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public can read terroir orders" ON terroir_orders FOR SELECT USING (true);
 CREATE POLICY "Public can create terroir order items" ON terroir_order_items FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public can read terroir order items" ON terroir_order_items FOR SELECT USING (true);
 
 CREATE POLICY "Service role full access terroir_products" ON terroir_products FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Service role full access terroir_product_variants" ON terroir_product_variants FOR ALL USING (true) WITH CHECK (true);
@@ -557,4 +561,103 @@ CREATE TRIGGER update_terroir_products_updated_at BEFORE UPDATE ON terroir_produ
 CREATE TRIGGER update_terroir_variants_updated_at BEFORE UPDATE ON terroir_product_variants
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_terroir_orders_updated_at BEFORE UPDATE ON terroir_orders
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- PASTRIES TABLE (Pâtisserie Solidaire)
+-- ============================================
+CREATE TABLE IF NOT EXISTS pastries (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  price DECIMAL(10,2) NOT NULL,
+  image_url TEXT,
+  category VARCHAR(100),
+  active BOOLEAN NOT NULL DEFAULT true,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_pastries_active ON pastries(active);
+
+-- ============================================
+-- PASTRY ORDERS TABLE (Commandes Pâtisserie)
+-- ============================================
+CREATE TABLE IF NOT EXISTS pastry_orders (
+  id SERIAL PRIMARY KEY,
+  reference VARCHAR(50) NOT NULL UNIQUE,
+  customer_name VARCHAR(255) NOT NULL,
+  phone VARCHAR(20) NOT NULL,
+  email VARCHAR(320),
+  items JSONB NOT NULL,
+  total_amount DECIMAL(10,2) NOT NULL,
+  payment_method VARCHAR(20) NOT NULL,
+  payment_status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (payment_status IN ('pending', 'confirmed', 'paid', 'cancelled')),
+  order_status VARCHAR(20) NOT NULL DEFAULT 'reserved' CHECK (order_status IN ('reserved', 'paid', 'handed', 'cancelled')),
+  qr_token VARCHAR(64) UNIQUE,
+  scanned_at TIMESTAMPTZ,
+  scanned_by INTEGER REFERENCES users(id),
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_pastry_orders_reference ON pastry_orders(reference);
+CREATE INDEX idx_pastry_orders_status ON pastry_orders(order_status);
+
+-- ============================================
+-- QR TOKENS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS qr_tokens (
+  id SERIAL PRIMARY KEY,
+  token VARCHAR(64) NOT NULL UNIQUE,
+  scope VARCHAR(50) NOT NULL,
+  entity_id INTEGER,
+  status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'used', 'expired', 'revoked')),
+  max_uses INTEGER NOT NULL DEFAULT 1,
+  uses_count INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_qr_tokens_token ON qr_tokens(token);
+CREATE INDEX idx_qr_tokens_scope ON qr_tokens(scope);
+
+-- ============================================
+-- QR SCANS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS qr_scans (
+  id SERIAL PRIMARY KEY,
+  token VARCHAR(64) NOT NULL,
+  scope VARCHAR(50) NOT NULL,
+  entity_id INTEGER,
+  validation_action VARCHAR(50) NOT NULL,
+  validated_by INTEGER NOT NULL REFERENCES users(id),
+  success BOOLEAN NOT NULL DEFAULT true,
+  error_message TEXT,
+  scanned_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_qr_scans_token ON qr_scans(token);
+
+-- RLS for pastry and QR tables
+ALTER TABLE pastries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pastry_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE qr_tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE qr_scans ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public can read active pastries" ON pastries FOR SELECT USING (active = true);
+CREATE POLICY "Public can create pastry orders" ON pastry_orders FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public can read pastry orders" ON pastry_orders FOR SELECT USING (true);
+
+CREATE POLICY "Service role full access pastries" ON pastries FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access pastry_orders" ON pastry_orders FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access qr_tokens" ON qr_tokens FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access qr_scans" ON qr_scans FOR ALL USING (true) WITH CHECK (true);
+
+CREATE TRIGGER update_pastries_updated_at BEFORE UPDATE ON pastries
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_pastry_orders_updated_at BEFORE UPDATE ON pastry_orders
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

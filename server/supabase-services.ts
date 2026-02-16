@@ -844,12 +844,29 @@ export async function getAllOrdersSupabase() {
   const client = getSupabaseAdminClient();
   if (!client) return [];
 
-  const { data, error } = await client
+  // Try with nested joins first, fall back to simple query if it fails
+  let data: any[] | null = null;
+  let joinSucceeded = true;
+
+  const { data: joinData, error: joinError } = await client
     .from('orders')
     .select('*, order_items(*, goodies(name))')
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (joinError) {
+    console.error('[Orders] Nested join query failed, falling back to simple query:', joinError.message);
+    joinSucceeded = false;
+    // Fallback: query orders without nested joins
+    const { data: simpleData, error: simpleError } = await client
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (simpleError) throw simpleError;
+    data = simpleData;
+  } else {
+    data = joinData;
+  }
 
   return data?.map((o: any) => ({
     id: o.id,
@@ -869,14 +886,14 @@ export async function getAllOrdersSupabase() {
     deliveryInstructions: o.delivery_instructions,
     paymentMethod: o.payment_method,
     createdAt: new Date(o.created_at),
-    items: o.order_items?.map((i: { id: number; goodie_id: number; quantity: number; unit_price: string; total_price: string; goodies: { name: string } | null }) => ({
+    items: joinSucceeded ? (o.order_items?.map((i: { id: number; goodie_id: number; quantity: number; unit_price: string; total_price: string; goodies: { name: string } | null }) => ({
       id: i.id,
       goodieId: i.goodie_id,
       goodieName: i.goodies?.name,
       quantity: i.quantity,
       unitPrice: parseFloat(i.unit_price),
       totalPrice: parseFloat(i.total_price),
-    })) || [],
+    })) || []) : [],
   })) || [];
 }
 

@@ -19,7 +19,7 @@ export default function AdminCommandes() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<number | null>(null);
 
-  const { data: orders, isLoading, refetch } = trpc.orders.listAll.useQuery();
+  const { data: orders, isLoading, error, refetch } = trpc.orders.listAll.useQuery();
 
   const updateStatusMutation = trpc.orders.updateStatus.useMutation({
     onSuccess: () => {
@@ -32,13 +32,13 @@ export default function AdminCommandes() {
   });
 
   const filteredOrders = orders?.filter((o: any) => {
-    const matchesSearch = searchQuery === "" || 
-      o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.customerEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.orderReference.toLowerCase().includes(searchQuery.toLowerCase());
-    
+    const matchesSearch = searchQuery === "" ||
+      (o.customerName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (o.customerEmail || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (o.orderReference || '').toLowerCase().includes(searchQuery.toLowerCase());
+
     const matchesStatus = statusFilter === "all" || o.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -175,6 +175,19 @@ export default function AdminCommandes() {
           </Card>
         </div>
 
+        {/* Error */}
+        {error && (
+          <Card className="mb-6 border-red-200 bg-red-50">
+            <CardContent className="p-4">
+              <p className="text-red-600 font-medium">Erreur lors du chargement des commandes</p>
+              <p className="text-red-500 text-sm mt-1">{error.message}</p>
+              <Button variant="outline" size="sm" className="mt-2" onClick={() => refetch()}>
+                Réessayer
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Table */}
         <Card>
           <CardContent className="p-0">
@@ -307,8 +320,7 @@ export default function AdminCommandes() {
                 {currentOrder.items?.map((item: any, index: number) => (
                   <div key={index} className="flex justify-between py-1">
                     <span>
-                      {item.goodie?.name || 'Article'} 
-                      {item.variant && ` (${item.variant.size || ''} ${item.variant.color || ''})`}
+                      {item.goodieName || 'Article'}
                       <span className="text-muted-foreground"> x{item.quantity}</span>
                     </span>
                     <span>{item.unitPrice} DH</span>
