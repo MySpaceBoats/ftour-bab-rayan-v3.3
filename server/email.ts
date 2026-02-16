@@ -238,10 +238,21 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
           <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.dayDate}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Heure :</strong> ${data.startTime}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Lieu :</strong> ${data.location}</p>
-          ${slotsHtml ? `<p style="margin: 10px 0 5px 0; color: #374151;"><strong>Créneaux choisis :</strong></p><ul style="margin: 0; padding-left: 20px; color: #374151;">${slotsHtml}</ul>` : ''}
         </td>
       </tr>
     </table>
+
+    <!-- Créneaux choisis -->
+    ${slotsHtml ? `
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #eff6ff; border-radius: 8px; margin: 20px 0; border: 1px solid #bfdbfe;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #1e40af; margin: 0 0 12px 0; font-size: 18px;">🕐 Vos créneaux choisis</h3>
+          <ul style="margin: 0; padding-left: 20px; color: #374151; font-size: 15px;">${slotsHtml}</ul>
+        </td>
+      </tr>
+    </table>
+    ` : ''}
 
     <!-- QR Code -->
     <div style="text-align: center; margin: 30px 0; padding: 20px; background-color: #ffffff; border: 2px dashed #166534; border-radius: 8px;">
