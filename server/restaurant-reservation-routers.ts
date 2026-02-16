@@ -32,7 +32,7 @@ export const restaurantReservationsRouter = router({
           email: z.string().email("Email invalide"),
           phone: z.string().min(1, "Téléphone requis"),
           date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide"),
-          participantsCount: z.number().int().min(1).max(12),
+          participantsCount: z.number().int().min(5).max(12),
         })
       )
       .mutation(async ({ input }) => {
@@ -229,7 +229,7 @@ export const restaurantReservationsRouter = router({
           phone: z.string().min(1, "Téléphone requis"),
           groupType: z.string().optional(),
           date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide"),
-          participantsCount: z.number().int().min(1),
+          participantsCount: z.number().int().min(5),
         })
       )
       .mutation(async ({ input }) => {
@@ -398,6 +398,80 @@ export const restaurantReservationsRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Erreur lors du refus',
+        });
+      }
+    }),
+
+  // ============================================
+  // PUBLIC: GET RESERVATION BY QR TOKEN (for check-in page)
+  // ============================================
+
+  getByQrToken: publicProcedure
+    .input(z.object({ qrToken: z.string() }))
+    .query(async ({ input }) => {
+      const reservation = await reservationServices.getRestaurantReservationByQrToken(input.qrToken);
+      if (!reservation) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Réservation non trouvée' });
+      }
+      return reservation;
+    }),
+
+  // ============================================
+  // ADMIN: LIST & MANAGE RESERVATIONS (MySQL/Drizzle)
+  // ============================================
+
+  adminListParticuliers: protectedProcedure
+    .query(async ({ ctx }) => {
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_particuliers'];
+      if (!allowedRoles.includes(ctx.user?.role || '')) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      }
+      return await reservationServices.listRestaurantReservations({ type: 'particulier' });
+    }),
+
+  adminListGroupes: protectedProcedure
+    .query(async ({ ctx }) => {
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_groupes'];
+      if (!allowedRoles.includes(ctx.user?.role || '')) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      }
+      return await reservationServices.listRestaurantReservations({ type: 'groupe' });
+    }),
+
+  adminListEntreprises: protectedProcedure
+    .query(async ({ ctx }) => {
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_entreprises'];
+      if (!allowedRoles.includes(ctx.user?.role || '')) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      }
+      return await reservationServices.listRestaurantReservations({ type: 'entreprise' });
+    }),
+
+  adminUpdateStatus: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      status: z.enum(['pending_validation', 'validated_pending_payment', 'paid_confirmed', 'refused', 'cancelled', 'completed', 'no_show']),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes'];
+      if (!allowedRoles.includes(ctx.user?.role || '')) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      }
+
+      try {
+        const updated = await reservationServices.updateRestaurantReservationStatus(input.id, input.status);
+
+        // Activate QR when confirmed
+        if (input.status === 'paid_confirmed') {
+          await reservationServices.activateQrCode(input.id);
+        }
+
+        return { success: true, reservation: updated };
+      } catch (error) {
+        console.error("[Admin Update Status] Error:", error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Erreur lors de la mise à jour du statut',
         });
       }
     }),
