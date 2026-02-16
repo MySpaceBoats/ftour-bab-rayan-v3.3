@@ -148,7 +148,7 @@ export const pastryOrdersRouter = router({
         price: z.number().positive(),
       })),
       totalAmount: z.number().positive(),
-      paymentMethod: z.enum(['bank_transfer', 'cheque', 'cash', 'paypal', 'cmi']),
+      paymentMethod: z.enum(['bank_transfer', 'cheque', 'cash', 'cmi']),
       channel: z.enum(['online', 'on_site_qr', 'on_site_admin']).default('online'),
     }))
     .mutation(async ({ input }) => {

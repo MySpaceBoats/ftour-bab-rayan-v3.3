@@ -26,7 +26,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-export default function AdminPatisserieCatalogue() {
+export default function AdminPastryCatalog() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingPastry, setEditingPastry] = useState<any>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -39,8 +39,8 @@ export default function AdminPatisserieCatalogue() {
     price: 0,
     imageUrl: "",
     category: "",
-    active: true,
     sortOrder: 0,
+    active: true,
   });
 
   const { data: pastries, isLoading, refetch } = trpc.pastries.list.useQuery();
@@ -54,7 +54,7 @@ export default function AdminPatisserieCatalogue() {
 
   const createMutation = trpc.pastries.create.useMutation({
     onSuccess: () => {
-      toast.success("Produit créé avec succès");
+      toast.success("Pâtisserie créée avec succès");
       setShowCreateDialog(false);
       resetForm();
       refetch();
@@ -66,7 +66,7 @@ export default function AdminPatisserieCatalogue() {
 
   const updateMutation = trpc.pastries.update.useMutation({
     onSuccess: () => {
-      toast.success("Produit mis à jour");
+      toast.success("Pâtisserie mise à jour");
       setEditingPastry(null);
       resetForm();
       refetch();
@@ -78,7 +78,7 @@ export default function AdminPatisserieCatalogue() {
 
   const deleteMutation = trpc.pastries.delete.useMutation({
     onSuccess: () => {
-      toast.success("Produit supprimé");
+      toast.success("Pâtisserie supprimée");
       refetch();
     },
     onError: (error: any) => {
@@ -93,8 +93,8 @@ export default function AdminPatisserieCatalogue() {
       price: 0,
       imageUrl: "",
       category: "",
-      active: true,
       sortOrder: 0,
+      active: true,
     });
     setImagePreview(null);
   };
@@ -125,7 +125,7 @@ export default function AdminPatisserieCatalogue() {
           fileName: file.name,
           fileType: file.type,
           fileData: base64,
-          folder: 'patisserie',
+          folder: 'pastries',
         });
 
         setFormData(prev => ({ ...prev, imageUrl: result.url }));
@@ -152,27 +152,40 @@ export default function AdminPatisserieCatalogue() {
       toast.error("Veuillez remplir les champs obligatoires");
       return;
     }
-    createMutation.mutate(formData);
+    createMutation.mutate({
+      name: formData.name,
+      description: formData.description || undefined,
+      price: formData.price,
+      imageUrl: formData.imageUrl || undefined,
+      category: formData.category || undefined,
+      sortOrder: formData.sortOrder,
+    });
   };
 
   const handleUpdate = () => {
     if (!editingPastry) return;
     updateMutation.mutate({
       id: editingPastry.id,
-      ...formData,
+      name: formData.name || undefined,
+      description: formData.description || undefined,
+      price: formData.price || undefined,
+      imageUrl: formData.imageUrl || undefined,
+      category: formData.category || undefined,
+      active: formData.active,
+      sortOrder: formData.sortOrder,
     });
   };
 
   const openEditDialog = (pastry: any) => {
     setEditingPastry(pastry);
     setFormData({
-      name: pastry.name,
+      name: pastry.name || "",
       description: pastry.description || "",
       price: pastry.price || 0,
       imageUrl: pastry.image_url || "",
       category: pastry.category || "",
-      active: pastry.active ?? true,
       sortOrder: pastry.sort_order || 0,
+      active: pastry.active ?? true,
     });
     setImagePreview(pastry.image_url || null);
   };
@@ -283,12 +296,12 @@ export default function AdminPatisserieCatalogue() {
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                Ajouter un produit
+                Ajouter une pâtisserie
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Nouveau produit pâtisserie</DialogTitle>
+                <DialogTitle>Nouvelle pâtisserie</DialogTitle>
               </DialogHeader>
 
               <div className="space-y-4">
@@ -297,7 +310,7 @@ export default function AdminPatisserieCatalogue() {
                   <Input
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Gâteau au chocolat, Tarte aux fruits..."
+                    placeholder="Cornes de gazelle, Chebakia..."
                   />
                 </div>
 
@@ -318,7 +331,7 @@ export default function AdminPatisserieCatalogue() {
                       type="number"
                       value={formData.price === 0 ? '' : formData.price}
                       onChange={(e) => setFormData({ ...formData, price: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
-                      placeholder="100"
+                      placeholder="50"
                       min="0"
                       step="0.01"
                     />
@@ -346,14 +359,12 @@ export default function AdminPatisserieCatalogue() {
                   />
                 </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label>Actif</Label>
-                    <Switch
-                      checked={formData.active}
-                      onCheckedChange={(checked) => setFormData({ ...formData, active: checked })}
-                    />
-                  </div>
+                <div className="flex items-center justify-between">
+                  <Label>Actif</Label>
+                  <Switch
+                    checked={formData.active}
+                    onCheckedChange={(checked) => setFormData({ ...formData, active: checked })}
+                  />
                 </div>
 
                 <Button
@@ -366,7 +377,7 @@ export default function AdminPatisserieCatalogue() {
                   ) : (
                     <Plus className="h-4 w-4 mr-2" />
                   )}
-                  Créer le produit
+                  Créer la pâtisserie
                 </Button>
               </div>
             </DialogContent>
@@ -393,7 +404,7 @@ export default function AdminPatisserieCatalogue() {
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-muted-foreground">
+              <div className="text-2xl font-bold text-red-600">
                 {pastries?.filter((p: any) => !p.active).length || 0}
               </div>
               <div className="text-xs text-muted-foreground">Inactifs</div>
@@ -415,7 +426,7 @@ export default function AdminPatisserieCatalogue() {
                     <TableRow>
                       <TableHead>Produit</TableHead>
                       <TableHead>Prix</TableHead>
-                      <TableHead>Catégorie</TableHead>
+                      <TableHead>Ordre</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -441,7 +452,7 @@ export default function AdminPatisserieCatalogue() {
                           </div>
                         </TableCell>
                         <TableCell className="font-medium">{pastry.price} DH</TableCell>
-                        <TableCell>{pastry.category || "-"}</TableCell>
+                        <TableCell>{pastry.sort_order || 0}</TableCell>
                         <TableCell>
                           <Badge variant={pastry.active ? "default" : "secondary"}>
                             {pastry.active ? "Actif" : "Inactif"}
@@ -462,7 +473,7 @@ export default function AdminPatisserieCatalogue() {
                               </DialogTrigger>
                               <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                                 <DialogHeader>
-                                  <DialogTitle>Modifier le produit</DialogTitle>
+                                  <DialogTitle>Modifier la pâtisserie</DialogTitle>
                                 </DialogHeader>
 
                                 <div className="space-y-4">
@@ -512,6 +523,7 @@ export default function AdminPatisserieCatalogue() {
                                     <Input
                                       value={formData.category}
                                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                      placeholder="Gâteaux, Tartes, Viennoiseries..."
                                     />
                                   </div>
 
@@ -557,10 +569,10 @@ export default function AdminPatisserieCatalogue() {
                               </AlertDialogTrigger>
                               <AlertDialogContent>
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>Supprimer ce produit ?</AlertDialogTitle>
+                                  <AlertDialogTitle>Supprimer cette pâtisserie ?</AlertDialogTitle>
                                   <AlertDialogDescription>
                                     Êtes-vous sûr de vouloir supprimer "{pastry.name}" ?
-                                    Cette action est irréversible.
+                                    Cette action désactivera le produit.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -584,8 +596,8 @@ export default function AdminPatisserieCatalogue() {
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <CakeSlice className="h-12 w-12 mb-4" />
-                <p>Aucun produit trouvé</p>
-                <p className="text-sm">Créez votre premier produit pour commencer</p>
+                <p>Aucune pâtisserie trouvée</p>
+                <p className="text-sm">Créez votre première pâtisserie pour commencer</p>
               </div>
             )}
           </CardContent>

@@ -140,7 +140,7 @@ const sections: SectionDefinition[] = [
       },
       {
         label: "Catalogue Pâtisserie",
-        description: "Gérer les produits de pâtisserie, prix et images",
+        description: "Ajouter, modifier et gérer les produits pâtisserie",
         route: "/admin/patisserie/catalogue",
         icon: CakeSlice,
         iconColor: "text-amber-600",

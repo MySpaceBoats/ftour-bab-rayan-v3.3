@@ -50,7 +50,7 @@ import AdminScanReservation from "@/features/restaurant/admin/AdminScanReservati
 import Pastries from "@/features/patisserie/pages/Pastries";
 import BuyPastry from "@/features/patisserie/pages/BuyPastry";
 import AdminPastries from "@/features/patisserie/admin/AdminPastries";
-import AdminPatisserieCatalogue from "@/features/patisserie/admin/AdminPatisserieCatalogue";
+import AdminPastryCatalog from "@/features/patisserie/admin/AdminPastryCatalog";
 
 // ============================================
 // TERROIR — features/terroir
@@ -160,7 +160,7 @@ function LocalizedRoutes() {
       {/* Admin Pâtisserie */}
       <Route path="/admin/patisserie" component={AdminPastries} />
       <Route path="/admin/pastries" component={AdminPastries} />
-      <Route path="/admin/patisserie/catalogue" component={AdminPatisserieCatalogue} />
+      <Route path="/admin/patisserie/catalogue" component={AdminPastryCatalog} />
 
       {/* Admin Terroir */}
       <Route path="/admin/terroir/products" component={AdminTerroirProducts} />

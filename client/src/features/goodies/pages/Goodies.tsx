@@ -477,7 +477,7 @@ export default function Goodies() {
             <PaymentMethodSelector
               value={checkoutForm.paymentMethod}
               onChange={(method) => setCheckoutForm(prev => ({ ...prev, paymentMethod: method }))}
-              availableMethods={['bank_transfer', 'check', 'cash', 'paypal']}
+              availableMethods={['bank_transfer', 'cheque', 'cash']}
               showDescriptions={true}
             />
             

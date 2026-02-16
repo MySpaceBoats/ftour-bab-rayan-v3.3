@@ -196,7 +196,7 @@ export default function BuyPastry() {
                     <PaymentMethodSelector
                       value={formData.paymentMethod}
                       onChange={(method: any) => setFormData({ ...formData, paymentMethod: method })}
-                      availableMethods={['cash', 'bank_transfer', 'check', 'paypal'] as any}
+                      availableMethods={['cash', 'bank_transfer', 'cheque']}
                     />
                   </div>
 
