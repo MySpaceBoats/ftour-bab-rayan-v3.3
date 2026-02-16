@@ -9,7 +9,7 @@ import { useI18n } from "@/i18n";
 import { useCart } from "@/contexts/CartContext";
 import {
   Menu, Heart, Users, ShoppingBag, Home, Info, Phone, Building2,
-  LogOut, LayoutDashboard, Search, Globe, X, Lock, ShoppingCart
+  LogOut, LayoutDashboard, Search, Globe, X, Lock, ShoppingCart, UtensilsCrossed
 } from "lucide-react";
 
 export default function Navbar() {
@@ -36,6 +36,7 @@ export default function Navbar() {
     { href: localizedHref('/evenement'), label: t.nav.event, icon: Info },
     { href: localizedHref('/benevole'), label: t.nav.volunteer, icon: Users },
     { href: localizedHref('/boutique'), label: t.nav.boutique, icon: ShoppingBag },
+    { href: localizedHref('/reservation'), label: t.nav.restaurant, icon: UtensilsCrossed },
     { href: localizedHref('/association'), label: t.association.title, icon: Building2 },
     { href: localizedHref('/contact'), label: t.nav.contact, icon: Phone },
   ];
