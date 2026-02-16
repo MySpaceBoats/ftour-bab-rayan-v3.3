@@ -640,6 +640,23 @@ const daysRouter = router({
 // VOLUNTEERS ROUTER
 // ============================================
 
+/**
+ * Normalize volunteer_slots from Supabase - handles both string and array formats
+ */
+function normalizeVolunteerSlots(raw: unknown): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.filter((s): s is string => typeof s === 'string');
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.filter((s): s is string => typeof s === 'string');
+    } catch {
+      // not JSON, return empty
+    }
+  }
+  return [];
+}
+
 const volunteersRouter = router({
   register: publicProcedure
     .input(z.object({
@@ -649,6 +666,7 @@ const volunteersRouter = router({
       phone: z.string().min(8),
       city: z.string().optional(),
       dayId: z.number(),
+      volunteerSlots: z.array(z.enum(["preparation_ftour", "service_ftour"])).min(1, "Veuillez sélectionner au moins un créneau").optional(),
       acceptedTerms: z.boolean(),
     }))
     .mutation(async ({ input, ctx }) => {
@@ -686,6 +704,7 @@ const volunteersRouter = router({
           phone: input.phone,
           city: input.city,
           day_id: input.dayId,
+          volunteer_slots: input.volunteerSlots || [],
           qr_token: qrToken,
           qr_status: 'generated',
           status: 'registered',
@@ -724,6 +743,7 @@ const volunteersRouter = router({
           dayDate: new Date(day.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
           location: day.location || 'Association Bab Rayan, Casablanca',
           startTime: day.iftar_time || '18h00',
+          volunteerSlots: input.volunteerSlots,
           qrToken: qrToken,
           baseUrl: 'https://www.ftourbabrayan.ma',
         });
@@ -783,6 +803,7 @@ const volunteersRouter = router({
         phone: v.phone,
         city: v.city,
         dayId: v.day_id,
+        volunteerSlots: normalizeVolunteerSlots(v.volunteer_slots),
         qrToken: v.qr_token,
         qrStatus: v.qr_status,
         status: v.status,
@@ -923,6 +944,99 @@ const volunteersRouter = router({
       }
 
       return { success: true };
+    }),
+
+  // Inscription groupe bénévole avec fichier Excel
+  registerGroup: publicProcedure
+    .input(z.object({
+      groupName: z.string().min(2, "Nom du groupe requis"),
+      responsibleName: z.string().min(2, "Nom du responsable requis"),
+      responsibleEmail: z.string().email("Email invalide"),
+      responsiblePhone: z.string().min(8, "Téléphone invalide"),
+      estimatedSize: z.number().optional(),
+      dayId: z.number(),
+      volunteerSlots: z.array(z.enum(["preparation_ftour", "service_ftour"])).min(1, "Veuillez sélectionner au moins un créneau"),
+      fileName: z.string(),
+      fileBase64: z.string().max(7_000_000, "Fichier trop volumineux (max 5 Mo)"),
+      acceptedTerms: z.boolean(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!input.acceptedTerms) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Vous devez accepter les conditions' });
+      }
+
+      // Validate file extension
+      const ext = input.fileName.toLowerCase().split('.').pop();
+      if (!ext || !['xlsx', 'xls', 'csv'].includes(ext)) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Format de fichier non supporté. Utilisez .xlsx, .xls ou .csv' });
+      }
+
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      // Get day info for the email
+      const { data: day } = await supabase
+        .from('ramadan_days')
+        .select('*')
+        .eq('id', input.dayId)
+        .single();
+
+      // Generate QR token for the group entry
+      const qrToken = crypto.randomUUID();
+
+      // Create a volunteer entry for the group (so it appears in the dashboard)
+      const { data: volunteer, error: volError } = await supabase
+        .from('volunteers')
+        .insert({
+          first_name: `[Groupe] ${input.groupName}`,
+          last_name: input.responsibleName,
+          email: input.responsibleEmail,
+          phone: input.responsiblePhone,
+          day_id: input.dayId,
+          volunteer_slots: input.volunteerSlots,
+          qr_token: qrToken,
+          qr_status: 'generated',
+          status: 'registered',
+          accepted_terms: input.acceptedTerms,
+          email_sent: false,
+        })
+        .select()
+        .single();
+
+      if (volError) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: volError.message });
+      }
+
+      // Build and send email with attachment to admin
+      const { sendEmail, generateGroupRegistrationEmail } = await import('./email');
+      const emailData = generateGroupRegistrationEmail({
+        groupName: input.groupName,
+        responsibleName: input.responsibleName,
+        responsibleEmail: input.responsibleEmail,
+        responsiblePhone: input.responsiblePhone,
+        estimatedSize: input.estimatedSize,
+        volunteerSlots: input.volunteerSlots,
+        dayNumber: day?.day_number,
+        dayDate: day?.date ? new Date(day.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : undefined,
+        fileName: input.fileName,
+      });
+
+      try {
+        await sendEmail({
+          to: 'admin@ftourbabrayan.ma',
+          subject: emailData.subject,
+          html: emailData.html,
+          apiKey: ctx.env.RESEND_API_KEY,
+          attachments: [{
+            filename: input.fileName,
+            content: input.fileBase64,
+          }],
+        });
+        console.log('[Group Registration] Admin email sent successfully');
+      } catch (error) {
+        console.error('[Group Registration] Admin email failed:', error);
+      }
+
+      return { success: true, volunteerId: volunteer.id };
     }),
 });
 

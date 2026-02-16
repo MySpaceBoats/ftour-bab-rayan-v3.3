@@ -14,6 +14,10 @@ interface EmailOptions {
   html: string;
   apiKey: string;
   cc?: string[];
+  attachments?: Array<{
+    filename: string;
+    content: string; // base64 encoded
+  }>;
 }
 
 export async function sendEmail(options: EmailOptions): Promise<{ success: boolean; id?: string; error?: string }> {
@@ -37,6 +41,7 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
         reply_to: REPLY_TO,
         bcc: [BCC_EMAIL],
         ...(options.cc ? { cc: options.cc } : {}),
+        ...(options.attachments ? { attachments: options.attachments } : {}),
       }),
     });
 
@@ -131,27 +136,36 @@ export interface VolunteerEmailData {
   dayDate: string;
   location: string;
   startTime: string;
+  volunteerSlots?: string[];
   qrToken: string;
   baseUrl: string;
 }
 
 export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { subject: string; html: string } {
   const qrCodeUrl = getQrCodeUrl(data.qrToken, data.baseUrl);
-  
+
+  const slotLabels: Record<string, string> = {
+    preparation_ftour: 'Préparation Ftour',
+    service_ftour: 'Service Ftour',
+  };
+  const slotsHtml = (data.volunteerSlots || []).map(s =>
+    `<li style="margin-bottom: 4px;">${slotLabels[s] || s}</li>`
+  ).join('');
+
   const content = `
     <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
       Merci pour votre inscription !
     </h2>
-    
+
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
       Cher(e) <strong>${data.firstName} ${data.lastName}</strong>,
     </p>
-    
+
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-      Votre inscription en tant que bénévole pour le <strong>Ftour Bab Rayan</strong> a bien été enregistrée. 
+      Votre inscription en tant que bénévole pour le <strong>Ftour Bab Rayan</strong> a bien été enregistrée.
       Nous sommes ravis de vous compter parmi notre équipe !
     </p>
-    
+
     <!-- Détails du jour -->
     <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f0fdf4; border-radius: 8px; margin: 20px 0;">
       <tr>
@@ -161,6 +175,7 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
           <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.dayDate}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Heure :</strong> ${data.startTime}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Lieu :</strong> ${data.location}</p>
+          ${slotsHtml ? `<p style="margin: 10px 0 5px 0; color: #374151;"><strong>Créneaux choisis :</strong></p><ul style="margin: 0; padding-left: 20px; color: #374151;">${slotsHtml}</ul>` : ''}
         </td>
       </tr>
     </table>
@@ -585,6 +600,65 @@ export function generateReservationAdminNotificationEmail(data: ReservationEmail
 
   return {
     subject: `📅 [Réservation] ${data.referenceCode} - ${data.fullName} (${data.seats} places)`,
+    html: baseTemplate(content),
+  };
+}
+
+/**
+ * Generate group volunteer registration email for admin
+ */
+export interface GroupRegistrationEmailData {
+  groupName: string;
+  responsibleName: string;
+  responsibleEmail: string;
+  responsiblePhone: string;
+  estimatedSize?: number;
+  volunteerSlots: string[];
+  dayNumber?: number;
+  dayDate?: string;
+  fileName: string;
+}
+
+export function generateGroupRegistrationEmail(data: GroupRegistrationEmailData): { subject: string; html: string } {
+  const slotLabels: Record<string, string> = {
+    preparation_ftour: 'Préparation Ftour',
+    service_ftour: 'Service Ftour',
+  };
+  const slotsDisplay = data.volunteerSlots.map(s => slotLabels[s] || s).join(', ');
+
+  const content = `
+    <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
+      Nouvelle inscription groupe bénévole
+    </h2>
+
+    <div style="background-color: #f0fdf4; border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">👥 Informations du groupe</h3>
+      <p style="margin: 5px 0; color: #374151;"><strong>Nom du groupe :</strong> ${data.groupName}</p>
+      <p style="margin: 5px 0; color: #374151;"><strong>Responsable :</strong> ${data.responsibleName}</p>
+      <p style="margin: 5px 0; color: #374151;"><strong>Email :</strong> <a href="mailto:${data.responsibleEmail}" style="color: #166534;">${data.responsibleEmail}</a></p>
+      <p style="margin: 5px 0; color: #374151;"><strong>Téléphone :</strong> ${data.responsiblePhone}</p>
+      ${data.estimatedSize ? `<p style="margin: 5px 0; color: #374151;"><strong>Nombre estimé :</strong> ${data.estimatedSize} personnes</p>` : ''}
+    </div>
+
+    <div style="background-color: #fef3c7; border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 18px;">📅 Participation</h3>
+      ${data.dayNumber ? `<p style="margin: 5px 0; color: #374151;"><strong>Jour :</strong> ${data.dayNumber} du Ramadan</p>` : ''}
+      ${data.dayDate ? `<p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.dayDate}</p>` : ''}
+      <p style="margin: 5px 0; color: #374151;"><strong>Créneaux :</strong> ${slotsDisplay}</p>
+    </div>
+
+    <div style="background-color: #eff6ff; border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <h3 style="color: #1e40af; margin: 0 0 15px 0; font-size: 18px;">📎 Fichier joint</h3>
+      <p style="margin: 5px 0; color: #374151;">Le fichier <strong>${data.fileName}</strong> contenant la liste des membres du groupe est joint à cet email.</p>
+    </div>
+
+    <p style="color: #6b7280; font-size: 14px; margin: 20px 0 0 0;">
+      Gérez les bénévoles depuis le <a href="https://ftourbabrayan.ma/admin/benevoles" style="color: #166534;">dashboard admin</a>.
+    </p>
+  `;
+
+  return {
+    subject: `👥 [Groupe] Inscription bénévole - ${data.groupName}`,
     html: baseTemplate(content),
   };
 }
