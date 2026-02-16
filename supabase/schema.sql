@@ -362,6 +362,7 @@ CREATE TABLE IF NOT EXISTS restaurant_reservations (
   reference VARCHAR(50) NOT NULL UNIQUE,
   type VARCHAR(20) NOT NULL CHECK (type IN ('particulier', 'entreprise', 'groupe')),
   seats_total INTEGER NOT NULL,
+  date DATE,
   -- Contact
   name VARCHAR(255) NOT NULL,
   phone VARCHAR(20) NOT NULL,
@@ -372,8 +373,8 @@ CREATE TABLE IF NOT EXISTS restaurant_reservations (
   group_name VARCHAR(255),
   group_type VARCHAR(50),
   -- Status
-  status VARCHAR(30) NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted', 'pending_confirmation', 'confirmed', 'rejected', 'cancelled', 'completed', 'no_show')),
-  payment_status VARCHAR(20) NOT NULL DEFAULT 'not_applicable' CHECK (payment_status IN ('not_applicable', 'pending', 'paid', 'failed', 'refunded')),
+  status VARCHAR(30) NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted', 'pending_confirmation', 'pending_validation', 'validated_pending_payment', 'confirmed', 'paid_confirmed', 'rejected', 'refused', 'cancelled', 'completed', 'no_show', 'checked_in')),
+  payment_status VARCHAR(20) NOT NULL DEFAULT 'not_applicable' CHECK (payment_status IN ('not_applicable', 'not_requested', 'pending', 'pending_payment', 'paid', 'failed', 'refunded')),
   payment_amount DECIMAL(10,2),
   payment_provider VARCHAR(50),
   payment_reference VARCHAR(100),
@@ -383,7 +384,7 @@ CREATE TABLE IF NOT EXISTS restaurant_reservations (
   -- Hold expiration
   expires_at TIMESTAMPTZ,
   -- Tracking
-  processed_by INTEGER REFERENCES users(id),
+  processed_by INTEGER,
   processed_at TIMESTAMPTZ,
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -392,8 +393,8 @@ CREATE TABLE IF NOT EXISTS restaurant_reservations (
 
 CREATE INDEX idx_restaurant_reservations_reference ON restaurant_reservations(reference);
 CREATE INDEX idx_restaurant_reservations_type ON restaurant_reservations(type);
-CREATE INDEX idx_restaurant_reservations_slot_id ON restaurant_reservations(slot_id);
 CREATE INDEX idx_restaurant_reservations_status ON restaurant_reservations(status);
+CREATE INDEX idx_restaurant_reservations_date ON restaurant_reservations(date);
 
 -- ============================================
 -- RESTAURANT RESERVATION ALLOCATIONS TABLE
