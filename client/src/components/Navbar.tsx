@@ -160,13 +160,6 @@ export default function Navbar() {
         <div className="container flex h-16 items-center justify-between">
           {/* Logo */}
           <Link href={localizedHref('/')} className="flex items-center gap-3">
-            <img
-              src="/logo-bab-rayan.svg"
-              alt="Ftour Bab Rayan"
-              className="h-10 w-10"
-              width={40}
-              height={40}
-            />
             <div className="flex flex-col">
               <span className="text-lg font-bold leading-none text-[#F2E9D3]" style={{ fontFamily: 'Caveat, cursive' }}>
                 {t.home.heroTitle}
