@@ -129,6 +129,11 @@ function getQrCodeUrl(token: string, baseUrl: string): string {
   return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(checkinUrl)}`;
 }
 
+function getReservationQrCodeUrl(token: string, baseUrl: string): string {
+  const checkinUrl = `${baseUrl}/checkin-reservation/${token}`;
+  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(checkinUrl)}`;
+}
+
 /**
  * Template de base pour tous les emails
  */
@@ -645,8 +650,8 @@ export interface ReservationConfirmationEmailData {
 }
 
 export function generateReservationConfirmationEmail(data: ReservationConfirmationEmailData): { subject: string; html: string } {
-  const qrCodeUrl = getQrCodeUrl(data.qrToken, data.baseUrl);
-  const checkinUrl = `${data.baseUrl}/checkin/${data.qrToken}`;
+  const qrCodeUrl = getReservationQrCodeUrl(data.qrToken, data.baseUrl);
+  const checkinUrl = `${data.baseUrl}/checkin-reservation/${data.qrToken}`;
 
   const content = `
     <h2 style="color: #5d5a3c; margin: 0 0 20px 0; font-size: 24px;">
@@ -831,7 +836,7 @@ export function generateParticulierReservationConfirmedEmail(data: ParticulierRe
     <!-- QR Code -->
     <div style="text-align: center; margin: 30px 0; padding: 20px; background-color: #ffffff; border: 2px dashed #d4a574; border-radius: 8px;">
       <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">🎛 Votre QR Code d'accès</h3>
-      <img src="${getQrCodeUrl(data.qrToken, data.baseUrl)}" alt="QR Code" style="width: 200px; height: 200px; margin: 10px 0;" />
+      <img src="${getReservationQrCodeUrl(data.qrToken, data.baseUrl)}" alt="QR Code" style="width: 200px; height: 200px; margin: 10px 0;" />
       <p style="color: #6b7280; font-size: 14px; margin: 10px 0 0 0;">
         Présentez ce QR code à l'entrée le jour de votre visite
       </p>

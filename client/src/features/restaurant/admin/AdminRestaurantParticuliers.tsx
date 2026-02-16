@@ -14,16 +14,6 @@ import { ArrowLeft, Search, Loader2, CheckCircle, XCircle,
 } from "lucide-react";
 import { ReservationStats } from "./ReservationStats";
 
-const statusLabels: Record<string, string> = {
-  submitted: "Soumise",
-  pending_confirmation: "En attente",
-  confirmed: "Confirmée",
-  rejected: "Refusée",
-  cancelled: "Annulée",
-  completed: "Terminée",
-  no_show: "No show",
-};
-
 export default function AdminRestaurantParticuliers() {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,11 +22,31 @@ export default function AdminRestaurantParticuliers() {
   const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_particuliers'];
   const hasAccess = user?.role && allowedRoles.includes(user.role);
 
-  const { data: reservations, isLoading, refetch } = trpc.restaurantModule.adminListParticuliers.useQuery(undefined, {
+  const { data: reservations, isLoading, refetch } = trpc.restaurantReservations.adminListParticuliers.useQuery(undefined, {
     enabled: !!hasAccess,
   });
 
-  const updateStatusMutation = trpc.restaurantModule.adminUpdateStatus.useMutation({
+  const validateMutation = trpc.restaurantReservations.validate.useMutation({
+    onSuccess: () => {
+      toast.success("Réservation validée, email de confirmation envoyé");
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const refuseMutation = trpc.restaurantReservations.refuse.useMutation({
+    onSuccess: () => {
+      toast.success("Réservation refusée, email de notification envoyé");
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const updateStatusMutation = trpc.restaurantReservations.adminUpdateStatus.useMutation({
     onSuccess: () => {
       toast.success("Statut mis à jour");
       refetch();
@@ -48,10 +58,10 @@ export default function AdminRestaurantParticuliers() {
 
   const stats = {
     total: reservations?.length || 0,
-    pending: reservations?.filter(r => r.status === 'pending_validation').length || 0,
-    confirmed: reservations?.filter(r => r.status === 'validated_pending_payment' || r.status === 'paid_confirmed').length || 0,
-    refused: reservations?.filter(r => r.status === 'refused').length || 0,
-    totalParticipants: reservations?.reduce((sum, r) => sum + (r.seatsTotal || 0), 0) || 0,
+    pending: reservations?.filter((r: any) => r.status === 'pending_validation').length || 0,
+    confirmed: reservations?.filter((r: any) => r.status === 'validated_pending_payment' || r.status === 'paid_confirmed').length || 0,
+    refused: reservations?.filter((r: any) => r.status === 'refused').length || 0,
+    totalParticipants: reservations?.reduce((sum: number, r: any) => sum + (r.seatsTotal || 0), 0) || 0,
   };
 
   if (!hasAccess) {
@@ -62,9 +72,9 @@ export default function AdminRestaurantParticuliers() {
             <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">
               <Users className="h-8 w-8 text-red-600" />
             </div>
-            <h1 className="text-xl font-bold">Accès non autorisé</h1>
+            <h1 className="text-xl font-bold">Acces non autorise</h1>
             <p className="text-muted-foreground">
-              Vous n'avez pas les droits pour accéder aux réservations particuliers.
+              Vous n'avez pas les droits pour acceder aux reservations particuliers.
             </p>
             <Link href="/admin">
               <Button variant="outline">Retour au dashboard</Button>
@@ -86,23 +96,28 @@ export default function AdminRestaurantParticuliers() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'submitted':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200"><Clock className="h-3 w-3 mr-1" />Soumise</Badge>;
-      case 'pending_confirmation':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200"><Clock className="h-3 w-3 mr-1" />En attente</Badge>;
-      case 'confirmed':
-        return <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Confirmée</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Refusée</Badge>;
+      case 'pending_validation':
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200"><Clock className="h-3 w-3 mr-1" />En attente</Badge>;
+      case 'validated_pending_payment':
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200"><CreditCard className="h-3 w-3 mr-1" />Paiement attendu</Badge>;
+      case 'paid_confirmed':
+        return <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Confirmee</Badge>;
+      case 'refused':
+        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Refusee</Badge>;
       case 'cancelled':
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Annulée</Badge>;
+        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Annulee</Badge>;
       case 'completed':
-        return <Badge className="bg-emerald-600"><CheckCircle className="h-3 w-3 mr-1" />Terminée</Badge>;
+        return <Badge className="bg-emerald-600"><CheckCircle className="h-3 w-3 mr-1" />Terminee</Badge>;
       case 'no_show':
         return <Badge variant="outline" className="bg-gray-50 text-gray-700">No show</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  const formatDate = (date: any) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('fr-FR');
   };
 
   return (
@@ -117,10 +132,10 @@ export default function AdminRestaurantParticuliers() {
           <div>
             <h1 className="font-bold text-lg flex items-center gap-2">
               <UtensilsCrossed className="h-5 w-5 text-[#5d5a3c]" />
-              Réservations Particuliers
+              Reservations Particuliers
             </h1>
             <p className="text-xs text-muted-foreground">
-              {filteredReservations?.length || 0} réservation(s) - max 10 places/réservation
+              {filteredReservations?.length || 0} reservation(s)
             </p>
           </div>
         </div>
@@ -141,22 +156,24 @@ export default function AdminRestaurantParticuliers() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Rechercher (nom, tél, référence)..."
+              placeholder="Rechercher (nom, tel, reference)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Statut" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous les statuts</SelectItem>
-              <SelectItem value="submitted">Soumise</SelectItem>
-              <SelectItem value="confirmed">Confirmée</SelectItem>
-              <SelectItem value="cancelled">Annulée</SelectItem>
-              <SelectItem value="completed">Terminée</SelectItem>
+              <SelectItem value="pending_validation">En attente</SelectItem>
+              <SelectItem value="validated_pending_payment">Paiement attendu</SelectItem>
+              <SelectItem value="paid_confirmed">Confirmee</SelectItem>
+              <SelectItem value="refused">Refusee</SelectItem>
+              <SelectItem value="cancelled">Annulee</SelectItem>
+              <SelectItem value="completed">Terminee</SelectItem>
               <SelectItem value="no_show">No show</SelectItem>
             </SelectContent>
           </Select>
@@ -173,12 +190,13 @@ export default function AdminRestaurantParticuliers() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Référence</TableHead>
+                    <TableHead>Reference</TableHead>
                     <TableHead>Client</TableHead>
                     <TableHead>Places</TableHead>
+                    <TableHead>Date ftour</TableHead>
                     <TableHead>Paiement</TableHead>
                     <TableHead>Statut</TableHead>
-                    <TableHead>Date</TableHead>
+                    <TableHead>Cree le</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -186,7 +204,7 @@ export default function AdminRestaurantParticuliers() {
                   {filteredReservations?.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                        Aucune réservation trouvée
+                        Aucune reservation trouvee
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -196,41 +214,50 @@ export default function AdminRestaurantParticuliers() {
                         <TableCell>
                           <div>{r.name}</div>
                           <div className="text-xs text-muted-foreground">{r.phone}</div>
+                          <div className="text-xs text-muted-foreground">{r.email}</div>
                         </TableCell>
-                        <TableCell>{r.seats_total}</TableCell>
+                        <TableCell>{r.seatsTotal}</TableCell>
+                        <TableCell>{formatDate(r.date)}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={r.payment_status === 'paid' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}>
+                          <Badge variant="outline" className={r.paymentStatus === 'paid' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}>
                             <CreditCard className="h-3 w-3 mr-1" />
-                            {r.payment_status === 'paid' ? 'Payé' : r.payment_status === 'pending' ? 'En attente' : r.payment_status}
+                            {r.paymentStatus === 'paid' ? 'Paye' : r.paymentStatus === 'pending_payment' ? 'En attente' : r.paymentStatus === 'not_requested' ? 'Non demande' : r.paymentStatus}
                           </Badge>
                         </TableCell>
                         <TableCell>{getStatusBadge(r.status)}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {new Date(r.created_at).toLocaleDateString('fr-FR')}
+                          {formatDate(r.createdAt)}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            {r.status === 'submitted' && (
+                            {r.status === 'pending_validation' && (
                               <>
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   className="text-green-600"
-                                  onClick={() => updateStatusMutation.mutate({ id: r.id, status: 'confirmed' })}
+                                  onClick={() => validateMutation.mutate({
+                                    reference: r.reference,
+                                    baseUrl: window.location.origin,
+                                  })}
+                                  disabled={validateMutation.isPending}
                                 >
-                                  <CheckCircle className="h-3 w-3" />
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Valider
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   className="text-red-600"
-                                  onClick={() => updateStatusMutation.mutate({ id: r.id, status: 'cancelled' })}
+                                  onClick={() => refuseMutation.mutate({ reference: r.reference })}
+                                  disabled={refuseMutation.isPending}
                                 >
-                                  <XCircle className="h-3 w-3" />
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  Refuser
                                 </Button>
                               </>
                             )}
-                            {r.status === 'confirmed' && (
+                            {(r.status === 'validated_pending_payment' || r.status === 'paid_confirmed') && (
                               <Button
                                 size="sm"
                                 variant="outline"

@@ -16,7 +16,7 @@ export default function RestaurantParticuliers() {
   const [confirmed, setConfirmed] = useState(false);
   const [formData, setFormData] = useState({
     date: '',
-    seats: 1,
+    seats: 5,
     fullName: '',
     phone: '',
     email: '',
@@ -49,8 +49,8 @@ export default function RestaurantParticuliers() {
       return;
     }
 
-    if (formData.seats < 1 || formData.seats > 12) {
-      toast.error('Le nombre de places doit être entre 1 et 12');
+    if (formData.seats < 5 || formData.seats > 12) {
+      toast.error('Le nombre de couverts doit être entre 5 et 12');
       return;
     }
 
@@ -113,12 +113,11 @@ export default function RestaurantParticuliers() {
           <Link href={`/${lang}/reservation`} className="text-sm text-[#5d5a3c] underline">← Retour</Link>
           <h1 className="text-3xl font-bold text-[#5d5a3c] mt-2 italic">Réservation Ftour</h1>
           <p className="text-[#8b8b7a] mt-2">
-            Demande de réservation pour le ftour solidaire Bab Rayan.<br />
-            Service unique à partir de 18h45.
+            Demande de réservation pour le ftour solidaire (réservation en ligne à partir de 5 couverts). Confirmation sous 48 heures.
           </p>
           <p className="text-sm text-[#8b8b7a] mt-3">
-            Les demandes sont ouvertes du 20 février au 13 mars.<br />
-            Confirmation sous 48 heures par notre équipe.
+            Service unique à partir de 18h45.<br />
+            Les demandes sont ouvertes du 20 février au 13 mars.
           </p>
         </div>
 
@@ -145,14 +144,14 @@ export default function RestaurantParticuliers() {
 
               {/* Nombre de places */}
               <div>
-                <Label htmlFor="seats">Nombre de places (1 à 12) *</Label>
+                <Label htmlFor="seats">Nombre de couverts (5 à 12) *</Label>
                 <Input
                   id="seats"
                   type="number"
-                  min="1"
+                  min="5"
                   max="12"
                   value={formData.seats}
-                  onChange={(e) => setFormData((p) => ({ ...p, seats: Math.max(1, Math.min(12, parseInt(e.target.value) || 1)) }))}
+                  onChange={(e) => setFormData((p) => ({ ...p, seats: Math.max(5, Math.min(12, parseInt(e.target.value) || 5)) }))}
                   required
                 />
               </div>
