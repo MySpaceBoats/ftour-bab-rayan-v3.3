@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "wouter";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,19 +9,36 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { 
-  ArrowLeft, Search, Download, Heart, CheckCircle, XCircle, 
-  Clock, Loader2, Mail, Phone, Building2, CreditCard
+import { useAuth } from "@/_core/hooks/useAuth";
+import { getLoginUrl } from "@/const";
+import {
+  ArrowLeft, Search, Download, Heart, CheckCircle, XCircle,
+  Clock, Loader2, AlertCircle, RefreshCw, Building2, CreditCard
 } from "lucide-react";
 
 export default function AdminDons() {
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
   const [selectedDonation, setSelectedDonation] = useState<number | null>(null);
 
-  const { data: donations, isLoading, refetch } = trpc.donations.listAll.useQuery();
-  const { data: stats } = trpc.donations.stats.useQuery();
+  const canManageDonations = isAuthenticated && user?.role && ['admin', 'super_admin', 'admin_dons'].includes(user.role);
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      window.location.href = getLoginUrl();
+    }
+  }, [authLoading, isAuthenticated]);
+
+  const { data: donations, isLoading, error: listError, refetch } = trpc.donations.listAll.useQuery(undefined, {
+    enabled: !!canManageDonations,
+    retry: 2,
+  });
+  const { data: stats, error: statsError } = trpc.donations.stats.useQuery(undefined, {
+    enabled: !!canManageDonations,
+  });
 
   const updateStatusMutation = trpc.donations.updateStatus.useMutation({
     onSuccess: () => {
@@ -34,14 +51,19 @@ export default function AdminDons() {
   });
 
   const filteredDonations = donations?.filter((d: any) => {
-    const matchesSearch = searchQuery === "" || 
-      d.donorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.donorEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.donationReference.toLowerCase().includes(searchQuery.toLowerCase());
-    
+    const donorName = (d.donorName || '').toLowerCase();
+    const donorEmail = (d.donorEmail || '').toLowerCase();
+    const donationRef = (d.donationReference || '').toLowerCase();
+    const query = searchQuery.toLowerCase();
+
+    const matchesSearch = searchQuery === "" ||
+      donorName.includes(query) ||
+      donorEmail.includes(query) ||
+      donationRef.includes(query);
+
     const matchesStatus = statusFilter === "all" || d.status === statusFilter;
     const matchesPayment = paymentFilter === "all" || d.paymentMethod === paymentFilter;
-    
+
     return matchesSearch && matchesStatus && matchesPayment;
   });
 
@@ -100,6 +122,35 @@ export default function AdminDons() {
   };
 
   const currentDonation = donations?.find((d: any) => d.id === selectedDonation);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!canManageDonations) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="p-8 text-center space-y-4">
+            <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">
+              <AlertCircle className="h-8 w-8 text-red-600" />
+            </div>
+            <h1 className="text-xl font-bold">Accès non autorisé</h1>
+            <p className="text-muted-foreground">
+              Vous n'avez pas les droits nécessaires pour accéder à la gestion des dons.
+            </p>
+            <Button onClick={() => navigate('/admin')} variant="outline">
+              Retour au tableau de bord
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -206,6 +257,16 @@ export default function AdminDons() {
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : listError ? (
+              <div className="text-center py-12 space-y-3">
+                <AlertCircle className="h-12 w-12 mx-auto text-red-400" />
+                <p className="text-muted-foreground">Erreur lors du chargement des dons</p>
+                <p className="text-xs text-red-500">{listError.message}</p>
+                <Button variant="outline" size="sm" onClick={() => refetch()}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Réessayer
+                </Button>
               </div>
             ) : filteredDonations && filteredDonations.length > 0 ? (
               <div className="overflow-x-auto">

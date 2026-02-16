@@ -1018,41 +1018,52 @@ export async function createDonationPledgeSupabase(data: DonationData) {
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('[Donations] Error creating donation:', error.message, error.code);
+    throw error;
+  }
 
   return {
     donationId: donation.id,
-    donationReference: donation.donation_reference,
-    amount: parseFloat(donation.amount),
-    status: donation.status,
-    createdAt: new Date(donation.created_at),
+    donationReference: donation.donation_reference ?? donation.donationReference,
+    amount: parseFloat(donation.amount) || 0,
+    status: donation.status ?? donation.donationStatus,
+    createdAt: new Date(donation.created_at ?? donation.createdAt),
   };
 }
 
 export async function getAllDonationsSupabase() {
   const client = getSupabaseAdminClient();
-  if (!client) return [];
+  if (!client) {
+    console.error('[Donations] Supabase admin client not configured');
+    return [];
+  }
 
   const { data, error } = await client
     .from('donations')
     .select('*')
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    console.error('[Donations] Error fetching donations:', error.message, error.code);
+    throw error;
+  }
 
-  return data?.map(d => ({
+  return data?.map((d: any) => ({
     id: d.id,
-    donationReference: d.donation_reference,
-    donorName: d.donor_name,
-    donorEmail: d.donor_email,
-    donorPhone: d.donor_phone,
-    amount: parseFloat(d.amount),
-    paymentMethod: d.payment_method,
-    status: d.status,
+    donationReference: d.donation_reference ?? d.donationReference,
+    donorName: d.donor_name ?? d.donorName,
+    donorEmail: d.donor_email ?? d.donorEmail,
+    donorPhone: d.donor_phone ?? d.donorPhone,
+    amount: parseFloat(d.amount) || 0,
+    paymentMethod: d.payment_method ?? d.paymentMethod,
+    status: d.status ?? d.donationStatus,
     message: d.message,
-    isAnonymous: d.is_anonymous,
-    acceptsUpdates: d.accepts_updates,
-    createdAt: new Date(d.created_at),
+    isAnonymous: d.is_anonymous ?? d.isAnonymous ?? false,
+    acceptsUpdates: d.accepts_updates ?? d.acceptsUpdates ?? false,
+    processedBy: d.processed_by ?? d.processedBy,
+    createdAt: new Date(d.created_at ?? d.createdAt),
+    updatedAt: d.updated_at ?? d.updatedAt ? new Date(d.updated_at ?? d.updatedAt) : null,
   })) || [];
 }
 
@@ -1065,7 +1076,10 @@ export async function markDonationReceivedSupabase(donationId: number, processed
     .update({ status: 'received', processed_by: processedBy })
     .eq('id', donationId);
 
-  if (error) throw error;
+  if (error) {
+    console.error('[Donations] Error marking donation received:', error.message, error.code);
+    throw error;
+  }
 }
 
 export async function updateDonationStatusSupabase(donationId: number, status: string, processedBy?: number) {
@@ -1077,24 +1091,35 @@ export async function updateDonationStatusSupabase(donationId: number, status: s
     .update({ status, processed_by: processedBy })
     .eq('id', donationId);
 
-  if (error) throw error;
+  if (error) {
+    console.error('[Donations] Error updating donation status:', error.message, error.code);
+    throw error;
+  }
 }
 
 export async function getDonationStatsSupabase() {
   const client = getSupabaseAdminClient();
-  if (!client) return { total: 0, promised: 0, received: 0, totalAmount: 0, receivedAmount: 0 };
+  if (!client) {
+    console.error('[Donations] Supabase admin client not configured for stats');
+    return { total: 0, promised: 0, received: 0, totalAmount: 0, receivedAmount: 0 };
+  }
 
   const { data, error } = await client
     .from('donations')
     .select('status, amount');
 
-  if (error) throw error;
+  if (error) {
+    console.error('[Donations] Error fetching donation stats:', error.message, error.code);
+    throw error;
+  }
 
   const total = data?.length || 0;
-  const promised = data?.filter(d => d.status === 'promised').length || 0;
-  const received = data?.filter(d => d.status === 'received').length || 0;
-  const totalAmount = data?.reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
-  const receivedAmount = data?.filter(d => d.status === 'received').reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
+  const getStatus = (d: any) => d.status ?? d.donationStatus;
+  const getAmount = (d: any) => parseFloat(d.amount) || 0;
+  const promised = data?.filter(d => getStatus(d) === 'promised').length || 0;
+  const received = data?.filter(d => getStatus(d) === 'received').length || 0;
+  const totalAmount = data?.reduce((sum, d) => sum + getAmount(d), 0) || 0;
+  const receivedAmount = data?.filter(d => getStatus(d) === 'received').reduce((sum, d) => sum + getAmount(d), 0) || 0;
 
   return { total, promised, received, totalAmount, receivedAmount };
 }
