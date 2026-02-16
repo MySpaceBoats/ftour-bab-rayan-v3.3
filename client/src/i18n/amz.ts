@@ -21,6 +21,7 @@ export const amz: Translations = {
     administration: 'Administration',
     search: 'Search...',
     searchPlaceholder: 'Search the site...',
+    boutique: 'Shop',
   },
 
   // CTA Buttons
@@ -134,6 +135,9 @@ export const amz: Translations = {
     produitsTerroir: 'Local Products',
     produitsTerroinDesc: 'Discover our authentic Moroccan products.',
     viewProducts: 'View Products',
+    boutiqueTitle: 'Solidarity Shop',
+    boutiqueDesc: 'Goodies, pastries and terroir products: all profits support our actions for children.',
+    viewBoutique: 'Discover the shop',
   },
 
   // Event Page
@@ -794,5 +798,21 @@ export const amz: Translations = {
     invalidPhone: 'Invalid phone number',
     minLength: 'Minimum {min} characters',
     maxLength: 'Maximum {max} characters',
+  },
+
+  boutique: {
+    badge: '100% solidarity',
+    title: 'Solidarity Shop',
+    subtitle: 'Goodies, artisanal pastries and Moroccan terroir products. All profits fund our actions for children in difficulty.',
+    goodiesTitle: 'Solidarity Goodies',
+    goodiesDesc: 'T-shirts, tote bags and exclusive Ramadan 2026 edition accessories.',
+    goodiesCta: 'View goodies',
+    pastriesTitle: 'Solidarity Pastries',
+    pastriesDesc: 'Handmade Moroccan pastries prepared with care.',
+    pastriesCta: 'View pastries',
+    terroirTitle: 'Terroir Products',
+    terroirDesc: 'Argan oil, honey, spices and other Moroccan treasures.',
+    terroirCta: 'View products',
+    infoText: 'All profits from the Solidarity Shop are fully donated to the Bab Rayan Association to fund actions for children.',
   },
 };

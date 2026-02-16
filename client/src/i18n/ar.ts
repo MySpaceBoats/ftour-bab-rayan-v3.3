@@ -21,6 +21,7 @@ export const ar: Translations = {
     administration: 'لوحة التحكم',
     search: 'بحث...',
     searchPlaceholder: 'البحث في الموقع...',
+    boutique: 'المتجر',
   },
 
   // CTA Buttons
@@ -134,6 +135,9 @@ export const ar: Translations = {
     produitsTerroir: 'منتجات الأرض',
     produitsTerroinDesc: 'اكتشف منتجاتنا المغربية الأصيلة.',
     viewProducts: 'عرض المنتجات',
+    boutiqueTitle: 'المتجر التضامني',
+    boutiqueDesc: 'منتجات، حلويات ومنتجات الأرض: جميع الأرباح تدعم أعمالنا من أجل الأطفال.',
+    viewBoutique: 'اكتشف المتجر',
   },
 
   // Event Page
@@ -795,5 +799,21 @@ export const ar: Translations = {
     invalidPhone: 'رقم هاتف غير صحيح',
     minLength: 'الحد الأدنى {min} أحرف',
     maxLength: 'الحد الأقصى {max} أحرف',
+  },
+
+  boutique: {
+    badge: '100% تضامني',
+    title: 'المتجر التضامني',
+    subtitle: 'منتجات وحلويات تقليدية ومنتجات الأرض المغربية. جميع الأرباح تمول أعمالنا من أجل الأطفال في وضع صعب.',
+    goodiesTitle: 'منتجات تضامنية',
+    goodiesDesc: 'تي شيرتات وحقائب وإكسسوارات حصرية لرمضان 2026.',
+    goodiesCta: 'عرض المنتجات',
+    pastriesTitle: 'حلويات تضامنية',
+    pastriesDesc: 'حلويات مغربية تقليدية محضرة بعناية.',
+    pastriesCta: 'عرض الحلويات',
+    terroirTitle: 'منتجات الأرض',
+    terroirDesc: 'زيت أرغان، عسل، توابل وكنوز مغربية أخرى.',
+    terroirCta: 'عرض المنتجات',
+    infoText: 'جميع أرباح المتجر التضامني تُحوَّل بالكامل لجمعية باب ريان لتمويل الأعمال لصالح الأطفال.',
   },
 };

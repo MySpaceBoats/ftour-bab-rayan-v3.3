@@ -19,6 +19,7 @@ export const fr = {
     administration: 'Administration',
     search: 'Rechercher...',
     searchPlaceholder: 'Rechercher sur le site...',
+    boutique: 'Boutique',
   },
 
   // CTA Buttons
@@ -131,7 +132,10 @@ export const fr = {
     orderPastry: 'Commander',
     produitsTerroir: 'Produits du Terroir',
     produitsTerroinDesc: 'Découvrez nos produits authentiques du Maroc',
-    viewProducts: 'Voir les produits'
+    viewProducts: 'Voir les produits',
+    boutiqueTitle: 'Boutique Solidaire',
+    boutiqueDesc: 'Goodies, pâtisseries et produits du terroir : tous les bénéfices soutiennent nos actions pour les enfants.',
+    viewBoutique: 'Découvrir la boutique',
   },
 
   // Event Page
@@ -804,6 +808,23 @@ export const fr = {
     invalidPhone: 'Numéro de téléphone invalide',
     minLength: 'Minimum {min} caractères',
     maxLength: 'Maximum {max} caractères',
+  },
+
+  // Boutique Solidaire (page hub)
+  boutique: {
+    badge: '100% solidaire',
+    title: 'Boutique Solidaire',
+    subtitle: 'Goodies, pâtisseries artisanales et produits du terroir marocain. Tous les bénéfices financent nos actions pour les enfants en difficulté.',
+    goodiesTitle: 'Goodies solidaires',
+    goodiesDesc: 'T-shirts, tote bags et accessoires exclusifs édition Ramadan 2026.',
+    goodiesCta: 'Voir les goodies',
+    pastriesTitle: 'Pâtisserie solidaire',
+    pastriesDesc: 'Pâtisseries artisanales marocaines préparées avec soin.',
+    pastriesCta: 'Voir les pâtisseries',
+    terroirTitle: 'Produits du terroir',
+    terroirDesc: 'Huile d\'argan, miel, épices et autres trésors du Maroc.',
+    terroirCta: 'Voir les produits',
+    infoText: 'Tous les bénéfices de la Boutique Solidaire sont intégralement reversés à l\'association Bab Rayan pour financer les actions en faveur des enfants.',
   },
 };
 
