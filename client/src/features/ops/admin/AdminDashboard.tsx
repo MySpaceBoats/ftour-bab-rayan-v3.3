@@ -9,7 +9,7 @@ import {
   Users, ShoppingBag, Heart, Calendar, QrCode,
   ArrowRight, Loader2, BarChart3, Package, MessageSquare,
   UserCog, FileText, Home, LogOut, UtensilsCrossed, Store,
-  Building2, UsersRound, CakeSlice, type LucideIcon
+  UsersRound, CakeSlice, type LucideIcon
 } from "lucide-react";
 
 // ============================================
@@ -36,7 +36,7 @@ type SectionDefinition = {
   borderClass?: string;
 };
 
-const ALL_ADMIN_ROLES = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes', 'admin_patisserie', 'admin_terroir'];
+const ALL_ADMIN_ROLES = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant_particuliers', 'admin_restaurant_groupes', 'admin_patisserie', 'admin_terroir'];
 
 const sections: SectionDefinition[] = [
   {
@@ -53,16 +53,6 @@ const sections: SectionDefinition[] = [
         iconColor: "text-[#5d5a3c]",
         iconBg: "bg-[#5d5a3c]/10",
         allowedRoles: ['admin', 'super_admin', 'admin_restaurant_particuliers'],
-        buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
-      },
-      {
-        label: "Réservations Entreprises",
-        description: "Réservations corporate soumises à confirmation admin",
-        route: "/admin/restaurant/entreprises",
-        icon: Building2,
-        iconColor: "text-[#5d5a3c]",
-        iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_restaurant_entreprises'],
         buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
       },
       {
