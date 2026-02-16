@@ -193,8 +193,7 @@ export default function AdminScanProduct() {
                         <SelectContent>
                           <SelectItem value="cash">Espèces</SelectItem>
                           <SelectItem value="bank_transfer">Virement</SelectItem>
-                          <SelectItem value="check">Chèque</SelectItem>
-                          <SelectItem value="paypal">PayPal</SelectItem>
+                          <SelectItem value="cheque">Chèque</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

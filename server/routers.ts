@@ -571,7 +571,7 @@ const ordersRouter = router({
       deliveryPostalCode: z.string().optional(),
       deliveryPhone: z.string().optional(),
       deliveryInstructions: z.string().optional(),
-      paymentMethod: z.enum(['bank_transfer', 'check', 'cash', 'paypal']).default('cash'),
+      paymentMethod: z.enum(['bank_transfer', 'cheque', 'cash']).default('cash'),
     }))
     .mutation(async ({ input }) => {
       // Validate stock for items with variants before creating order
@@ -2257,6 +2257,7 @@ const pastriesRouter = router({
       description: z.string().optional(),
       price: z.number().positive(),
       imageUrl: z.string().optional(),
+      category: z.string().optional(),
       sortOrder: z.number().default(0),
     }))
     .mutation(async ({ input }) => {
@@ -2270,6 +2271,7 @@ const pastriesRouter = router({
           description: input.description,
           price: input.price,
           image_url: input.imageUrl,
+          category: input.category,
           sort_order: input.sortOrder,
           active: true,
         })
@@ -2287,6 +2289,7 @@ const pastriesRouter = router({
       description: z.string().optional(),
       price: z.number().positive().optional(),
       imageUrl: z.string().optional(),
+      category: z.string().optional(),
       active: z.boolean().optional(),
       sortOrder: z.number().optional(),
     }))
@@ -2299,6 +2302,7 @@ const pastriesRouter = router({
       if (input.description) updateData.description = input.description;
       if (input.price) updateData.price = input.price;
       if (input.imageUrl) updateData.image_url = input.imageUrl;
+      if (input.category !== undefined) updateData.category = input.category;
       if (input.active !== undefined) updateData.active = input.active;
       if (input.sortOrder !== undefined) updateData.sort_order = input.sortOrder;
 

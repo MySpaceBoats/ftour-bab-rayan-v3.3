@@ -751,7 +751,7 @@ export interface OrderData {
   deliveryPostalCode?: string;
   deliveryPhone?: string;
   deliveryInstructions?: string;
-  paymentMethod?: string;
+  paymentMethod?: 'bank_transfer' | 'cheque' | 'cash' | 'paypal' | string;
 }
 
 function generateOrderReference(): string {

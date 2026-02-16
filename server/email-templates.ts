@@ -3,7 +3,7 @@
  * Génère des emails conditionnels basés sur le mode de livraison et la méthode de paiement
  */
 
-export type PaymentMethod = 'bank_transfer' | 'check' | 'cash' | 'paypal';
+export type PaymentMethod = 'bank_transfer' | 'cheque' | 'cash';
 export type DeliveryMode = 'pickup' | 'home_delivery';
 
 interface OrderItem {
@@ -110,7 +110,7 @@ function getPaymentInstructions(paymentMethod: PaymentMethod, deliveryMode: Deli
         </p>
       `
     },
-    check: {
+    cheque: {
       title: '✉️ Chèque',
       instructions: `
         <p style="margin: 0 0 10px 0; color: #374151;">

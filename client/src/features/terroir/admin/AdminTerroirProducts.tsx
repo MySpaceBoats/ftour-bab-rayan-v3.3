@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -12,31 +13,300 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import RequireRole from "@/components/RequireRole";
 import {
-  ArrowLeft, Loader2, Plus, Package, Edit, Layers
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  ArrowLeft, Loader2, Plus, Package, Edit, Layers, Upload, X, Image as ImageIcon, Trash2
 } from "lucide-react";
 
 export default function AdminTerroirProducts() {
   const [showCreate, setShowCreate] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
   const [showVariant, setShowVariant] = useState<number | null>(null);
-  const [form, setForm] = useState({ name: "", description: "", category: "", isActive: true, sortOrder: 0 });
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [form, setForm] = useState({
+    name: "",
+    description: "",
+    category: "",
+    imageUrl: "",
+    isActive: true,
+    sortOrder: 0,
+  });
   const [variantForm, setVariantForm] = useState({ label: "", sku: "", priceUnit: 0, stockTotal: 0, isActive: true });
 
   const { data: products, isLoading, refetch } = trpc.terroirModule.adminListProducts.useQuery();
 
+  const uploadMutation = trpc.upload.image.useMutation({
+    onError: (error: any) => {
+      toast.error("Erreur upload: " + error.message);
+      setIsUploading(false);
+    },
+  });
+
   const createProduct = trpc.terroirModule.adminCreateProduct.useMutation({
-    onSuccess: () => { toast.success("Produit créé"); setShowCreate(false); setForm({ name: "", description: "", category: "", isActive: true, sortOrder: 0 }); refetch(); },
+    onSuccess: () => {
+      toast.success("Produit créé");
+      setShowCreate(false);
+      resetForm();
+      refetch();
+    },
     onError: (err: any) => toast.error(err.message),
   });
 
   const updateProduct = trpc.terroirModule.adminUpdateProduct.useMutation({
-    onSuccess: () => { toast.success("Produit mis à jour"); refetch(); },
+    onSuccess: () => {
+      toast.success("Produit mis à jour");
+      setEditingProduct(null);
+      resetForm();
+      refetch();
+    },
     onError: (err: any) => toast.error(err.message),
   });
 
   const createVariant = trpc.terroirModule.adminCreateVariant.useMutation({
-    onSuccess: () => { toast.success("Variante créée"); setShowVariant(null); setVariantForm({ label: "", sku: "", priceUnit: 0, stockTotal: 0, isActive: true }); refetch(); },
+    onSuccess: () => {
+      toast.success("Variante créée");
+      setShowVariant(null);
+      setVariantForm({ label: "", sku: "", priceUnit: 0, stockTotal: 0, isActive: true });
+      refetch();
+    },
     onError: (err: any) => toast.error(err.message),
   });
+
+  const resetForm = () => {
+    setForm({
+      name: "",
+      description: "",
+      category: "",
+      imageUrl: "",
+      isActive: true,
+      sortOrder: 0,
+    });
+    setImagePreview(null);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Type de fichier non autorisé. Utilisez PNG, JPEG ou WebP.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Le fichier est trop volumineux. Maximum 5 Mo.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64 = event.target?.result as string;
+      setImagePreview(base64);
+
+      setIsUploading(true);
+      try {
+        const result = await uploadMutation.mutateAsync({
+          fileName: file.name,
+          fileType: file.type,
+          fileData: base64,
+          folder: 'terroir',
+        });
+
+        setForm(prev => ({ ...prev, imageUrl: result.url }));
+        toast.success("Image téléchargée avec succès");
+      } catch (error) {
+        // Error handled by mutation
+      } finally {
+        setIsUploading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImagePreview(null);
+    setForm(prev => ({ ...prev, imageUrl: "" }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleCreate = () => {
+    if (!form.name) {
+      toast.error("Veuillez remplir le nom du produit");
+      return;
+    }
+    createProduct.mutate(form);
+  };
+
+  const handleUpdate = () => {
+    if (!editingProduct) return;
+    updateProduct.mutate({
+      id: editingProduct.id,
+      ...form,
+    });
+  };
+
+  const openEditDialog = (product: any) => {
+    setEditingProduct(product);
+    setForm({
+      name: product.name,
+      description: product.description || "",
+      category: product.category || "",
+      imageUrl: product.image_url || "",
+      isActive: product.is_active ?? true,
+      sortOrder: product.sort_order || 0,
+    });
+    setImagePreview(product.image_url || null);
+  };
+
+  const toggleActive = (product: any) => {
+    updateProduct.mutate({
+      id: product.id,
+      isActive: !product.is_active,
+    });
+  };
+
+  const ImageUploadField = () => (
+    <div className="space-y-2">
+      <Label>Image du produit</Label>
+      <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
+        {imagePreview || form.imageUrl ? (
+          <div className="relative inline-block">
+            <img
+              src={imagePreview || form.imageUrl}
+              alt="Aperçu"
+              className="max-h-40 rounded-lg mx-auto"
+            />
+            <Button
+              type="button"
+              variant="destructive"
+              size="icon"
+              className="absolute -top-2 -right-2 h-6 w-6"
+              onClick={removeImage}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+            {isUploading && (
+              <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-white" />
+              </div>
+            )}
+          </div>
+        ) : (
+          <div
+            className="cursor-pointer py-6"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <div className="w-12 h-12 mx-auto rounded-full bg-muted flex items-center justify-center mb-3">
+              {isUploading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              ) : (
+                <Upload className="h-6 w-6 text-muted-foreground" />
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Cliquez pour télécharger une image
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              PNG, JPEG ou WebP (max 5 Mo)
+            </p>
+          </div>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/jpg,image/webp"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+      </div>
+      {!imagePreview && !form.imageUrl && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+        >
+          {isUploading ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <ImageIcon className="h-4 w-4 mr-2" />
+          )}
+          Choisir une image
+        </Button>
+      )}
+    </div>
+  );
+
+  const ProductFormFields = () => (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label>Nom du produit *</Label>
+        <Input
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          placeholder="Huile d'olive, Miel..."
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Description</Label>
+        <Textarea
+          value={form.description}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+          placeholder="Description du produit..."
+          rows={3}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Catégorie</Label>
+          <Input
+            value={form.category}
+            onChange={(e) => setForm({ ...form, category: e.target.value })}
+            placeholder="huile, miel, épices..."
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Ordre d'affichage</Label>
+          <Input
+            type="number"
+            value={form.sortOrder === 0 ? '' : form.sortOrder}
+            onChange={(e) => setForm({ ...form, sortOrder: e.target.value === '' ? 0 : parseInt(e.target.value) })}
+            placeholder="0"
+            min="0"
+          />
+        </div>
+      </div>
+
+      <ImageUploadField />
+
+      <div className="flex items-center justify-between">
+        <Label>Actif</Label>
+        <Switch
+          checked={form.isActive}
+          onCheckedChange={(checked) => setForm({ ...form, isActive: checked })}
+        />
+      </div>
+    </div>
+  );
 
   return (
     <RequireRole allowedRoles={["admin", "super_admin", "admin_terroir"]}>
@@ -50,39 +320,60 @@ export default function AdminTerroirProducts() {
               <h1 className="font-bold text-lg">Catalogue Terroir</h1>
               <p className="text-xs text-muted-foreground">{products?.length || 0} produit(s)</p>
             </div>
-            <Dialog open={showCreate} onOpenChange={setShowCreate}>
+            <Dialog open={showCreate} onOpenChange={(open) => {
+              setShowCreate(open);
+              if (!open) resetForm();
+            }}>
               <DialogTrigger asChild>
                 <Button><Plus className="h-4 w-4 mr-2" /> Nouveau produit</Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                 <DialogHeader><DialogTitle>Nouveau produit terroir</DialogTitle></DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label>Nom</Label>
-                    <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label>Description</Label>
-                    <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label>Catégorie</Label>
-                    <Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="huile, miel, épices..." />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch checked={form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} />
-                    <Label>Actif</Label>
-                  </div>
-                  <Button className="w-full" onClick={() => createProduct.mutate(form)} disabled={!form.name || createProduct.isPending}>
-                    Créer
-                  </Button>
-                </div>
+                <ProductFormFields />
+                <Button
+                  className="w-full"
+                  onClick={handleCreate}
+                  disabled={!form.name || createProduct.isPending || isUploading}
+                >
+                  {createProduct.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4 mr-2" />
+                  )}
+                  Créer le produit
+                </Button>
               </DialogContent>
             </Dialog>
           </div>
         </header>
 
         <main className="container py-8">
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold">{products?.length || 0}</div>
+                <div className="text-xs text-muted-foreground">Total produits</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {products?.filter((p: any) => p.is_active).length || 0}
+                </div>
+                <div className="text-xs text-muted-foreground">Actifs</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-amber-600">
+                  {products?.reduce((sum: number, p: any) => sum + (p.terroir_product_variants?.length || 0), 0) || 0}
+                </div>
+                <div className="text-xs text-muted-foreground">Variantes</div>
+              </CardContent>
+            </Card>
+          </div>
+
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -94,8 +385,12 @@ export default function AdminTerroirProducts() {
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
-                          <Package className="h-5 w-5 text-amber-700" />
+                        <div className="w-12 h-12 rounded-lg bg-amber-100 flex items-center justify-center overflow-hidden">
+                          {product.image_url ? (
+                            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <Package className="h-5 w-5 text-amber-700" />
+                          )}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
@@ -105,12 +400,45 @@ export default function AdminTerroirProducts() {
                             </Badge>
                           </div>
                           {product.category && <div className="text-sm text-muted-foreground font-normal">{product.category}</div>}
+                          {product.description && <div className="text-xs text-muted-foreground font-normal line-clamp-1">{product.description}</div>}
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => updateProduct.mutate({ id: product.id, isActive: !product.is_active })}>
+                        {/* Edit button */}
+                        <Dialog open={editingProduct?.id === product.id} onOpenChange={(open) => {
+                          if (!open) {
+                            setEditingProduct(null);
+                            resetForm();
+                          }
+                        }}>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={() => openEditDialog(product)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                            <DialogHeader><DialogTitle>Modifier le produit</DialogTitle></DialogHeader>
+                            <ProductFormFields />
+                            <Button
+                              onClick={handleUpdate}
+                              className="w-full"
+                              disabled={updateProduct.isPending || isUploading}
+                            >
+                              {updateProduct.isPending ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <Edit className="h-4 w-4 mr-2" />
+                              )}
+                              Enregistrer les modifications
+                            </Button>
+                          </DialogContent>
+                        </Dialog>
+
+                        <Button size="sm" variant={product.is_active ? "outline" : "default"} onClick={() => toggleActive(product)}>
                           {product.is_active ? "Désactiver" : "Activer"}
                         </Button>
+
+                        {/* Add variant */}
                         <Dialog open={showVariant === product.id} onOpenChange={(v) => setShowVariant(v ? product.id : null)}>
                           <DialogTrigger asChild>
                             <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Variante</Button>
@@ -140,6 +468,37 @@ export default function AdminTerroirProducts() {
                             </div>
                           </DialogContent>
                         </Dialog>
+
+                        {/* Delete button */}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Supprimer ce produit ?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Êtes-vous sûr de vouloir supprimer "{product.name}" ?
+                                Cette action est irréversible et supprimera aussi toutes les variantes associées.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Annuler</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-red-600 hover:bg-red-700"
+                                onClick={() => updateProduct.mutate({ id: product.id, isActive: false })}
+                              >
+                                Supprimer
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </CardTitle>
                   </CardHeader>
@@ -187,6 +546,7 @@ export default function AdminTerroirProducts() {
             <div className="text-center py-12">
               <Package className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
               <p className="text-muted-foreground">Aucun produit terroir</p>
+              <p className="text-sm text-muted-foreground">Créez votre premier produit pour commencer</p>
             </div>
           )}
         </main>
