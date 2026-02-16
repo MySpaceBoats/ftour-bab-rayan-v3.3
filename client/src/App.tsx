@@ -37,7 +37,6 @@ import CompanyBookingSpace from "@/features/restaurant/pages/CompanyBookingSpace
 import Reservation from "@/features/restaurant/pages/Reservation";
 import CheckinReservation from "@/features/restaurant/pages/CheckinReservation";
 import AdminRestaurantParticuliers from "@/features/restaurant/admin/AdminRestaurantParticuliers";
-import AdminRestaurantEntreprises from "@/features/restaurant/admin/AdminRestaurantEntreprises";
 import AdminRestaurantGroupes from "@/features/restaurant/admin/AdminRestaurantGroupes";
 import AdminRestaurants from "@/features/restaurant/admin/AdminRestaurants";
 import AdminRestaurantReservations from "@/features/restaurant/admin/AdminRestaurantReservations";
@@ -149,7 +148,6 @@ function LocalizedRoutes() {
 
       {/* Admin Restaurant */}
       <Route path="/admin/restaurant/particuliers" component={AdminRestaurantParticuliers} />
-      <Route path="/admin/restaurant/entreprises" component={AdminRestaurantEntreprises} />
       <Route path="/admin/restaurant/groupes" component={AdminRestaurantGroupes} />
       <Route path="/admin/restaurants" component={AdminRestaurants} />
       <Route path="/admin/restaurant-reservations" component={AdminRestaurantReservations} />
