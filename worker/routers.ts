@@ -201,6 +201,67 @@ const scannerRouter = router({
 
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'Type de QR non supporté pour la validation' });
     }),
+
+  sendAccessEmail: adminProcedure
+    .input(z.object({
+      to: z.string().email(),
+      scannerEmail: z.string().email().default('scaner@ftourbabrayan.ma'),
+      scannerPassword: z.string().default('WERISETOGETHER'),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { sendEmail } = await import('./email');
+      const SCANNER_URL = 'https://ftourbabrayan.ma/scanner';
+      const LOGIN_URL = 'https://ftourbabrayan.ma/fr/connexion';
+      const QR_CODE_URL = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(SCANNER_URL)}`;
+
+      const html = `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;font-family:'Segoe UI',Arial,sans-serif;background:#f4f4f4;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;">
+    <div style="background:linear-gradient(135deg,#166534 0%,#15803d 50%,#166534 100%);padding:30px 20px;text-align:center;">
+      <h1 style="color:#ffffff;margin:0;font-size:28px;">Ftour <span style="color:#fbbf24;">Bab Rayan</span></h1>
+      <p style="color:#d1fae5;margin:8px 0 0;font-size:14px;">Scanner Bénévoles — Accès QR Code</p>
+    </div>
+    <div style="padding:30px 25px;">
+      <h2 style="color:#166534;margin:0 0 15px;font-size:22px;">Accès au Scanner Bénévoles</h2>
+      <p style="color:#374151;line-height:1.6;margin:0 0 20px;">Bonjour,<br><br>Voici votre QR code d'accès au <strong>Scanner Unifié</strong> de Ftour Bab Rayan.</p>
+      <div style="text-align:center;margin:30px 0;padding:25px;background:#f0fdf4;border-radius:12px;border:2px solid #bbf7d0;">
+        <p style="color:#166534;font-weight:bold;margin:0 0 15px;font-size:16px;">Scannez ce QR code</p>
+        <img src="${QR_CODE_URL}" alt="QR Code Scanner" width="250" height="250" style="border-radius:8px;border:3px solid #166534;" />
+        <p style="color:#6b7280;margin:15px 0 0;font-size:13px;">Lien : <a href="${SCANNER_URL}" style="color:#166534;">${SCANNER_URL}</a></p>
+      </div>
+      <div style="background:#fffbeb;border:2px solid #fcd34d;border-radius:12px;padding:20px;margin:25px 0;">
+        <h3 style="color:#92400e;margin:0 0 15px;font-size:18px;">Identifiants de connexion</h3>
+        <p style="margin:8px 0;text-align:center;"><a href="${LOGIN_URL}" style="color:#166534;font-weight:bold;">${LOGIN_URL}</a></p>
+        <table style="width:100%;border-collapse:collapse;margin-top:15px;">
+          <tr><td style="padding:10px 15px;background:#fef3c7;font-weight:bold;color:#92400e;">Email</td><td style="padding:10px 15px;background:#fefce8;font-family:monospace;">${input.scannerEmail}</td></tr>
+          <tr><td style="padding:10px 15px;background:#fef3c7;font-weight:bold;color:#92400e;">Mot de passe</td><td style="padding:10px 15px;background:#fefce8;font-family:monospace;">${input.scannerPassword}</td></tr>
+        </table>
+        <p style="color:#92400e;margin:12px 0 0;font-size:12px;">Role : <strong>Scanner</strong></p>
+      </div>
+    </div>
+    <div style="background:#f9fafb;padding:20px;text-align:center;border-top:1px solid #e5e7eb;">
+      <p style="margin:0;color:#9ca3af;font-size:12px;">Association Bab Rayan — Ftour Solidaire</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+      const result = await sendEmail({
+        to: input.to,
+        subject: 'Accès Scanner Bénévoles — QR Code & Identifiants',
+        html,
+        apiKey: ctx.env.RESEND_API_KEY,
+      });
+
+      if (!result.success) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: result.error || 'Erreur envoi email' });
+      }
+
+      return { success: true, message: `Email envoyé à ${input.to}`, emailId: result.id };
+    }),
 });
 
 // ============================================
