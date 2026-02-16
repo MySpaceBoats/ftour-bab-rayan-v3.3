@@ -398,6 +398,7 @@ const volunteersRouter = router({
         volunteerSlots: input.volunteerSlots,
         dayNumber: day?.dayNumber,
         dayDate: day?.date ? new Date(day.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : undefined,
+        startTime: day?.iftarTime || '18h00',
         fileName: input.fileName,
       });
 
