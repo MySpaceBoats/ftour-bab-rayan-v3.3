@@ -176,7 +176,6 @@ export default function AdminRestaurantParticuliers() {
                     <TableHead>Référence</TableHead>
                     <TableHead>Client</TableHead>
                     <TableHead>Places</TableHead>
-                    <TableHead>Espace</TableHead>
                     <TableHead>Paiement</TableHead>
                     <TableHead>Statut</TableHead>
                     <TableHead>Date</TableHead>
@@ -199,7 +198,6 @@ export default function AdminRestaurantParticuliers() {
                           <div className="text-xs text-muted-foreground">{r.phone}</div>
                         </TableCell>
                         <TableCell>{r.seats_total}</TableCell>
-                        <TableCell className="capitalize">{r.display_choice === 'jardin' ? 'Table du Jardin' : 'Brasserie'}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className={r.payment_status === 'paid' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}>
                             <CreditCard className="h-3 w-3 mr-1" />

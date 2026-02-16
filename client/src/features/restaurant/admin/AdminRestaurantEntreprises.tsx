@@ -148,7 +148,6 @@ export default function AdminRestaurantEntreprises() {
                     <TableHead>Entreprise</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead>Places</TableHead>
-                    <TableHead>Espace</TableHead>
                     <TableHead>Statut</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Actions</TableHead>
@@ -173,7 +172,6 @@ export default function AdminRestaurantEntreprises() {
                           <div className="text-xs text-muted-foreground">{r.phone}</div>
                         </TableCell>
                         <TableCell>{r.seats_total}</TableCell>
-                        <TableCell className="capitalize">{r.display_choice === 'jardin' ? 'Table du Jardin' : 'Salle Corpo'}</TableCell>
                         <TableCell>{getStatusBadge(r.status)}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {new Date(r.created_at).toLocaleDateString('fr-FR')}

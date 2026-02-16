@@ -1358,7 +1358,7 @@ const restaurantModuleRouter = router({
       const qrToken = `rp-${Date.now()}-${Math.random().toString(36).substring(2, 14)}`;
 
       const { data, error } = await supabase.from('restaurant_reservations').insert({
-        reference, type: 'particulier', slot_id: input.slotId, display_choice: input.displayChoice,
+        reference, type: 'particulier',
         seats_total: input.seats, name: input.name, phone: input.phone, email: input.email,
         notes: input.notes, status: 'submitted', payment_status: 'pending', qr_token: qrToken, qr_status: 'inactive',
       }).select().single();
@@ -1421,7 +1421,7 @@ const restaurantModuleRouter = router({
       const qrToken = `re-${Date.now()}-${Math.random().toString(36).substring(2, 14)}`;
 
       const { data, error } = await supabase.from('restaurant_reservations').insert({
-        reference, type: 'entreprise', slot_id: input.slotId, display_choice: input.displayChoice,
+        reference, type: 'entreprise',
         seats_total: input.seats, name: input.name, phone: input.phone, email: input.email,
         company_name: input.companyName, notes: input.notes,
         status: 'pending_confirmation', payment_status: 'not_applicable', qr_token: qrToken, qr_status: 'inactive',
@@ -1484,7 +1484,7 @@ const restaurantModuleRouter = router({
       const qrToken = `rg-${Date.now()}-${Math.random().toString(36).substring(2, 14)}`;
 
       const { data, error } = await supabase.from('restaurant_reservations').insert({
-        reference, type: 'groupe', slot_id: input.slotId, display_choice: input.displayChoice,
+        reference, type: 'groupe',
         seats_total: input.seats, name: input.name, phone: input.phone, email: input.email,
         group_name: input.groupName, group_type: input.groupType, notes: input.notes,
         status: 'pending_confirmation', payment_status: 'not_applicable', qr_token: qrToken, qr_status: 'inactive',

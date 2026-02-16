@@ -2283,8 +2283,6 @@ const restaurantReservationsRouter = router({
         const { data, error } = await supabase.from('restaurant_reservations').insert({
           reference,
           type: 'particulier',
-          slot_id: 1,
-          display_choice: 'jardin',
           seats_total: input.participantsCount,
           date: input.date,
           name: input.firstName,
@@ -2348,8 +2346,6 @@ const restaurantReservationsRouter = router({
         const { data, error } = await supabase.from('restaurant_reservations').insert({
           reference,
           type: 'entreprise',
-          slot_id: 1,
-          display_choice: 'jardin',
           seats_total: input.participantsCount,
           date: input.date,
           name: input.contactName,
@@ -2413,8 +2409,6 @@ const restaurantReservationsRouter = router({
         const { data, error } = await supabase.from('restaurant_reservations').insert({
           reference,
           type: 'groupe',
-          slot_id: 1,
-          display_choice: 'jardin',
           seats_total: input.participantsCount,
           date: input.date,
           name: input.contactName,

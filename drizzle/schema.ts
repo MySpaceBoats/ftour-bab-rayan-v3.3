@@ -702,7 +702,6 @@ export type InsertRestaurantSlot = typeof restaurantSlots.$inferInsert;
 // ============================================
 
 export const restaurantReservationTypeEnum = mysqlEnum("restaurant_reservation_type", ["particulier", "entreprise", "groupe"]);
-export const restaurantDisplayChoiceEnum = mysqlEnum("restaurant_display_choice", ["jardin", "brasserie", "corpo"]);
 export const restaurantReservationStatusEnum = mysqlEnum("restaurant_reservation_status", [
   "pending_validation",        // Demande reçue (Email 1 envoye)
   "validated_pending_payment", // Confirmee, en attente paiement (Email 2 envoye)
@@ -725,8 +724,6 @@ export const restaurantReservations = mysqlTable("restaurant_reservations", {
   id: int("id").autoincrement().primaryKey(),
   reference: varchar("reference", { length: 50 }).notNull().unique(), // RES-P-XXXXX / RES-E-XXXXX / RES-G-XXXXX
   type: restaurantReservationTypeEnum.notNull(),
-  slotId: int("slotId").notNull().default(1),
-  displayChoice: restaurantDisplayChoiceEnum.notNull().default('jardin'),
   seatsTotal: int("seatsTotal").notNull(),
   date: timestamp("date"),
   // Contact info (common)

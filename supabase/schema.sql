@@ -361,8 +361,6 @@ CREATE TABLE IF NOT EXISTS restaurant_reservations (
   id SERIAL PRIMARY KEY,
   reference VARCHAR(50) NOT NULL UNIQUE,
   type VARCHAR(20) NOT NULL CHECK (type IN ('particulier', 'entreprise', 'groupe')),
-  slot_id INTEGER NOT NULL REFERENCES restaurant_slots(id),
-  display_choice VARCHAR(20) NOT NULL CHECK (display_choice IN ('jardin', 'brasserie', 'corpo')),
   seats_total INTEGER NOT NULL,
   -- Contact
   name VARCHAR(255) NOT NULL,

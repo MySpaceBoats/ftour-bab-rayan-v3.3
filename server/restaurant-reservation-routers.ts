@@ -49,7 +49,6 @@ export const restaurantReservationsRouter = router({
             date: new Date(input.date),
             seatsTotal: input.participantsCount,
             qrToken,
-            displayChoice: 'jardin',
           });
 
           await sendEmail({
@@ -150,7 +149,6 @@ export const restaurantReservationsRouter = router({
             date: new Date(input.date),
             seatsTotal: input.participantsCount,
             qrToken,
-            displayChoice: 'jardin',
             companyName: input.companyName,
             notes: input.companyNotes,
           });
@@ -248,7 +246,6 @@ export const restaurantReservationsRouter = router({
             date: new Date(input.date),
             seatsTotal: input.participantsCount,
             qrToken,
-            displayChoice: 'jardin',
             groupName: input.groupName,
             groupType: input.groupType,
           });
