@@ -272,6 +272,14 @@ function normalizeVolunteerSlots(raw: unknown): string[] {
   return [];
 }
 
+/**
+ * Extracts volunteer_slots from a raw DB row, handling both
+ * snake_case (volunteer_slots) and camelCase (volunteerSlots) column names.
+ */
+function extractSlots(row: any): string[] {
+  return normalizeVolunteerSlots(row.volunteer_slots ?? row.volunteerSlots);
+}
+
 export interface VolunteerData {
   firstName: string;
   lastName: string;
@@ -290,42 +298,63 @@ export async function createVolunteerShiftSupabase(data: VolunteerData) {
   // Generate secure token
   const qrToken = generateSecureToken();
 
-  const { data: volunteer, error } = await client
+  const slotsArray = data.volunteerSlots || [];
+
+  // Insert with both column names to handle DB created from either
+  // the SQL schema (snake_case) or Drizzle schema (camelCase).
+  // PostgREST ignores columns that don't exist in the table.
+  let insertPayload: Record<string, any> = {
+    first_name: data.firstName,
+    last_name: data.lastName,
+    email: data.email,
+    phone: data.phone,
+    city: data.city,
+    day_id: data.dayId,
+    volunteer_slots: slotsArray,
+    qr_token: qrToken,
+    qr_status: 'generated',
+    status: 'registered',
+    accepted_terms: data.acceptedTerms,
+    email_sent: false,
+  };
+
+  // Try inserting with snake_case first
+  let { data: volunteer, error } = await client
     .from('volunteers')
-    .insert({
-      first_name: data.firstName,
-      last_name: data.lastName,
-      email: data.email,
-      phone: data.phone,
-      city: data.city,
-      day_id: data.dayId,
-      volunteer_slots: data.volunteerSlots || [],
-      qr_token: qrToken,
-      qr_status: 'generated',
-      status: 'registered',
-      accepted_terms: data.acceptedTerms,
-      email_sent: false,
-    })
+    .insert(insertPayload)
     .select()
     .single();
+
+  // If snake_case column fails, try camelCase column name
+  if (error && (error.message?.includes('volunteer_slots') || error.code === '42703')) {
+    const { volunteer_slots, ...rest } = insertPayload;
+    insertPayload = { ...rest, volunteerSlots: slotsArray };
+    const retry = await client
+      .from('volunteers')
+      .insert(insertPayload)
+      .select()
+      .single();
+    volunteer = retry.data;
+    error = retry.error;
+  }
 
   if (error) throw error;
 
   return {
     id: volunteer.id,
-    firstName: volunteer.first_name,
-    lastName: volunteer.last_name,
+    firstName: volunteer.first_name ?? volunteer.firstName,
+    lastName: volunteer.last_name ?? volunteer.lastName,
     email: volunteer.email,
     phone: volunteer.phone,
     city: volunteer.city,
-    dayId: volunteer.day_id,
-    volunteerSlots: normalizeVolunteerSlots(volunteer.volunteer_slots),
-    qrToken: volunteer.qr_token,
-    qrStatus: volunteer.qr_status,
+    dayId: volunteer.day_id ?? volunteer.dayId,
+    volunteerSlots: extractSlots(volunteer),
+    qrToken: volunteer.qr_token ?? volunteer.qrToken,
+    qrStatus: volunteer.qr_status ?? volunteer.qrStatus,
     status: volunteer.status,
-    acceptedTerms: volunteer.accepted_terms,
-    emailSent: volunteer.email_sent,
-    createdAt: new Date(volunteer.created_at),
+    acceptedTerms: volunteer.accepted_terms ?? volunteer.acceptedTerms,
+    emailSent: volunteer.email_sent ?? volunteer.emailSent,
+    createdAt: new Date(volunteer.created_at ?? volunteer.createdAt),
   };
 }
 
@@ -340,34 +369,35 @@ export async function getVolunteerByTokenSupabase(token: string) {
     .single();
 
   if (error || !data) return null;
-  
+
+  const rd = data.ramadan_days;
   return {
     id: data.id,
-    firstName: data.first_name,
-    lastName: data.last_name,
+    firstName: data.first_name ?? data.firstName,
+    lastName: data.last_name ?? data.lastName,
     email: data.email,
     phone: data.phone,
     city: data.city,
-    dayId: data.day_id,
-    volunteerSlots: normalizeVolunteerSlots(data.volunteer_slots),
-    qrToken: data.qr_token,
-    qrStatus: data.qr_status,
+    dayId: data.day_id ?? data.dayId,
+    volunteerSlots: extractSlots(data),
+    qrToken: data.qr_token ?? data.qrToken,
+    qrStatus: data.qr_status ?? data.qrStatus,
     status: data.status,
-    confirmedAt: data.confirmed_at ? new Date(data.confirmed_at) : null,
-    scannedAt: data.scanned_at ? new Date(data.scanned_at) : null,
-    scannedBy: data.scanned_by,
-    acceptedTerms: data.accepted_terms,
-    emailSent: data.email_sent,
+    confirmedAt: (data.confirmed_at ?? data.confirmedAt) ? new Date(data.confirmed_at ?? data.confirmedAt) : null,
+    scannedAt: (data.scanned_at ?? data.scannedAt) ? new Date(data.scanned_at ?? data.scannedAt) : null,
+    scannedBy: data.scanned_by ?? data.scannedBy,
+    acceptedTerms: data.accepted_terms ?? data.acceptedTerms,
+    emailSent: data.email_sent ?? data.emailSent,
     notes: data.notes,
-    createdAt: new Date(data.created_at),
-    updatedAt: new Date(data.updated_at),
-    day: data.ramadan_days ? {
-      id: data.ramadan_days.id,
-      dayNumber: data.ramadan_days.day_number,
-      date: data.ramadan_days.date,
-      hijriDate: data.ramadan_days.hijri_date,
-      iftarTime: data.ramadan_days.iftar_time,
-      location: data.ramadan_days.location,
+    createdAt: new Date(data.created_at ?? data.createdAt),
+    updatedAt: new Date(data.updated_at ?? data.updatedAt),
+    day: rd ? {
+      id: rd.id,
+      dayNumber: rd.day_number ?? rd.dayNumber,
+      date: rd.date,
+      hijriDate: rd.hijri_date ?? rd.hijriDate,
+      iftarTime: rd.iftar_time ?? rd.iftarTime,
+      location: rd.location,
     } : null,
   };
 }
@@ -391,29 +421,32 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
     .order('day_number', { ascending: true });
 
   return {
-    volunteers: volunteers?.map(v => ({
-      id: v.id,
-      firstName: v.first_name,
-      lastName: v.last_name,
-      email: v.email,
-      phone: v.phone,
-      city: v.city,
-      dayId: v.day_id,
-      volunteerSlots: normalizeVolunteerSlots(v.volunteer_slots),
-      qrToken: v.qr_token,
-      qrStatus: v.qr_status,
-      status: v.status,
-      scannedAt: v.scanned_at ? new Date(v.scanned_at) : null,
-      scannedBy: v.scanned_by,
-      createdAt: new Date(v.created_at),
-      day: v.ramadan_days ? {
-        dayNumber: v.ramadan_days.day_number,
-        date: v.ramadan_days.date,
-      } : null,
-    })) || [],
+    volunteers: volunteers?.map(v => {
+      const rd = v.ramadan_days;
+      return {
+        id: v.id,
+        firstName: v.first_name ?? v.firstName,
+        lastName: v.last_name ?? v.lastName,
+        email: v.email,
+        phone: v.phone,
+        city: v.city,
+        dayId: v.day_id ?? v.dayId,
+        volunteerSlots: extractSlots(v),
+        qrToken: v.qr_token ?? v.qrToken,
+        qrStatus: v.qr_status ?? v.qrStatus,
+        status: v.status,
+        scannedAt: (v.scanned_at ?? v.scannedAt) ? new Date(v.scanned_at ?? v.scannedAt) : null,
+        scannedBy: v.scanned_by ?? v.scannedBy,
+        createdAt: new Date(v.created_at ?? v.createdAt),
+        day: rd ? {
+          dayNumber: rd.day_number ?? rd.dayNumber,
+          date: rd.date,
+        } : null,
+      };
+    }) || [],
     days: days?.map(d => ({
       id: d.id,
-      dayNumber: d.day_number,
+      dayNumber: d.day_number ?? d.dayNumber,
       date: d.date,
     })) || [],
   };
