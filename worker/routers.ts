@@ -1788,10 +1788,70 @@ const usersRouter = router({
     }));
   }),
 
+  create: superAdminProcedure
+    .input(z.object({
+      email: z.string().email(),
+      password: z.string().min(6),
+      name: z.string().optional(),
+      phone: z.string().optional(),
+      role: z.enum(['user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes', 'admin_patisserie', 'admin_terroir']).default('user'),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      // Create user in Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: input.email,
+        password: input.password,
+        email_confirm: true,
+        user_metadata: {
+          name: input.name,
+          phone: input.phone,
+        },
+      });
+
+      if (authError) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: authError.message });
+      }
+
+      if (!authData.user) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Erreur lors de la création du compte' });
+      }
+
+      // Create entry in users table
+      const { error: dbError } = await supabase
+        .from('users')
+        .insert({
+          open_id: authData.user.id,
+          email: input.email,
+          name: input.name || null,
+          phone: input.phone || null,
+          role: input.role,
+        });
+
+      if (dbError) {
+        // Rollback: delete auth user
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Erreur lors de la création du profil' });
+      }
+
+      return {
+        success: true,
+        user: {
+          id: authData.user.id,
+          email: input.email,
+          role: input.role,
+          name: input.name,
+          phone: input.phone,
+          createdAt: new Date(),
+        },
+      };
+    }),
+
   updateRole: superAdminProcedure
     .input(z.object({
       userId: z.number(),
-      role: z.enum(['user', 'admin', 'super_admin', 'admin_operations', 'admin_boutique', 'admin_dons', 'scanner']),
+      role: z.enum(['user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes', 'admin_patisserie', 'admin_terroir']),
     }))
     .mutation(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
