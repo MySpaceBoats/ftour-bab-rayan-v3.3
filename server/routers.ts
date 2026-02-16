@@ -248,10 +248,14 @@ const volunteersRouter = router({
       }
 
       // Send confirmation email with QR code
+      // Always use input.volunteerSlots (from form) to ensure slots appear
+      // in the email even if the DB column doesn't exist yet
       try {
         const baseUrl = process.env.NODE_ENV === 'production'
           ? 'https://ftourbabrayan.ma'
           : 'http://localhost:3000';
+
+        console.log('[Volunteer Registration] Sending email with slots:', input.volunteerSlots);
 
         const emailData = generateVolunteerConfirmationEmail({
           firstName: input.firstName,
@@ -276,6 +280,7 @@ const volunteersRouter = router({
           subject: emailData.subject,
           html: emailData.html,
         });
+        console.log('[Volunteer Registration] Email sent successfully to:', input.email);
       } catch (error) {
         console.error('[Volunteer Registration] Email send failed:', error);
       }

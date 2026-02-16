@@ -97,6 +97,49 @@ export async function testSupabaseConnection(): Promise<{ success: boolean; erro
 }
 
 // ============================================
+// AUTO-MIGRATION: ensure volunteer_slots column exists
+// ============================================
+let _migrationDone = false;
+export let volunteerSlotsColumnExists = false;
+
+export async function ensureVolunteerSlotsColumn(): Promise<void> {
+  if (_migrationDone) return;
+  _migrationDone = true;
+
+  const client = getSupabaseAdminClient();
+  if (!client) {
+    console.warn('[Migration] Supabase not configured, skipping volunteer_slots check');
+    return;
+  }
+
+  try {
+    // Check if the column exists by trying a select
+    const { error: testError } = await client
+      .from('volunteers')
+      .select('volunteer_slots')
+      .limit(1);
+
+    if (testError && (testError.message?.includes('volunteer_slots') || testError.code === '42703' || testError.code === 'PGRST204')) {
+      console.error('='.repeat(70));
+      console.error('[MIGRATION REQUIRED] The volunteer_slots column is MISSING');
+      console.error('[MIGRATION REQUIRED] Slots will NOT be saved until you run:');
+      console.error('');
+      console.error("  ALTER TABLE volunteers ADD COLUMN IF NOT EXISTS volunteer_slots JSONB DEFAULT '[]'::jsonb;");
+      console.error('');
+      console.error('[MIGRATION REQUIRED] Run this in the Supabase SQL Editor:');
+      console.error('  https://supabase.com/dashboard → SQL Editor');
+      console.error('='.repeat(70));
+      volunteerSlotsColumnExists = false;
+    } else {
+      console.log('[Migration] volunteer_slots column OK');
+      volunteerSlotsColumnExists = true;
+    }
+  } catch (err) {
+    console.error('[Migration] Error checking volunteer_slots column:', err);
+  }
+}
+
+// ============================================
 // DATABASE TYPES (generated from schema)
 // ============================================
 export interface Database {

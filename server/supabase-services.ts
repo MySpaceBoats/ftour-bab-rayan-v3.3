@@ -1,4 +1,4 @@
-import { getSupabaseAdminClient, getSupabasePublicClient } from './supabase';
+import { getSupabaseAdminClient, getSupabasePublicClient, volunteerSlotsColumnExists } from './supabase';
 import { generateSecureToken } from './qrcode';
 
 // ============================================
@@ -300,17 +300,14 @@ export async function createVolunteerShiftSupabase(data: VolunteerData) {
 
   const slotsArray = data.volunteerSlots || [];
 
-  // Insert with both column names to handle DB created from either
-  // the SQL schema (snake_case) or Drizzle schema (camelCase).
-  // PostgREST ignores columns that don't exist in the table.
-  let insertPayload: Record<string, any> = {
+  // Build the insert payload
+  const insertPayload: Record<string, any> = {
     first_name: data.firstName,
     last_name: data.lastName,
     email: data.email,
     phone: data.phone,
     city: data.city,
     day_id: data.dayId,
-    volunteer_slots: slotsArray,
     qr_token: qrToken,
     qr_status: 'generated',
     status: 'registered',
@@ -318,27 +315,25 @@ export async function createVolunteerShiftSupabase(data: VolunteerData) {
     email_sent: false,
   };
 
-  // Try inserting with snake_case first
-  let { data: volunteer, error } = await client
+  // Always include volunteer_slots - PostgREST silently ignores it
+  // if the column doesn't exist in the DB
+  insertPayload.volunteer_slots = slotsArray;
+
+  const { data: volunteer, error } = await client
     .from('volunteers')
     .insert(insertPayload)
     .select()
     .single();
 
-  // If snake_case column fails, try camelCase column name
-  if (error && (error.message?.includes('volunteer_slots') || error.code === '42703')) {
-    const { volunteer_slots, ...rest } = insertPayload;
-    insertPayload = { ...rest, volunteerSlots: slotsArray };
-    const retry = await client
-      .from('volunteers')
-      .insert(insertPayload)
-      .select()
-      .single();
-    volunteer = retry.data;
-    error = retry.error;
-  }
-
   if (error) throw error;
+
+  // Log if slots weren't stored (column might be missing from DB)
+  const storedSlots = extractSlots(volunteer);
+  if (slotsArray.length > 0 && storedSlots.length === 0) {
+    console.warn('[Volunteer] WARNING: volunteer_slots were NOT stored in DB!');
+    console.warn('[Volunteer] The volunteer_slots column is likely missing.');
+    console.warn("[Volunteer] Run: ALTER TABLE volunteers ADD COLUMN IF NOT EXISTS volunteer_slots JSONB DEFAULT '[]'::jsonb;");
+  }
 
   return {
     id: volunteer.id,
@@ -348,7 +343,7 @@ export async function createVolunteerShiftSupabase(data: VolunteerData) {
     phone: volunteer.phone,
     city: volunteer.city,
     dayId: volunteer.day_id ?? volunteer.dayId,
-    volunteerSlots: extractSlots(volunteer),
+    volunteerSlots: storedSlots.length > 0 ? storedSlots : slotsArray,
     qrToken: volunteer.qr_token ?? volunteer.qrToken,
     qrStatus: volunteer.qr_status ?? volunteer.qrStatus,
     status: volunteer.status,
