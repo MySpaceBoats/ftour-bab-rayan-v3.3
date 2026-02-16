@@ -38,6 +38,7 @@ export default function AdminPastryCatalog() {
     description: "",
     price: 0,
     imageUrl: "",
+    category: "",
     sortOrder: 0,
     active: true,
   });
@@ -91,6 +92,7 @@ export default function AdminPastryCatalog() {
       description: "",
       price: 0,
       imageUrl: "",
+      category: "",
       sortOrder: 0,
       active: true,
     });
@@ -155,6 +157,7 @@ export default function AdminPastryCatalog() {
       description: formData.description || undefined,
       price: formData.price,
       imageUrl: formData.imageUrl || undefined,
+      category: formData.category || undefined,
       sortOrder: formData.sortOrder,
     });
   };
@@ -167,6 +170,7 @@ export default function AdminPastryCatalog() {
       description: formData.description || undefined,
       price: formData.price || undefined,
       imageUrl: formData.imageUrl || undefined,
+      category: formData.category || undefined,
       active: formData.active,
       sortOrder: formData.sortOrder,
     });
@@ -179,6 +183,7 @@ export default function AdminPastryCatalog() {
       description: pastry.description || "",
       price: pastry.price || 0,
       imageUrl: pastry.image_url || "",
+      category: pastry.category || "",
       sortOrder: pastry.sort_order || 0,
       active: pastry.active ?? true,
     });
@@ -345,6 +350,15 @@ export default function AdminPastryCatalog() {
 
                 <ImageUploadField />
 
+                <div className="space-y-2">
+                  <Label>Catégorie</Label>
+                  <Input
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    placeholder="Gâteaux, Tartes, Viennoiseries..."
+                  />
+                </div>
+
                 <div className="flex items-center justify-between">
                   <Label>Actif</Label>
                   <Switch
@@ -503,6 +517,15 @@ export default function AdminPastryCatalog() {
                                   </div>
 
                                   <ImageUploadField />
+
+                                  <div className="space-y-2">
+                                    <Label>Catégorie</Label>
+                                    <Input
+                                      value={formData.category}
+                                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                      placeholder="Gâteaux, Tartes, Viennoiseries..."
+                                    />
+                                  </div>
 
                                   <div className="flex items-center justify-between">
                                     <Label>Actif</Label>

@@ -9,7 +9,7 @@ import {
   Users, ShoppingBag, Heart, Calendar, QrCode,
   ArrowRight, Loader2, BarChart3, Package, MessageSquare,
   UserCog, FileText, Home, LogOut, UtensilsCrossed, Store,
-  Building2, UsersRound, type LucideIcon
+  Building2, UsersRound, CakeSlice, type LucideIcon
 } from "lucide-react";
 
 // ============================================
@@ -142,7 +142,7 @@ const sections: SectionDefinition[] = [
         label: "Catalogue Pâtisserie",
         description: "Ajouter, modifier et gérer les produits pâtisserie",
         route: "/admin/patisserie/catalogue",
-        icon: ShoppingBag,
+        icon: CakeSlice,
         iconColor: "text-amber-600",
         iconBg: "bg-amber-100",
         allowedRoles: ['admin', 'super_admin', 'admin_boutique', 'admin_patisserie'],
