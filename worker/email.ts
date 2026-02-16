@@ -8,6 +8,34 @@ const FROM_EMAIL = "Ftour Bab Rayan <noreply@ftourbabrayan.ma>";
 const REPLY_TO = "contact@ftourbabrayan.ma";
 const BCC_EMAIL = "rsebbani@myspace.boats";
 
+/**
+ * Calcule les horaires des créneaux bénévoles à partir de l'heure d'iftar.
+ * Préparation : iftarTime - 3h → iftarTime - 15min
+ * Service : iftarTime → iftarTime + 1h30
+ */
+function computeSlotTimes(iftarTimeStr: string): { prepStart: string; prepEnd: string; serviceStart: string; serviceEnd: string } {
+  const match = iftarTimeStr.match(/(\d{1,2})[h:](\d{2})/);
+  if (!match) {
+    return { prepStart: '15:00', prepEnd: '17:45', serviceStart: '18:00', serviceEnd: '19:30' };
+  }
+  const iftarHour = parseInt(match[1]);
+  const iftarMin = parseInt(match[2]);
+  const iftarTotalMin = iftarHour * 60 + iftarMin;
+
+  const formatTime = (totalMin: number) => {
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  };
+
+  return {
+    prepStart: formatTime(iftarTotalMin - 180),
+    prepEnd: formatTime(iftarTotalMin - 15),
+    serviceStart: formatTime(iftarTotalMin),
+    serviceEnd: formatTime(iftarTotalMin + 90),
+  };
+}
+
 interface EmailOptions {
   to: string;
   subject: string;
@@ -144,9 +172,10 @@ export interface VolunteerEmailData {
 export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { subject: string; html: string } {
   const qrCodeUrl = getQrCodeUrl(data.qrToken, data.baseUrl);
 
+  const times = computeSlotTimes(data.startTime);
   const slotLabels: Record<string, string> = {
-    preparation_ftour: 'Préparation Ftour',
-    service_ftour: 'Service Ftour',
+    preparation_ftour: `Préparation Ftour (${times.prepStart} – ${times.prepEnd})`,
+    service_ftour: `Service Ftour (${times.serviceStart} – ${times.serviceEnd})`,
   };
   const slotsHtml = (data.volunteerSlots || []).map(s =>
     `<li style="margin-bottom: 4px;">${slotLabels[s] || s}</li>`
@@ -616,13 +645,15 @@ export interface GroupRegistrationEmailData {
   volunteerSlots: string[];
   dayNumber?: number;
   dayDate?: string;
+  startTime?: string;
   fileName: string;
 }
 
 export function generateGroupRegistrationEmail(data: GroupRegistrationEmailData): { subject: string; html: string } {
+  const times = computeSlotTimes(data.startTime || '18h00');
   const slotLabels: Record<string, string> = {
-    preparation_ftour: 'Préparation Ftour',
-    service_ftour: 'Service Ftour',
+    preparation_ftour: `Préparation Ftour (${times.prepStart} – ${times.prepEnd})`,
+    service_ftour: `Service Ftour (${times.serviceStart} – ${times.serviceEnd})`,
   };
   const slotsDisplay = data.volunteerSlots.map(s => slotLabels[s] || s).join(', ');
 
