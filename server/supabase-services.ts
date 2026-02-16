@@ -251,6 +251,27 @@ export async function deleteRamadanDaySupabase(id: number) {
 // VOLUNTEER SERVICES
 // ============================================
 
+/**
+ * Normalizes volunteer_slots from DB which may be stored as:
+ * - a JSON array (correct): ["preparation_ftour","service_ftour"]
+ * - a JSON string (legacy/quirk): '["preparation_ftour","service_ftour"]'
+ * - null/undefined
+ * Always returns a string[].
+ */
+function normalizeVolunteerSlots(raw: unknown): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.filter((s): s is string => typeof s === 'string');
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.filter((s): s is string => typeof s === 'string');
+    } catch {
+      // not JSON, return empty
+    }
+  }
+  return [];
+}
+
 export interface VolunteerData {
   firstName: string;
   lastName: string;
@@ -298,7 +319,7 @@ export async function createVolunteerShiftSupabase(data: VolunteerData) {
     phone: volunteer.phone,
     city: volunteer.city,
     dayId: volunteer.day_id,
-    volunteerSlots: volunteer.volunteer_slots as string[] || [],
+    volunteerSlots: normalizeVolunteerSlots(volunteer.volunteer_slots),
     qrToken: volunteer.qr_token,
     qrStatus: volunteer.qr_status,
     status: volunteer.status,
@@ -328,7 +349,7 @@ export async function getVolunteerByTokenSupabase(token: string) {
     phone: data.phone,
     city: data.city,
     dayId: data.day_id,
-    volunteerSlots: data.volunteer_slots as string[] || [],
+    volunteerSlots: normalizeVolunteerSlots(data.volunteer_slots),
     qrToken: data.qr_token,
     qrStatus: data.qr_status,
     status: data.status,
@@ -378,7 +399,7 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
       phone: v.phone,
       city: v.city,
       dayId: v.day_id,
-      volunteerSlots: v.volunteer_slots as string[] || [],
+      volunteerSlots: normalizeVolunteerSlots(v.volunteer_slots),
       qrToken: v.qr_token,
       qrStatus: v.qr_status,
       status: v.status,

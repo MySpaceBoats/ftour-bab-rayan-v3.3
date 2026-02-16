@@ -160,21 +160,13 @@ export default function Navbar() {
         <div className="container flex h-16 items-center justify-between">
           {/* Logo */}
           <Link href={localizedHref('/')} className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center">
-              <svg viewBox="0 0 40 40" className="h-10 w-10">
-                <path 
-                  d="M20 8c-2 0-4 1-5 3-1-2-3-3-5-3-4 0-7 3-7 7 0 8 12 16 12 16s12-8 12-16c0-4-3-7-7-7z" 
-                  fill="none" 
-                  stroke="#F2E9D3" 
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <line x1="12" y1="14" x2="16" y2="18" stroke="#F2E9D3" strokeWidth="1" opacity="0.6"/>
-                <line x1="14" y1="12" x2="18" y2="16" stroke="#F2E9D3" strokeWidth="1" opacity="0.6"/>
-                <line x1="16" y1="14" x2="20" y2="18" stroke="#F2E9D3" strokeWidth="1" opacity="0.6"/>
-              </svg>
-            </div>
+            <img
+              src="/logo-bab-rayan.svg"
+              alt="Ftour Bab Rayan"
+              className="h-10 w-10"
+              width={40}
+              height={40}
+            />
             <div className="flex flex-col">
               <span className="text-lg font-bold leading-none text-[#F2E9D3]" style={{ fontFamily: 'Caveat, cursive' }}>
                 {t.home.heroTitle}

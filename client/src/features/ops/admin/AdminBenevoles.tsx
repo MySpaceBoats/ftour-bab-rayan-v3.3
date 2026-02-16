@@ -25,6 +25,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+function normalizeSlots(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try { const p = JSON.parse(raw); return Array.isArray(p) ? p : []; } catch { return []; }
+  }
+  return [];
+}
+
 export default function AdminBenevoles() {
   const [selectedDay, setSelectedDay] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,7 +79,7 @@ export default function AdminBenevoles() {
 
     const matchesStatus = statusFilter === "all" || v.status === statusFilter;
 
-    const slots: string[] = v.volunteerSlots || [];
+    const slots: string[] = normalizeSlots(v.volunteerSlots);
     let matchesSlot = true;
     if (slotFilter === "preparation_ftour") {
       matchesSlot = slots.includes("preparation_ftour");
@@ -119,7 +127,7 @@ export default function AdminBenevoles() {
       v.phone,
       v.city || "",
       `Jour ${v.day?.dayNumber || ""}`,
-      (v.volunteerSlots || []).map((s: string) => slotLabels[s] || s).join(" + "),
+      normalizeSlots(v.volunteerSlots).map((s: string) => slotLabels[s] || s).join(" + "),
       v.status,
       new Date(v.createdAt).toLocaleDateString('fr-FR'),
     ]);
@@ -307,17 +315,17 @@ export default function AdminBenevoles() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
-                            {(volunteer.volunteerSlots || []).includes("preparation_ftour") && (
+                            {normalizeSlots(volunteer.volunteerSlots).includes("preparation_ftour") && (
                               <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-xs">
                                 Préparation
                               </Badge>
                             )}
-                            {(volunteer.volunteerSlots || []).includes("service_ftour") && (
+                            {normalizeSlots(volunteer.volunteerSlots).includes("service_ftour") && (
                               <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
                                 Service
                               </Badge>
                             )}
-                            {(!volunteer.volunteerSlots || volunteer.volunteerSlots.length === 0) && (
+                            {(normalizeSlots(volunteer.volunteerSlots).length === 0) && (
                               <span className="text-xs text-muted-foreground">—</span>
                             )}
                           </div>
@@ -439,17 +447,17 @@ export default function AdminBenevoles() {
                 <div className="flex justify-between py-2 border-b">
                   <span className="text-muted-foreground">Créneaux</span>
                   <div className="flex flex-wrap gap-1 justify-end">
-                    {(currentVolunteer.volunteerSlots || []).includes("preparation_ftour") && (
+                    {normalizeSlots(currentVolunteer.volunteerSlots).includes("preparation_ftour") && (
                       <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-xs">
                         Préparation ftour
                       </Badge>
                     )}
-                    {(currentVolunteer.volunteerSlots || []).includes("service_ftour") && (
+                    {normalizeSlots(currentVolunteer.volunteerSlots).includes("service_ftour") && (
                       <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
                         Service ftour
                       </Badge>
                     )}
-                    {(!currentVolunteer.volunteerSlots || currentVolunteer.volunteerSlots.length === 0) && (
+                    {(normalizeSlots(currentVolunteer.volunteerSlots).length === 0) && (
                       <span className="text-muted-foreground">—</span>
                     )}
                   </div>
