@@ -222,6 +222,8 @@ export const amz: Translations = {
     backToHome: 'Back to home',
     noProducts: 'No products available',
     comingSoon: 'Goodies coming soon!',
+    loadError: 'Loading error',
+    retry: 'Retry',
     selectVariant: 'Select a variant',
     chooseOptions: 'Choose your options',
     selectOption: 'Select an option',

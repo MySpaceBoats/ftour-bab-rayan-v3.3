@@ -220,6 +220,8 @@ export const fr = {
     backToHome: "Retour à l'accueil",
     noProducts: 'Aucun produit disponible',
     comingSoon: 'Les goodies arrivent bientôt !',
+    loadError: 'Erreur de chargement',
+    retry: 'Réessayer',
     selectVariant: 'Sélectionner une variante',
     chooseOptions: 'Choisissez vos options',
     selectOption: 'Sélectionner une option',

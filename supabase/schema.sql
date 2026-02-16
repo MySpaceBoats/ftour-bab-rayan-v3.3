@@ -146,6 +146,15 @@ CREATE TABLE IF NOT EXISTS orders (
   pickup_date DATE,
   pickup_location TEXT,
   notes TEXT,
+  -- Delivery fields
+  delivery_mode VARCHAR(20) NOT NULL DEFAULT 'pickup',
+  delivery_fee DECIMAL(10,2) NOT NULL DEFAULT 0,
+  delivery_address TEXT,
+  delivery_phone VARCHAR(20),
+  delivery_instructions TEXT,
+  delivered_at TIMESTAMPTZ,
+  -- Payment
+  payment_method VARCHAR(20) DEFAULT 'cash',
   processed_by INTEGER REFERENCES users(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

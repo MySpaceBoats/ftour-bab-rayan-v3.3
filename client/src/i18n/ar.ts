@@ -222,6 +222,8 @@ export const ar: Translations = {
     backToHome: 'العودة للرئيسية',
     noProducts: 'لا توجد منتجات متاحة',
     comingSoon: 'المنتجات قادمة قريباً!',
+    loadError: 'خطأ في التحميل',
+    retry: 'إعادة المحاولة',
     selectVariant: 'اختر النوع',
     chooseOptions: 'اختر خياراتك',
     selectOption: 'اختر خياراً',

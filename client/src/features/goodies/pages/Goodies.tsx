@@ -10,7 +10,7 @@ import { trpc } from "@/lib/trpc";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
-import { ShoppingBag, Plus, Minus, ShoppingCart, X, CheckCircle, Loader2, Package } from "lucide-react";
+import { ShoppingBag, Plus, Minus, ShoppingCart, X, CheckCircle, Loader2, Package, RefreshCw, AlertTriangle } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { useCart } from "@/contexts/CartContext";
 import GoodiesConfirmation from "@/components/GoodiesConfirmation";
@@ -20,7 +20,7 @@ export default function Goodies() {
   const { t, lang } = useI18n();
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
 
-  const { data: goodies, isLoading } = trpc.goodies.list.useQuery();
+  const { data: goodies, isLoading, isError, error, refetch } = trpc.goodies.list.useQuery();
   const { cart, cartCount, cartTotal, isCartOpen, setIsCartOpen, addToCart: addToCartContext, updateQuantity, removeFromCart, clearCart } = useCart();
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [selectedGoodie, setSelectedGoodie] = useState<number | null>(null);
@@ -161,6 +161,24 @@ export default function Goodies() {
                     </CardContent>
                   </Card>
                 ))}
+              </div>
+            ) : isError ? (
+              <div className="text-center py-16">
+                <AlertTriangle className="h-16 w-16 mx-auto text-red-400/60 mb-4" />
+                <h3 className="text-xl font-semibold text-[#F2E9D3] mb-2">
+                  {t.goodies.loadError || "Erreur de chargement"}
+                </h3>
+                <p className="text-[#E6DCC3] mb-4">
+                  {error?.message || "Impossible de charger les produits"}
+                </p>
+                <Button
+                  onClick={() => refetch()}
+                  variant="outline"
+                  className="border-[#F2E9D3]/20 text-[#F2E9D3] hover:bg-[#F2E9D3]/10"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  {t.goodies.retry || "Réessayer"}
+                </Button>
               </div>
             ) : goodies && goodies.length > 0 ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

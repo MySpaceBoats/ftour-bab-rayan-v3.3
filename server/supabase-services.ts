@@ -642,18 +642,36 @@ export async function createGoodieSupabase(data: GoodieData) {
 
 export async function getAllGoodiesSupabase(activeOnly = false) {
   const client = getSupabaseAdminClient();
-  if (!client) return [];
+  if (!client) {
+    console.error('[Goodies] Supabase admin client not configured');
+    return [];
+  }
 
+  // Try fetching goodies with variants join first
   let query = client.from('goodies').select('*, goodie_variants(*)');
-  
+
   if (activeOnly) {
     query = query.eq('is_active', true);
   }
 
-  const { data, error } = await query.order('sort_order', { ascending: true });
-  if (error) throw error;
+  let { data, error } = await query.order('sort_order', { ascending: true });
 
-  return data?.map(g => ({
+  // If the variants join fails (FK not set up), fall back to goodies only
+  if (error) {
+    console.warn('[Goodies] Variants join failed, fetching goodies without variants:', error.message);
+    let fallbackQuery = client.from('goodies').select('*');
+    if (activeOnly) {
+      fallbackQuery = fallbackQuery.eq('is_active', true);
+    }
+    const fallbackResult = await fallbackQuery.order('sort_order', { ascending: true });
+    if (fallbackResult.error) {
+      console.error('[Goodies] Failed to fetch goodies:', fallbackResult.error.message);
+      throw fallbackResult.error;
+    }
+    data = fallbackResult.data?.map((g: any) => ({ ...g, goodie_variants: [] })) ?? null;
+  }
+
+  return data?.map((g: any) => ({
     id: g.id,
     name: g.name,
     description: g.description,
@@ -733,6 +751,7 @@ export interface OrderData {
   deliveryPostalCode?: string;
   deliveryPhone?: string;
   deliveryInstructions?: string;
+  paymentMethod?: string;
 }
 
 function generateOrderReference(): string {
@@ -777,6 +796,7 @@ export async function createGoodieOrderSupabase(data: OrderData) {
       delivery_address: deliveryAddressData,
       delivery_phone: data.deliveryPhone,
       delivery_instructions: data.deliveryInstructions,
+      payment_method: data.paymentMethod || 'cash',
     })
     .select()
     .single();
@@ -819,7 +839,7 @@ export async function getAllOrdersSupabase() {
 
   if (error) throw error;
 
-  return data?.map(o => ({
+  return data?.map((o: any) => ({
     id: o.id,
     orderReference: o.order_reference,
     customerName: o.customer_name,
@@ -830,6 +850,12 @@ export async function getAllOrdersSupabase() {
     pickupDate: o.pickup_date,
     pickupLocation: o.pickup_location,
     notes: o.notes,
+    deliveryMode: o.delivery_mode,
+    deliveryFee: o.delivery_fee ? parseFloat(o.delivery_fee) : 0,
+    deliveryAddress: o.delivery_address,
+    deliveryPhone: o.delivery_phone,
+    deliveryInstructions: o.delivery_instructions,
+    paymentMethod: o.payment_method,
     createdAt: new Date(o.created_at),
     items: o.order_items?.map((i: { id: number; goodie_id: number; quantity: number; unit_price: string; total_price: string; goodies: { name: string } | null }) => ({
       id: i.id,
