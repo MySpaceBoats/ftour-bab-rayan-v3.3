@@ -733,6 +733,7 @@ export interface OrderData {
   deliveryPostalCode?: string;
   deliveryPhone?: string;
   deliveryInstructions?: string;
+  paymentMethod?: 'bank_transfer' | 'cheque' | 'cash';
 }
 
 function generateOrderReference(): string {
@@ -777,6 +778,7 @@ export async function createGoodieOrderSupabase(data: OrderData) {
       delivery_address: deliveryAddressData,
       delivery_phone: data.deliveryPhone,
       delivery_instructions: data.deliveryInstructions,
+      payment_method: data.paymentMethod || 'cash',
     })
     .select()
     .single();
