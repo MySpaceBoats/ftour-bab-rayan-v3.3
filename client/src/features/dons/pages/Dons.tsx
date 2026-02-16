@@ -14,7 +14,12 @@ import { toast } from "sonner";
 import { Heart, CreditCard, Building2, CheckCircle, Loader2, ArrowRight, HandHeart, Users, Utensils, Gift } from "lucide-react";
 import { useI18n } from "@/i18n";
 
-const suggestedAmounts = [100, 200, 500, 1000, 2000, 5000];
+const suggestedAmounts = [25, 100, 200, 500, 650, 1000, 2000, 5000];
+
+const amountLabels: Record<number, { fr: string; ar: string; en: string }> = {
+  25: { fr: '1 repas', ar: 'وجبة واحدة', en: '1 meal' },
+  650: { fr: '1 personne tout Ramadan', ar: 'شخص واحد طوال رمضان', en: '1 person all Ramadan' },
+};
 
 export default function Dons() {
   const { t, lang } = useI18n();
@@ -173,11 +178,11 @@ export default function Dons() {
         <section className="py-12 bg-muted/30">
           <div className="container">
             <div className="grid md:grid-cols-4 gap-6">
-              <Card className="border-none shadow-sm">
+              <Card className="border-none shadow-sm border-2 border-primary/20">
                 <CardContent className="p-6 text-center">
                   <Utensils className="h-8 w-8 mx-auto text-primary mb-3" />
-                  <div className="text-2xl font-bold">50 DH</div>
-                  <p className="text-sm text-muted-foreground">= {t.donations.oneMeal}</p>
+                  <div className="text-2xl font-bold text-primary">25 DH</div>
+                  <p className="text-sm text-muted-foreground">= {lang === 'ar' ? 'وجبة واحدة' : lang === 'en' ? '1 meal' : '1 repas'}</p>
                 </CardContent>
               </Card>
               <Card className="border-none shadow-sm">
@@ -187,6 +192,13 @@ export default function Dons() {
                   <p className="text-sm text-muted-foreground">= {t.donations.tenMeals}</p>
                 </CardContent>
               </Card>
+              <Card className="border-none shadow-sm border-2 border-primary/20">
+                <CardContent className="p-6 text-center">
+                  <HandHeart className="h-8 w-8 mx-auto text-primary mb-3" />
+                  <div className="text-2xl font-bold text-primary">650 DH</div>
+                  <p className="text-sm text-muted-foreground">= {lang === 'ar' ? 'شخص واحد طوال رمضان' : lang === 'en' ? '1 person all Ramadan' : '1 personne tout Ramadan'}</p>
+                </CardContent>
+              </Card>
               <Card className="border-none shadow-sm">
                 <CardContent className="p-6 text-center">
                   <Gift className="h-8 w-8 mx-auto text-primary mb-3" />
@@ -194,7 +206,6 @@ export default function Dons() {
                   <p className="text-sm text-muted-foreground">= {t.donations.oneDayFtour}</p>
                 </CardContent>
               </Card>
-
             </div>
           </div>
         </section>
@@ -215,20 +226,29 @@ export default function Dons() {
                     {/* Amount Selection */}
                     <div className="space-y-3">
                       <Label>{t.donations.amount} *</Label>
-                      <div className="grid grid-cols-3 gap-3">
-                        {suggestedAmounts.map((amount) => (
-                          <Button
-                            key={amount}
-                            type="button"
-                            variant={formData.amount === amount.toString() && !formData.customAmount ? "default" : "outline"}
-                            onClick={() => {
-                              setFormData(prev => ({ ...prev, amount: amount.toString(), customAmount: "" }));
-                            }}
-                            className="h-12"
-                          >
-                            {amount} DH
-                          </Button>
-                        ))}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {suggestedAmounts.map((amount) => {
+                          const label = amountLabels[amount];
+                          const isSelected = formData.amount === amount.toString() && !formData.customAmount;
+                          return (
+                            <Button
+                              key={amount}
+                              type="button"
+                              variant={isSelected ? "default" : "outline"}
+                              onClick={() => {
+                                setFormData(prev => ({ ...prev, amount: amount.toString(), customAmount: "" }));
+                              }}
+                              className={`h-auto py-3 flex flex-col items-center gap-0.5 ${label ? 'ring-2 ring-primary/20' : ''}`}
+                            >
+                              <span className="font-bold">{amount} DH</span>
+                              {label && (
+                                <span className={`text-[10px] leading-tight ${isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
+                                  {lang === 'ar' ? label.ar : lang === 'en' ? label.en : label.fr}
+                                </span>
+                              )}
+                            </Button>
+                          );
+                        })}
                       </div>
                       <div className="relative">
                         <Input

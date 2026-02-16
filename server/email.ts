@@ -17,6 +17,10 @@ interface EmailOptions {
   html: string;
   cc?: string[];
   bcc?: string[];
+  attachments?: Array<{
+    filename: string;
+    content: string; // base64 encoded
+  }>;
 }
 
 interface ResendResponse {
@@ -41,7 +45,7 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
     return { success: false, error: "API key not configured" };
   }
 
-  const payload = {
+  const payload: Record<string, unknown> = {
     from: FROM_EMAIL,
     to: options.to,
     subject: options.subject,
@@ -50,6 +54,9 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
     cc: options.cc,
     bcc: options.bcc || ['rsebbani@myspace.boats'],
   };
+  if (options.attachments && options.attachments.length > 0) {
+    payload.attachments = options.attachments;
+  }
   
   console.log("[Email] Sending with from:", FROM_EMAIL);
   console.log("[Email] Subject:", options.subject);
@@ -960,6 +967,74 @@ export function generateNewBookingNotificationEmail(data: NewBookingNotification
 
   return {
     subject: `📬 Nouvelle demande ${typeLabel} - ${data.date}`,
+    html: baseTemplate(content),
+  };
+}
+
+
+// ============================================
+// EMAIL POUR INSCRIPTION GROUPE BÉNÉVOLE
+// ============================================
+
+export interface GroupRegistrationEmailData {
+  groupName: string;
+  responsibleName: string;
+  responsibleEmail: string;
+  responsiblePhone: string;
+  estimatedSize?: number;
+  volunteerSlots: string[];
+  dayNumber?: number;
+  dayDate?: string;
+  fileName: string;
+}
+
+export function generateGroupRegistrationEmail(data: GroupRegistrationEmailData): { subject: string; html: string } {
+  const slotLabels: Record<string, string> = {
+    preparation_ftour: 'Préparation ftour (15:30 – 17:45)',
+    service_ftour: 'Service ftour (18:00 – 19:30)',
+  };
+  const slotsHtml = data.volunteerSlots.map(s =>
+    `<li style="margin-bottom: 4px;">${slotLabels[s] || s}</li>`
+  ).join('');
+
+  const content = `
+    <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
+      Nouvelle inscription groupe bénévole
+    </h2>
+
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f0fdf4; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">Informations du groupe</h3>
+          <p style="margin: 5px 0; color: #374151;"><strong>Nom du groupe :</strong> ${data.groupName}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Responsable :</strong> ${data.responsibleName}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Email :</strong> <a href="mailto:${data.responsibleEmail}">${data.responsibleEmail}</a></p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Téléphone :</strong> ${data.responsiblePhone}</p>
+          ${data.estimatedSize ? `<p style="margin: 5px 0; color: #374151;"><strong>Taille estimée :</strong> ${data.estimatedSize} personnes</p>` : ''}
+          ${data.dayNumber ? `<p style="margin: 5px 0; color: #374151;"><strong>Jour :</strong> ${data.dayNumber} du Ramadan${data.dayDate ? ` (${data.dayDate})` : ''}</p>` : ''}
+          ${slotsHtml ? `<p style="margin: 10px 0 5px 0; color: #374151;"><strong>Créneaux choisis :</strong></p><ul style="margin: 0; padding-left: 20px; color: #374151;">${slotsHtml}</ul>` : ''}
+        </td>
+      </tr>
+    </table>
+
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #eff6ff; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #1e40af; margin: 0 0 10px 0; font-size: 18px;">Fichier joint</h3>
+          <p style="margin: 0; color: #374151;">
+            Le fichier <strong>${data.fileName}</strong> contenant la liste des bénévoles est joint à cet email.
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
+      Veuillez traiter cette inscription groupe dans les meilleurs délais.
+    </p>
+  `;
+
+  return {
+    subject: `[Bénévoles][Groupe] Nouvelle inscription groupe – ${data.groupName}`,
     html: baseTemplate(content),
   };
 }

@@ -10,7 +10,8 @@ import { trpc } from "@/lib/trpc";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
-import { Users, Calendar, CheckCircle, Mail, Phone, MapPin, ArrowRight, Loader2, QrCode, Clock, AlertCircle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Users, Calendar, CheckCircle, Mail, Phone, MapPin, ArrowRight, Loader2, QrCode, Clock, AlertCircle, Upload, UsersRound } from "lucide-react";
 import { useI18n } from "@/i18n";
 
 export default function Benevole() {
@@ -22,6 +23,7 @@ export default function Benevole() {
   const [, navigate] = useLocation();
   const { data: days, isLoading: daysLoading } = trpc.days.list.useQuery();
   
+  const [isGroup, setIsGroup] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -35,12 +37,21 @@ export default function Benevole() {
     },
     acceptedTerms: false,
   });
+  const [groupData, setGroupData] = useState({
+    groupName: "",
+    responsibleName: "",
+    responsibleEmail: "",
+    responsiblePhone: "",
+    estimatedSize: "",
+  });
+  const [groupFile, setGroupFile] = useState<File | null>(null);
   const [slotsError, setSlotsError] = useState(false);
-  
+
   const [registrationSuccess, setRegistrationSuccess] = useState<{
     qrToken: string;
     dayInfo: { dayNumber: number; date: string };
   } | null>(null);
+  const [groupSuccess, setGroupSuccess] = useState(false);
 
   const registerMutation = trpc.volunteers.register.useMutation({
     onSuccess: (data) => {
@@ -60,13 +71,23 @@ export default function Benevole() {
     },
   });
 
+  const groupRegisterMutation = trpc.volunteers.registerGroup.useMutation({
+    onSuccess: () => {
+      setGroupSuccess(true);
+      toast.success(lang === 'ar' ? 'تم تسجيل المجموعة بنجاح!' : lang === 'en' ? 'Group registration successful!' : 'Inscription groupe enregistrée !');
+    },
+    onError: (error) => {
+      toast.error(error.message || (lang === 'ar' ? 'خطأ' : lang === 'en' ? 'Error' : 'Erreur'));
+    },
+  });
+
   useEffect(() => {
     if (preselectedDay) {
       setFormData(prev => ({ ...prev, dayId: preselectedDay }));
     }
   }, [preselectedDay]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.acceptedTerms) {
@@ -91,16 +112,62 @@ export default function Benevole() {
     }
     setSlotsError(false);
 
-    registerMutation.mutate({
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      phone: formData.phone,
-      city: formData.city || undefined,
-      dayId: parseInt(formData.dayId),
-      volunteerSlots: volunteerSlots as ("preparation_ftour" | "service_ftour")[],
-      acceptedTerms: formData.acceptedTerms,
-    });
+    if (isGroup) {
+      // Group registration
+      if (!groupData.groupName.trim()) {
+        toast.error(lang === 'ar' ? 'يرجى إدخال اسم المجموعة' : lang === 'en' ? 'Please enter the group name' : 'Veuillez entrer le nom du groupe');
+        return;
+      }
+      if (!groupData.responsibleName.trim() || !groupData.responsibleEmail.trim() || !groupData.responsiblePhone.trim()) {
+        toast.error(lang === 'ar' ? 'يرجى ملء معلومات المسؤول' : lang === 'en' ? 'Please fill in the responsible person info' : 'Veuillez remplir les informations du responsable');
+        return;
+      }
+      if (!groupFile) {
+        toast.error(lang === 'ar' ? 'يرجى رفع ملف Excel' : lang === 'en' ? 'Please upload an Excel file' : 'Veuillez uploader un fichier Excel');
+        return;
+      }
+      if (groupFile.size > 5 * 1024 * 1024) {
+        toast.error(lang === 'ar' ? 'حجم الملف كبير جداً (الحد الأقصى 5 ميغا)' : lang === 'en' ? 'File too large (max 5 MB)' : 'Fichier trop volumineux (max 5 Mo)');
+        return;
+      }
+
+      // Read file as base64
+      const fileBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Remove data:...;base64, prefix
+          resolve(result.split(',')[1] || result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(groupFile);
+      });
+
+      groupRegisterMutation.mutate({
+        groupName: groupData.groupName,
+        responsibleName: groupData.responsibleName,
+        responsibleEmail: groupData.responsibleEmail,
+        responsiblePhone: groupData.responsiblePhone,
+        estimatedSize: groupData.estimatedSize ? parseInt(groupData.estimatedSize) : undefined,
+        dayId: parseInt(formData.dayId),
+        volunteerSlots: volunteerSlots as ("preparation_ftour" | "service_ftour")[],
+        fileName: groupFile.name,
+        fileBase64,
+        acceptedTerms: formData.acceptedTerms,
+      });
+    } else {
+      // Individual registration
+      registerMutation.mutate({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        city: formData.city || undefined,
+        dayId: parseInt(formData.dayId),
+        volunteerSlots: volunteerSlots as ("preparation_ftour" | "service_ftour")[],
+        acceptedTerms: formData.acceptedTerms,
+      });
+    }
   };
 
   const availableDays = days?.filter(d => d.isOpen && d.registeredCount < 100) || [];
@@ -161,7 +228,67 @@ export default function Benevole() {
     consigneNoBags: lang === 'ar' ? 'الحقائب غير مسموح بها.' : lang === 'en' ? 'Bags are not allowed.' : 'Les sacs ne sont pas autorisés.',
     consigneVest: lang === 'ar' ? 'ارتداء سترة المتطوع إلزامي داخل الجمعية.' : lang === 'en' ? 'Wearing the volunteer vest is mandatory within the association.' : 'Le port du gilet bénévole est obligatoire au sein de l\'association.',
     consigneNoPhotos: lang === 'ar' ? 'يمنع التقاط صور للمستفيدين.' : lang === 'en' ? 'Taking photos of beneficiaries is prohibited.' : 'Il est interdit de prendre des photos des bénéficiaires.',
+    // Group registration
+    groupToggle: lang === 'ar' ? 'التسجيل كمجموعة' : lang === 'en' ? 'Register as a group' : 'Je m\'inscris en tant que groupe',
+    groupName: lang === 'ar' ? 'اسم المجموعة / الهيكل *' : lang === 'en' ? 'Group / organization name *' : 'Nom du groupe / structure *',
+    groupNamePlaceholder: lang === 'ar' ? 'اسم جمعيتكم أو مجموعتكم' : lang === 'en' ? 'Name of your association or group' : 'Nom de votre association ou groupe',
+    responsibleName: lang === 'ar' ? 'اسم المسؤول *' : lang === 'en' ? 'Responsible person name *' : 'Nom du responsable *',
+    responsibleNamePlaceholder: lang === 'ar' ? 'الاسم الكامل للمسؤول' : lang === 'en' ? 'Full name of the responsible person' : 'Nom complet du responsable',
+    responsibleEmail: lang === 'ar' ? 'البريد الإلكتروني للمسؤول *' : lang === 'en' ? 'Responsible email *' : 'Email du responsable *',
+    responsiblePhone: lang === 'ar' ? 'هاتف المسؤول *' : lang === 'en' ? 'Responsible phone *' : 'Téléphone du responsable *',
+    estimatedSize: lang === 'ar' ? 'الحجم التقديري (اختياري)' : lang === 'en' ? 'Estimated size (optional)' : 'Taille estimée (optionnel)',
+    estimatedSizePlaceholder: lang === 'ar' ? 'عدد المتطوعين تقريباً' : lang === 'en' ? 'Approximate number of volunteers' : 'Nombre approximatif de bénévoles',
+    uploadFile: lang === 'ar' ? 'رفع ملف Excel (قائمة المتطوعين) *' : lang === 'en' ? 'Upload Excel file (volunteer list) *' : 'Upload fichier Excel (liste des bénévoles) *',
+    uploadFileDesc: lang === 'ar' ? 'ملفات مقبولة: .xlsx, .xls, .csv (الحد الأقصى 5 ميغا)' : lang === 'en' ? 'Accepted files: .xlsx, .xls, .csv (max 5 MB)' : 'Fichiers acceptés : .xlsx, .xls, .csv (max 5 Mo)',
+    registerGroup: lang === 'ar' ? 'تسجيل المجموعة' : lang === 'en' ? 'Register group' : 'Inscrire le groupe',
+    registeringGroup: lang === 'ar' ? 'جاري تسجيل المجموعة...' : lang === 'en' ? 'Registering group...' : 'Inscription du groupe en cours...',
   };
+
+  // Group success screen
+  if (groupSuccess) {
+    const groupSuccessTexts = {
+      title: lang === 'ar' ? 'تم تسجيل المجموعة بنجاح!' : lang === 'en' ? 'Group registration confirmed!' : 'Inscription groupe confirmée !',
+      message: lang === 'ar' ? 'تم إرسال ملف Excel الخاص بكم إلى الإدارة. سيتم التواصل معكم قريباً.' : lang === 'en' ? 'Your Excel file has been sent to the administration. You will be contacted soon.' : 'Votre fichier Excel a été transmis à l\'administration. Vous serez contacté(e) prochainement.',
+      emailSent: lang === 'ar' ? 'تم إرسال بريد إلكتروني إلى الإدارة مع الملف المرفق.' : lang === 'en' ? 'An email has been sent to the administration with the attached file.' : 'Un email a été envoyé à l\'administration avec le fichier en pièce jointe.',
+    };
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 py-16">
+          <div className="container max-w-2xl">
+            <Card className="border-none shadow-lg">
+              <CardContent className="p-8 text-center space-y-6">
+                <div className="w-20 h-20 mx-auto rounded-full bg-green-100 flex items-center justify-center">
+                  <CheckCircle className="h-10 w-10 text-green-600" />
+                </div>
+                <div className="space-y-2">
+                  <h1 className="text-2xl font-bold text-foreground">{groupSuccessTexts.title}</h1>
+                  <p className="text-muted-foreground">{groupSuccessTexts.message}</p>
+                </div>
+                <div className="bg-primary/5 rounded-lg p-4 text-left space-y-2">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-primary" />
+                    {successTexts.confirmationEmail}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">{groupSuccessTexts.emailSent}</p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                  <Button onClick={() => { setGroupSuccess(false); setIsGroup(false); }} variant="outline" className="flex-1">
+                    {successTexts.newRegistration}
+                  </Button>
+                  <Button onClick={() => navigate(`/${lang}/programme`)} className="flex-1">
+                    {successTexts.viewProgram}
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   if (registrationSuccess) {
     return (
@@ -383,66 +510,171 @@ export default function Benevole() {
                         </Select>
                       </div>
 
-                      {/* Name Fields */}
-                      <div className="grid sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="firstName">{formTexts.firstName}</Label>
-                          <Input
-                            id="firstName"
-                            value={formData.firstName}
-                            onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                            placeholder={formTexts.firstNamePlaceholder}
-                            required
-                          />
+                      {/* Group Toggle */}
+                      <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
+                        <div className="flex items-center gap-3">
+                          <UsersRound className="h-5 w-5 text-primary" />
+                          <div>
+                            <Label htmlFor="group-toggle" className="cursor-pointer font-medium">
+                              {formTexts.groupToggle}
+                            </Label>
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="lastName">{formTexts.lastName}</Label>
-                          <Input
-                            id="lastName"
-                            value={formData.lastName}
-                            onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                            placeholder={formTexts.lastNamePlaceholder}
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      {/* Contact Fields */}
-                      <div className="grid sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="email">{formTexts.email}</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            value={formData.email}
-                            onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                            placeholder="votre@email.com"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="phone">{formTexts.phone}</Label>
-                          <Input
-                            id="phone"
-                            type="tel"
-                            value={formData.phone}
-                            onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                            placeholder="+212 6XX XXX XXX"
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      {/* City */}
-                      <div className="space-y-2">
-                        <Label htmlFor="city">{formTexts.city}</Label>
-                        <Input
-                          id="city"
-                          value={formData.city}
-                          onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                          placeholder={formTexts.cityPlaceholder}
+                        <Switch
+                          id="group-toggle"
+                          checked={isGroup}
+                          onCheckedChange={setIsGroup}
                         />
                       </div>
+
+                      {isGroup ? (
+                        <>
+                          {/* Group Fields */}
+                          <div className="space-y-2">
+                            <Label htmlFor="groupName">{formTexts.groupName}</Label>
+                            <Input
+                              id="groupName"
+                              value={groupData.groupName}
+                              onChange={(e) => setGroupData(prev => ({ ...prev, groupName: e.target.value }))}
+                              placeholder={formTexts.groupNamePlaceholder}
+                              required
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="responsibleName">{formTexts.responsibleName}</Label>
+                            <Input
+                              id="responsibleName"
+                              value={groupData.responsibleName}
+                              onChange={(e) => setGroupData(prev => ({ ...prev, responsibleName: e.target.value }))}
+                              placeholder={formTexts.responsibleNamePlaceholder}
+                              required
+                            />
+                          </div>
+
+                          <div className="grid sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="responsibleEmail">{formTexts.responsibleEmail}</Label>
+                              <Input
+                                id="responsibleEmail"
+                                type="email"
+                                value={groupData.responsibleEmail}
+                                onChange={(e) => setGroupData(prev => ({ ...prev, responsibleEmail: e.target.value }))}
+                                placeholder="responsable@email.com"
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="responsiblePhone">{formTexts.responsiblePhone}</Label>
+                              <Input
+                                id="responsiblePhone"
+                                type="tel"
+                                value={groupData.responsiblePhone}
+                                onChange={(e) => setGroupData(prev => ({ ...prev, responsiblePhone: e.target.value }))}
+                                placeholder="+212 6XX XXX XXX"
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="estimatedSize">{formTexts.estimatedSize}</Label>
+                            <Input
+                              id="estimatedSize"
+                              type="number"
+                              min="2"
+                              value={groupData.estimatedSize}
+                              onChange={(e) => setGroupData(prev => ({ ...prev, estimatedSize: e.target.value }))}
+                              placeholder={formTexts.estimatedSizePlaceholder}
+                            />
+                          </div>
+
+                          {/* File Upload */}
+                          <div className="space-y-2">
+                            <Label>{formTexts.uploadFile}</Label>
+                            <div className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
+                              <input
+                                type="file"
+                                accept=".xlsx,.xls,.csv"
+                                onChange={(e) => setGroupFile(e.target.files?.[0] || null)}
+                                className="hidden"
+                                id="group-file-upload"
+                              />
+                              <label htmlFor="group-file-upload" className="cursor-pointer space-y-2 block">
+                                <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
+                                {groupFile ? (
+                                  <p className="text-sm font-medium text-primary">{groupFile.name}</p>
+                                ) : (
+                                  <p className="text-sm text-muted-foreground">{formTexts.uploadFileDesc}</p>
+                                )}
+                              </label>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {/* Individual Name Fields */}
+                          <div className="grid sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="firstName">{formTexts.firstName}</Label>
+                              <Input
+                                id="firstName"
+                                value={formData.firstName}
+                                onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                                placeholder={formTexts.firstNamePlaceholder}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="lastName">{formTexts.lastName}</Label>
+                              <Input
+                                id="lastName"
+                                value={formData.lastName}
+                                onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                                placeholder={formTexts.lastNamePlaceholder}
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          {/* Individual Contact Fields */}
+                          <div className="grid sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="email">{formTexts.email}</Label>
+                              <Input
+                                id="email"
+                                type="email"
+                                value={formData.email}
+                                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                                placeholder="votre@email.com"
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="phone">{formTexts.phone}</Label>
+                              <Input
+                                id="phone"
+                                type="tel"
+                                value={formData.phone}
+                                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                                placeholder="+212 6XX XXX XXX"
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          {/* City */}
+                          <div className="space-y-2">
+                            <Label htmlFor="city">{formTexts.city}</Label>
+                            <Input
+                              id="city"
+                              value={formData.city}
+                              onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                              placeholder={formTexts.cityPlaceholder}
+                            />
+                          </div>
+                        </>
+                      )}
 
                       {/* Volunteer Slots */}
                       <div className="space-y-3">
@@ -507,21 +739,21 @@ export default function Benevole() {
                       </div>
 
                       {/* Submit */}
-                      <Button 
-                        type="submit" 
-                        className="w-full" 
+                      <Button
+                        type="submit"
+                        className="w-full"
                         size="lg"
-                        disabled={registerMutation.isPending || availableDays.length === 0}
+                        disabled={registerMutation.isPending || groupRegisterMutation.isPending || availableDays.length === 0}
                       >
-                        {registerMutation.isPending ? (
+                        {(registerMutation.isPending || groupRegisterMutation.isPending) ? (
                           <>
                             <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                            {formTexts.registering}
+                            {isGroup ? formTexts.registeringGroup : formTexts.registering}
                           </>
                         ) : (
                           <>
-                            <Users className="h-5 w-5 mr-2" />
-                            {formTexts.register}
+                            {isGroup ? <UsersRound className="h-5 w-5 mr-2" /> : <Users className="h-5 w-5 mr-2" />}
+                            {isGroup ? formTexts.registerGroup : formTexts.register}
                           </>
                         )}
                       </Button>

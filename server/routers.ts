@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { sendEmail, generateVolunteerConfirmationEmail, generateOrderConfirmationEmail, generateDonationConfirmationEmail, generateContactNotificationEmail } from "./email";
+import { sendEmail, generateVolunteerConfirmationEmail, generateOrderConfirmationEmail, generateDonationConfirmationEmail, generateContactNotificationEmail, generateGroupRegistrationEmail } from "./email";
 import { signInUser, signUpUser, getUserFromToken, signOutUser } from "./supabase-auth";
 import * as supabaseServices from "./supabase-services";
 import * as reservationServices from "./reservation-services";
@@ -343,6 +343,75 @@ const volunteersRouter = router({
     .mutation(async ({ input }) => {
       await supabaseServices.deleteVolunteerSupabase(input.volunteerId);
       return { success: true };
+    }),
+
+  registerGroup: publicProcedure
+    .input(z.object({
+      groupName: z.string().min(2, "Nom du groupe requis"),
+      responsibleName: z.string().min(2, "Nom du responsable requis"),
+      responsibleEmail: z.string().email("Email invalide"),
+      responsiblePhone: z.string().min(8, "Téléphone invalide"),
+      estimatedSize: z.number().optional(),
+      dayId: z.number(),
+      volunteerSlots: z.array(z.enum(["preparation_ftour", "service_ftour"])).min(1, "Veuillez sélectionner au moins un créneau"),
+      fileName: z.string(),
+      fileBase64: z.string().max(7_000_000, "Fichier trop volumineux (max 5 Mo)"),
+      acceptedTerms: z.boolean(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!input.acceptedTerms) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Vous devez accepter les conditions' });
+      }
+
+      // Validate file extension
+      const ext = input.fileName.toLowerCase().split('.').pop();
+      if (!ext || !['xlsx', 'xls', 'csv'].includes(ext)) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Format de fichier non supporté. Utilisez .xlsx, .xls ou .csv' });
+      }
+
+      // Get day info for the email
+      const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
+
+      // Also create a volunteer entry for the group (so it appears in the dashboard)
+      const volunteer = await supabaseServices.createVolunteerShiftSupabase({
+        firstName: `[Groupe] ${input.groupName}`,
+        lastName: input.responsibleName,
+        email: input.responsibleEmail,
+        phone: input.responsiblePhone,
+        dayId: input.dayId,
+        volunteerSlots: input.volunteerSlots,
+        acceptedTerms: input.acceptedTerms,
+      });
+
+      // Build and send email with attachment to admin
+      const emailData = generateGroupRegistrationEmail({
+        groupName: input.groupName,
+        responsibleName: input.responsibleName,
+        responsibleEmail: input.responsibleEmail,
+        responsiblePhone: input.responsiblePhone,
+        estimatedSize: input.estimatedSize,
+        volunteerSlots: input.volunteerSlots,
+        dayNumber: day?.dayNumber,
+        dayDate: day?.date ? new Date(day.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : undefined,
+        fileName: input.fileName,
+      });
+
+      try {
+        await sendEmail({
+          to: 'admin@ftourbabrayan.ma',
+          subject: emailData.subject,
+          html: emailData.html,
+          attachments: [{
+            filename: input.fileName,
+            content: input.fileBase64,
+          }],
+        });
+        console.log('[Group Registration] Admin email sent successfully');
+      } catch (error) {
+        console.error('[Group Registration] Admin email failed:', error);
+      }
+
+      return { success: true, volunteerId: volunteer.id };
     }),
 });
 
