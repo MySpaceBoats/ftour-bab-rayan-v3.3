@@ -29,6 +29,13 @@ const scannerProcedure = protectedProcedure.use(({ ctx, next }) => {
 // PASTRIES ROUTER (Pâtisserie Solidaire)
 // ============================================
 
+function isPastriesTableMissing(error: any): boolean {
+  return error?.code === 'PGRST204' || error?.code === '42P01' ||
+    error?.message?.includes('schema cache') || error?.message?.includes('does not exist');
+}
+
+const PASTRIES_TABLE_MISSING_MSG = 'La table "pastries" n\'existe pas encore dans la base de données. Veuillez exécuter la migration SQL : supabase/migrations/add_pastry_and_qr_tables.sql dans l\'éditeur SQL de Supabase.';
+
 export const pastriesRouter = router({
   list: publicProcedure.query(async () => {
     try {
@@ -65,9 +72,16 @@ export const pastriesRouter = router({
           .select()
           .single();
 
-        if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        if (error) {
+          if (isPastriesTableMissing(error)) {
+            console.error('[Pastries] Table missing - run migration: supabase/migrations/add_pastry_and_qr_tables.sql');
+            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: PASTRIES_TABLE_MISSING_MSG });
+          }
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
         return data;
-      } catch (error) {
+      } catch (error: any) {
+        if (error instanceof TRPCError) throw error;
         console.error('Error creating pastry:', error);
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Erreur lors de la création de la pâtisserie' });
       }
@@ -103,9 +117,16 @@ export const pastriesRouter = router({
           .select()
           .single();
 
-        if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        if (error) {
+          if (isPastriesTableMissing(error)) {
+            console.error('[Pastries] Table missing - run migration: supabase/migrations/add_pastry_and_qr_tables.sql');
+            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: PASTRIES_TABLE_MISSING_MSG });
+          }
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
         return data;
-      } catch (error) {
+      } catch (error: any) {
+        if (error instanceof TRPCError) throw error;
         console.error('Error updating pastry:', error);
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Erreur lors de la mise à jour de la pâtisserie' });
       }
@@ -123,9 +144,16 @@ export const pastriesRouter = router({
           .update({ active: false })
           .eq('id', input.id);
 
-        if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        if (error) {
+          if (isPastriesTableMissing(error)) {
+            console.error('[Pastries] Table missing - run migration: supabase/migrations/add_pastry_and_qr_tables.sql');
+            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: PASTRIES_TABLE_MISSING_MSG });
+          }
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
         return { success: true };
-      } catch (error) {
+      } catch (error: any) {
+        if (error instanceof TRPCError) throw error;
         console.error('Error deleting pastry:', error);
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Erreur lors de la suppression de la pâtisserie' });
       }

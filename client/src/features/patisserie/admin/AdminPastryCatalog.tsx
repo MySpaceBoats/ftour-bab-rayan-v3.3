@@ -52,6 +52,15 @@ export default function AdminPastryCatalog() {
     },
   });
 
+  const handlePastryError = (error: any) => {
+    const msg = error?.message || "";
+    if (msg.includes("schema cache") || msg.includes("does not exist") || msg.includes("n'existe pas encore")) {
+      toast.error("La table pâtisseries n'existe pas encore dans la base de données. Contactez l'administrateur pour exécuter la migration SQL.", { duration: 8000 });
+    } else {
+      toast.error(msg || "Une erreur est survenue");
+    }
+  };
+
   const createMutation = trpc.pastries.create.useMutation({
     onSuccess: () => {
       toast.success("Pâtisserie créée avec succès");
@@ -59,9 +68,7 @@ export default function AdminPastryCatalog() {
       resetForm();
       refetch();
     },
-    onError: (error: any) => {
-      toast.error(error.message);
-    },
+    onError: handlePastryError,
   });
 
   const updateMutation = trpc.pastries.update.useMutation({
@@ -71,9 +78,7 @@ export default function AdminPastryCatalog() {
       resetForm();
       refetch();
     },
-    onError: (error: any) => {
-      toast.error(error.message);
-    },
+    onError: handlePastryError,
   });
 
   const deleteMutation = trpc.pastries.delete.useMutation({
@@ -81,9 +86,7 @@ export default function AdminPastryCatalog() {
       toast.success("Pâtisserie supprimée");
       refetch();
     },
-    onError: (error: any) => {
-      toast.error(error.message);
-    },
+    onError: handlePastryError,
   });
 
   const resetForm = () => {
