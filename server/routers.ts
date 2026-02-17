@@ -2419,7 +2419,12 @@ export const appRouter = router({
 
 const pastriesRouter = router({
   list: publicProcedure.query(async () => {
-    return supabaseServices.getPastriesSupabase();
+    try {
+      return await supabaseServices.getPastriesSupabase();
+    } catch (error) {
+      console.error('Error fetching pastries:', error);
+      return [];
+    }
   }),
 
   create: adminBoutiqueProcedure
