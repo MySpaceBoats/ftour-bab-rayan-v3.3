@@ -10,7 +10,7 @@ import { ArrowLeft, Download, Search, CheckCircle, XCircle } from 'lucide-react'
 import { toast } from 'sonner';
 
 type ReservationType = 'all' | 'particulier' | 'entreprise' | 'groupe';
-type ReservationStatus = 'all' | 'pending_validation' | 'validated_pending_payment' | 'paid_confirmed' | 'refused';
+type ReservationStatus = 'all' | 'submitted' | 'pending_confirmation' | 'confirmed' | 'rejected' | 'cancelled';
 
 export default function AdminRestaurantReservations() {
   const [typeFilter, setTypeFilter] = useState<ReservationType>('all');
@@ -38,7 +38,7 @@ export default function AdminRestaurantReservations() {
     return allReservations.filter((res: any) => {
       const matchesType = typeFilter === 'all' || res.type === typeFilter;
       const matchesStatus = statusFilter === 'all' || res.status === statusFilter;
-      const text = `${res.reference} ${res.contact_name} ${res.contact_email} ${res.contact_phone}`.toLowerCase();
+      const text = `${res.reference} ${res.name} ${res.email} ${res.phone}`.toLowerCase();
       const matchesSearch = searchQuery === '' || text.includes(searchQuery.toLowerCase());
       return matchesType && matchesStatus && matchesSearch;
     });
@@ -93,10 +93,10 @@ export default function AdminRestaurantReservations() {
       res.reference,
       res.type,
       res.status,
-      res.contact_name,
-      res.contact_email,
-      res.contact_phone,
-      res.seats_total || res.participants_count || '-',
+      res.name,
+      res.email || '',
+      res.phone,
+      res.seats_total || '-',
       new Date(res.created_at).toLocaleString('fr-FR'),
       (res.notes || '').replace(/\n/g, ' '),
     ]);
@@ -116,14 +116,20 @@ export default function AdminRestaurantReservations() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'pending_validation':
-        return <Badge variant="outline">En attente</Badge>;
-      case 'validated_pending_payment':
-        return <Badge variant="secondary">Validée</Badge>;
-      case 'paid_confirmed':
+      case 'submitted':
+        return <Badge variant="outline">Soumise</Badge>;
+      case 'pending_confirmation':
+        return <Badge variant="secondary">En attente</Badge>;
+      case 'confirmed':
         return <Badge className="bg-green-600">Confirmée</Badge>;
-      case 'refused':
+      case 'rejected':
         return <Badge variant="destructive">Refusée</Badge>;
+      case 'cancelled':
+        return <Badge variant="destructive">Annulée</Badge>;
+      case 'completed':
+        return <Badge className="bg-emerald-600">Terminée</Badge>;
+      case 'no_show':
+        return <Badge variant="outline">No show</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -194,14 +200,17 @@ export default function AdminRestaurantReservations() {
                 <Button variant={statusFilter === 'all' ? 'default' : 'outline'} onClick={() => setStatusFilter('all')} size="sm">
                   Tous statuts
                 </Button>
-                <Button variant={statusFilter === 'pending_validation' ? 'default' : 'outline'} onClick={() => setStatusFilter('pending_validation')} size="sm">
+                <Button variant={statusFilter === 'submitted' ? 'default' : 'outline'} onClick={() => setStatusFilter('submitted')} size="sm">
+                  Soumises
+                </Button>
+                <Button variant={statusFilter === 'pending_confirmation' ? 'default' : 'outline'} onClick={() => setStatusFilter('pending_confirmation')} size="sm">
                   En attente
                 </Button>
-                <Button variant={statusFilter === 'validated_pending_payment' ? 'default' : 'outline'} onClick={() => setStatusFilter('validated_pending_payment')} size="sm">
-                  Validées
-                </Button>
-                <Button variant={statusFilter === 'paid_confirmed' ? 'default' : 'outline'} onClick={() => setStatusFilter('paid_confirmed')} size="sm">
+                <Button variant={statusFilter === 'confirmed' ? 'default' : 'outline'} onClick={() => setStatusFilter('confirmed')} size="sm">
                   Confirmées
+                </Button>
+                <Button variant={statusFilter === 'rejected' ? 'default' : 'outline'} onClick={() => setStatusFilter('rejected')} size="sm">
+                  Refusées
                 </Button>
               </div>
 
@@ -230,7 +239,7 @@ export default function AdminRestaurantReservations() {
                       {getStatusBadge(res.status)}
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">{res.contact_name} • {res.contact_email}</p>
+                  <p className="text-sm text-muted-foreground">{res.name} • {res.email}</p>
                   <p className="text-sm text-muted-foreground">{new Date(res.created_at).toLocaleString('fr-FR')}</p>
                 </button>
               ))}
@@ -264,26 +273,26 @@ export default function AdminRestaurantReservations() {
 
                 <div>
                   <p className="text-xs text-muted-foreground">Contact</p>
-                  <p className="font-medium">{selectedReservation.contact_name}</p>
-                  <p className="text-sm">{selectedReservation.contact_email}</p>
-                  <p className="text-sm">{selectedReservation.contact_phone}</p>
+                  <p className="font-medium">{selectedReservation.name}</p>
+                  <p className="text-sm">{selectedReservation.email}</p>
+                  <p className="text-sm">{selectedReservation.phone}</p>
                 </div>
 
-                {selectedReservation.organization_name && (
+                {(selectedReservation.company_name || selectedReservation.group_name) && (
                   <div>
                     <p className="text-xs text-muted-foreground">Entreprise/Groupe</p>
-                    <p className="font-medium">{selectedReservation.organization_name}</p>
+                    <p className="font-medium">{selectedReservation.company_name || selectedReservation.group_name}</p>
                   </div>
                 )}
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <p className="text-xs text-muted-foreground">Places</p>
-                    <p className="font-medium">{selectedReservation.seats_total || selectedReservation.participants_count || '-'}</p>
+                    <p className="font-medium">{selectedReservation.seats_total || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Date</p>
-                    <p className="font-medium">{new Date(selectedReservation.reservation_date).toLocaleDateString('fr-FR')}</p>
+                    <p className="font-medium">{new Date(selectedReservation.created_at).toLocaleDateString('fr-FR')}</p>
                   </div>
                 </div>
 
@@ -294,7 +303,7 @@ export default function AdminRestaurantReservations() {
                   </div>
                 )}
 
-                {selectedReservation.status === 'pending_validation' && (
+                {(selectedReservation.status === 'submitted' || selectedReservation.status === 'pending_confirmation') && (
                   <div className="flex gap-2">
                     <Button
                       onClick={() => handleValidate(selectedReservation.id)}
