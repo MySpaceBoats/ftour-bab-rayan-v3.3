@@ -1498,6 +1498,70 @@ const ordersRouter = router({
 
       return { success: true };
     }),
+
+  getByReference: publicProcedure
+    .input(z.object({ reference: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const { data: order, error } = await supabase
+        .from('orders')
+        .select('*, order_items(*, goodies(name))')
+        .eq('order_reference', input.reference)
+        .single();
+
+      if (error || !order) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Order not found' });
+      }
+
+      // Parse delivery address if it's a JSON string
+      let deliveryAddress = null;
+      let deliveryCity = null;
+      let deliveryNeighborhood = null;
+      let deliveryPostalCode = null;
+
+      if (order.delivery_address && typeof order.delivery_address === 'string') {
+        try {
+          const parsed = JSON.parse(order.delivery_address);
+          deliveryAddress = parsed.address;
+          deliveryCity = parsed.city;
+          deliveryNeighborhood = parsed.neighborhood;
+          deliveryPostalCode = parsed.postalCode;
+        } catch {
+          deliveryAddress = order.delivery_address;
+        }
+      }
+
+      return {
+        id: order.id,
+        orderReference: order.order_reference,
+        customerName: order.customer_name,
+        customerEmail: order.customer_email,
+        customerPhone: order.customer_phone,
+        totalAmount: parseFloat(order.total_amount),
+        status: order.status,
+        pickupDate: order.pickup_date,
+        pickupLocation: order.pickup_location,
+        notes: order.notes,
+        deliveryMode: order.delivery_mode,
+        deliveryFee: order.delivery_fee ? parseFloat(order.delivery_fee) : 0,
+        deliveryAddress,
+        deliveryCity,
+        deliveryNeighborhood,
+        deliveryPostalCode,
+        deliveryPhone: order.delivery_phone,
+        deliveryInstructions: order.delivery_instructions,
+        createdAt: new Date(order.created_at),
+        items: (order.order_items || []).map((i: any) => ({
+          id: i.id,
+          goodieId: i.goodie_id,
+          goodieName: i.goodies?.name,
+          quantity: i.quantity,
+          unitPrice: parseFloat(i.unit_price),
+          totalPrice: parseFloat(i.total_price),
+        })),
+      };
+    }),
 });
 
 // ============================================
