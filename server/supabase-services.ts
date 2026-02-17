@@ -1651,7 +1651,15 @@ export async function getPastriesSupabase() {
     .eq('active', true)
     .order('sort_order', { ascending: true });
 
-  if (error) throw error;
+  if (error) {
+    // If the pastries table doesn't exist yet, return empty array
+    // The table needs to be created by running: supabase/migrations/add_pastry_and_qr_tables.sql
+    if (error.code === '42P01' || error.message?.includes('does not exist') || error.message?.includes('not found')) {
+      console.warn('[Pastries] Table "pastries" not found in database. Run the migration: supabase/migrations/add_pastry_and_qr_tables.sql');
+      return [];
+    }
+    throw error;
+  }
   return data || [];
 }
 
