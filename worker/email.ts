@@ -226,7 +226,6 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
             <li style="margin-bottom: 8px;">Arrivez à l'heure prévu du service (ou)et préparation .</li>
             <li style="margin-bottom: 8px;">En cas d'empêchement, prévenez-nous à l'avance</li>
             <li style="margin-bottom: 8px;">Portez des vêtements confortables</li>
-            <li style="margin-bottom: 8px;">Et pas de bêtises durant votre présence sur les lieux</li>
           </ul>
         </td>
       </tr>
