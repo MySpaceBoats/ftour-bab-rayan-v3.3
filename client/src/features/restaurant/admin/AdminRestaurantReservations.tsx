@@ -10,7 +10,7 @@ import { ArrowLeft, Download, Search, CheckCircle, XCircle } from 'lucide-react'
 import { toast } from 'sonner';
 
 type ReservationType = 'all' | 'particulier' | 'entreprise' | 'groupe';
-type ReservationStatus = 'all' | 'submitted' | 'pending_confirmation' | 'confirmed' | 'rejected' | 'cancelled';
+type ReservationStatus = 'all' | 'pending_validation' | 'validated_pending_payment' | 'paid_confirmed' | 'refused' | 'cancelled' | 'completed' | 'no_show';
 
 export default function AdminRestaurantReservations() {
   const [typeFilter, setTypeFilter] = useState<ReservationType>('all');
@@ -18,19 +18,25 @@ export default function AdminRestaurantReservations() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  // Fetch reservations based on type
-  const { data: particuliers = [] } = trpc.restaurantModule.adminListParticuliers.useQuery();
-  const { data: entreprises = [] } = trpc.restaurantModule.adminListEntreprises.useQuery();
-  const { data: groupes = [] } = trpc.restaurantModule.adminListGroupes.useQuery();
+  // Fetch reservations from MySQL/Drizzle via restaurantReservations router
+  const { data: particuliers = [], refetch: refetchParticuliers } = trpc.restaurantReservations.adminListParticuliers.useQuery();
+  const { data: entreprises = [], refetch: refetchEntreprises } = trpc.restaurantReservations.adminListEntreprises.useQuery();
+  const { data: groupes = [], refetch: refetchGroupes } = trpc.restaurantReservations.adminListGroupes.useQuery();
+
+  const refetchAll = () => {
+    refetchParticuliers();
+    refetchEntreprises();
+    refetchGroupes();
+  };
 
   // Combine all reservations
   const allReservations = useMemo(() => {
     const all = [
-      ...particuliers.map((r: any) => ({ ...r, type: 'particulier' })),
-      ...entreprises.map((r: any) => ({ ...r, type: 'entreprise' })),
-      ...groupes.map((r: any) => ({ ...r, type: 'groupe' })),
+      ...particuliers.map((r: any) => ({ ...r, type: r.type || 'particulier' })),
+      ...entreprises.map((r: any) => ({ ...r, type: r.type || 'entreprise' })),
+      ...groupes.map((r: any) => ({ ...r, type: r.type || 'groupe' })),
     ];
-    return all.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return all.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [particuliers, entreprises, groupes]);
 
   // Filter reservations
@@ -47,10 +53,11 @@ export default function AdminRestaurantReservations() {
   const selectedReservation = filteredReservations.find((res: any) => res.id === selectedId) || null;
 
   // Validate reservation
-  const validateMutation = trpc.restaurantModule.adminUpdateStatus.useMutation({
+  const validateMutation = trpc.restaurantReservations.validate.useMutation({
     onSuccess: () => {
       toast.success('Réservation validée');
       setSelectedId(null);
+      refetchAll();
     },
     onError: (error: any) => {
       toast.error(error.message || 'Erreur lors de la validation');
@@ -58,28 +65,38 @@ export default function AdminRestaurantReservations() {
   });
 
   // Refuse reservation
-  const refuseMutation = trpc.restaurantModule.adminUpdateStatus.useMutation({
+  const refuseMutation = trpc.restaurantReservations.refuse.useMutation({
     onSuccess: () => {
       toast.success('Réservation refusée');
       setSelectedId(null);
+      refetchAll();
     },
     onError: (error: any) => {
       toast.error(error.message || 'Erreur lors du refus');
     },
   });
 
-  const handleValidate = (id: number) => {
+  // Update status
+  const updateStatusMutation = trpc.restaurantReservations.adminUpdateStatus.useMutation({
+    onSuccess: () => {
+      toast.success('Statut mis à jour');
+      setSelectedId(null);
+      refetchAll();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Erreur lors de la mise à jour');
+    },
+  });
+
+  const handleValidate = (reference: string) => {
     validateMutation.mutate({
-      id,
-      status: 'confirmed',
+      reference,
+      baseUrl: window.location.origin,
     });
   };
 
-  const handleRefuse = (id: number) => {
-    refuseMutation.mutate({
-      id,
-      status: 'rejected',
-    });
+  const handleRefuse = (reference: string) => {
+    refuseMutation.mutate({ reference });
   };
 
   const exportCsv = () => {
@@ -96,8 +113,8 @@ export default function AdminRestaurantReservations() {
       res.name,
       res.email || '',
       res.phone,
-      res.seats_total || '-',
-      new Date(res.created_at).toLocaleString('fr-FR'),
+      res.seatsTotal || '-',
+      new Date(res.createdAt).toLocaleString('fr-FR'),
       (res.notes || '').replace(/\n/g, ' '),
     ]);
 
@@ -116,13 +133,13 @@ export default function AdminRestaurantReservations() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'submitted':
-        return <Badge variant="outline">Soumise</Badge>;
-      case 'pending_confirmation':
-        return <Badge variant="secondary">En attente</Badge>;
-      case 'confirmed':
+      case 'pending_validation':
+        return <Badge variant="outline">En attente</Badge>;
+      case 'validated_pending_payment':
+        return <Badge variant="secondary">Paiement attendu</Badge>;
+      case 'paid_confirmed':
         return <Badge className="bg-green-600">Confirmée</Badge>;
-      case 'rejected':
+      case 'refused':
         return <Badge variant="destructive">Refusée</Badge>;
       case 'cancelled':
         return <Badge variant="destructive">Annulée</Badge>;
@@ -200,16 +217,16 @@ export default function AdminRestaurantReservations() {
                 <Button variant={statusFilter === 'all' ? 'default' : 'outline'} onClick={() => setStatusFilter('all')} size="sm">
                   Tous statuts
                 </Button>
-                <Button variant={statusFilter === 'submitted' ? 'default' : 'outline'} onClick={() => setStatusFilter('submitted')} size="sm">
-                  Soumises
-                </Button>
-                <Button variant={statusFilter === 'pending_confirmation' ? 'default' : 'outline'} onClick={() => setStatusFilter('pending_confirmation')} size="sm">
+                <Button variant={statusFilter === 'pending_validation' ? 'default' : 'outline'} onClick={() => setStatusFilter('pending_validation')} size="sm">
                   En attente
                 </Button>
-                <Button variant={statusFilter === 'confirmed' ? 'default' : 'outline'} onClick={() => setStatusFilter('confirmed')} size="sm">
+                <Button variant={statusFilter === 'validated_pending_payment' ? 'default' : 'outline'} onClick={() => setStatusFilter('validated_pending_payment')} size="sm">
+                  Paiement attendu
+                </Button>
+                <Button variant={statusFilter === 'paid_confirmed' ? 'default' : 'outline'} onClick={() => setStatusFilter('paid_confirmed')} size="sm">
                   Confirmées
                 </Button>
-                <Button variant={statusFilter === 'rejected' ? 'default' : 'outline'} onClick={() => setStatusFilter('rejected')} size="sm">
+                <Button variant={statusFilter === 'refused' ? 'default' : 'outline'} onClick={() => setStatusFilter('refused')} size="sm">
                   Refusées
                 </Button>
               </div>
@@ -226,7 +243,7 @@ export default function AdminRestaurantReservations() {
 
               {filteredReservations.map((res: any) => (
                 <button
-                  key={res.id}
+                  key={`${res.type}-${res.id}`}
                   onClick={() => setSelectedId(res.id)}
                   className={`w-full text-left p-4 rounded-lg border transition-colors ${
                     selectedId === res.id ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
@@ -240,7 +257,7 @@ export default function AdminRestaurantReservations() {
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground">{res.name} • {res.email}</p>
-                  <p className="text-sm text-muted-foreground">{new Date(res.created_at).toLocaleString('fr-FR')}</p>
+                  <p className="text-sm text-muted-foreground">{new Date(res.createdAt).toLocaleString('fr-FR')}</p>
                 </button>
               ))}
             </div>
@@ -278,21 +295,21 @@ export default function AdminRestaurantReservations() {
                   <p className="text-sm">{selectedReservation.phone}</p>
                 </div>
 
-                {(selectedReservation.company_name || selectedReservation.group_name) && (
+                {(selectedReservation.companyName || selectedReservation.groupName) && (
                   <div>
                     <p className="text-xs text-muted-foreground">Entreprise/Groupe</p>
-                    <p className="font-medium">{selectedReservation.company_name || selectedReservation.group_name}</p>
+                    <p className="font-medium">{selectedReservation.companyName || selectedReservation.groupName}</p>
                   </div>
                 )}
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <p className="text-xs text-muted-foreground">Places</p>
-                    <p className="font-medium">{selectedReservation.seats_total || '-'}</p>
+                    <p className="font-medium">{selectedReservation.seatsTotal || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Date</p>
-                    <p className="font-medium">{new Date(selectedReservation.created_at).toLocaleDateString('fr-FR')}</p>
+                    <p className="text-xs text-muted-foreground">Date ftour</p>
+                    <p className="font-medium">{selectedReservation.date ? new Date(selectedReservation.date).toLocaleDateString('fr-FR') : '-'}</p>
                   </div>
                 </div>
 
@@ -303,10 +320,10 @@ export default function AdminRestaurantReservations() {
                   </div>
                 )}
 
-                {(selectedReservation.status === 'submitted' || selectedReservation.status === 'pending_confirmation') && (
+                {selectedReservation.status === 'pending_validation' && (
                   <div className="flex gap-2">
                     <Button
-                      onClick={() => handleValidate(selectedReservation.id)}
+                      onClick={() => handleValidate(selectedReservation.reference)}
                       disabled={validateMutation.isPending}
                       className="flex-1"
                     >
@@ -314,7 +331,7 @@ export default function AdminRestaurantReservations() {
                       Valider
                     </Button>
                     <Button
-                      onClick={() => handleRefuse(selectedReservation.id)}
+                      onClick={() => handleRefuse(selectedReservation.reference)}
                       disabled={refuseMutation.isPending}
                       variant="destructive"
                       className="flex-1"
@@ -323,6 +340,17 @@ export default function AdminRestaurantReservations() {
                       Refuser
                     </Button>
                   </div>
+                )}
+
+                {(selectedReservation.status === 'validated_pending_payment' || selectedReservation.status === 'paid_confirmed') && (
+                  <Button
+                    onClick={() => updateStatusMutation.mutate({ id: selectedReservation.id, status: 'completed' })}
+                    disabled={updateStatusMutation.isPending}
+                    className="w-full"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Marquer terminée
+                  </Button>
                 )}
               </div>
             )}
