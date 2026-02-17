@@ -292,6 +292,7 @@ export default function Admin() {
   const canManageVolunteers = user?.role && ['admin', 'super_admin', 'admin_ops'].includes(user.role);
   const canManageOrders = user?.role && ['admin', 'super_admin', 'admin_boutique'].includes(user.role);
   const canManageDonations = user?.role && ['admin', 'super_admin', 'admin_dons'].includes(user.role);
+  const canManageRestaurant = user?.role && ['admin', 'super_admin', 'admin_restaurant_particuliers', 'admin_restaurant_groupes', 'admin_restaurant_entreprises', 'admin_ops'].includes(user.role);
 
   const { data: volunteerStats } = trpc.volunteers.stats.useQuery(undefined, {
     enabled: isAuthenticated && !!canManageVolunteers,
@@ -304,6 +305,22 @@ export default function Admin() {
   const { data: donationStats } = trpc.donations.stats.useQuery(undefined, {
     enabled: isAuthenticated && !!canManageDonations,
   });
+
+  const { data: restaurantParticuliers } = trpc.restaurantReservations.adminListParticuliers.useQuery(undefined, {
+    enabled: isAuthenticated && !!canManageRestaurant,
+  });
+  const { data: restaurantGroupes } = trpc.restaurantReservations.adminListGroupes.useQuery(undefined, {
+    enabled: isAuthenticated && !!canManageRestaurant,
+  });
+  const { data: restaurantEntreprises } = trpc.restaurantReservations.adminListEntreprises.useQuery(undefined, {
+    enabled: isAuthenticated && !!canManageRestaurant,
+  });
+
+  const restaurantStats = canManageRestaurant ? {
+    total: (restaurantParticuliers?.length || 0) + (restaurantGroupes?.length || 0) + (restaurantEntreprises?.length || 0),
+    pending: [...(restaurantParticuliers || []), ...(restaurantGroupes || []), ...(restaurantEntreprises || [])].filter((r: any) => r.status === 'pending_validation').length,
+    totalSeats: [...(restaurantParticuliers || []), ...(restaurantGroupes || []), ...(restaurantEntreprises || [])].reduce((sum: number, r: any) => sum + (r.seatsTotal || 0), 0),
+  } : null;
 
   const { data: days } = trpc.days.list.useQuery();
 
@@ -441,6 +458,25 @@ export default function Admin() {
                   </div>
                   <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
                     <Heart className="h-6 w-6 text-accent" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {canManageRestaurant && restaurantStats && (
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Réservations</p>
+                    <p className="text-3xl font-bold">{restaurantStats.total}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {restaurantStats.pending} en attente • {restaurantStats.totalSeats} places
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-[#5d5a3c]/10 flex items-center justify-center">
+                    <UtensilsCrossed className="h-6 w-6 text-[#5d5a3c]" />
                   </div>
                 </div>
               </CardContent>

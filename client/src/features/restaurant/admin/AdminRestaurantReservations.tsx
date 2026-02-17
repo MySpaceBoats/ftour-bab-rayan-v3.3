@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Download, Search, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Download, Search, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 type ReservationType = 'all' | 'particulier' | 'entreprise' | 'groupe';
@@ -18,19 +18,27 @@ export default function AdminRestaurantReservations() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  // Fetch reservations based on type
-  const { data: particuliers = [] } = trpc.restaurantModule.adminListParticuliers.useQuery();
-  const { data: entreprises = [] } = trpc.restaurantModule.adminListEntreprises.useQuery();
-  const { data: groupes = [] } = trpc.restaurantModule.adminListGroupes.useQuery();
+  // Fetch reservations from MySQL/Drizzle via restaurantReservations router
+  const { data: particuliers = [], isLoading: loadingP, refetch: refetchP } = trpc.restaurantReservations.adminListParticuliers.useQuery();
+  const { data: entreprises = [], isLoading: loadingE, refetch: refetchE } = trpc.restaurantReservations.adminListEntreprises.useQuery();
+  const { data: groupes = [], isLoading: loadingG, refetch: refetchG } = trpc.restaurantReservations.adminListGroupes.useQuery();
+
+  const isLoading = loadingP || loadingE || loadingG;
+
+  const refetchAll = () => {
+    refetchP();
+    refetchE();
+    refetchG();
+  };
 
   // Combine all reservations
   const allReservations = useMemo(() => {
     const all = [
-      ...particuliers.map((r: any) => ({ ...r, type: 'particulier' })),
-      ...entreprises.map((r: any) => ({ ...r, type: 'entreprise' })),
-      ...groupes.map((r: any) => ({ ...r, type: 'groupe' })),
+      ...particuliers.map((r: any) => ({ ...r, type: r.type || 'particulier' })),
+      ...entreprises.map((r: any) => ({ ...r, type: r.type || 'entreprise' })),
+      ...groupes.map((r: any) => ({ ...r, type: r.type || 'groupe' })),
     ];
-    return all.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return all.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [particuliers, entreprises, groupes]);
 
   // Filter reservations
@@ -38,7 +46,7 @@ export default function AdminRestaurantReservations() {
     return allReservations.filter((res: any) => {
       const matchesType = typeFilter === 'all' || res.type === typeFilter;
       const matchesStatus = statusFilter === 'all' || res.status === statusFilter;
-      const text = `${res.reference} ${res.contact_name} ${res.contact_email} ${res.contact_phone}`.toLowerCase();
+      const text = `${res.reference} ${res.name} ${res.email} ${res.phone}`.toLowerCase();
       const matchesSearch = searchQuery === '' || text.includes(searchQuery.toLowerCase());
       return matchesType && matchesStatus && matchesSearch;
     });
@@ -47,10 +55,11 @@ export default function AdminRestaurantReservations() {
   const selectedReservation = filteredReservations.find((res: any) => res.id === selectedId) || null;
 
   // Validate reservation
-  const validateMutation = trpc.restaurantModule.adminUpdateStatus.useMutation({
+  const validateMutation = trpc.restaurantReservations.validate.useMutation({
     onSuccess: () => {
-      toast.success('Réservation validée');
+      toast.success('Réservation validée, email de confirmation envoyé');
       setSelectedId(null);
+      refetchAll();
     },
     onError: (error: any) => {
       toast.error(error.message || 'Erreur lors de la validation');
@@ -58,28 +67,26 @@ export default function AdminRestaurantReservations() {
   });
 
   // Refuse reservation
-  const refuseMutation = trpc.restaurantModule.adminUpdateStatus.useMutation({
+  const refuseMutation = trpc.restaurantReservations.refuse.useMutation({
     onSuccess: () => {
-      toast.success('Réservation refusée');
+      toast.success('Réservation refusée, email de notification envoyé');
       setSelectedId(null);
+      refetchAll();
     },
     onError: (error: any) => {
       toast.error(error.message || 'Erreur lors du refus');
     },
   });
 
-  const handleValidate = (id: number) => {
+  const handleValidate = (reference: string) => {
     validateMutation.mutate({
-      id,
-      status: 'confirmed',
+      reference,
+      baseUrl: window.location.origin,
     });
   };
 
-  const handleRefuse = (id: number) => {
-    refuseMutation.mutate({
-      id,
-      status: 'rejected',
-    });
+  const handleRefuse = (reference: string) => {
+    refuseMutation.mutate({ reference });
   };
 
   const exportCsv = () => {
@@ -88,16 +95,17 @@ export default function AdminRestaurantReservations() {
       return;
     }
 
-    const header = ['Référence', 'Type', 'Statut', 'Contact', 'Email', 'Téléphone', 'Places', 'Date', 'Notes'];
+    const header = ['Référence', 'Type', 'Statut', 'Contact', 'Email', 'Téléphone', 'Places', 'Date Ftour', 'Créé le', 'Notes'];
     const rows = filteredReservations.map((res: any) => [
       res.reference,
       res.type,
       res.status,
-      res.contact_name,
-      res.contact_email,
-      res.contact_phone,
-      res.seats_total || res.participants_count || '-',
-      new Date(res.created_at).toLocaleString('fr-FR'),
+      res.name,
+      res.email,
+      res.phone,
+      res.seatsTotal || '-',
+      res.date ? new Date(res.date).toLocaleDateString('fr-FR') : '-',
+      res.createdAt ? new Date(res.createdAt).toLocaleString('fr-FR') : '-',
       (res.notes || '').replace(/\n/g, ' '),
     ]);
 
@@ -124,6 +132,12 @@ export default function AdminRestaurantReservations() {
         return <Badge className="bg-green-600">Confirmée</Badge>;
       case 'refused':
         return <Badge variant="destructive">Refusée</Badge>;
+      case 'cancelled':
+        return <Badge variant="destructive">Annulée</Badge>;
+      case 'completed':
+        return <Badge className="bg-emerald-600">Terminée</Badge>;
+      case 'no_show':
+        return <Badge variant="outline" className="bg-gray-50 text-gray-700">No show</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -140,6 +154,11 @@ export default function AdminRestaurantReservations() {
       default:
         return <Badge>{type}</Badge>;
     }
+  };
+
+  const formatDate = (date: any) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('fr-FR');
   };
 
   return (
@@ -210,31 +229,37 @@ export default function AdminRestaurantReservations() {
               </Button>
             </div>
 
-            <div className="space-y-3">
-              {filteredReservations.length === 0 && (
-                <p className="text-sm text-muted-foreground">Aucune réservation trouvée.</p>
-              )}
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredReservations.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Aucune réservation trouvée.</p>
+                )}
 
-              {filteredReservations.map((res: any) => (
-                <button
-                  key={res.id}
-                  onClick={() => setSelectedId(res.id)}
-                  className={`w-full text-left p-4 rounded-lg border transition-colors ${
-                    selectedId === res.id ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <p className="font-medium">{res.reference}</p>
-                    <div className="flex gap-1">
-                      {getTypeBadge(res.type)}
-                      {getStatusBadge(res.status)}
+                {filteredReservations.map((res: any) => (
+                  <button
+                    key={res.id}
+                    onClick={() => setSelectedId(res.id)}
+                    className={`w-full text-left p-4 rounded-lg border transition-colors ${
+                      selectedId === res.id ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <p className="font-medium">{res.reference}</p>
+                      <div className="flex gap-1">
+                        {getTypeBadge(res.type)}
+                        {getStatusBadge(res.status)}
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{res.contact_name} • {res.contact_email}</p>
-                  <p className="text-sm text-muted-foreground">{new Date(res.created_at).toLocaleString('fr-FR')}</p>
-                </button>
-              ))}
-            </div>
+                    <p className="text-sm text-muted-foreground">{res.name} {res.email ? `• ${res.email}` : ''}</p>
+                    <p className="text-sm text-muted-foreground">{res.seatsTotal} places • Ftour {formatDate(res.date)} • Créé {formatDate(res.createdAt)}</p>
+                  </button>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -264,26 +289,26 @@ export default function AdminRestaurantReservations() {
 
                 <div>
                   <p className="text-xs text-muted-foreground">Contact</p>
-                  <p className="font-medium">{selectedReservation.contact_name}</p>
-                  <p className="text-sm">{selectedReservation.contact_email}</p>
-                  <p className="text-sm">{selectedReservation.contact_phone}</p>
+                  <p className="font-medium">{selectedReservation.name}</p>
+                  <p className="text-sm">{selectedReservation.email}</p>
+                  <p className="text-sm">{selectedReservation.phone}</p>
                 </div>
 
-                {selectedReservation.organization_name && (
+                {(selectedReservation.companyName || selectedReservation.groupName) && (
                   <div>
                     <p className="text-xs text-muted-foreground">Entreprise/Groupe</p>
-                    <p className="font-medium">{selectedReservation.organization_name}</p>
+                    <p className="font-medium">{selectedReservation.companyName || selectedReservation.groupName}</p>
                   </div>
                 )}
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <p className="text-xs text-muted-foreground">Places</p>
-                    <p className="font-medium">{selectedReservation.seats_total || selectedReservation.participants_count || '-'}</p>
+                    <p className="font-medium">{selectedReservation.seatsTotal || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Date</p>
-                    <p className="font-medium">{new Date(selectedReservation.reservation_date).toLocaleDateString('fr-FR')}</p>
+                    <p className="text-xs text-muted-foreground">Date Ftour</p>
+                    <p className="font-medium">{formatDate(selectedReservation.date)}</p>
                   </div>
                 </div>
 
@@ -297,7 +322,7 @@ export default function AdminRestaurantReservations() {
                 {selectedReservation.status === 'pending_validation' && (
                   <div className="flex gap-2">
                     <Button
-                      onClick={() => handleValidate(selectedReservation.id)}
+                      onClick={() => handleValidate(selectedReservation.reference)}
                       disabled={validateMutation.isPending}
                       className="flex-1"
                     >
@@ -305,7 +330,7 @@ export default function AdminRestaurantReservations() {
                       Valider
                     </Button>
                     <Button
-                      onClick={() => handleRefuse(selectedReservation.id)}
+                      onClick={() => handleRefuse(selectedReservation.reference)}
                       disabled={refuseMutation.isPending}
                       variant="destructive"
                       className="flex-1"
