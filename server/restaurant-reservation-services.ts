@@ -120,9 +120,13 @@ export async function getRestaurantReservationByQrToken(qrToken: string) {
 export async function getRestaurantReservationById(id: number) {
   try {
     const database = await getDb();
-    return await database.query.restaurantReservations.findFirst({
-      where: eq(restaurantReservations.id, id),
-    });
+    const result = await database
+      .select()
+      .from(restaurantReservations)
+      .where(eq(restaurantReservations.id, id))
+      .limit(1);
+
+    return result[0] || null;
   } catch (error) {
     console.error("[getRestaurantReservationById] Error:", error);
     throw error;
@@ -239,10 +243,13 @@ export async function activateQrCode(id: number) {
 export async function markQrCodeAsUsed(qrToken: string) {
   try {
     const database = await getDb();
-    const reservation = await database.query.restaurantReservations.findFirst({
-      where: eq(restaurantReservations.qrToken, qrToken),
-    });
+    const result = await database
+      .select()
+      .from(restaurantReservations)
+      .where(eq(restaurantReservations.qrToken, qrToken))
+      .limit(1);
 
+    const reservation = result[0];
     if (!reservation) {
       throw new Error("QR code not found");
     }
