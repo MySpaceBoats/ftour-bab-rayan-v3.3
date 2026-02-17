@@ -1599,6 +1599,90 @@ const restaurantModuleRouter = router({
         .update(updateData)
         .eq('id', input.id);
       if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+
+      // Send confirmation email with QR code when reservation is confirmed
+      if (input.status === 'confirmed') {
+        try {
+          const { data: reservation } = await supabase
+            .from('restaurant_reservations')
+            .select('*')
+            .eq('id', input.id)
+            .single();
+
+          if (reservation?.email && reservation?.qr_token) {
+            const baseUrl = process.env.VITE_APP_URL || 'https://ftourbabrayan.ma';
+            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${baseUrl}/checkin-reservation/${reservation.qr_token}`)}`;
+
+            const typeLabel: Record<string, string> = {
+              particulier: 'Particulier',
+              entreprise: 'Entreprise',
+              groupe: 'Groupe',
+            };
+
+            const emailHtml = `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f5f5f0;">
+  <table role="presentation" style="width:100%;border-collapse:collapse;">
+    <tr><td align="center" style="padding:40px 0;">
+      <table role="presentation" style="width:600px;max-width:100%;border-collapse:collapse;background-color:#ffffff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+        <tr><td style="background:linear-gradient(135deg,#166534 0%,#15803d 100%);padding:30px;text-align:center;border-radius:8px 8px 0 0;">
+          <h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:bold;">Ftour <span style="color:#fbbf24;">Bab Rayan</span></h1>
+          <p style="color:rgba(255,255,255,0.9);margin:10px 0 0 0;font-size:14px;">Réservation confirmée</p>
+        </td></tr>
+        <tr><td style="padding:40px 30px;">
+          <h2 style="color:#5d5a3c;margin:0 0 20px 0;font-size:24px;">Votre réservation est confirmée</h2>
+          <p style="color:#374151;font-size:16px;line-height:1.6;">Bonjour <strong>${reservation.name}</strong>,</p>
+          <p style="color:#374151;font-size:16px;line-height:1.6;">Excellente nouvelle ! Votre réservation au Restaurant Solidaire a été confirmée.</p>
+          <table role="presentation" style="width:100%;border-collapse:collapse;background-color:#f5f5f0;border-radius:8px;margin:20px 0;">
+            <tr><td style="padding:20px;">
+              <h3 style="color:#5d5a3c;margin:0 0 15px 0;font-size:18px;">Détails de votre réservation</h3>
+              <p style="margin:5px 0;color:#374151;"><strong>Type :</strong> ${typeLabel[reservation.type] || reservation.type}</p>
+              <p style="margin:5px 0;color:#374151;"><strong>Nombre de places :</strong> ${reservation.seats_total}</p>
+              ${reservation.company_name ? `<p style="margin:5px 0;color:#374151;"><strong>Entreprise :</strong> ${reservation.company_name}</p>` : ''}
+              ${reservation.group_name ? `<p style="margin:5px 0;color:#374151;"><strong>Groupe :</strong> ${reservation.group_name}</p>` : ''}
+              <p style="margin:10px 0 0 0;color:#6b7280;font-size:14px;"><strong>Référence :</strong> ${reservation.reference}</p>
+            </td></tr>
+          </table>
+          <div style="text-align:center;margin:30px 0;padding:20px;background-color:#ffffff;border:2px dashed #d4a574;border-radius:8px;">
+            <h3 style="color:#5d5a3c;margin:0 0 15px 0;font-size:18px;">Votre QR Code d'accès</h3>
+            <img src="${qrCodeUrl}" alt="QR Code" style="width:200px;height:200px;margin:10px 0;" />
+            <p style="color:#6b7280;font-size:14px;margin:10px 0 0 0;">Présentez ce QR code à l'entrée le jour de votre visite</p>
+          </div>
+          <table role="presentation" style="width:100%;border-collapse:collapse;background-color:#fef3c7;border-radius:8px;margin:20px 0;">
+            <tr><td style="padding:20px;">
+              <h3 style="color:#92400e;margin:0 0 15px 0;font-size:18px;">Consignes importantes</h3>
+              <ul style="margin:0;padding-left:20px;color:#374151;">
+                <li style="margin-bottom:8px;">Arrivez 15 minutes avant l'heure de votre réservation</li>
+                <li style="margin-bottom:8px;">Présentez votre QR code à l'entrée</li>
+                <li style="margin-bottom:8px;">En cas d'annulation, prévenez-nous au moins 24h à l'avance</li>
+              </ul>
+            </td></tr>
+          </table>
+          <p style="color:#374151;font-size:16px;line-height:1.6;margin:20px 0 0 0;">À très bientôt !<br><strong>L'équipe Ftour Bab Rayan</strong></p>
+        </td></tr>
+        <tr><td style="background-color:#f8f9fa;padding:20px 30px;text-align:center;border-radius:0 0 8px 8px;border-top:1px solid #e5e7eb;">
+          <p style="margin:0 0 10px 0;font-size:14px;color:#6b7280;">Association Bab Rayan</p>
+          <p style="margin:0;font-size:12px;color:#9ca3af;">4 rue Bayt Lham, quartier Palmier, Casablanca<br>Tél: +212 610 023 555 | contact@ftourbabrayan.ma</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+            await sendEmail({
+              to: reservation.email,
+              subject: `✅ Réservation confirmée - Référence ${reservation.reference}`,
+              html: emailHtml,
+            });
+          }
+        } catch (emailError) {
+          console.error('[Restaurant Reservation] Confirmation email failed:', emailError);
+        }
+      }
+
       return { success: true };
     }),
 
@@ -1787,6 +1871,88 @@ const terroirModuleRouter = router({
               .update({ stock_reserved: variant.stock_reserved + item.quantity })
               .eq('id', item.variantId);
           }
+        }
+      }
+
+      // Send confirmation email with QR code
+      if (input.customerEmail) {
+        try {
+          const baseUrl = process.env.VITE_APP_URL || 'https://ftourbabrayan.ma';
+          const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${baseUrl}/qr/terroir/${reference}`)}`;
+
+          // Fetch product names for the email
+          const productNames: Record<number, string> = {};
+          for (const item of input.items) {
+            const { data: product } = await supabase.from('terroir_products').select('name').eq('id', item.productId).single();
+            if (product) productNames[item.productId] = product.name;
+          }
+
+          const itemsHtml = input.items.map(item =>
+            `<tr>
+              <td style="padding:8px;border-bottom:1px solid #e5e7eb;">${productNames[item.productId] || `Produit #${item.productId}`}</td>
+              <td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td>
+              <td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:right;">${item.unitPrice * item.quantity} MAD</td>
+            </tr>`
+          ).join('');
+
+          const emailHtml = `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f5f5f5;">
+  <table role="presentation" style="width:100%;border-collapse:collapse;">
+    <tr><td align="center" style="padding:40px 0;">
+      <table role="presentation" style="width:600px;max-width:100%;border-collapse:collapse;background-color:#ffffff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+        <tr><td style="background:linear-gradient(135deg,#166534 0%,#15803d 100%);padding:30px;text-align:center;border-radius:8px 8px 0 0;">
+          <h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:bold;">Ftour <span style="color:#fbbf24;">Bab Rayan</span></h1>
+          <p style="color:rgba(255,255,255,0.9);margin:10px 0 0 0;font-size:14px;">Terroir Solidaire</p>
+        </td></tr>
+        <tr><td style="padding:40px 30px;">
+          <h2 style="color:#166534;margin:0 0 20px 0;font-size:24px;">Commande confirmée !</h2>
+          <p style="color:#374151;font-size:16px;line-height:1.6;">Bonjour <strong>${input.customerName}</strong>,</p>
+          <p style="color:#374151;font-size:16px;line-height:1.6;">Votre commande de produits terroir a bien été enregistrée.</p>
+          <div style="background-color:#f0fdf4;padding:15px;border-radius:8px;text-align:center;margin:20px 0;">
+            <p style="margin:0;color:#6b7280;font-size:14px;">Référence de commande</p>
+            <p style="margin:5px 0 0 0;color:#166534;font-size:24px;font-weight:bold;font-family:monospace;">${reference}</p>
+          </div>
+          <table role="presentation" style="width:100%;border-collapse:collapse;margin:20px 0;">
+            <thead><tr style="background-color:#f3f4f6;">
+              <th style="padding:10px;text-align:left;color:#374151;">Article</th>
+              <th style="padding:10px;text-align:center;color:#374151;">Qté</th>
+              <th style="padding:10px;text-align:right;color:#374151;">Prix</th>
+            </tr></thead>
+            <tbody>
+              ${itemsHtml}
+              <tr style="background-color:#f0fdf4;">
+                <td colspan="2" style="padding:15px;font-weight:bold;color:#166534;">Total</td>
+                <td style="padding:15px;text-align:right;font-weight:bold;color:#166534;font-size:18px;">${totalAmount} MAD</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="text-align:center;margin:30px 0;padding:20px;background-color:#ffffff;border:2px dashed #166534;border-radius:8px;">
+            <h3 style="color:#166534;margin:0 0 15px 0;font-size:18px;">Votre QR Code</h3>
+            <img src="${qrCodeUrl}" alt="QR Code" style="width:200px;height:200px;margin:10px 0;" />
+            <p style="color:#6b7280;font-size:14px;margin:10px 0 0 0;">Présentez ce QR code lors du retrait de votre commande</p>
+          </div>
+          <p style="color:#374151;font-size:16px;line-height:1.6;margin:20px 0 0 0;">Merci pour votre soutien !<br><strong>L'équipe Ftour Bab Rayan</strong></p>
+        </td></tr>
+        <tr><td style="background-color:#f8f9fa;padding:20px 30px;text-align:center;border-radius:0 0 8px 8px;border-top:1px solid #e5e7eb;">
+          <p style="margin:0 0 10px 0;font-size:14px;color:#6b7280;">Association Bab Rayan</p>
+          <p style="margin:0;font-size:12px;color:#9ca3af;">4 rue Bayt Lham, quartier Palmier, Casablanca<br>Tél: +212 610 023 555 | contact@ftourbabrayan.ma</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+          await sendEmail({
+            to: input.customerEmail,
+            subject: `✅ Confirmation commande terroir #${reference}`,
+            html: emailHtml,
+          });
+        } catch (emailError) {
+          console.error('[Terroir Order] Email send failed:', emailError);
         }
       }
 
@@ -2378,17 +2544,81 @@ const pastryOrdersRouter = router({
         order.qr_token = qrData.token;
       }
 
-      // Envoyer email de confirmation
-      try {
-        const emailContent = `Commande Pâtisserie #${reference}\n\nMerci pour votre commande!\n\nDétails:\n${input.items.map(item => `- Item ${item.pastryId}: ${item.quantity}x`).join('\n')}\n\nMontant total: ${input.totalAmount}€\nMéthode de paiement: ${input.paymentMethod}`;
-        
-        await sendEmail({
-          to: input.email || input.phone,
-          subject: `Confirmation de commande pâtisserie #${reference}`,
-          html: `<p>${emailContent.replace(/\n/g, '</p><p>')}</p>`,
-        });
-      } catch (e) {
-        console.error('Email send error:', e);
+      // Envoyer email de confirmation avec QR code
+      if (input.email) {
+        try {
+          const baseUrl = process.env.VITE_APP_URL || 'https://ftourbabrayan.ma';
+          const qrCodeUrl = order.qr_token
+            ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${baseUrl}/qr/pastry/${reference}`)}`
+            : '';
+
+          const itemsHtml = input.items.map(item =>
+            `<tr>
+              <td style="padding:8px;border-bottom:1px solid #e5e7eb;">Pâtisserie #${item.pastryId}</td>
+              <td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td>
+              <td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:right;">${item.price} MAD</td>
+            </tr>`
+          ).join('');
+
+          const emailHtml = `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f5f5f5;">
+  <table role="presentation" style="width:100%;border-collapse:collapse;">
+    <tr><td align="center" style="padding:40px 0;">
+      <table role="presentation" style="width:600px;max-width:100%;border-collapse:collapse;background-color:#ffffff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+        <tr><td style="background:linear-gradient(135deg,#166534 0%,#15803d 100%);padding:30px;text-align:center;border-radius:8px 8px 0 0;">
+          <h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:bold;">Ftour <span style="color:#fbbf24;">Bab Rayan</span></h1>
+          <p style="color:rgba(255,255,255,0.9);margin:10px 0 0 0;font-size:14px;">Pâtisserie Solidaire</p>
+        </td></tr>
+        <tr><td style="padding:40px 30px;">
+          <h2 style="color:#166534;margin:0 0 20px 0;font-size:24px;">Commande confirmée !</h2>
+          <p style="color:#374151;font-size:16px;line-height:1.6;">Merci pour votre commande de pâtisseries solidaires !</p>
+          <div style="background-color:#f0fdf4;padding:15px;border-radius:8px;text-align:center;margin:20px 0;">
+            <p style="margin:0;color:#6b7280;font-size:14px;">Référence de commande</p>
+            <p style="margin:5px 0 0 0;color:#166534;font-size:24px;font-weight:bold;font-family:monospace;">${reference}</p>
+          </div>
+          <table role="presentation" style="width:100%;border-collapse:collapse;margin:20px 0;">
+            <thead><tr style="background-color:#f3f4f6;">
+              <th style="padding:10px;text-align:left;color:#374151;">Article</th>
+              <th style="padding:10px;text-align:center;color:#374151;">Qté</th>
+              <th style="padding:10px;text-align:right;color:#374151;">Prix</th>
+            </tr></thead>
+            <tbody>
+              ${itemsHtml}
+              <tr style="background-color:#f0fdf4;">
+                <td colspan="2" style="padding:15px;font-weight:bold;color:#166534;">Total</td>
+                <td style="padding:15px;text-align:right;font-weight:bold;color:#166534;font-size:18px;">${input.totalAmount} MAD</td>
+              </tr>
+            </tbody>
+          </table>
+          ${qrCodeUrl ? `
+          <div style="text-align:center;margin:30px 0;padding:20px;background-color:#ffffff;border:2px dashed #166534;border-radius:8px;">
+            <h3 style="color:#166534;margin:0 0 15px 0;font-size:18px;">Votre QR Code</h3>
+            <img src="${qrCodeUrl}" alt="QR Code" style="width:200px;height:200px;margin:10px 0;" />
+            <p style="color:#6b7280;font-size:14px;margin:10px 0 0 0;">Présentez ce QR code lors du retrait de votre commande</p>
+          </div>` : ''}
+          <p style="color:#374151;font-size:16px;line-height:1.6;margin:20px 0 0 0;">Merci pour votre soutien !<br><strong>L'équipe Ftour Bab Rayan</strong></p>
+        </td></tr>
+        <tr><td style="background-color:#f8f9fa;padding:20px 30px;text-align:center;border-radius:0 0 8px 8px;border-top:1px solid #e5e7eb;">
+          <p style="margin:0 0 10px 0;font-size:14px;color:#6b7280;">Association Bab Rayan</p>
+          <p style="margin:0;font-size:12px;color:#9ca3af;">4 rue Bayt Lham, quartier Palmier, Casablanca<br>Tél: +212 610 023 555 | contact@ftourbabrayan.ma</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+          await sendEmail({
+            to: input.email,
+            subject: `✅ Confirmation commande pâtisserie #${reference}`,
+            html: emailHtml,
+          });
+        } catch (e) {
+          console.error('Email send error:', e);
+        }
       }
 
       return order;
