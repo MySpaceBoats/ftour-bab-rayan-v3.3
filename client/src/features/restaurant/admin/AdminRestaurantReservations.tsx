@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Download, Search, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Download, Search, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 type ReservationType = 'all' | 'particulier' | 'entreprise' | 'groupe';
@@ -19,14 +19,16 @@ export default function AdminRestaurantReservations() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   // Fetch reservations from MySQL/Drizzle via restaurantReservations router
-  const { data: particuliers = [], refetch: refetchParticuliers } = trpc.restaurantReservations.adminListParticuliers.useQuery();
-  const { data: entreprises = [], refetch: refetchEntreprises } = trpc.restaurantReservations.adminListEntreprises.useQuery();
-  const { data: groupes = [], refetch: refetchGroupes } = trpc.restaurantReservations.adminListGroupes.useQuery();
+  const { data: particuliers = [], isLoading: loadingP, refetch: refetchP } = trpc.restaurantReservations.adminListParticuliers.useQuery();
+  const { data: entreprises = [], isLoading: loadingE, refetch: refetchE } = trpc.restaurantReservations.adminListEntreprises.useQuery();
+  const { data: groupes = [], isLoading: loadingG, refetch: refetchG } = trpc.restaurantReservations.adminListGroupes.useQuery();
+
+  const isLoading = loadingP || loadingE || loadingG;
 
   const refetchAll = () => {
-    refetchParticuliers();
-    refetchEntreprises();
-    refetchGroupes();
+    refetchP();
+    refetchE();
+    refetchG();
   };
 
   // Combine all reservations
@@ -55,7 +57,7 @@ export default function AdminRestaurantReservations() {
   // Validate reservation
   const validateMutation = trpc.restaurantReservations.validate.useMutation({
     onSuccess: () => {
-      toast.success('Réservation validée');
+      toast.success('Réservation validée, email de confirmation envoyé');
       setSelectedId(null);
       refetchAll();
     },
@@ -67,7 +69,7 @@ export default function AdminRestaurantReservations() {
   // Refuse reservation
   const refuseMutation = trpc.restaurantReservations.refuse.useMutation({
     onSuccess: () => {
-      toast.success('Réservation refusée');
+      toast.success('Réservation refusée, email de notification envoyé');
       setSelectedId(null);
       refetchAll();
     },
@@ -105,7 +107,7 @@ export default function AdminRestaurantReservations() {
       return;
     }
 
-    const header = ['Référence', 'Type', 'Statut', 'Contact', 'Email', 'Téléphone', 'Places', 'Date', 'Notes'];
+    const header = ['Référence', 'Type', 'Statut', 'Contact', 'Email', 'Téléphone', 'Places', 'Date Ftour', 'Créé le', 'Notes'];
     const rows = filteredReservations.map((res: any) => [
       res.reference,
       res.type,
@@ -114,7 +116,8 @@ export default function AdminRestaurantReservations() {
       res.email || '',
       res.phone,
       res.seatsTotal || '-',
-      new Date(res.createdAt).toLocaleString('fr-FR'),
+      res.date ? new Date(res.date).toLocaleDateString('fr-FR') : '-',
+      res.createdAt ? new Date(res.createdAt).toLocaleString('fr-FR') : '-',
       (res.notes || '').replace(/\n/g, ' '),
     ]);
 
@@ -150,7 +153,7 @@ export default function AdminRestaurantReservations() {
       case 'completed':
         return <Badge className="bg-emerald-600">Terminée</Badge>;
       case 'no_show':
-        return <Badge variant="outline">No show</Badge>;
+        return <Badge variant="outline" className="bg-gray-50 text-gray-700">No show</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -167,6 +170,11 @@ export default function AdminRestaurantReservations() {
       default:
         return <Badge>{type}</Badge>;
     }
+  };
+
+  const formatDate = (date: any) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('fr-FR');
   };
 
   return (
@@ -240,31 +248,37 @@ export default function AdminRestaurantReservations() {
               </Button>
             </div>
 
-            <div className="space-y-3">
-              {filteredReservations.length === 0 && (
-                <p className="text-sm text-muted-foreground">Aucune réservation trouvée.</p>
-              )}
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredReservations.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Aucune réservation trouvée.</p>
+                )}
 
-              {filteredReservations.map((res: any) => (
-                <button
-                  key={`${res.type}-${res.id}`}
-                  onClick={() => setSelectedId(res.id)}
-                  className={`w-full text-left p-4 rounded-lg border transition-colors ${
-                    selectedId === res.id ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <p className="font-medium">{res.reference}</p>
-                    <div className="flex gap-1">
-                      {getTypeBadge(res.type)}
-                      {getStatusBadge(res.status)}
+                {filteredReservations.map((res: any) => (
+                  <button
+                    key={`${res.type}-${res.id}`}
+                    onClick={() => setSelectedId(res.id)}
+                    className={`w-full text-left p-4 rounded-lg border transition-colors ${
+                      selectedId === res.id ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <p className="font-medium">{res.reference}</p>
+                      <div className="flex gap-1">
+                        {getTypeBadge(res.type)}
+                        {getStatusBadge(res.status)}
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{res.name} • {res.email}</p>
-                  <p className="text-sm text-muted-foreground">{new Date(res.createdAt).toLocaleString('fr-FR')}</p>
-                </button>
-              ))}
-            </div>
+                    <p className="text-sm text-muted-foreground">{res.name} {res.email ? `• ${res.email}` : ''}</p>
+                    <p className="text-sm text-muted-foreground">{res.seatsTotal} places • Ftour {formatDate(res.date)} • Créé {formatDate(res.createdAt)}</p>
+                  </button>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -312,8 +326,8 @@ export default function AdminRestaurantReservations() {
                     <p className="font-medium">{selectedReservation.seatsTotal || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Date ftour</p>
-                    <p className="font-medium">{selectedReservation.date ? new Date(selectedReservation.date).toLocaleDateString('fr-FR') : '-'}</p>
+                    <p className="text-xs text-muted-foreground">Date Ftour</p>
+                    <p className="font-medium">{formatDate(selectedReservation.date)}</p>
                   </div>
                 </div>
 
