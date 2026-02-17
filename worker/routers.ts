@@ -1442,7 +1442,7 @@ const ordersRouter = router({
       return { id: order.id, orderReference: orderRef, totalAmount };
     }),
 
-  list: adminProcedure.query(async ({ ctx }) => {
+  listAll: adminProcedure.query(async ({ ctx }) => {
     const supabase = createSupabaseAdmin(ctx.env);
 
     const { data, error } = await supabase
@@ -1477,6 +1477,31 @@ const ordersRouter = router({
         } : null,
       })),
     }));
+  }),
+
+  stats: adminProcedure.query(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select('status, total_amount');
+
+    if (error || !orders) {
+      return { total: 0, reserved: 0, paid: 0, delivered: 0, cancelled: 0, revenue: 0 };
+    }
+
+    const stats = {
+      total: orders.length,
+      reserved: orders.filter(o => o.status === 'reserved').length,
+      paid: orders.filter(o => o.status === 'paid').length,
+      delivered: orders.filter(o => o.status === 'delivered').length,
+      cancelled: orders.filter(o => o.status === 'cancelled').length,
+      revenue: orders
+        .filter(o => o.status !== 'cancelled')
+        .reduce((sum, o) => sum + parseFloat(o.total_amount || '0'), 0),
+    };
+
+    return stats;
   }),
 
   updateStatus: adminProcedure
