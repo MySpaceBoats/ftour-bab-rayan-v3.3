@@ -203,17 +203,6 @@ export default function Evenement() {
                   </div>
                 </div>
 
-                <div className="flex gap-6">
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg">
-                    4
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-bold">{t.event.step4Title}</h3>
-                    <p className="text-muted-foreground">
-                      {t.event.step4Desc}
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
