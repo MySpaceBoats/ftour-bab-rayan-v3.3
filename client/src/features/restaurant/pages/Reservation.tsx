@@ -18,37 +18,19 @@ export default function Reservation() {
           <p className="text-muted-foreground">Demande de réservation pour le ftour solidaire (réservation en ligne à partir de 5 couverts). Confirmation sous 48 heures.</p>
         </div>
 
-        <div className="max-w-2xl mx-auto grid gap-6 md:grid-cols-2">
+        <div className="max-w-md mx-auto">
           <Card className="flex flex-col">
             <CardHeader>
               <div className="h-10 w-10 rounded-full bg-[#5d5a3c]/10 text-[#5d5a3c] flex items-center justify-center mb-2">
                 <UtensilsCrossed className="h-5 w-5" />
               </div>
-              <CardTitle>Réservation Particuliers</CardTitle>
-              <CardDescription>Demande de réservation pour le ftour solidaire (réservation en ligne à partir de 5 couverts). Confirmation sous 48 heures.</CardDescription>
-            </CardHeader>
-            <CardContent className="mt-auto">
-              <Link href={`/${lang}/restaurant/particuliers`}>
-                <Button className="w-full">
-                  Réserver
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          <Card className="flex flex-col">
-            <CardHeader>
-              <div className="h-10 w-10 rounded-full bg-[#5d5a3c]/10 text-[#5d5a3c] flex items-center justify-center mb-2">
-                <UtensilsCrossed className="h-5 w-5" />
-              </div>
-              <CardTitle>Réservation Groupes</CardTitle>
-              <CardDescription>Demande de réservation groupe pour le ftour solidaire (à partir de 5 couverts). Confirmation sous 48 heures.</CardDescription>
+              <CardTitle>Réservation Groupe ou Entreprise</CardTitle>
+              <CardDescription>Demande de réservation groupe ou entreprise pour le ftour solidaire (à partir de 5 couverts). Confirmation sous 48 heures.</CardDescription>
             </CardHeader>
             <CardContent className="mt-auto">
               <Link href={`/${lang}/restaurant/groupes`}>
                 <Button className="w-full">
-                  Réserver en groupe
+                  Réserver
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </Link>

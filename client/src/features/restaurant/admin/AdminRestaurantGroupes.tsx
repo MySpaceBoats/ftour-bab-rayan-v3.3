@@ -129,7 +129,7 @@ export default function AdminRestaurantGroupes() {
           <div>
             <h1 className="font-bold text-lg flex items-center gap-2">
               <UsersRound className="h-5 w-5 text-[#5d5a3c]" />
-              Réservations Groupes
+              Réservations Groupes ou Entreprises
             </h1>
             <p className="text-xs text-muted-foreground">
               {filteredReservations?.length || 0} réservation(s) - soumises à confirmation

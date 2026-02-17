@@ -46,18 +46,8 @@ const sections: SectionDefinition[] = [
     borderClass: "border-[#5d5a3c]/20",
     modules: [
       {
-        label: "Réservations Particuliers",
-        description: "Réservations individuelles (max 10 places, paiement direct)",
-        route: "/admin/restaurant/particuliers",
-        icon: UtensilsCrossed,
-        iconColor: "text-[#5d5a3c]",
-        iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_restaurant'],
-        buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
-      },
-      {
-        label: "Réservations Groupes",
-        description: "Réservations groupes (assos, familles, délégations) soumises à confirmation",
+        label: "Réservations Groupes ou Entreprises",
+        description: "Réservations groupes ou entreprises (assos, familles, délégations, entreprises) soumises à confirmation",
         route: "/admin/restaurant/groupes",
         icon: UsersRound,
         iconColor: "text-[#5d5a3c]",

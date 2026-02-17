@@ -29,14 +29,12 @@ import Signup from "@/features/auth/pages/Signup";
 // ============================================
 // RESTAURANT — features/restaurant
 // ============================================
-import RestaurantParticuliers from "@/features/restaurant/pages/RestaurantParticuliers";
 import RestaurantGroupes from "@/features/restaurant/pages/RestaurantGroupes";
 import CompanyBooking from "@/features/restaurant/pages/CompanyBooking";
 import CompanyBookingConfirmation from "@/features/restaurant/pages/CompanyBookingConfirmation";
 import CompanyBookingSpace from "@/features/restaurant/pages/CompanyBookingSpace";
 import Reservation from "@/features/restaurant/pages/Reservation";
 import CheckinReservation from "@/features/restaurant/pages/CheckinReservation";
-import AdminRestaurantParticuliers from "@/features/restaurant/admin/AdminRestaurantParticuliers";
 import AdminRestaurantGroupes from "@/features/restaurant/admin/AdminRestaurantGroupes";
 import AdminRestaurantEntreprises from "@/features/restaurant/admin/AdminRestaurantEntreprises";
 import AdminRestaurants from "@/features/restaurant/admin/AdminRestaurants";
@@ -149,7 +147,6 @@ function LocalizedRoutes() {
       <Route path="/admin/unified-dashboard" component={AdminUnifiedDashboard} />
 
       {/* Admin Restaurant */}
-      <Route path="/admin/restaurant/particuliers" component={AdminRestaurantParticuliers} />
       <Route path="/admin/restaurant/groupes" component={AdminRestaurantGroupes} />
       <Route path="/admin/restaurant/entreprises" component={AdminRestaurantEntreprises} />
       <Route path="/admin/restaurants" component={AdminRestaurants} />
@@ -223,7 +220,6 @@ function LocalizedRoutes() {
       <Route path="/:lang/inscription" component={Signup} />
 
       {/* Restaurant public */}
-      <Route path="/:lang/restaurant/particuliers" component={RestaurantParticuliers} />
       <Route path="/:lang/restaurant/groupes" component={RestaurantGroupes} />
       <Route path="/:lang/reservation" component={Reservation} />
       <Route path="/:lang/company-booking" component={CompanyBooking} />

@@ -2,7 +2,6 @@
  * Unified Admin Dashboard for Restaurant Reservations
  * 
  * Centralized interface to manage all reservation requests:
- * - Particuliers (individuals)
  * - Groupes (groups)
  * - Entreprises (companies)
  * 
@@ -27,7 +26,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle2, XCircle, Clock } from "lucide-react";
 
-type ReservationType = "particulier" | "groupe" | "entreprise";
+type ReservationType = "groupe" | "entreprise";
 type ReservationStatus = "submitted" | "pending_confirmation" | "confirmed" | "rejected" | "cancelled";
 
 interface Reservation {
@@ -64,22 +63,6 @@ export default function AdminUnifiedBookings() {
 
   // Mock data - replace with actual API calls
   const mockReservations: Reservation[] = [
-    {
-      id: 1,
-      reference: "RES-P-00001",
-      type: "particulier",
-      name: "Ahmed Ben Ali",
-      email: "ahmed@example.com",
-      phone: "+212 6 12 34 56 78",
-      seatsTotal: 4,
-      displayChoice: "jardin",
-      status: "pending_confirmation",
-      slotId: 1,
-      slotTime: "20:00 - 22:30",
-      allocatedSpace: "jardin_libre",
-      expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
-      createdAt: new Date(),
-    },
     {
       id: 2,
       reference: "RES-E-00002",
@@ -148,8 +131,6 @@ export default function AdminUnifiedBookings() {
 
   const getTypeColor = (type: ReservationType) => {
     switch (type) {
-      case "particulier":
-        return "bg-blue-100 text-blue-800";
       case "groupe":
         return "bg-purple-100 text-purple-800";
       case "entreprise":
@@ -175,7 +156,7 @@ export default function AdminUnifiedBookings() {
       <div>
         <h1 className="text-3xl font-bold">Gestion Unifiée des Réservations</h1>
         <p className="text-gray-600 mt-2">
-          Arbitrez toutes les demandes de réservation (particuliers, groupes, entreprises) en un seul endroit
+          Arbitrez toutes les demandes de réservation (groupes, entreprises) en un seul endroit
         </p>
       </div>
 
@@ -193,7 +174,6 @@ export default function AdminUnifiedBookings() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous</SelectItem>
-                <SelectItem value="particulier">Particulier</SelectItem>
                 <SelectItem value="groupe">Groupe</SelectItem>
                 <SelectItem value="entreprise">Entreprise</SelectItem>
               </SelectContent>
