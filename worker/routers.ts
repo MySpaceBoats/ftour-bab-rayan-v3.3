@@ -1680,7 +1680,7 @@ const donationsRouter = router({
       return { id: data.id, donationReference: donationRef };
     }),
 
-  list: adminProcedure.query(async ({ ctx }) => {
+  listAll: adminProcedure.query(async ({ ctx }) => {
     const supabase = createSupabaseAdmin(ctx.env);
 
     const { data, error } = await supabase
@@ -1689,6 +1689,7 @@ const donationsRouter = router({
       .order('created_at', { ascending: false });
 
     if (error) {
+      console.error('[Worker] Donations listAll error:', error);
       return [];
     }
 
@@ -1698,7 +1699,7 @@ const donationsRouter = router({
       donorName: d.donor_name,
       donorEmail: d.donor_email,
       donorPhone: d.donor_phone,
-      amount: d.amount,
+      amount: typeof d.amount === 'string' ? parseFloat(d.amount) || 0 : (d.amount ?? 0),
       paymentMethod: d.payment_method,
       status: d.status,
       message: d.message,
@@ -1743,7 +1744,7 @@ const donationsRouter = router({
     };
 
     for (const d of data || []) {
-      const amount = parseFloat(d.amount);
+      const amount = parseFloat(d.amount) || 0;
       stats.total += amount;
       if (d.status === 'received') stats.received += amount;
       if (d.status === 'pending' || d.status === 'promised') stats.pending += amount;
@@ -1751,6 +1752,224 @@ const donationsRouter = router({
 
     return stats;
   }),
+});
+
+// ============================================
+// PASTRIES ROUTER (Catalogue Pâtisserie)
+// ============================================
+
+const pastriesRouter = router({
+  list: publicProcedure.query(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+
+    const { data, error } = await supabase
+      .from('pastries')
+      .select('*')
+      .eq('active', true)
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      console.error('[Worker] Pastries list error:', error);
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Erreur lors du chargement des pâtisseries' });
+    }
+
+    return (data || []).map(p => ({
+      ...p,
+      price: typeof p.price === 'string' ? parseFloat(p.price) || 0 : (p.price ?? 0),
+    }));
+  }),
+
+  create: adminProcedure
+    .input(z.object({
+      name: z.string(),
+      description: z.string().optional(),
+      price: z.number().positive(),
+      imageUrl: z.string().optional(),
+      category: z.string().optional(),
+      sortOrder: z.number().default(0),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const { data, error } = await supabase
+        .from('pastries')
+        .insert({
+          name: input.name,
+          description: input.description,
+          price: input.price,
+          image_url: input.imageUrl,
+          category: input.category,
+          sort_order: input.sortOrder,
+          active: true,
+        })
+        .select()
+        .single();
+
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data;
+    }),
+
+  update: adminProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      description: z.string().optional(),
+      price: z.number().positive().optional(),
+      imageUrl: z.string().optional(),
+      category: z.string().optional(),
+      active: z.boolean().optional(),
+      sortOrder: z.number().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const updateData: Record<string, unknown> = {};
+      if (input.name) updateData.name = input.name;
+      if (input.description) updateData.description = input.description;
+      if (input.price) updateData.price = input.price;
+      if (input.imageUrl) updateData.image_url = input.imageUrl;
+      if (input.category !== undefined) updateData.category = input.category;
+      if (input.active !== undefined) updateData.active = input.active;
+      if (input.sortOrder !== undefined) updateData.sort_order = input.sortOrder;
+
+      const { data, error } = await supabase
+        .from('pastries')
+        .update(updateData)
+        .eq('id', input.id)
+        .select()
+        .single();
+
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data;
+    }),
+
+  delete: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const { error } = await supabase
+        .from('pastries')
+        .update({ active: false })
+        .eq('id', input.id);
+
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return { success: true };
+    }),
+});
+
+// ============================================
+// PASTRY ORDERS ROUTER (Commandes Pâtisserie)
+// ============================================
+
+const pastryOrdersRouter = router({
+  create: publicProcedure
+    .input(z.object({
+      customerName: z.string(),
+      phone: z.string(),
+      email: z.string().email().optional(),
+      items: z.array(z.object({
+        pastryId: z.number(),
+        quantity: z.number().positive(),
+        price: z.number().positive(),
+      })),
+      totalAmount: z.number().positive(),
+      paymentMethod: z.enum(['bank_transfer', 'cheque', 'cash', 'paypal', 'cmi']),
+      channel: z.enum(['online', 'on_site_qr', 'on_site_admin']).default('online'),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const reference = `PASTRY-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+      const { data, error } = await supabase
+        .from('pastry_orders')
+        .insert({
+          reference,
+          customer_name: input.customerName,
+          phone: input.phone,
+          email: input.email,
+          items: input.items,
+          total_amount: input.totalAmount,
+          payment_method: input.paymentMethod,
+          payment_status: 'pending',
+          order_status: 'reserved',
+        })
+        .select()
+        .single();
+
+      if (error) throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+
+      // Send confirmation email
+      try {
+        const { sendEmail } = await import('./email');
+        await sendEmail({
+          to: input.email || input.phone,
+          subject: `Confirmation de commande pâtisserie #${reference}`,
+          html: `<h2>Commande Pâtisserie #${reference}</h2><p>Merci pour votre commande!</p><p>Montant total: ${input.totalAmount} DH</p><p>Méthode de paiement: ${input.paymentMethod}</p>`,
+          apiKey: ctx.env.RESEND_API_KEY,
+        });
+      } catch (emailError) {
+        console.error('[Worker] Pastry order email error:', emailError);
+      }
+
+      return data;
+    }),
+
+  list: adminProcedure
+    .input(z.object({
+      status: z.string().optional(),
+      paymentStatus: z.string().optional(),
+    }))
+    .query(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      let query = supabase.from('pastry_orders').select('*');
+
+      if (input.status) {
+        query = query.eq('order_status', input.status);
+      }
+      if (input.paymentStatus) {
+        query = query.eq('payment_status', input.paymentStatus);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('[Worker] Pastry orders list error:', error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Erreur lors du chargement des commandes pâtisserie' });
+      }
+
+      return (data || []).map(o => ({
+        ...o,
+        total_amount: typeof o.total_amount === 'string' ? parseFloat(o.total_amount) || 0 : (o.total_amount ?? 0),
+      }));
+    }),
+
+  updateStatus: adminProcedure
+    .input(z.object({
+      orderId: z.number(),
+      orderStatus: z.enum(['reserved', 'paid', 'handed', 'cancelled']),
+      paymentStatus: z.enum(['pending', 'confirmed', 'paid', 'cancelled']).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const updateData: Record<string, unknown> = {
+        order_status: input.orderStatus,
+      };
+      if (input.paymentStatus) {
+        updateData.payment_status = input.paymentStatus;
+      }
+
+      const { error } = await supabase
+        .from('pastry_orders')
+        .update(updateData)
+        .eq('id', input.orderId);
+
+      if (error) throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      return { success: true };
+    }),
 });
 
 // ============================================
@@ -2873,6 +3092,8 @@ export const appRouter = router({
   goodies: goodiesRouter,
   orders: ordersRouter,
   donations: donationsRouter,
+  pastries: pastriesRouter,
+  pastryOrders: pastryOrdersRouter,
   contact: contactRouter,
   users: usersRouter,
   public: publicRouter,
