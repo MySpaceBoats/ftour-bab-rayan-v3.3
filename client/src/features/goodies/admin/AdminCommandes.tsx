@@ -17,6 +17,7 @@ import {
 export default function AdminCommandes() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [productFilter, setProductFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<number | null>(null);
 
   const { data: orders, isLoading, error, refetch } = trpc.orders.listAll.useQuery();
@@ -31,6 +32,15 @@ export default function AdminCommandes() {
     },
   });
 
+  // Extract unique product names from all orders for the filter
+  const uniqueProducts = Array.from(
+    new Set(
+      orders?.flatMap((o: any) =>
+        o.items?.map((item: any) => item.goodieName).filter(Boolean) || []
+      ) || []
+    )
+  ).sort() as string[];
+
   const filteredOrders = orders?.filter((o: any) => {
     const matchesSearch = searchQuery === "" ||
       (o.customerName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -39,7 +49,10 @@ export default function AdminCommandes() {
 
     const matchesStatus = statusFilter === "all" || o.status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    const matchesProduct = productFilter === "all" ||
+      o.items?.some((item: any) => item.goodieName === productFilter);
+
+    return matchesSearch && matchesStatus && matchesProduct;
   });
 
   const getStatusBadge = (status: string) => {
@@ -63,12 +76,13 @@ export default function AdminCommandes() {
       return;
     }
 
-    const headers = ["Référence", "Client", "Email", "Téléphone", "Total", "Statut", "Date"];
+    const headers = ["Référence", "Client", "Email", "Téléphone", "Produit(s)", "Total", "Statut", "Date"];
     const rows = filteredOrders.map((o: any) => [
       o.orderReference,
       o.customerName,
       o.customerEmail,
       o.customerPhone,
+      o.items?.map((item: any) => `${item.goodieName || 'Article'} x${item.quantity}`).join(' | ') || '',
       `${o.totalAmount} DH`,
       o.status,
       new Date(o.createdAt).toLocaleDateString('fr-FR'),
@@ -131,6 +145,19 @@ export default function AdminCommandes() {
                   <SelectItem value="paid">Payé</SelectItem>
                   <SelectItem value="delivered">Remis</SelectItem>
                   <SelectItem value="cancelled">Annulé</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={productFilter} onValueChange={setProductFilter}>
+                <SelectTrigger className="w-full md:w-[200px]">
+                  <SelectValue placeholder="Tous les produits" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les produits</SelectItem>
+                  {uniqueProducts.map((product) => (
+                    <SelectItem key={product} value={product}>
+                      {product}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Button variant="outline" onClick={handleExportCSV}>
@@ -202,6 +229,7 @@ export default function AdminCommandes() {
                     <TableRow>
                       <TableHead>Référence</TableHead>
                       <TableHead>Client</TableHead>
+                      <TableHead>Produit(s)</TableHead>
                       <TableHead>Total</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Date</TableHead>
@@ -218,6 +246,19 @@ export default function AdminCommandes() {
                           <div>
                             <div className="font-medium">{order.customerName}</div>
                             <div className="text-xs text-muted-foreground">{order.customerEmail}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            {order.items?.length > 0 ? (
+                              order.items.map((item: any, idx: number) => (
+                                <div key={idx}>
+                                  {item.goodieName || 'Article'} <span className="text-muted-foreground">x{item.quantity}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
