@@ -13,7 +13,6 @@ import { companyBookingsRouter } from "./company-booking-routers";
 import { restaurantReservationsRouter } from "./restaurant-reservation-routers";
 import { contentRouter } from "./content-router";
 import { scannerRouter } from "./scanner-router";
-import QRCode from "qrcode";
 
 // ============================================
 // ROLE-BASED PROCEDURES
@@ -2502,12 +2501,14 @@ const qrRouter = router({
 
     const baseUrl = process.env.VITE_APP_URL || 'https://ftourbabrayan.ma';
 
-    // Fetch all products in parallel
     const [goodiesRes, pastriesRes, terroirRes] = await Promise.all([
       supabase.from('goodies').select('id, name, image_url, price, category, is_active').order('sort_order', { ascending: true }),
       supabase.from('pastries').select('id, name, image_url, price, active').order('sort_order', { ascending: true }),
       supabase.from('terroir_products').select('id, name, image_url, category, is_active, terroir_product_variants(price_unit)').order('sort_order', { ascending: true }),
     ]);
+
+    const makeQrImageUrl = (url: string) =>
+      `https://api.qrserver.com/v1/create-qr-code/?size=400x400&ecc=H&data=${encodeURIComponent(url)}`;
 
     const items: Array<{
       id: number;
@@ -2519,10 +2520,8 @@ const qrRouter = router({
       qrDataUrl: string;
     }> = [];
 
-    // Generate QR codes for goodies
     for (const g of goodiesRes.data || []) {
       const url = `${baseUrl}/fr/buy/goodie/${g.id}`;
-      const qrDataUrl = await QRCode.toDataURL(url, { errorCorrectionLevel: 'H', width: 400, margin: 2 });
       items.push({
         id: g.id,
         name: g.name,
@@ -2530,14 +2529,12 @@ const qrRouter = router({
         price: g.price,
         category: 'goodies',
         qrUrl: url,
-        qrDataUrl,
+        qrDataUrl: makeQrImageUrl(url),
       });
     }
 
-    // Generate QR codes for pastries
     for (const p of pastriesRes.data || []) {
       const url = `${baseUrl}/fr/buy/pastry/${p.id}`;
-      const qrDataUrl = await QRCode.toDataURL(url, { errorCorrectionLevel: 'H', width: 400, margin: 2 });
       items.push({
         id: p.id,
         name: p.name,
@@ -2545,14 +2542,12 @@ const qrRouter = router({
         price: p.price,
         category: 'patisserie',
         qrUrl: url,
-        qrDataUrl,
+        qrDataUrl: makeQrImageUrl(url),
       });
     }
 
-    // Generate QR codes for terroir products
     for (const t of terroirRes.data || []) {
       const url = `${baseUrl}/fr/terroir`;
-      const qrDataUrl = await QRCode.toDataURL(url, { errorCorrectionLevel: 'H', width: 400, margin: 2 });
       const firstVariant = (t as any).terroir_product_variants?.[0];
       items.push({
         id: t.id,
@@ -2561,13 +2556,11 @@ const qrRouter = router({
         price: firstVariant?.price_unit ?? null,
         category: 'terroir',
         qrUrl: url,
-        qrDataUrl,
+        qrDataUrl: makeQrImageUrl(url),
       });
     }
 
-    // Add a single QR code for donations page
     const donsUrl = `${baseUrl}/fr/dons`;
-    const donsQr = await QRCode.toDataURL(donsUrl, { errorCorrectionLevel: 'H', width: 400, margin: 2 });
     items.push({
       id: 0,
       name: 'Page de dons',
@@ -2575,7 +2568,7 @@ const qrRouter = router({
       price: null,
       category: 'dons',
       qrUrl: donsUrl,
-      qrDataUrl: donsQr,
+      qrDataUrl: makeQrImageUrl(donsUrl),
     });
 
     return items;

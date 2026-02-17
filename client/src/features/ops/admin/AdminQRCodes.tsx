@@ -67,13 +67,22 @@ export default function AdminQRCodes() {
   const countByCategory = (cat: ProductCategory) =>
     items.filter(p => p.category === cat).length;
 
-  // Download QR code
-  const downloadQR = (product: CatalogProduct) => {
+  // Download QR code (fetch external image and save as blob)
+  const downloadQR = async (product: CatalogProduct) => {
     if (!product.qrDataUrl) return;
-    const link = document.createElement("a");
-    link.download = `qr-${product.category}-${product.name.replace(/\s+/g, "-").toLowerCase()}.png`;
-    link.href = product.qrDataUrl;
-    link.click();
+    try {
+      const res = await fetch(product.qrDataUrl);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = `qr-${product.category}-${product.name.replace(/\s+/g, "-").toLowerCase()}.png`;
+      link.href = blobUrl;
+      link.click();
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      // Fallback: open in new tab
+      window.open(product.qrDataUrl, "_blank");
+    }
   };
 
   return (

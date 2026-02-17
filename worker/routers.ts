@@ -2839,6 +2839,86 @@ const restaurantReservationsRouter = router({
 });
 
 // ============================================
+// QR CODES ROUTER
+// ============================================
+
+const qrRouter = router({
+  catalogQRCodes: adminProcedure.query(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+    const baseUrl = 'https://ftourbabrayan.ma';
+
+    const [goodiesRes, pastriesRes, terroirRes] = await Promise.all([
+      supabase.from('goodies').select('id, name, image_url, price, category, is_active').order('sort_order', { ascending: true }),
+      supabase.from('pastries').select('id, name, image_url, price, active').order('sort_order', { ascending: true }),
+      supabase.from('terroir_products').select('id, name, image_url, category, is_active, terroir_product_variants(price_unit)').order('sort_order', { ascending: true }),
+    ]);
+
+    const items: Array<{
+      id: number;
+      name: string;
+      imageUrl: string | null;
+      price: number | null;
+      category: string;
+      qrUrl: string;
+      qrDataUrl: string;
+    }> = [];
+
+    for (const g of goodiesRes.data || []) {
+      const url = `${baseUrl}/fr/buy/goodie/${g.id}`;
+      items.push({
+        id: g.id,
+        name: g.name,
+        imageUrl: g.image_url,
+        price: g.price,
+        category: 'goodies',
+        qrUrl: url,
+        qrDataUrl: `https://api.qrserver.com/v1/create-qr-code/?size=400x400&ecc=H&data=${encodeURIComponent(url)}`,
+      });
+    }
+
+    for (const p of pastriesRes.data || []) {
+      const url = `${baseUrl}/fr/buy/pastry/${p.id}`;
+      items.push({
+        id: p.id,
+        name: p.name,
+        imageUrl: p.image_url,
+        price: p.price,
+        category: 'patisserie',
+        qrUrl: url,
+        qrDataUrl: `https://api.qrserver.com/v1/create-qr-code/?size=400x400&ecc=H&data=${encodeURIComponent(url)}`,
+      });
+    }
+
+    for (const t of terroirRes.data || []) {
+      const url = `${baseUrl}/fr/terroir`;
+      const firstVariant = (t as any).terroir_product_variants?.[0];
+      items.push({
+        id: t.id,
+        name: t.name,
+        imageUrl: t.image_url,
+        price: firstVariant?.price_unit ?? null,
+        category: 'terroir',
+        qrUrl: url,
+        qrDataUrl: `https://api.qrserver.com/v1/create-qr-code/?size=400x400&ecc=H&data=${encodeURIComponent(url)}`,
+      });
+    }
+
+    const donsUrl = `${baseUrl}/fr/dons`;
+    items.push({
+      id: 0,
+      name: 'Page de dons',
+      imageUrl: null,
+      price: null,
+      category: 'dons',
+      qrUrl: donsUrl,
+      qrDataUrl: `https://api.qrserver.com/v1/create-qr-code/?size=400x400&ecc=H&data=${encodeURIComponent(donsUrl)}`,
+    });
+
+    return items;
+  }),
+});
+
+// ============================================
 // MAIN APP ROUTER
 // ============================================
 
@@ -2859,6 +2939,7 @@ export const appRouter = router({
   reservations: reservationsRouter,
   restaurantReservations: restaurantReservationsRouter,
   scanner: scannerRouter,
+  qr: qrRouter,
 });
 
 export type AppRouter = typeof appRouter;
