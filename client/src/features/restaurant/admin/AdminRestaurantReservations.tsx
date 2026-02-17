@@ -18,12 +18,13 @@ export default function AdminRestaurantReservations() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  // Fetch reservations from MySQL/Drizzle via restaurantReservations router
-  const { data: particuliers = [], isLoading: loadingP, refetch: refetchP } = trpc.restaurantReservations.adminListParticuliers.useQuery();
-  const { data: entreprises = [], isLoading: loadingE, refetch: refetchE } = trpc.restaurantReservations.adminListEntreprises.useQuery();
-  const { data: groupes = [], isLoading: loadingG, refetch: refetchG } = trpc.restaurantReservations.adminListGroupes.useQuery();
+  // Fetch reservations via restaurantReservations router
+  const { data: particuliers = [], isLoading: loadingP, isError: errorP, refetch: refetchP } = trpc.restaurantReservations.adminListParticuliers.useQuery(undefined, { retry: 1 });
+  const { data: entreprises = [], isLoading: loadingE, isError: errorE, refetch: refetchE } = trpc.restaurantReservations.adminListEntreprises.useQuery(undefined, { retry: 1 });
+  const { data: groupes = [], isLoading: loadingG, isError: errorG, refetch: refetchG } = trpc.restaurantReservations.adminListGroupes.useQuery(undefined, { retry: 1 });
 
   const isLoading = loadingP || loadingE || loadingG;
+  const hasError = errorP || errorE || errorG;
 
   const refetchAll = () => {
     refetchP();
@@ -251,6 +252,14 @@ export default function AdminRestaurantReservations() {
             {isLoading ? (
               <div className="flex justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : hasError ? (
+              <div className="text-center py-8 space-y-4">
+                <div className="w-12 h-12 mx-auto rounded-full bg-red-100 flex items-center justify-center">
+                  <XCircle className="h-6 w-6 text-red-600" />
+                </div>
+                <p className="text-red-600 font-medium">Erreur lors du chargement des réservations</p>
+                <Button variant="outline" onClick={refetchAll}>Réessayer</Button>
               </div>
             ) : (
               <div className="space-y-3">

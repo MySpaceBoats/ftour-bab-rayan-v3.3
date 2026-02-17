@@ -22,8 +22,9 @@ export default function AdminRestaurantParticuliers() {
   const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
   const hasAccess = user?.role && allowedRoles.includes(user.role);
 
-  const { data: reservations, isLoading, refetch } = trpc.restaurantReservations.adminListParticuliers.useQuery(undefined, {
+  const { data: reservations, isLoading, isError, error, refetch } = trpc.restaurantReservations.adminListParticuliers.useQuery(undefined, {
     enabled: !!hasAccess,
+    retry: 1,
   });
 
   const validateMutation = trpc.restaurantReservations.validate.useMutation({
@@ -188,6 +189,17 @@ export default function AdminRestaurantParticuliers() {
           <div className="flex justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
+        ) : isError ? (
+          <Card>
+            <CardContent className="p-8 text-center space-y-4">
+              <div className="w-12 h-12 mx-auto rounded-full bg-red-100 flex items-center justify-center">
+                <XCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <p className="text-red-600 font-medium">Erreur lors du chargement des réservations</p>
+              <p className="text-sm text-muted-foreground">{error?.message || 'Erreur inconnue'}</p>
+              <Button variant="outline" onClick={() => refetch()}>Réessayer</Button>
+            </CardContent>
+          </Card>
         ) : (
           <Card>
             <CardContent className="p-0">

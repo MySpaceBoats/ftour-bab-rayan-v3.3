@@ -426,7 +426,15 @@ export const restaurantReservationsRouter = router({
       if (!allowedRoles.includes(ctx.user?.role || '')) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
       }
-      return await reservationServices.listRestaurantReservations({ type: 'particulier' });
+      try {
+        return await reservationServices.listRestaurantReservations({ type: 'particulier' });
+      } catch (error) {
+        console.error("[adminListParticuliers] Error:", error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : 'Erreur lors du chargement des réservations particuliers',
+        });
+      }
     }),
 
   adminListGroupes: protectedProcedure
@@ -435,7 +443,15 @@ export const restaurantReservationsRouter = router({
       if (!allowedRoles.includes(ctx.user?.role || '')) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
       }
-      return await reservationServices.listRestaurantReservations({ type: 'groupe' });
+      try {
+        return await reservationServices.listRestaurantReservations({ type: 'groupe' });
+      } catch (error) {
+        console.error("[adminListGroupes] Error:", error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : 'Erreur lors du chargement des réservations groupes',
+        });
+      }
     }),
 
   adminListEntreprises: protectedProcedure
@@ -444,7 +460,15 @@ export const restaurantReservationsRouter = router({
       if (!allowedRoles.includes(ctx.user?.role || '')) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
       }
-      return await reservationServices.listRestaurantReservations({ type: 'entreprise' });
+      try {
+        return await reservationServices.listRestaurantReservations({ type: 'entreprise' });
+      } catch (error) {
+        console.error("[adminListEntreprises] Error:", error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : 'Erreur lors du chargement des réservations entreprises',
+        });
+      }
     }),
 
   adminUpdateStatus: protectedProcedure
