@@ -1422,7 +1422,25 @@ export async function getPaymentsSupabase(filters?: {
   const { data, error } = await query.order('created_at', { ascending: false });
 
   if (error) return [];
-  return data || [];
+  return (data || []).map((p: any) => ({
+    id: p.id,
+    paymentReference: p.payment_reference,
+    userName: p.user_name,
+    email: p.email,
+    phone: p.phone,
+    amount: parseFloat(p.amount) || 0,
+    currency: p.currency || 'MAD',
+    paymentMethod: p.payment_method,
+    status: p.status,
+    description: p.description,
+    relatedEntityType: p.related_entity_type,
+    relatedEntityId: p.related_entity_id,
+    metadata: p.metadata,
+    validatedAt: p.validated_at,
+    validatedBy: p.validated_by,
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+  }));
 }
 
 /**
@@ -1600,19 +1618,18 @@ export async function getPaymentMethodConfigSupabase(method: string) {
  */
 export async function getPaymentStatsSupabase() {
   const client = getSupabaseAdminClient();
-  if (!client) return { total: 0, pending: 0, confirmed: 0, cancelled: 0, totalAmount: 0 };
+  if (!client) return { totalPayments: 0, totalPending: 0, totalValidated: 0, totalAmount: 0 };
 
   const { data, error } = await client
     .from('payments')
     .select('status, amount');
 
-  if (error) return { total: 0, pending: 0, confirmed: 0, cancelled: 0, totalAmount: 0 };
+  if (error) return { totalPayments: 0, totalPending: 0, totalValidated: 0, totalAmount: 0 };
 
   const stats = {
-    total: data?.length || 0,
-    pending: data?.filter(p => p.status === 'pending').length || 0,
-    confirmed: data?.filter(p => p.status === 'confirmed').length || 0,
-    cancelled: data?.filter(p => p.status === 'cancelled').length || 0,
+    totalPayments: data?.length || 0,
+    totalPending: data?.filter(p => p.status === 'pending' || p.status === 'processing').length || 0,
+    totalValidated: data?.filter(p => p.status === 'confirmed' || p.status === 'validated' || p.status === 'cheque_cashed').length || 0,
     totalAmount: data?.reduce((sum: number, p: any) => sum + (parseFloat(p.amount) || 0), 0) || 0,
   };
 
