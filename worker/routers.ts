@@ -1204,13 +1204,58 @@ const goodiesRouter = router({
   list: publicProcedure.query(async ({ ctx }) => {
     const supabase = createSupabaseAdmin(ctx.env);
 
-    // Try fetching goodies with variants join first
+    // Try fetching active goodies with variants join first
+    let { data, error } = await supabase
+      .from('goodies')
+      .select('*, goodie_variants(*)')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+
+    // If the variants join fails (FK not set up), fall back to goodies only
+    if (error) {
+      console.warn('[Worker][Goodies] Variants join failed, fetching without variants:', error.message);
+      const fallback = await supabase
+        .from('goodies')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+      if (fallback.error) {
+        console.error('[Worker][Goodies] Failed to fetch goodies:', fallback.error.message);
+        return [];
+      }
+      data = fallback.data?.map((g: any) => ({ ...g, goodie_variants: [] })) ?? null;
+    }
+
+    return (data || []).map((g: any) => ({
+      id: g.id,
+      name: g.name,
+      description: g.description,
+      price: parseFloat(g.price),
+      imageUrl: g.image_url,
+      category: g.category,
+      isActive: g.is_active,
+      sortOrder: g.sort_order,
+      variants: (g.goodie_variants || []).map((v: any) => ({
+        id: v.id,
+        size: v.size,
+        color: v.color,
+        stock: v.stock,
+        priceModifier: parseFloat(v.price_modifier),
+        isAvailable: v.is_available,
+      })),
+      createdAt: new Date(g.created_at),
+    }));
+  }),
+
+  listAll: adminProcedure.query(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+
+    // Fetch all goodies (active + inactive) for admin
     let { data, error } = await supabase
       .from('goodies')
       .select('*, goodie_variants(*)')
       .order('sort_order', { ascending: true });
 
-    // If the variants join fails (FK not set up), fall back to goodies only
     if (error) {
       console.warn('[Worker][Goodies] Variants join failed, fetching without variants:', error.message);
       const fallback = await supabase
@@ -1241,6 +1286,7 @@ const goodiesRouter = router({
         priceModifier: parseFloat(v.price_modifier),
         isAvailable: v.is_available,
       })),
+      createdAt: new Date(g.created_at),
     }));
   }),
 
@@ -1266,7 +1312,7 @@ const goodiesRouter = router({
           image_url: input.imageUrl,
           category: input.category,
           is_active: input.isActive,
-          sort_order: 0,
+          sort_order: input.sortOrder,
         })
         .select()
         .single();
@@ -1346,10 +1392,19 @@ const ordersRouter = router({
         goodieId: z.number(),
         variantId: z.number().optional(),
         quantity: z.number().min(1),
+        unitPrice: z.number().min(0),
       })),
       pickupDate: z.string().optional(),
       pickupLocation: z.string().optional(),
       notes: z.string().optional(),
+      deliveryMode: z.enum(['pickup', 'home_delivery']).default('pickup'),
+      deliveryAddress: z.string().optional(),
+      deliveryCity: z.string().optional(),
+      deliveryNeighborhood: z.string().optional(),
+      deliveryPostalCode: z.string().optional(),
+      deliveryPhone: z.string().optional(),
+      deliveryInstructions: z.string().optional(),
+      paymentMethod: z.enum(['bank_transfer', 'cheque', 'cash']).default('cash'),
     }))
     .mutation(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
@@ -1357,38 +1412,47 @@ const ordersRouter = router({
       // Generate order reference
       const orderRef = `FBR-${Date.now().toString(36).toUpperCase()}`;
 
-      // Calculate total
-      let totalAmount = 0;
+      // Validate stock for items with variants
+      for (const item of input.items) {
+        if (item.variantId) {
+          const { data: variant } = await supabase
+            .from('goodie_variants')
+            .select('stock, is_available')
+            .eq('id', item.variantId)
+            .single();
+          if (!variant) throw new TRPCError({ code: 'NOT_FOUND', message: `Variante #${item.variantId} introuvable` });
+          if (!variant.is_available) throw new TRPCError({ code: 'BAD_REQUEST', message: `Variante #${item.variantId} indisponible` });
+          if (variant.stock < item.quantity) {
+            throw new TRPCError({ code: 'BAD_REQUEST', message: `Stock insuffisant pour la variante #${item.variantId}` });
+          }
+        }
+      }
+
+      // Calculate total and delivery fee
+      const deliveryFee = input.deliveryMode === 'home_delivery' ? 30 : 0;
+      let totalAmount = deliveryFee;
       const orderItems: any[] = [];
 
       for (const item of input.items) {
-        const { data: goodie } = await supabase
-          .from('goodies')
-          .select('*, goodie_variants(*)')
-          .eq('id', item.goodieId)
-          .single();
-
-        if (!goodie) continue;
-
-        let unitPrice = parseFloat(goodie.price);
-        if (item.variantId) {
-          const variant = goodie.goodie_variants?.find((v: any) => v.id === item.variantId);
-          if (variant) {
-            unitPrice += parseFloat(variant.price_modifier || '0');
-          }
-        }
-
-        const itemTotal = unitPrice * item.quantity;
+        const itemTotal = item.unitPrice * item.quantity;
         totalAmount += itemTotal;
 
         orderItems.push({
           goodie_id: item.goodieId,
           variant_id: item.variantId,
           quantity: item.quantity,
-          unit_price: unitPrice.toString(),
+          unit_price: item.unitPrice.toString(),
           total_price: itemTotal.toString(),
         });
       }
+
+      // Build delivery address JSON if home delivery
+      const deliveryAddressJson = input.deliveryMode === 'home_delivery' ? JSON.stringify({
+        address: input.deliveryAddress,
+        city: input.deliveryCity,
+        neighborhood: input.deliveryNeighborhood,
+        postalCode: input.deliveryPostalCode,
+      }) : null;
 
       // Create order
       const { data: order, error: orderError } = await supabase
@@ -1403,6 +1467,12 @@ const ordersRouter = router({
           pickup_date: input.pickupDate,
           pickup_location: input.pickupLocation,
           notes: input.notes,
+          delivery_mode: input.deliveryMode,
+          delivery_fee: deliveryFee.toString(),
+          delivery_address: deliveryAddressJson,
+          delivery_phone: input.deliveryMode === 'home_delivery' ? input.deliveryPhone : null,
+          delivery_instructions: input.deliveryMode === 'home_delivery' ? input.deliveryInstructions : null,
+          payment_method: input.paymentMethod,
         })
         .select()
         .single();
@@ -1418,6 +1488,22 @@ const ordersRouter = router({
           .insert({ ...item, order_id: order.id });
       }
 
+      // Decrement stock for items with variants
+      for (const item of input.items) {
+        if (item.variantId) {
+          const { data: variant } = await supabase
+            .from('goodie_variants')
+            .select('stock')
+            .eq('id', item.variantId)
+            .single();
+          if (variant) {
+            await supabase.from('goodie_variants')
+              .update({ stock: Math.max(0, variant.stock - item.quantity) })
+              .eq('id', item.variantId);
+          }
+        }
+      }
+
       // Get goodie names for email
       const itemsForEmail: Array<{ name: string; quantity: number; unitPrice: number; totalPrice: number }> = [];
       for (const item of input.items) {
@@ -1427,12 +1513,11 @@ const ordersRouter = router({
           .eq('id', item.goodieId)
           .single();
         if (goodie) {
-          const unitPrice = parseFloat(goodie.price);
           itemsForEmail.push({
             name: goodie.name,
             quantity: item.quantity,
-            unitPrice,
-            totalPrice: unitPrice * item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.unitPrice * item.quantity,
           });
         }
       }
