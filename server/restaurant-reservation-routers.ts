@@ -308,7 +308,7 @@ export const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes'];
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
       if (!allowedRoles.includes(ctx.user?.role || '')) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
       }
@@ -361,7 +361,7 @@ export const restaurantReservationsRouter = router({
   refuse: protectedProcedure
     .input(z.object({ reference: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes'];
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
       if (!allowedRoles.includes(ctx.user?.role || '')) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
       }
@@ -422,7 +422,7 @@ export const restaurantReservationsRouter = router({
 
   adminListParticuliers: protectedProcedure
     .query(async ({ ctx }) => {
-      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_particuliers'];
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
       if (!allowedRoles.includes(ctx.user?.role || '')) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
       }
@@ -431,7 +431,7 @@ export const restaurantReservationsRouter = router({
 
   adminListGroupes: protectedProcedure
     .query(async ({ ctx }) => {
-      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_groupes'];
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
       if (!allowedRoles.includes(ctx.user?.role || '')) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
       }
@@ -440,7 +440,7 @@ export const restaurantReservationsRouter = router({
 
   adminListEntreprises: protectedProcedure
     .query(async ({ ctx }) => {
-      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_entreprises'];
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
       if (!allowedRoles.includes(ctx.user?.role || '')) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
       }
@@ -453,7 +453,7 @@ export const restaurantReservationsRouter = router({
       status: z.enum(['pending_validation', 'validated_pending_payment', 'paid_confirmed', 'refused', 'cancelled', 'completed', 'no_show']),
     }))
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes'];
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
       if (!allowedRoles.includes(ctx.user?.role || '')) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
       }

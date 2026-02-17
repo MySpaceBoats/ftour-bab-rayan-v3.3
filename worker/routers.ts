@@ -1884,7 +1884,7 @@ const usersRouter = router({
       password: z.string().min(6),
       name: z.string().optional(),
       phone: z.string().optional(),
-      role: z.enum(['user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes', 'admin_patisserie', 'admin_terroir']).default('user'),
+      role: z.enum(['user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'admin_patisserie', 'admin_terroir']).default('user'),
     }))
     .mutation(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
@@ -1941,7 +1941,7 @@ const usersRouter = router({
   updateRole: superAdminProcedure
     .input(z.object({
       userId: z.number(),
-      role: z.enum(['user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes', 'admin_patisserie', 'admin_terroir']),
+      role: z.enum(['user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'admin_patisserie', 'admin_terroir']),
     }))
     .mutation(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
@@ -2782,7 +2782,7 @@ const restaurantReservationsRouter = router({
   validate: protectedProcedure
     .input(z.object({ reference: z.string(), baseUrl: z.string().url() }))
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes'];
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
       if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
       }
@@ -2812,7 +2812,7 @@ const restaurantReservationsRouter = router({
   refuse: protectedProcedure
     .input(z.object({ reference: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes'];
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
       if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
       }

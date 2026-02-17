@@ -19,7 +19,7 @@ export default function AdminRestaurantParticuliers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_particuliers'];
+  const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
   const hasAccess = user?.role && allowedRoles.includes(user.role);
 
   const { data: reservations, isLoading, refetch } = trpc.restaurantReservations.adminListParticuliers.useQuery(undefined, {

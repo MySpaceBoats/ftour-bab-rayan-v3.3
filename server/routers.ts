@@ -19,7 +19,7 @@ import { scannerRouter } from "./scanner-router";
 // ============================================
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes', 'admin_patisserie', 'admin_terroir'];
+  const allowedRoles = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'admin_restaurant', 'admin_patisserie', 'admin_terroir'];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès administrateur requis' });
   }
@@ -65,26 +65,10 @@ const adminDonsProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
-const adminRestaurantPartProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_particuliers'];
+const adminRestaurantProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès réservations particuliers requis' });
-  }
-  return next({ ctx });
-});
-
-const adminRestaurantEntProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_entreprises'];
-  if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès réservations entreprises requis' });
-  }
-  return next({ ctx });
-});
-
-const adminRestaurantGroupProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_restaurant_groupes'];
-  if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès réservations groupes requis' });
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès restaurant requis' });
   }
   return next({ ctx });
 });
@@ -849,7 +833,7 @@ const usersRouter = router({
       password: z.string().min(6),
       name: z.string().optional(),
       phone: z.string().optional(),
-      role: z.enum(['user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes', 'admin_patisserie', 'admin_terroir']).default('user'),
+      role: z.enum(['user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'admin_patisserie', 'admin_terroir']).default('user'),
     }))
     .mutation(async ({ input }) => {
       const result = await signUpUser({ email: input.email, password: input.password, name: input.name, phone: input.phone });
@@ -866,7 +850,7 @@ const usersRouter = router({
   updateRole: superAdminProcedure
     .input(z.object({
       userId: z.number(),
-      role: z.enum(['user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes', 'admin_patisserie', 'admin_terroir']),
+      role: z.enum(['user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'admin_patisserie', 'admin_terroir']),
     }))
     .mutation(async ({ input }) => {
       await supabaseServices.updateUserRoleSupabase(input.userId, input.role);
@@ -1531,7 +1515,7 @@ const restaurantModuleRouter = router({
     }),
 
   // --- Admin: list reservations by type ---
-  adminListParticuliers: adminRestaurantPartProcedure
+  adminListParticuliers: adminRestaurantProcedure
     .input(z.object({
       status: z.string().optional(),
       fromDate: z.string().optional(),
@@ -1549,7 +1533,7 @@ const restaurantModuleRouter = router({
       return data || [];
     }),
 
-  adminListEntreprises: adminRestaurantEntProcedure
+  adminListEntreprises: adminRestaurantProcedure
     .input(z.object({
       status: z.string().optional(),
       fromDate: z.string().optional(),
@@ -1567,7 +1551,7 @@ const restaurantModuleRouter = router({
       return data || [];
     }),
 
-  adminListGroupes: adminRestaurantGroupProcedure
+  adminListGroupes: adminRestaurantProcedure
     .input(z.object({
       status: z.string().optional(),
       fromDate: z.string().optional(),
