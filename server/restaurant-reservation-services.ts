@@ -1,22 +1,47 @@
-import { eq, and, desc } from "drizzle-orm";
-import { ENV } from "./_core/env";
-import mysql from "mysql2/promise";
-import { drizzle } from "drizzle-orm/mysql2";
-import { restaurantReservations } from "../drizzle/schema";
+import { getSupabaseAdminClient } from "./supabase";
 
-// Initialize Drizzle ORM with MySQL connection
-let db: any;
+// ============================================
+// HELPERS
+// ============================================
 
-async function getDb() {
-  if (!ENV.databaseUrl) {
-    throw new Error("DATABASE_URL is not configured");
+function getClient() {
+  const client = getSupabaseAdminClient();
+  if (!client) {
+    throw new Error("Supabase is not configured");
   }
+  return client;
+}
 
-  if (!db) {
-    const connection = await mysql.createConnection(ENV.databaseUrl);
-    db = drizzle(connection);
-  }
-  return db;
+/**
+ * Map snake_case DB row to camelCase object expected by frontend
+ */
+function mapReservation(r: any) {
+  return {
+    id: r.id,
+    reference: r.reference,
+    type: r.type,
+    seatsTotal: r.seats_total,
+    date: r.date ? new Date(r.date) : null,
+    name: r.name,
+    phone: r.phone,
+    email: r.email,
+    companyName: r.company_name,
+    groupName: r.group_name,
+    groupType: r.group_type,
+    status: r.status,
+    paymentStatus: r.payment_status,
+    paymentAmount: r.payment_amount,
+    paymentProvider: r.payment_provider,
+    paymentReference: r.payment_reference,
+    qrToken: r.qr_token,
+    qrStatus: r.qr_status,
+    expiresAt: r.expires_at ? new Date(r.expires_at) : null,
+    processedBy: r.processed_by,
+    processedAt: r.processed_at ? new Date(r.processed_at) : null,
+    notes: r.notes,
+    createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+    updatedAt: r.updated_at ? new Date(r.updated_at) : new Date(),
+  };
 }
 
 // ============================================
@@ -41,34 +66,31 @@ export async function createRestaurantReservation(data: {
   notes?: string;
 }) {
   try {
-    const database = await getDb();
-    const result = await database.insert(restaurantReservations).values({
-      reference: data.reference,
-      type: data.type,
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      date: data.date,
-      seatsTotal: data.seatsTotal,
-      qrToken: data.qrToken,
-      companyName: data.companyName,
-      groupName: data.groupName,
-      groupType: data.groupType,
-      notes: data.notes,
-      status: 'pending_validation',
-      paymentStatus: 'not_requested',
-      qrStatus: 'inactive',
-      createdAt: new Date(),
-    });
+    const client = getClient();
+    const { data: row, error } = await client
+      .from('restaurant_reservations')
+      .insert({
+        reference: data.reference,
+        type: data.type,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        date: data.date.toISOString().split('T')[0],
+        seats_total: data.seatsTotal,
+        qr_token: data.qrToken,
+        company_name: data.companyName || null,
+        group_name: data.groupName || null,
+        group_type: data.groupType || null,
+        notes: data.notes || null,
+        status: 'pending_validation',
+        payment_status: 'not_requested',
+        qr_status: 'inactive',
+      })
+      .select()
+      .single();
 
-    // Récupérer la réservation créée
-    const reservation = await getRestaurantReservationByReference(data.reference);
-
-    if (!reservation) {
-      throw new Error('Impossible de récupérer la réservation créée');
-    }
-
-    return reservation;
+    if (error) throw error;
+    return mapReservation(row);
   } catch (error) {
     console.error("[createRestaurantReservation] Error:", error);
     throw error;
@@ -80,15 +102,19 @@ export async function createRestaurantReservation(data: {
  */
 export async function getRestaurantReservationByReference(reference: string) {
   try {
-    const database = await getDb();
-    const result = await database
-      .select()
-      .from(restaurantReservations)
-      .where(eq(restaurantReservations.reference, reference))
-      .limit(1);
+    const client = getClient();
+    const { data, error } = await client
+      .from('restaurant_reservations')
+      .select('*')
+      .eq('reference', reference)
+      .limit(1)
+      .single();
 
-    // Return single object instead of array
-    return result[0] || null;
+    if (error) {
+      if (error.code === 'PGRST116') return null; // No rows
+      throw error;
+    }
+    return data ? mapReservation(data) : null;
   } catch (error) {
     console.error("[getRestaurantReservationByReference] Error:", error);
     throw error;
@@ -100,14 +126,19 @@ export async function getRestaurantReservationByReference(reference: string) {
  */
 export async function getRestaurantReservationByQrToken(qrToken: string) {
   try {
-    const database = await getDb();
-    const result = await database
-      .select()
-      .from(restaurantReservations)
-      .where(eq(restaurantReservations.qrToken, qrToken))
-      .limit(1);
+    const client = getClient();
+    const { data, error } = await client
+      .from('restaurant_reservations')
+      .select('*')
+      .eq('qr_token', qrToken)
+      .limit(1)
+      .single();
 
-    return result[0] || null;
+    if (error) {
+      if (error.code === 'PGRST116') return null;
+      throw error;
+    }
+    return data ? mapReservation(data) : null;
   } catch (error) {
     console.error("[getRestaurantReservationByQrToken] Error:", error);
     throw error;
@@ -119,14 +150,18 @@ export async function getRestaurantReservationByQrToken(qrToken: string) {
  */
 export async function getRestaurantReservationById(id: number) {
   try {
-    const database = await getDb();
-    const result = await database
-      .select()
-      .from(restaurantReservations)
-      .where(eq(restaurantReservations.id, id))
-      .limit(1);
+    const client = getClient();
+    const { data, error } = await client
+      .from('restaurant_reservations')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-    return result[0] || null;
+    if (error) {
+      if (error.code === 'PGRST116') return null;
+      throw error;
+    }
+    return data ? mapReservation(data) : null;
   } catch (error) {
     console.error("[getRestaurantReservationById] Error:", error);
     throw error;
@@ -145,24 +180,26 @@ export async function listRestaurantReservations(filters?: {
   offset?: number;
 }) {
   try {
-    const database = await getDb();
+    const client = getClient();
     const queryLimit = filters?.limit || 200;
     const queryOffset = filters?.offset || 0;
 
-    const conditions = [];
+    let query = client
+      .from('restaurant_reservations')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(queryOffset, queryOffset + queryLimit - 1);
+
     if (filters?.type) {
-      conditions.push(eq(restaurantReservations.type, filters.type));
+      query = query.eq('type', filters.type);
+    }
+    if (filters?.status) {
+      query = query.eq('status', filters.status);
     }
 
-    const result = await database
-      .select()
-      .from(restaurantReservations)
-      .where(conditions.length > 0 ? (conditions.length === 1 ? conditions[0] : and(...conditions)) : undefined)
-      .orderBy(desc(restaurantReservations.createdAt))
-      .limit(queryLimit)
-      .offset(queryOffset);
-
-    return result;
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data || []).map(mapReservation);
   } catch (error) {
     console.error("[listRestaurantReservations] Error:", error);
     throw error;
@@ -177,14 +214,16 @@ export async function updateRestaurantReservationStatus(
   status: 'pending_validation' | 'validated_pending_payment' | 'paid_confirmed' | 'refused' | 'cancelled' | 'completed' | 'no_show'
 ) {
   try {
-    const database = await getDb();
-    await database.update(restaurantReservations)
-      .set({
+    const client = getClient();
+    const { error } = await client
+      .from('restaurant_reservations')
+      .update({
         status,
-        updatedAt: new Date(),
+        updated_at: new Date().toISOString(),
       })
-      .where(eq(restaurantReservations.id, id));
+      .eq('id', id);
 
+    if (error) throw error;
     return await getRestaurantReservationById(id);
   } catch (error) {
     console.error("[updateRestaurantReservationStatus] Error:", error);
@@ -200,14 +239,16 @@ export async function updateRestaurantReservationPaymentStatus(
   paymentStatus: 'not_requested' | 'pending_payment' | 'paid' | 'failed' | 'refunded'
 ) {
   try {
-    const database = await getDb();
-    await database.update(restaurantReservations)
-      .set({
-        paymentStatus,
-        updatedAt: new Date(),
+    const client = getClient();
+    const { error } = await client
+      .from('restaurant_reservations')
+      .update({
+        payment_status: paymentStatus,
+        updated_at: new Date().toISOString(),
       })
-      .where(eq(restaurantReservations.id, id));
+      .eq('id', id);
 
+    if (error) throw error;
     return await getRestaurantReservationById(id);
   } catch (error) {
     console.error("[updateRestaurantReservationPaymentStatus] Error:", error);
@@ -220,16 +261,18 @@ export async function updateRestaurantReservationPaymentStatus(
  */
 export async function activateQrCode(id: number) {
   try {
-    const database = await getDb();
-    await database.update(restaurantReservations)
-      .set({
-        qrStatus: 'active',
+    const client = getClient();
+    const { error } = await client
+      .from('restaurant_reservations')
+      .update({
+        qr_status: 'active',
         status: 'paid_confirmed',
-        paymentStatus: 'paid',
-        updatedAt: new Date(),
+        payment_status: 'paid',
+        updated_at: new Date().toISOString(),
       })
-      .where(eq(restaurantReservations.id, id));
+      .eq('id', id);
 
+    if (error) throw error;
     return await getRestaurantReservationById(id);
   } catch (error) {
     console.error("[activateQrCode] Error:", error);
@@ -242,25 +285,21 @@ export async function activateQrCode(id: number) {
  */
 export async function markQrCodeAsUsed(qrToken: string) {
   try {
-    const database = await getDb();
-    const result = await database
-      .select()
-      .from(restaurantReservations)
-      .where(eq(restaurantReservations.qrToken, qrToken))
-      .limit(1);
-
-    const reservation = result[0];
+    const reservation = await getRestaurantReservationByQrToken(qrToken);
     if (!reservation) {
       throw new Error("QR code not found");
     }
 
-    await database.update(restaurantReservations)
-      .set({
-        qrStatus: 'used',
-        updatedAt: new Date(),
+    const client = getClient();
+    const { error } = await client
+      .from('restaurant_reservations')
+      .update({
+        qr_status: 'used',
+        updated_at: new Date().toISOString(),
       })
-      .where(eq(restaurantReservations.id, reservation.id));
+      .eq('id', reservation.id);
 
+    if (error) throw error;
     return await getRestaurantReservationById(reservation.id);
   } catch (error) {
     console.error("[markQrCodeAsUsed] Error:", error);
@@ -273,14 +312,16 @@ export async function markQrCodeAsUsed(qrToken: string) {
  */
 export async function cancelRestaurantReservation(id: number) {
   try {
-    const database = await getDb();
-    await database.update(restaurantReservations)
-      .set({
+    const client = getClient();
+    const { error } = await client
+      .from('restaurant_reservations')
+      .update({
         status: 'cancelled',
-        updatedAt: new Date(),
+        updated_at: new Date().toISOString(),
       })
-      .where(eq(restaurantReservations.id, id));
+      .eq('id', id);
 
+    if (error) throw error;
     return await getRestaurantReservationById(id);
   } catch (error) {
     console.error("[cancelRestaurantReservation] Error:", error);
@@ -293,14 +334,16 @@ export async function cancelRestaurantReservation(id: number) {
  */
 export async function markRestaurantReservationAsNoShow(id: number) {
   try {
-    const database = await getDb();
-    await database.update(restaurantReservations)
-      .set({
+    const client = getClient();
+    const { error } = await client
+      .from('restaurant_reservations')
+      .update({
         status: 'no_show',
-        updatedAt: new Date(),
+        updated_at: new Date().toISOString(),
       })
-      .where(eq(restaurantReservations.id, id));
+      .eq('id', id);
 
+    if (error) throw error;
     return await getRestaurantReservationById(id);
   } catch (error) {
     console.error("[markRestaurantReservationAsNoShow] Error:", error);

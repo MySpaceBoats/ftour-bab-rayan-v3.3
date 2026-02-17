@@ -89,12 +89,16 @@ export default function AdminRestaurantGroupes() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending_validation':
+      case 'submitted':
         return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200"><Clock className="h-3 w-3 mr-1" />En attente</Badge>;
       case 'validated_pending_payment':
+      case 'pending_confirmation':
         return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200"><CreditCard className="h-3 w-3 mr-1" />Paiement attendu</Badge>;
       case 'paid_confirmed':
+      case 'confirmed':
         return <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Confirmée</Badge>;
       case 'refused':
+      case 'rejected':
         return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Refusée</Badge>;
       case 'cancelled':
         return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Annulée</Badge>;
@@ -210,7 +214,7 @@ export default function AdminRestaurantGroupes() {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            {r.status === 'pending_validation' && (
+                            {(r.status === 'pending_validation' || r.status === 'submitted') && (
                               <>
                                 <Button
                                   size="sm"
@@ -237,7 +241,7 @@ export default function AdminRestaurantGroupes() {
                                 </Button>
                               </>
                             )}
-                            {(r.status === 'validated_pending_payment' || r.status === 'paid_confirmed') && (
+                            {(['validated_pending_payment', 'pending_confirmation', 'paid_confirmed', 'confirmed'].includes(r.status)) && (
                               <Button
                                 size="sm"
                                 variant="outline"

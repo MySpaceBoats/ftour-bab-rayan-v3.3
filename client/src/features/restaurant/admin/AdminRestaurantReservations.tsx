@@ -134,12 +134,16 @@ export default function AdminRestaurantReservations() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending_validation':
+      case 'submitted':
         return <Badge variant="outline">En attente</Badge>;
       case 'validated_pending_payment':
+      case 'pending_confirmation':
         return <Badge variant="secondary">Paiement attendu</Badge>;
       case 'paid_confirmed':
+      case 'confirmed':
         return <Badge className="bg-green-600">Confirmée</Badge>;
       case 'refused':
+      case 'rejected':
         return <Badge variant="destructive">Refusée</Badge>;
       case 'cancelled':
         return <Badge variant="destructive">Annulée</Badge>;
@@ -320,7 +324,7 @@ export default function AdminRestaurantReservations() {
                   </div>
                 )}
 
-                {selectedReservation.status === 'pending_validation' && (
+                {(selectedReservation.status === 'pending_validation' || selectedReservation.status === 'submitted') && (
                   <div className="flex gap-2">
                     <Button
                       onClick={() => handleValidate(selectedReservation.reference)}
@@ -342,7 +346,7 @@ export default function AdminRestaurantReservations() {
                   </div>
                 )}
 
-                {(selectedReservation.status === 'validated_pending_payment' || selectedReservation.status === 'paid_confirmed') && (
+                {(['validated_pending_payment', 'pending_confirmation', 'paid_confirmed', 'confirmed'].includes(selectedReservation.status)) && (
                   <Button
                     onClick={() => updateStatusMutation.mutate({ id: selectedReservation.id, status: 'completed' })}
                     disabled={updateStatusMutation.isPending}
