@@ -183,6 +183,15 @@ const sections: SectionDefinition[] = [
         iconBg: "bg-green-100",
         allowedRoles: ['admin', 'super_admin', 'admin_boutique', 'admin_dons', 'admin_terroir'],
       },
+      {
+        label: "QR Codes Catalogue",
+        description: "Tous les QR codes produits (goodies, pâtisserie, terroir, dons)",
+        route: "/admin/qr-codes",
+        icon: QrCode,
+        iconColor: "text-indigo-600",
+        iconBg: "bg-indigo-100",
+        allowedRoles: ['admin', 'super_admin', 'admin_boutique', 'admin_patisserie', 'admin_terroir', 'admin_dons'],
+      },
     ],
   },
   {

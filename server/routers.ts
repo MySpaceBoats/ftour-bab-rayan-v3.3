@@ -13,6 +13,7 @@ import { companyBookingsRouter } from "./company-booking-routers";
 import { restaurantReservationsRouter } from "./restaurant-reservation-routers";
 import { contentRouter } from "./content-router";
 import { scannerRouter } from "./scanner-router";
+import QRCode from "qrcode";
 
 // ============================================
 // ROLE-BASED PROCEDURES
@@ -2493,6 +2494,92 @@ const qrRouter = router({
       );
       return { success: true };
     }),
+
+  // --- Admin: Get QR codes for all catalog products ---
+  catalogQRCodes: adminProcedure.query(async () => {
+    const supabase = getSupabaseAdminClient();
+    if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+
+    const baseUrl = process.env.VITE_APP_URL || 'https://ftourbabrayan.ma';
+
+    // Fetch all products in parallel
+    const [goodiesRes, pastriesRes, terroirRes] = await Promise.all([
+      supabase.from('goodies').select('id, name, image_url, price, category, is_active').order('sort_order', { ascending: true }),
+      supabase.from('pastries').select('id, name, image_url, price, active').order('sort_order', { ascending: true }),
+      supabase.from('terroir_products').select('id, name, image_url, category, is_active, terroir_product_variants(price_unit)').order('sort_order', { ascending: true }),
+    ]);
+
+    const items: Array<{
+      id: number;
+      name: string;
+      imageUrl: string | null;
+      price: number | null;
+      category: string;
+      qrUrl: string;
+      qrDataUrl: string;
+    }> = [];
+
+    // Generate QR codes for goodies
+    for (const g of goodiesRes.data || []) {
+      const url = `${baseUrl}/fr/buy/goodie/${g.id}`;
+      const qrDataUrl = await QRCode.toDataURL(url, { errorCorrectionLevel: 'H', width: 400, margin: 2 });
+      items.push({
+        id: g.id,
+        name: g.name,
+        imageUrl: g.image_url,
+        price: g.price,
+        category: 'goodies',
+        qrUrl: url,
+        qrDataUrl,
+      });
+    }
+
+    // Generate QR codes for pastries
+    for (const p of pastriesRes.data || []) {
+      const url = `${baseUrl}/fr/buy/pastry/${p.id}`;
+      const qrDataUrl = await QRCode.toDataURL(url, { errorCorrectionLevel: 'H', width: 400, margin: 2 });
+      items.push({
+        id: p.id,
+        name: p.name,
+        imageUrl: p.image_url,
+        price: p.price,
+        category: 'patisserie',
+        qrUrl: url,
+        qrDataUrl,
+      });
+    }
+
+    // Generate QR codes for terroir products
+    for (const t of terroirRes.data || []) {
+      const url = `${baseUrl}/fr/terroir`;
+      const qrDataUrl = await QRCode.toDataURL(url, { errorCorrectionLevel: 'H', width: 400, margin: 2 });
+      const firstVariant = (t as any).terroir_product_variants?.[0];
+      items.push({
+        id: t.id,
+        name: t.name,
+        imageUrl: t.image_url,
+        price: firstVariant?.price_unit ?? null,
+        category: 'terroir',
+        qrUrl: url,
+        qrDataUrl,
+      });
+    }
+
+    // Add a single QR code for donations page
+    const donsUrl = `${baseUrl}/fr/dons`;
+    const donsQr = await QRCode.toDataURL(donsUrl, { errorCorrectionLevel: 'H', width: 400, margin: 2 });
+    items.push({
+      id: 0,
+      name: 'Page de dons',
+      imageUrl: null,
+      price: null,
+      category: 'dons',
+      qrUrl: donsUrl,
+      qrDataUrl: donsQr,
+    });
+
+    return items;
+  }),
 });
 
 // Ajouter les nouveaux routers à l'appRouter existant
