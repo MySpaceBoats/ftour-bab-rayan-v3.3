@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(320),
   phone VARCHAR(20),
   login_method VARCHAR(64),
-  role VARCHAR(40) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant_particuliers', 'admin_restaurant_entreprises', 'admin_restaurant_groupes', 'admin_patisserie', 'admin_terroir')),
+  role VARCHAR(40) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'admin_patisserie', 'admin_terroir')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   last_signed_in TIMESTAMPTZ NOT NULL DEFAULT NOW()
