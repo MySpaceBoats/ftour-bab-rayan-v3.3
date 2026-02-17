@@ -214,9 +214,6 @@ export default function AdminRestaurantReservations() {
                 <Button variant={typeFilter === 'all' ? 'default' : 'outline'} onClick={() => setTypeFilter('all')} size="sm">
                   Tous
                 </Button>
-                <Button variant={typeFilter === 'particulier' ? 'default' : 'outline'} onClick={() => setTypeFilter('particulier')} size="sm">
-                  Particuliers
-                </Button>
                 <Button variant={typeFilter === 'entreprise' ? 'default' : 'outline'} onClick={() => setTypeFilter('entreprise')} size="sm">
                   Entreprises
                 </Button>
