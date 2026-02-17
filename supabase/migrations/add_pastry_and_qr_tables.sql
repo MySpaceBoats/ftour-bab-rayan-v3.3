@@ -115,13 +115,17 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- Missing read policies for order_items and terroir_order_items
+-- Missing read policies for order_items and terroir_order_items (only if tables exist)
 DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'order_items' AND policyname = 'Public can read order items') THEN
-    CREATE POLICY "Public can read order items" ON order_items FOR SELECT USING (true);
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'order_items') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'order_items' AND policyname = 'Public can read order items') THEN
+      CREATE POLICY "Public can read order items" ON order_items FOR SELECT USING (true);
+    END IF;
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'terroir_order_items' AND policyname = 'Public can read terroir order items') THEN
-    CREATE POLICY "Public can read terroir order items" ON terroir_order_items FOR SELECT USING (true);
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'terroir_order_items') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'terroir_order_items' AND policyname = 'Public can read terroir order items') THEN
+      CREATE POLICY "Public can read terroir order items" ON terroir_order_items FOR SELECT USING (true);
+    END IF;
   END IF;
 END $$;
 
