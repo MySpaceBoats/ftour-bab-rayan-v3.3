@@ -729,6 +729,13 @@ export async function deleteGoodieSupabase(id: number) {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error('Supabase not configured');
 
+  // Delete related order_items first (FK constraint: order_items_goodie_id_fkey)
+  await client.from('order_items').delete().eq('goodie_id', id);
+
+  // Delete related variants (FK constraint: goodie_variants_goodie_id_fkey)
+  await client.from('goodie_variants').delete().eq('goodie_id', id);
+
+  // Delete the goodie itself
   const { error } = await client
     .from('goodies')
     .delete()

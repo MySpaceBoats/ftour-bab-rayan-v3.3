@@ -1365,6 +1365,13 @@ const goodiesRouter = router({
     .mutation(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
 
+      // Delete related order_items first (FK constraint: order_items_goodie_id_fkey)
+      await supabase.from('order_items').delete().eq('goodie_id', input.id);
+
+      // Delete related variants (FK constraint: goodie_variants_goodie_id_fkey)
+      await supabase.from('goodie_variants').delete().eq('goodie_id', input.id);
+
+      // Delete the goodie itself
       const { error } = await supabase
         .from('goodies')
         .delete()
