@@ -9,9 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { 
-  ArrowLeft, Search, Download, Package, CheckCircle, XCircle, 
-  Clock, Loader2, Mail, Phone, ShoppingBag, CreditCard
+import {
+  ArrowLeft, Search, Download, Package, CheckCircle, XCircle,
+  Clock, Loader2, Mail, Phone, ShoppingBag, CreditCard, QrCode
 } from "lucide-react";
 
 export default function AdminCommandes() {
@@ -96,12 +96,18 @@ export default function AdminCommandes() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <div>
+          <div className="flex-1">
             <h1 className="font-bold text-lg">Gestion des commandes</h1>
             <p className="text-xs text-muted-foreground">
               {filteredOrders?.length || 0} commande(s)
             </p>
           </div>
+          <Link href="/admin/scan-product">
+            <Button className="bg-purple-600 hover:bg-purple-700">
+              <QrCode className="h-4 w-4 mr-2" />
+              Scan Produit
+            </Button>
+          </Link>
         </div>
       </header>
 
