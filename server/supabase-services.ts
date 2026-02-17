@@ -1649,7 +1649,7 @@ export async function getPastriesSupabase() {
     .from('pastries')
     .select('*')
     .eq('active', true)
-    .order('sortOrder', { ascending: true });
+    .order('sort_order', { ascending: true });
 
   if (error) throw error;
   return data || [];
