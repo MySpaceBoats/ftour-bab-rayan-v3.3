@@ -444,23 +444,34 @@ const publicRouter = router({
 
   goodies: publicProcedure.query(async ({ ctx }) => {
     const supabase = createSupabaseAdmin(ctx.env);
-    
-    const { data, error } = await supabase
+
+    // Try fetching active goodies with variants join first
+    let { data, error } = await supabase
       .from('goodies')
       .select('*, goodie_variants(*)')
       .eq('is_active', true)
       .order('sort_order', { ascending: true });
 
+    // If the variants join fails (FK not set up), fall back to goodies only
     if (error) {
-      console.error('[Worker] Error fetching goodies:', error);
-      return [];
+      console.warn('[Worker][Public] Variants join failed, fetching without variants:', error.message);
+      const fallback = await supabase
+        .from('goodies')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+      if (fallback.error) {
+        console.error('[Worker][Public] Failed to fetch goodies:', fallback.error.message);
+        return [];
+      }
+      data = fallback.data?.map((g: any) => ({ ...g, goodie_variants: [] })) ?? null;
     }
 
-    return (data || []).map(g => ({
+    return (data || []).map((g: any) => ({
       id: g.id,
       name: g.name,
       description: g.description,
-      price: g.price,
+      price: parseFloat(g.price),
       imageUrl: g.image_url,
       category: g.category,
       isActive: g.is_active,
@@ -470,7 +481,7 @@ const publicRouter = router({
         size: v.size,
         color: v.color,
         stock: v.stock,
-        priceModifier: v.price_modifier,
+        priceModifier: parseFloat(v.price_modifier),
         isAvailable: v.is_available,
       })),
     }));
@@ -1192,21 +1203,32 @@ const checkinRouter = router({
 const goodiesRouter = router({
   list: publicProcedure.query(async ({ ctx }) => {
     const supabase = createSupabaseAdmin(ctx.env);
-    
-    const { data, error } = await supabase
+
+    // Try fetching goodies with variants join first
+    let { data, error } = await supabase
       .from('goodies')
       .select('*, goodie_variants(*)')
       .order('sort_order', { ascending: true });
 
+    // If the variants join fails (FK not set up), fall back to goodies only
     if (error) {
-      return [];
+      console.warn('[Worker][Goodies] Variants join failed, fetching without variants:', error.message);
+      const fallback = await supabase
+        .from('goodies')
+        .select('*')
+        .order('sort_order', { ascending: true });
+      if (fallback.error) {
+        console.error('[Worker][Goodies] Failed to fetch goodies:', fallback.error.message);
+        return [];
+      }
+      data = fallback.data?.map((g: any) => ({ ...g, goodie_variants: [] })) ?? null;
     }
 
-    return (data || []).map(g => ({
+    return (data || []).map((g: any) => ({
       id: g.id,
       name: g.name,
       description: g.description,
-      price: g.price,
+      price: parseFloat(g.price),
       imageUrl: g.image_url,
       category: g.category,
       isActive: g.is_active,
@@ -1216,7 +1238,7 @@ const goodiesRouter = router({
         size: v.size,
         color: v.color,
         stock: v.stock,
-        priceModifier: v.price_modifier,
+        priceModifier: parseFloat(v.price_modifier),
         isAvailable: v.is_available,
       })),
     }));
