@@ -3198,6 +3198,109 @@ const restaurantReservationsRouter = router({
       }
       return { success: true, message: 'Réservation refusée. Email envoyé.' };
     }),
+
+  getByQrToken: publicProcedure
+    .input(z.object({ qrToken: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('restaurant_reservations')
+        .select('*')
+        .eq('qr_token', input.qrToken)
+        .single();
+      if (error || !data) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Réservation non trouvée' });
+      }
+      return data;
+    }),
+
+  adminListParticuliers: protectedProcedure
+    .query(async ({ ctx }) => {
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
+      if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      }
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('restaurant_reservations')
+        .select('*')
+        .eq('type', 'particulier')
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error('[adminListParticuliers] Error:', error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      }
+      return data || [];
+    }),
+
+  adminListGroupes: protectedProcedure
+    .query(async ({ ctx }) => {
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
+      if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      }
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('restaurant_reservations')
+        .select('*')
+        .eq('type', 'groupe')
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error('[adminListGroupes] Error:', error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      }
+      return data || [];
+    }),
+
+  adminListEntreprises: protectedProcedure
+    .query(async ({ ctx }) => {
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
+      if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      }
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('restaurant_reservations')
+        .select('*')
+        .eq('type', 'entreprise')
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error('[adminListEntreprises] Error:', error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      }
+      return data || [];
+    }),
+
+  adminUpdateStatus: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      status: z.enum(['pending_validation', 'validated_pending_payment', 'paid_confirmed', 'refused', 'cancelled', 'completed', 'no_show']),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
+      if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      }
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('restaurant_reservations')
+        .update({ status: input.status, updated_at: new Date().toISOString() })
+        .eq('id', input.id)
+        .select()
+        .single();
+      if (error) {
+        console.error('[adminUpdateStatus] Error:', error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Erreur lors de la mise à jour du statut' });
+      }
+      // Activate QR when confirmed
+      if (input.status === 'paid_confirmed') {
+        await supabase
+          .from('restaurant_reservations')
+          .update({ qr_status: 'active' })
+          .eq('id', input.id);
+      }
+      return { success: true, reservation: data };
+    }),
 });
 
 // ============================================
