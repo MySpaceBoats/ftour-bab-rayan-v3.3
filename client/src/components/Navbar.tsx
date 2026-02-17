@@ -1,22 +1,18 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n";
 import { useCart } from "@/contexts/CartContext";
 import {
   Menu, Heart, Users, ShoppingBag, Home, Info, Phone, Building2,
-  LogOut, LayoutDashboard, Search, Globe, X, Lock, ShoppingCart, UtensilsCrossed
+  LogOut, LayoutDashboard, Globe, Lock, ShoppingCart, UtensilsCrossed
 } from "lucide-react";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const [location, setLocation] = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const { t, lang, setLang, languages, dir } = useI18n();
@@ -46,66 +42,11 @@ export default function Navbar() {
     window.location.href = '/';
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      // Redirect to search results page
-      window.location.href = `/recherche?q=${encodeURIComponent(searchQuery)}`;
-    }
-  };
-
-  useEffect(() => {
-    if (searchOpen && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [searchOpen]);
-
-  // Close search on escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setSearchOpen(false);
-      }
-    };
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, []);
-
   return (
     <header className="sticky top-0 z-50 w-full">
       {/* Top Menu (niveau 0) - Menu utilitaire */}
       <div className="bg-[#3A3820] border-b border-[#F2E9D3]/10">
         <div className="container flex h-9 items-center justify-end gap-4 text-sm">
-          {/* Recherche */}
-          <div className="relative flex items-center">
-            {searchOpen ? (
-              <form onSubmit={handleSearch} className="flex items-center gap-2 animate-in slide-in-from-right-2">
-                <Input
-                  ref={searchInputRef}
-                  type="search"
-                  placeholder={t.nav.searchPlaceholder}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-7 w-48 bg-[#4A4829] border-[#F2E9D3]/30 text-[#F2E9D3] placeholder:text-[#CDBB8A]/60 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => setSearchOpen(false)}
-                  className="text-[#CDBB8A] hover:text-[#F2E9D3]"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </form>
-            ) : (
-              <button
-                onClick={() => setSearchOpen(true)}
-                className="flex items-center gap-1 text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors"
-              >
-                <Search className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-
           {/* Cart Icon - Boutique solidaire */}
           <button
             onClick={() => {
