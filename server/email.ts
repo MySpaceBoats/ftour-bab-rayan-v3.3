@@ -270,7 +270,6 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
           <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">📅 Votre jour de participation</h3>
           <p style="margin: 5px 0; color: #374151;"><strong>Jour :</strong> ${data.dayNumber} du Ramadan</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.dayDate}</p>
-          <p style="margin: 5px 0; color: #374151;"><strong>Heure :</strong> ${data.startTime}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Lieu :</strong> ${data.location}</p>
         </td>
       </tr>
