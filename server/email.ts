@@ -625,13 +625,12 @@ export function generateReservationRequestEmail(data: ReservationRequestEmailDat
           <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de votre demande</h3>
           <p style="margin: 5px 0; color: #374151;"><strong>Type :</strong> ${typeLabel}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
-          <p style="margin: 5px 0; color: #374151;"><strong>Heure :</strong> ${data.time}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Nombre de participants :</strong> ${data.participantsCount}</p>
           <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;"><strong>Référence :</strong> ${data.reference}</p>
         </td>
       </tr>
     </table>
-    
+
     <!-- Prochaines étapes -->
     <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fef3c7; border-radius: 8px; margin: 20px 0;">
       <tr>
@@ -701,13 +700,12 @@ export function generateReservationConfirmationEmail(data: ReservationConfirmati
           <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de votre réservation</h3>
           <p style="margin: 5px 0; color: #374151;"><strong>Espace :</strong> ${data.space}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
-          <p style="margin: 5px 0; color: #374151;"><strong>Heure :</strong> ${data.time}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Nombre de participants :</strong> ${data.participantsCount}</p>
           <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;"><strong>Référence :</strong> ${data.reference}</p>
         </td>
       </tr>
     </table>
-    
+
     <!-- QR Code -->
     <div style="text-align: center; margin: 30px 0; padding: 20px; background-color: #ffffff; border: 2px dashed #d4a574; border-radius: 8px;">
       <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">🎫 Votre QR Code d'accès</h3>
