@@ -180,7 +180,7 @@ export default function AdminTerroirProducts() {
     });
   };
 
-  const ImageUploadField = () => (
+  const imageUploadField = (
     <div className="space-y-2">
       <Label>Image du produit</Label>
       <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
@@ -254,13 +254,13 @@ export default function AdminTerroirProducts() {
     </div>
   );
 
-  const ProductFormFields = () => (
+  const productFormFields = (
     <div className="space-y-4">
       <div className="space-y-2">
         <Label>Nom du produit *</Label>
         <Input
           value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
           placeholder="Huile d'olive, Miel..."
         />
       </div>
@@ -269,7 +269,7 @@ export default function AdminTerroirProducts() {
         <Label>Description</Label>
         <Textarea
           value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
+          onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
           placeholder="Description du produit..."
           rows={3}
         />
@@ -280,7 +280,7 @@ export default function AdminTerroirProducts() {
           <Label>Catégorie</Label>
           <Input
             value={form.category}
-            onChange={(e) => setForm({ ...form, category: e.target.value })}
+            onChange={(e) => setForm(prev => ({ ...prev, category: e.target.value }))}
             placeholder="huile, miel, épices..."
           />
         </div>
@@ -289,20 +289,20 @@ export default function AdminTerroirProducts() {
           <Input
             type="number"
             value={form.sortOrder === 0 ? '' : form.sortOrder}
-            onChange={(e) => setForm({ ...form, sortOrder: e.target.value === '' ? 0 : parseInt(e.target.value) })}
+            onChange={(e) => setForm(prev => ({ ...prev, sortOrder: e.target.value === '' ? 0 : parseInt(e.target.value) }))}
             placeholder="0"
             min="0"
           />
         </div>
       </div>
 
-      <ImageUploadField />
+      {imageUploadField}
 
       <div className="flex items-center justify-between">
         <Label>Actif</Label>
         <Switch
           checked={form.isActive}
-          onCheckedChange={(checked) => setForm({ ...form, isActive: checked })}
+          onCheckedChange={(checked) => setForm(prev => ({ ...prev, isActive: checked }))}
         />
       </div>
     </div>
@@ -329,7 +329,7 @@ export default function AdminTerroirProducts() {
               </DialogTrigger>
               <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                 <DialogHeader><DialogTitle>Nouveau produit terroir</DialogTitle></DialogHeader>
-                <ProductFormFields />
+                {productFormFields}
                 <Button
                   className="w-full"
                   onClick={handleCreate}
@@ -418,7 +418,7 @@ export default function AdminTerroirProducts() {
                           </DialogTrigger>
                           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                             <DialogHeader><DialogTitle>Modifier le produit</DialogTitle></DialogHeader>
-                            <ProductFormFields />
+                            {productFormFields}
                             <Button
                               onClick={handleUpdate}
                               className="w-full"
@@ -448,19 +448,19 @@ export default function AdminTerroirProducts() {
                             <div className="space-y-4">
                               <div>
                                 <Label>Label (ex: 250g, 500ml, Pack 3)</Label>
-                                <Input value={variantForm.label} onChange={(e) => setVariantForm({ ...variantForm, label: e.target.value })} />
+                                <Input value={variantForm.label} onChange={(e) => setVariantForm(prev => ({ ...prev, label: e.target.value }))} />
                               </div>
                               <div>
                                 <Label>SKU (optionnel)</Label>
-                                <Input value={variantForm.sku} onChange={(e) => setVariantForm({ ...variantForm, sku: e.target.value })} />
+                                <Input value={variantForm.sku} onChange={(e) => setVariantForm(prev => ({ ...prev, sku: e.target.value }))} />
                               </div>
                               <div>
                                 <Label>Prix unitaire (DH)</Label>
-                                <Input type="number" value={variantForm.priceUnit} onChange={(e) => setVariantForm({ ...variantForm, priceUnit: parseFloat(e.target.value) || 0 })} />
+                                <Input type="number" value={variantForm.priceUnit} onChange={(e) => setVariantForm(prev => ({ ...prev, priceUnit: parseFloat(e.target.value) || 0 }))} />
                               </div>
                               <div>
                                 <Label>Stock total</Label>
-                                <Input type="number" value={variantForm.stockTotal} onChange={(e) => setVariantForm({ ...variantForm, stockTotal: parseInt(e.target.value) || 0 })} />
+                                <Input type="number" value={variantForm.stockTotal} onChange={(e) => setVariantForm(prev => ({ ...prev, stockTotal: parseInt(e.target.value) || 0 }))} />
                               </div>
                               <Button className="w-full" onClick={() => createVariant.mutate({ productId: product.id, ...variantForm })} disabled={!variantForm.label || createVariant.isPending}>
                                 Créer la variante
