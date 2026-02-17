@@ -7,7 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouterUpdated as appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { ensureVolunteerSlotsColumn } from "../supabase";
+import { ensureVolunteerSlotsColumn, ensurePastriesTable } from "../supabase";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -37,6 +37,7 @@ async function startServer() {
 
   // Ensure database schema is up to date
   await ensureVolunteerSlotsColumn();
+  await ensurePastriesTable();
 
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);

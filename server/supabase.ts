@@ -140,6 +140,63 @@ export async function ensureVolunteerSlotsColumn(): Promise<void> {
 }
 
 // ============================================
+// AUTO-MIGRATION: ensure pastries table exists
+// ============================================
+let _pastriesMigrationDone = false;
+export let pastriesTableExists = false;
+
+export async function ensurePastriesTable(): Promise<void> {
+  if (_pastriesMigrationDone) return;
+  _pastriesMigrationDone = true;
+
+  const client = getSupabaseAdminClient();
+  if (!client) {
+    console.warn('[Migration] Supabase not configured, skipping pastries table check');
+    return;
+  }
+
+  try {
+    const { error: testError } = await client
+      .from('pastries')
+      .select('id')
+      .limit(1);
+
+    if (testError && (testError.code === 'PGRST204' || testError.code === '42P01' || testError.message?.includes('schema cache') || testError.message?.includes('does not exist'))) {
+      console.error('='.repeat(70));
+      console.error('[MIGRATION REQUIRED] The "pastries" table is MISSING from the database');
+      console.error('[MIGRATION REQUIRED] Pastry features will NOT work until you run the migration.');
+      console.error('');
+      console.error('[MIGRATION REQUIRED] Run this file in the Supabase SQL Editor:');
+      console.error('  supabase/migrations/add_pastry_and_qr_tables.sql');
+      console.error('');
+      console.error('[MIGRATION REQUIRED] Or run this SQL directly:');
+      console.error('  CREATE TABLE IF NOT EXISTS pastries (');
+      console.error('    id SERIAL PRIMARY KEY,');
+      console.error('    name VARCHAR(255) NOT NULL,');
+      console.error('    description TEXT,');
+      console.error('    price DECIMAL(10,2) NOT NULL,');
+      console.error('    image_url TEXT,');
+      console.error('    category VARCHAR(100),');
+      console.error('    active BOOLEAN NOT NULL DEFAULT true,');
+      console.error('    sort_order INTEGER NOT NULL DEFAULT 0,');
+      console.error('    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),');
+      console.error('    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()');
+      console.error('  );');
+      console.error('');
+      console.error('[MIGRATION REQUIRED] Then reload the PostgREST schema cache:');
+      console.error("  NOTIFY pgrst, 'reload schema';");
+      console.error('='.repeat(70));
+      pastriesTableExists = false;
+    } else {
+      console.log('[Migration] pastries table OK');
+      pastriesTableExists = true;
+    }
+  } catch (err) {
+    console.error('[Migration] Error checking pastries table:', err);
+  }
+}
+
+// ============================================
 // DATABASE TYPES (generated from schema)
 // ============================================
 export interface Database {
