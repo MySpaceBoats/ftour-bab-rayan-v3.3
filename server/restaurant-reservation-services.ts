@@ -13,34 +13,41 @@ function getClient() {
 }
 
 /**
- * Map snake_case DB row to camelCase object expected by frontend
+ * Map DB row to camelCase object expected by frontend.
+ * Handles both snake_case (Supabase/PostgreSQL) and camelCase (Drizzle/MySQL) column names.
  */
 function mapReservation(r: any) {
+  const rawDate = r.date;
+  const rawCreatedAt = r.created_at ?? r.createdAt;
+  const rawUpdatedAt = r.updated_at ?? r.updatedAt;
+  const rawExpiresAt = r.expires_at ?? r.expiresAt;
+  const rawProcessedAt = r.processed_at ?? r.processedAt;
+
   return {
     id: r.id,
     reference: r.reference,
     type: r.type,
-    seatsTotal: r.seats_total,
-    date: r.date ? new Date(r.date) : null,
+    seatsTotal: r.seats_total ?? r.seatsTotal ?? 0,
+    date: rawDate ? new Date(rawDate) : null,
     name: r.name,
     phone: r.phone,
     email: r.email,
-    companyName: r.company_name,
-    groupName: r.group_name,
-    groupType: r.group_type,
+    companyName: r.company_name ?? r.companyName ?? null,
+    groupName: r.group_name ?? r.groupName ?? null,
+    groupType: r.group_type ?? r.groupType ?? null,
     status: r.status,
-    paymentStatus: r.payment_status,
-    paymentAmount: r.payment_amount,
-    paymentProvider: r.payment_provider,
-    paymentReference: r.payment_reference,
-    qrToken: r.qr_token,
-    qrStatus: r.qr_status,
-    expiresAt: r.expires_at ? new Date(r.expires_at) : null,
-    processedBy: r.processed_by,
-    processedAt: r.processed_at ? new Date(r.processed_at) : null,
+    paymentStatus: r.payment_status ?? r.paymentStatus ?? 'not_requested',
+    paymentAmount: r.payment_amount ?? r.paymentAmount ?? null,
+    paymentProvider: r.payment_provider ?? r.paymentProvider ?? null,
+    paymentReference: r.payment_reference ?? r.paymentReference ?? null,
+    qrToken: r.qr_token ?? r.qrToken ?? null,
+    qrStatus: r.qr_status ?? r.qrStatus ?? 'inactive',
+    expiresAt: rawExpiresAt ? new Date(rawExpiresAt) : null,
+    processedBy: r.processed_by ?? r.processedBy ?? null,
+    processedAt: rawProcessedAt ? new Date(rawProcessedAt) : null,
     notes: r.notes,
-    createdAt: r.created_at ? new Date(r.created_at) : new Date(),
-    updatedAt: r.updated_at ? new Date(r.updated_at) : new Date(),
+    createdAt: rawCreatedAt ? new Date(rawCreatedAt) : new Date(),
+    updatedAt: rawUpdatedAt ? new Date(rawUpdatedAt) : new Date(),
   };
 }
 
@@ -187,7 +194,7 @@ export async function listRestaurantReservations(filters?: {
     let query = client
       .from('restaurant_reservations')
       .select('*')
-      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
       .range(queryOffset, queryOffset + queryLimit - 1);
 
     if (filters?.type) {
