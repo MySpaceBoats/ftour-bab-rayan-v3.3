@@ -91,6 +91,7 @@ import AdminScanProduct from "@/features/ops/admin/AdminScanProduct";
 import AdminPayments from "@/features/ops/admin/AdminPayments";
 import AdminUtilisateurs from "@/features/ops/admin/AdminUtilisateurs";
 import AdminUnifiedDashboard from "@/features/ops/admin/AdminUnifiedDashboard";
+import AdminQRCodes from "@/features/ops/admin/AdminQRCodes";
 
 // ============================================
 // SCANNER — features/scanner
@@ -179,6 +180,9 @@ function LocalizedRoutes() {
       <Route path="/admin/scan-product" component={AdminScanProduct} />
       <Route path="/admin/payments" component={AdminPayments} />
       <Route path="/admin/utilisateurs" component={AdminUtilisateurs} />
+
+      {/* Admin QR Codes Catalogue */}
+      <Route path="/admin/qr-codes" component={AdminQRCodes} />
 
       {/* Admin Contenu */}
       <Route path="/admin/contenu" component={AdminContenu} />
