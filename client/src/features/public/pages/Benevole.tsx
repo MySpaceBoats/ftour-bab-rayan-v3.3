@@ -191,7 +191,6 @@ export default function Benevole() {
     becomeVolunteer: lang === 'ar' ? 'كن متطوعا' : lang === 'en' ? 'Become a volunteer' : 'Devenir bénévole',
     subtitle: lang === 'ar' ? 'شارك في هذه المغامرة التضامنية وشارك لحظات فريدة خلال شهر رمضان' : lang === 'en' ? 'Participate in this solidarity adventure and share unique moments during Ramadan' : 'Participez à cette belle aventure solidaire et partagez des moments uniques pendant le Ramadan',
     schedules: lang === 'ar' ? 'المواعيد' : lang === 'en' ? 'Schedules' : 'Horaires',
-    schedulesDesc: lang === 'ar' ? 'الوصول قبل ساعة ونصف من الإفطار. يستمر النشاط حوالي 3 ساعات.' : lang === 'en' ? 'Arrive 1h30 before Ftour. Activity lasts about 3 hours.' : 'Arrivée 1h30 avant le Ftour. L\'activité dure environ 3h au total.',
     location: lang === 'ar' ? 'المكان' : lang === 'en' ? 'Location' : 'Lieu',
     locationDesc: lang === 'ar' ? '4 شارع بيت لحم، حي النخيل، الدار البيضاء' : lang === 'en' ? '4 rue Bayt Lham, Palmier district, Casablanca' : '4 rue Bayt Lham, quartier Palmier, Casablanca',
     qrCodeTitle: lang === 'ar' ? 'رمز QR' : lang === 'en' ? 'QR Code' : 'QR Code',
@@ -396,9 +395,6 @@ export default function Benevole() {
                       <h3 className="font-semibold">{formTexts.schedules}</h3>
                     </div>
                     <div className="space-y-3">
-                      <p className="text-sm text-muted-foreground">
-                        {formTexts.schedulesDesc}
-                      </p>
                       <div className="bg-primary/5 rounded-lg p-3 space-y-2">
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-primary"></div>
