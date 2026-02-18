@@ -402,7 +402,7 @@ export function Checkout() {
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
                     {t.checkout?.chequeInstructions ||
-                      'Please send your cheque to: Association Bab Rayan, 4 rue Bayt Lham, Casablanca'}
+                      'Please send your cheque to: Association Bab Rayan, 4 rue Bayt Lahm, Casablanca'}
                   </AlertDescription>
                 </Alert>
               </CardContent>
@@ -431,7 +431,7 @@ export function Checkout() {
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
                     {t.checkout?.cashInstructions ||
-                      'Please bring cash to our office at: 4 rue Bayt Lham, Casablanca. Contact us at +212 664-887978'}
+                      'Please bring cash to our office at: 4 rue Bayt Lahm, Casablanca. Contact us at +212 664-887978'}
                   </AlertDescription>
                 </Alert>
               </CardContent>

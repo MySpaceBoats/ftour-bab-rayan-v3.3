@@ -139,7 +139,7 @@ function baseTemplate(content: string): string {
                 Association Bab Rayan
               </p>
               <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                4 rue Bayt Lham, quartier Palmier, Casablanca<br>
+                4 rue Bayt Lahm, quartier Palmier, Casablanca<br>
                 Tél: +212 664-887978 | contact@ftourbabrayan.ma
               </p>
             </td>
@@ -317,7 +317,7 @@ export function generateOrderConfirmationEmail(data: OrderEmailData): { subject:
       <tr>
         <td style="padding: 20px;">
           <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 18px;">📦 Retrait de votre commande</h3>
-          <p style="margin: 5px 0; color: #374151;"><strong>Lieu :</strong> ${data.pickupLocation || 'Association Bab Rayan, 4 rue Bayt Lham, Casablanca'}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Lieu :</strong> ${data.pickupLocation || 'Association Bab Rayan, 4 rue Bayt Lahm, Casablanca'}</p>
           ${data.pickupDate ? `<p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.pickupDate}</p>` : ''}
           <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;">
             Présentez cette confirmation lors du retrait. Le paiement s'effectue sur place.
@@ -372,7 +372,7 @@ export function generateDonationConfirmationEmail(data: DonationEmailData): { su
           <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 18px;">📍 Don sur place</h3>
           <p style="margin: 5px 0; color: #374151;">Vous pouvez effectuer votre don lors d'un Ftour à :</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Association Bab Rayan</strong></p>
-          <p style="margin: 5px 0; color: #374151;">4 rue Bayt Lham, quartier Palmier, Casablanca</p>
+          <p style="margin: 5px 0; color: #374151;">4 rue Bayt Lahm, quartier Palmier, Casablanca</p>
           <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;">
             Présentez cette confirmation avec la référence <strong>${data.donationReference}</strong>.
           </p>

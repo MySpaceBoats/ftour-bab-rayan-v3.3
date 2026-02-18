@@ -193,7 +193,7 @@ export default function Benevole() {
     schedules: lang === 'ar' ? 'المواعيد' : lang === 'en' ? 'Schedules' : 'Horaires',
     schedulesDesc: lang === 'ar' ? 'الوصول قبل ساعة ونصف من الإفطار. يستمر النشاط حوالي 3 ساعات.' : lang === 'en' ? 'Arrive 1h30 before Ftour. Activity lasts about 3 hours.' : 'Arrivée 1h30 avant le Ftour. L\'activité dure environ 3h au total.',
     location: lang === 'ar' ? 'المكان' : lang === 'en' ? 'Location' : 'Lieu',
-    locationDesc: lang === 'ar' ? '4 شارع بيت لحم، حي النخيل، الدار البيضاء' : lang === 'en' ? '4 rue Bayt Lham, Palmier district, Casablanca' : '4 rue Bayt Lham, quartier Palmier, Casablanca',
+    locationDesc: lang === 'ar' ? '4 شارع بيت لحم، حي النخيل، الدار البيضاء' : lang === 'en' ? '4 rue Bayt Lahm, Palmier district, Casablanca' : '4 rue Bayt Lahm, quartier Palmier, Casablanca',
     qrCodeTitle: lang === 'ar' ? 'رمز QR' : lang === 'en' ? 'QR Code' : 'QR Code',
     qrCodeDesc: lang === 'ar' ? 'ستتلقى رمز QR فريدًا لتقديمه عند الدخول يوم المشاركة.' : lang === 'en' ? 'You will receive a unique QR code to present at the entrance on the day.' : 'Vous recevrez un QR code unique à présenter à l\'entrée le jour J.',
     important: lang === 'ar' ? 'مهم' : lang === 'en' ? 'Important' : 'Important',
