@@ -96,6 +96,8 @@ import AdminQRCodes from "@/features/ops/admin/AdminQRCodes";
 // ============================================
 import Scanner from "@/features/scanner/pages/Scanner";
 import Checkin from "@/features/scanner/pages/Checkin";
+import ScannerPatisserie from "@/features/scanner/pages/ScannerPatisserie";
+import ScannerUnifie from "@/features/scanner/pages/ScannerUnifie";
 
 // ============================================
 // CONTENU — features/contenu
@@ -190,6 +192,8 @@ function LocalizedRoutes() {
       {/* ================================================
           SCANNER — route unique (section 4.3)
           ================================================ */}
+      <Route path="/scanner/patisserie" component={ScannerPatisserie} />
+      <Route path="/scanner/unifie" component={ScannerUnifie} />
       <Route path="/scanner" component={Scanner} />
 
       {/* ================================================
