@@ -185,9 +185,6 @@ function baseTemplate(content: string): string {
               <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">
                 Ftour <span style="color: #fbbf24;">Bab Rayan</span>
               </h1>
-              <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 14px;">
-                Parce que chaque enfant mérite un bon départ dans la vie
-              </p>
             </td>
           </tr>
           
