@@ -260,6 +260,26 @@ export default function Contact() {
             </div>
           </div>
         </section>
+
+        {/* Google Maps */}
+        <section className="py-12">
+          <div className="container">
+            <Card className="bg-[#4A4829] border-[#F2E9D3]/20 overflow-hidden">
+              <CardContent className="p-0">
+                <iframe
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3323.965397406019!2d-7.630356723855206!3d33.58024767333852!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xda7d2be82cac4e5%3A0x4c7187e94a633b19!2sAssociation%20Bab%20Rayan!5e0!3m2!1sfr!2sma!4v1771423733450!5m2!1sfr!2sma"
+                  width="100%"
+                  height="400"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Association Bab Rayan - Google Maps"
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </section>
       </main>
 
       <Footer />
