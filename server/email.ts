@@ -205,7 +205,7 @@ function baseTemplate(content: string): string {
                 Association Bab Rayan
               </p>
               <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                4 rue Bayt Lham, quartier Palmier, Casablanca<br>
+                4 rue Bayt Lahm, quartier Palmier, Casablanca<br>
                 Tél: +212 610 023 555 | contact@ftourbabrayan.ma
               </p>
             </td>

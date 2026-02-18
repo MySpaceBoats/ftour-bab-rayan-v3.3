@@ -205,7 +205,7 @@ export default function Programme() {
                       <h3 className="font-semibold">Lieu</h3>
                     </div>
                     <p className="text-muted-foreground text-sm">
-                      4 rue Bayt Lham, quartier Palmier, Casablanca
+                      4 rue Bayt Lahm, quartier Palmier, Casablanca
                     </p>
                   </CardContent>
                 </Card>
