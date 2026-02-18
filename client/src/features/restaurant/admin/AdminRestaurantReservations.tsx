@@ -47,7 +47,7 @@ export default function AdminRestaurantReservations() {
     return allReservations.filter((res: any) => {
       const matchesType = typeFilter === 'all' || res.type === typeFilter;
       const matchesStatus = statusFilter === 'all' || res.status === statusFilter;
-      const text = `${res.reference} ${res.name} ${res.email} ${res.phone}`.toLowerCase();
+      const text = `${res.reference} ${res.name} ${res.email} ${res.phone} ${res.groupName || ''} ${res.companyName || ''}`.toLowerCase();
       const matchesSearch = searchQuery === '' || text.includes(searchQuery.toLowerCase());
       return matchesType && matchesStatus && matchesSearch;
     });
@@ -279,6 +279,9 @@ export default function AdminRestaurantReservations() {
                         {getStatusBadge(res.status)}
                       </div>
                     </div>
+                    {(res.groupName || res.companyName) && (
+                      <p className="text-sm font-medium">{res.groupName || res.companyName}</p>
+                    )}
                     <p className="text-sm text-muted-foreground">{res.name} {res.email ? `• ${res.email}` : ''}</p>
                     <p className="text-sm text-muted-foreground">{res.seatsTotal} places • Ftour {formatDate(res.date)} • Créé {formatDate(res.createdAt)}</p>
                   </button>
