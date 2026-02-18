@@ -55,7 +55,7 @@
 
 
 ## Coordonnées complètes
-- **Adresse** : 4 rue Bayt Lham, quartier Palmier, Casablanca
+- **Adresse** : 4 rue Bayt Lahm, quartier Palmier, Casablanca
 - **Téléphone Direction Générale** : +212 610 023 555
 - **Email Affaires générales** : contact@babrayan.ma
 - **Email Presse** : communication@babrayan.ma

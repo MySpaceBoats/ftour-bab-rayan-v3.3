@@ -255,7 +255,7 @@ export default function AdminRestaurants() {
                   id="address"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="4 rue Bayt Lham, quartier Palmier, Casablanca"
+                  placeholder="4 rue Bayt Lahm, quartier Palmier, Casablanca"
                   className="mt-1 border-[#d4d4aa]"
                 />
               </div>

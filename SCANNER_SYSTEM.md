@@ -489,7 +489,7 @@ validateQRTokenSupabase(token, 'goodies')
     "qrStatus": "generated",
     "dayNumber": 1,
     "dayDate": "2024-10-13",
-    "location": "4 rue Bayt Lham, Casablanca",
+    "location": "4 rue Bayt Lahm, Casablanca",
     "iftarTime": "18:45",
     "alreadyValidated": false,
     "scannedAt": null

@@ -74,7 +74,7 @@ function baseTemplate(content: string): string {
                 Association Bab Rayan
               </p>
               <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                4 rue Bayt Lham, quartier Palmier, Casablanca<br>
+                4 rue Bayt Lahm, quartier Palmier, Casablanca<br>
                 Tél: +212 610 023 555 | contact@ftourbabrayan.ma
               </p>
             </td>
@@ -118,7 +118,7 @@ function getPaymentInstructions(paymentMethod: PaymentMethod, deliveryMode: Deli
         </p>
         <p style="margin: 0; padding: 10px; background-color: #f3f4f6; border-radius: 4px; color: #374151;">
           Association Bab Rayan<br>
-          4 rue Bayt Lham, quartier Palmier<br>
+          4 rue Bayt Lahm, quartier Palmier<br>
           20000 Casablanca, Maroc
         </p>
         <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;">
@@ -195,7 +195,7 @@ function getDeliveryInstructions(deliveryMode: DeliveryMode, deliveryData?: {
             </p>
             <p style="margin: 0; padding: 10px; background-color: #ffffff; border-radius: 4px; color: #374151;">
               <strong>Ftour Bab Rayan - Point de retrait</strong><br>
-              4 rue Bayt Lham, quartier Palmier<br>
+              4 rue Bayt Lahm, quartier Palmier<br>
               20000 Casablanca, Maroc
             </p>
             <p style="margin: 10px 0 0 0; color: #374151;">
