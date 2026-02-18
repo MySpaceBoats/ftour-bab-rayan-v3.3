@@ -32,8 +32,8 @@ export default function Benevole() {
     city: "",
     dayId: preselectedDay || "",
     slots: {
-      preparation_ftour: false,  // Préparation ftour : 15h00 – 17h45
-      service_ftour: false,      // Service ftour : 18h00 – 19h30
+      preparation_ftour: false,  // Préparation ftour : 15h00 – 16h45
+      service_ftour: false,      // Service ftour : 17h00 – 19h15
     },
     acceptedTerms: false,
   });
@@ -220,8 +220,8 @@ export default function Benevole() {
     registering: lang === 'ar' ? 'جاري التسجيل...' : lang === 'en' ? 'Registering...' : 'Inscription en cours...',
     register: lang === 'ar' ? 'التسجيل كمتطوع' : lang === 'en' ? 'Register as volunteer' : 'S\'inscrire comme bénévole',
     slotsLabel: lang === 'ar' ? 'فترات المشاركة (يمكنك اختيار فترة واحدة أو أكثر) *' : lang === 'en' ? 'Participation slots (you can select one or more) *' : 'Créneaux de participation (vous pouvez cocher un ou plusieurs créneaux) *',
-    preparationSlot: lang === 'ar' ? 'تحضير الفطور (15:00 – 17:45)' : lang === 'en' ? 'Ftour preparation (15:00 – 17:45)' : 'Préparation ftour (15:00 – 17:45)',
-    serviceSlot: lang === 'ar' ? 'خدمة الفطور (18:00 – 19:30)' : lang === 'en' ? 'Ftour service (18:00 – 19:30)' : 'Service ftour (18:00 – 19:30)',
+    preparationSlot: lang === 'ar' ? 'تحضير الفطور (15:00 – 16:45)' : lang === 'en' ? 'Ftour preparation (15:00 – 16:45)' : 'Préparation ftour (15:00 – 16:45)',
+    serviceSlot: lang === 'ar' ? 'خدمة الفطور (17:00 – 19:15)' : lang === 'en' ? 'Ftour service (17:00 – 19:15)' : 'Service ftour (17:00 – 19:15)',
     slotsError: lang === 'ar' ? 'يرجى اختيار فترة واحدة على الأقل' : lang === 'en' ? 'Please select at least one time slot' : 'Veuillez sélectionner au moins un créneau',
     consignesTitle: lang === 'ar' ? 'تعليمات مهمة' : lang === 'en' ? 'Important instructions' : 'Consignes importantes',
     consigneNoBags: lang === 'ar' ? 'الحقائب غير مسموح بها.' : lang === 'en' ? 'Bags are not allowed.' : 'Les sacs ne sont pas autorisés.',
@@ -400,13 +400,13 @@ export default function Benevole() {
                           <div className="w-2 h-2 rounded-full bg-primary"></div>
                           <span className="text-sm font-medium">Préparation ftour</span>
                         </div>
-                        <p className="text-sm text-muted-foreground ml-4">15h00 – 17h45</p>
+                        <p className="text-sm text-muted-foreground ml-4">15h00 – 16h45</p>
 
                         <div className="flex items-center gap-2 mt-2">
                           <div className="w-2 h-2 rounded-full bg-primary"></div>
                           <span className="text-sm font-medium">Service ftour</span>
                         </div>
-                        <p className="text-sm text-muted-foreground ml-4">18h00 – 19h30</p>
+                        <p className="text-sm text-muted-foreground ml-4">17h00 – 19h15</p>
                       </div>
                     </div>
                   </CardContent>
