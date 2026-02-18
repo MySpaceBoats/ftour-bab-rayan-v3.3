@@ -452,20 +452,6 @@ export default function Benevole() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-primary/5 border-primary/20">
-                  <CardContent className="p-6 space-y-3">
-                    <div className="flex items-center gap-2 text-primary">
-                      <AlertCircle className="h-5 w-5" />
-                      <h3 className="font-semibold">{formTexts.important}</h3>
-                    </div>
-                    <ul className="text-sm text-muted-foreground space-y-2">
-                      <li>• {formTexts.dress}</li>
-                      <li>• {formTexts.punctuality}</li>
-                      <li>• {formTexts.instructions}</li>
-                    </ul>
-                  </CardContent>
-                </Card>
-
                 <Card className="bg-amber-50 border-amber-200">
                   <CardContent className="p-6 space-y-3">
                     <div className="flex items-center gap-2 text-amber-700">
@@ -473,6 +459,8 @@ export default function Benevole() {
                       <h3 className="font-semibold">{formTexts.consignesTitle}</h3>
                     </div>
                     <ul className="text-sm text-amber-900 space-y-2">
+                      <li>• {formTexts.dress}</li>
+                      <li>• {formTexts.punctuality}</li>
                       <li>• {formTexts.consigneNoBags}</li>
                       <li>• {formTexts.consigneVest}</li>
                       <li>• {formTexts.consigneNoPhotos}</li>
@@ -727,6 +715,8 @@ export default function Benevole() {
                           {formTexts.consignesTitle}
                         </h4>
                         <ul className="text-sm text-amber-900 space-y-1">
+                          <li>• {formTexts.dress}</li>
+                          <li>• {formTexts.punctuality}</li>
                           <li>• {formTexts.consigneNoBags}</li>
                           <li>• {formTexts.consigneVest}</li>
                           <li>• {formTexts.consigneNoPhotos}</li>
