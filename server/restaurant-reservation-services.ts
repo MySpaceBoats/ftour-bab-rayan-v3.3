@@ -13,6 +13,21 @@ function getClient() {
 }
 
 /**
+ * Explicit column list for restaurant_reservations SELECT queries.
+ * Using explicit columns instead of '*' to ensure all fields are returned
+ * regardless of PostgREST schema cache state.
+ */
+const RESERVATION_COLUMNS = [
+  'id', 'reference', 'type', 'seats_total', 'date',
+  'name', 'phone', 'email',
+  'company_name', 'group_name', 'group_type',
+  'status', 'payment_status', 'payment_amount', 'payment_provider', 'payment_reference',
+  'qr_token', 'qr_status',
+  'expires_at', 'processed_by', 'processed_at',
+  'notes', 'created_at', 'updated_at',
+].join(', ');
+
+/**
  * Map DB row to camelCase object expected by frontend.
  * Handles both snake_case (Supabase/PostgreSQL) and camelCase (Drizzle/MySQL) column names.
  */
@@ -93,7 +108,7 @@ export async function createRestaurantReservation(data: {
         payment_status: 'not_requested',
         qr_status: 'inactive',
       })
-      .select()
+      .select(RESERVATION_COLUMNS)
       .single();
 
     if (error) throw error;
@@ -112,7 +127,7 @@ export async function getRestaurantReservationByReference(reference: string) {
     const client = getClient();
     const { data, error } = await client
       .from('restaurant_reservations')
-      .select('*')
+      .select(RESERVATION_COLUMNS)
       .eq('reference', reference)
       .limit(1)
       .single();
@@ -136,7 +151,7 @@ export async function getRestaurantReservationByQrToken(qrToken: string) {
     const client = getClient();
     const { data, error } = await client
       .from('restaurant_reservations')
-      .select('*')
+      .select(RESERVATION_COLUMNS)
       .eq('qr_token', qrToken)
       .limit(1)
       .single();
@@ -160,7 +175,7 @@ export async function getRestaurantReservationById(id: number) {
     const client = getClient();
     const { data, error } = await client
       .from('restaurant_reservations')
-      .select('*')
+      .select(RESERVATION_COLUMNS)
       .eq('id', id)
       .single();
 
@@ -193,7 +208,7 @@ export async function listRestaurantReservations(filters?: {
 
     let query = client
       .from('restaurant_reservations')
-      .select('*')
+      .select(RESERVATION_COLUMNS)
       .order('id', { ascending: false })
       .range(queryOffset, queryOffset + queryLimit - 1);
 
