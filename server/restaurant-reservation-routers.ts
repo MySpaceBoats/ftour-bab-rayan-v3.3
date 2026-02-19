@@ -130,7 +130,7 @@ export const restaurantReservationsRouter = router({
           companyICE: z.string().optional(),
           companyNotes: z.string().optional(),
           date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide"),
-          participantsCount: z.number().int().min(10).max(120),
+          participantsCount: z.number().int().min(10).max(130),
           displayChoice: z.enum(['jardin', 'corpo']),
         })
       )

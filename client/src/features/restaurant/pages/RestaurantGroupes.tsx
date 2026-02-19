@@ -68,8 +68,8 @@ export default function RestaurantGroupes() {
 
     // Normaliser groupSize
     const groupSizeNum = parseInt(formData.groupSize, 10);
-    if (isNaN(groupSizeNum) || groupSizeNum < 5 || groupSizeNum > 120) {
-      toast.error('Le nombre de couverts doit être entre 5 et 120');
+    if (isNaN(groupSizeNum) || groupSizeNum < 5 || groupSizeNum > 130) {
+      toast.error('Le nombre de couverts doit être entre 5 et 130');
       return;
     }
 
@@ -188,7 +188,7 @@ export default function RestaurantGroupes() {
                   id="groupSize"
                   type="number"
                   min="5"
-                  max="120"
+                  max="130"
                   value={formData.groupSize}
                   onChange={(e) => handleInputChange('groupSize', e.target.value)}
                   placeholder="Ex: 45"

@@ -679,7 +679,7 @@ export const restaurantSlots = mysqlTable("restaurant_slots", {
   startAt: timestamp("startAt").notNull(),
   endAt: timestamp("endAt").notNull(),
   // Capacities
-  capJardinGlobal: int("capJardinGlobal").notNull().default(120),
+  capJardinGlobal: int("capJardinGlobal").notNull().default(130),
   capBrasserie: int("capBrasserie").notNull().default(50),
   capCorpo: int("capCorpo").notNull().default(50),
   capJardinLibre: int("capJardinLibre").notNull().default(20),
