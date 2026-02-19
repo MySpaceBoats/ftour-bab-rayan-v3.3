@@ -10,29 +10,29 @@ import {
 
 /**
  * Page publique de validation QR code - /checkin/{token}
- * 
+ *
  * Cette page est accessible sans authentification et permet de :
  * 1. Vérifier la validité du QR code (token existe, bonne date, pas déjà validé)
- * 2. Afficher les informations du bénévole de manière minimale
- * 3. Permettre la validation de présence par un organisateur
- * 
+ * 2. Valider automatiquement la présence du bénévole (sans clic manuel)
+ * 3. Afficher le résultat de la validation
+ *
  * Design mobile-first optimisé pour usage terrain
  */
 export default function Checkin() {
   const { token } = useParams<{ token: string }>();
-  const [isValidating, setIsValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<'success' | 'error' | null>(null);
-  
+  const [autoValidated, setAutoValidated] = useState(false);
+
   // Requête pour vérifier le token
   const { data, isLoading, error, refetch } = trpc.checkin.verify.useQuery(
     { token: token || '' },
-    { 
+    {
       enabled: !!token,
       retry: false,
       refetchOnWindowFocus: false,
     }
   );
-  
+
   // Mutation pour valider la présence
   const validateMutation = trpc.checkin.validate.useMutation({
     onSuccess: () => {
@@ -43,18 +43,15 @@ export default function Checkin() {
       setValidationResult('error');
     },
   });
-  
-  const handleValidate = async () => {
-    if (!token) return;
-    setIsValidating(true);
-    setValidationResult(null);
-    try {
-      await validateMutation.mutateAsync({ token });
-    } finally {
-      setIsValidating(false);
+
+  // Auto-validation : dès que le token est vérifié et valide, on valide automatiquement
+  useEffect(() => {
+    if (data?.status === 'valid' && token && !autoValidated && !validateMutation.isPending) {
+      setAutoValidated(true);
+      validateMutation.mutate({ token });
     }
-  };
-  
+  }, [data?.status, token, autoValidated]);
+
   // Scroll to top on mount
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -224,9 +221,7 @@ export default function Checkin() {
     );
   }
   
-  // Valid state - Ready to validate
-  const isValid = status === 'valid';
-  
+  // Valid state - Auto-validation in progress or completed
   return (
     <div className={`min-h-screen flex items-center justify-center p-4 ${
       validationResult === 'success' ? 'bg-green-50' : 'bg-green-50'
@@ -235,27 +230,36 @@ export default function Checkin() {
         validationResult === 'success' ? 'border-green-300' : 'border-green-200'
       }`}>
         <CardContent className="pt-8 pb-8 text-center">
-          {/* Success icon */}
+          {/* Icon based on state */}
           <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-4 ${
-            validationResult === 'success' ? 'bg-green-200' : 'bg-green-100'
+            validationResult === 'success' ? 'bg-green-200' :
+            validationResult === 'error' ? 'bg-red-100' : 'bg-green-100'
           }`}>
-            <CheckCircle className={`h-14 w-14 ${
-              validationResult === 'success' ? 'text-green-700' : 'text-green-600'
-            }`} />
+            {validationResult === 'error' ? (
+              <XCircle className="h-14 w-14 text-red-600" />
+            ) : validationResult === 'success' ? (
+              <CheckCircle className="h-14 w-14 text-green-700" />
+            ) : (
+              <Loader2 className="h-14 w-14 text-green-600 animate-spin" />
+            )}
           </div>
-          
+
           <h1 className={`text-2xl font-bold mb-2 ${
-            validationResult === 'success' ? 'text-green-800' : 'text-green-700'
+            validationResult === 'success' ? 'text-green-800' :
+            validationResult === 'error' ? 'text-red-700' : 'text-green-700'
           }`}>
-            {validationResult === 'success' ? 'Présence Validée !' : 'QR Code Valide'}
+            {validationResult === 'success' ? 'Présence Validée !' :
+             validationResult === 'error' ? 'Erreur de validation' : 'Validation en cours...'}
           </h1>
-          
-          <p className="text-green-600 mb-6">
-            {validationResult === 'success' 
+
+          <p className={`mb-6 ${validationResult === 'error' ? 'text-red-600' : 'text-green-600'}`}>
+            {validationResult === 'success'
               ? 'La présence a été enregistrée avec succès.'
-              : 'Ce bénévole peut participer aujourd\'hui.'}
+              : validationResult === 'error'
+              ? 'Erreur lors de la validation. Veuillez réessayer.'
+              : 'Validation automatique de la présence...'}
           </p>
-          
+
           {/* Volunteer info card */}
           <div className="bg-white rounded-lg p-4 text-left space-y-3 border border-green-200 mb-6">
             <div className="flex items-center gap-3">
@@ -265,7 +269,7 @@ export default function Checkin() {
                 <p className="font-semibold text-lg">{volunteer.firstName} {volunteer.lastName}</p>
               </div>
             </div>
-            
+
             {day && (
               <>
                 <div className="flex items-center gap-3">
@@ -281,7 +285,7 @@ export default function Checkin() {
                     </p>
                   </div>
                 </div>
-                
+
                 {day.iftarTime && (
                   <div className="flex items-center gap-3">
                     <Clock className="h-5 w-5 text-green-600" />
@@ -291,7 +295,7 @@ export default function Checkin() {
                     </div>
                   </div>
                 )}
-                
+
                 {day.location && (
                   <div className="flex items-center gap-3">
                     <MapPin className="h-5 w-5 text-green-600" />
@@ -304,36 +308,14 @@ export default function Checkin() {
               </>
             )}
           </div>
-          
-          {/* Validate button */}
-          {validationResult !== 'success' && isValid && (
-            <Button 
-              onClick={handleValidate}
-              disabled={isValidating}
-              size="lg"
-              className="w-full bg-green-600 hover:bg-green-700 text-white text-lg py-6"
-            >
-              {isValidating ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                  Validation...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-5 w-5 mr-2" />
-                  Valider la présence
-                </>
-              )}
-            </Button>
-          )}
-          
+
           {validationResult === 'success' && (
             <div className="space-y-3">
               <div className="bg-green-100 rounded-lg p-3 text-green-700 text-sm">
                 <CheckCircle className="h-4 w-4 inline mr-2" />
                 Présence enregistrée à {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
               </div>
-              <Button 
+              <Button
                 onClick={() => window.location.reload()}
                 variant="outline"
                 className="w-full"
@@ -343,11 +325,21 @@ export default function Checkin() {
               </Button>
             </div>
           )}
-          
+
           {validationResult === 'error' && (
-            <div className="bg-red-100 rounded-lg p-3 text-red-700 text-sm mb-4">
-              <XCircle className="h-4 w-4 inline mr-2" />
-              Erreur lors de la validation. Veuillez réessayer.
+            <div className="space-y-3">
+              <Button
+                onClick={() => {
+                  setAutoValidated(false);
+                  setValidationResult(null);
+                  refetch();
+                }}
+                size="lg"
+                className="w-full bg-green-600 hover:bg-green-700 text-white"
+              >
+                <RefreshCw className="h-5 w-5 mr-2" />
+                Réessayer la validation
+              </Button>
             </div>
           )}
         </CardContent>
