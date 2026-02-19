@@ -303,6 +303,25 @@ export interface VolunteerData {
   acceptedTerms: boolean;
 }
 
+export async function checkVolunteerEmailExistsForDay(email: string, dayId: number): Promise<boolean> {
+  const client = getSupabaseAdminClient();
+  if (!client) return false;
+
+  const { data, error } = await client
+    .from('volunteers')
+    .select('id')
+    .eq('email', email.toLowerCase().trim())
+    .eq('day_id', dayId)
+    .limit(1);
+
+  if (error) {
+    console.error('[Volunteer] Email duplicate check error:', error);
+    return false;
+  }
+
+  return (data?.length ?? 0) > 0;
+}
+
 export async function createVolunteerShiftSupabase(data: VolunteerData) {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error('Supabase not configured');
@@ -316,7 +335,7 @@ export async function createVolunteerShiftSupabase(data: VolunteerData) {
   const insertPayload: Record<string, any> = {
     first_name: data.firstName,
     last_name: data.lastName,
-    email: data.email,
+    email: data.email.toLowerCase().trim(),
     phone: data.phone,
     city: data.city,
     day_id: data.dayId,
