@@ -226,6 +226,15 @@ const volunteersRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ce jour est complet' });
       }
 
+      // Check duplicate email for same day
+      const emailExists = await supabaseServices.checkVolunteerEmailExistsSupabase(input.email, input.dayId);
+      if (emailExists) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Cette adresse email est déjà inscrite pour ce jour. Si vous souhaitez modifier votre inscription, veuillez nous contacter.',
+        });
+      }
+
       // Create volunteer with QR token
       const volunteer = await supabaseServices.createVolunteerShiftSupabase({
         firstName: input.firstName,

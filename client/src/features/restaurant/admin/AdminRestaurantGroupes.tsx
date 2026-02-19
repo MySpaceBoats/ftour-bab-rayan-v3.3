@@ -22,10 +22,26 @@ export default function AdminRestaurantGroupes() {
   const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
   const hasAccess = user?.role && allowedRoles.includes(user.role);
 
-  const { data: reservations, isLoading, isError, error, refetch } = trpc.restaurantReservations.adminListGroupes.useQuery(undefined, {
+  const { data: groupes, isLoading: loadingG, isError: errorG, error: errorGroupes, refetch: refetchG } = trpc.restaurantReservations.adminListGroupes.useQuery(undefined, {
     enabled: !!hasAccess,
     retry: 1,
   });
+
+  const { data: entreprises, isLoading: loadingE, isError: errorE, error: errorEntreprises, refetch: refetchE } = trpc.restaurantReservations.adminListEntreprises.useQuery(undefined, {
+    enabled: !!hasAccess,
+    retry: 1,
+  });
+
+  const isLoading = loadingG || loadingE;
+  const isError = errorG || errorE;
+  const error = errorGroupes || errorEntreprises;
+
+  const reservations = [
+    ...(groupes || []).map((r: any) => ({ ...r, type: r.type || 'groupe' })),
+    ...(entreprises || []).map((r: any) => ({ ...r, type: r.type || 'entreprise' })),
+  ].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const refetch = () => { refetchG(); refetchE(); };
 
   const validateMutation = trpc.restaurantReservations.validate.useMutation({
     onSuccess: () => {
@@ -82,6 +98,7 @@ export default function AdminRestaurantGroupes() {
     const matchesSearch = searchQuery === "" ||
       r.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.groupName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.companyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.reference?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || r.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -190,7 +207,8 @@ export default function AdminRestaurantGroupes() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Référence</TableHead>
-                    <TableHead>Groupe</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Groupe / Entreprise</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead>Places</TableHead>
                     <TableHead>Date ftour</TableHead>
@@ -202,16 +220,21 @@ export default function AdminRestaurantGroupes() {
                 <TableBody>
                   {filteredReservations?.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                         Aucune réservation trouvée
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredReservations?.map((r: any) => (
-                      <TableRow key={r.id}>
+                      <TableRow key={`${r.type}-${r.id}`}>
                         <TableCell className="font-mono text-sm">{r.reference}</TableCell>
                         <TableCell>
-                          <div className="font-medium">{r.groupName || '-'}</div>
+                          <Badge variant="outline" className={r.type === 'groupe' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-purple-50 text-purple-700 border-purple-200'}>
+                            {r.type === 'groupe' ? 'Groupe' : 'Entreprise'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">{r.groupName || r.companyName || '-'}</div>
                         </TableCell>
                         <TableCell>
                           <div>{r.name}</div>

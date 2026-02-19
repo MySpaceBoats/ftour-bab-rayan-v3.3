@@ -280,7 +280,7 @@ export default function AdminRestaurantReservations() {
                       </div>
                     </div>
                     {(res.groupName || res.companyName) && (
-                      <p className="font-semibold text-sm">{res.groupName || res.companyName}</p>
+                      <p className="text-sm font-medium">{res.groupName || res.companyName}</p>
                     )}
                     <p className="text-sm text-muted-foreground">{res.name} {res.email ? `• ${res.email}` : ''}</p>
                     <p className="text-sm">
