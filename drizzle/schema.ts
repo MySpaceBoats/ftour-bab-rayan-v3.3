@@ -743,6 +743,7 @@ export const restaurantReservations = mysqlTable("restaurant_reservations", {
   paymentAmount: decimal("paymentAmount", { precision: 10, scale: 2 }),
   paymentProvider: varchar("paymentProvider", { length: 50 }),
   paymentReference: varchar("paymentReference", { length: 100 }),
+  depositPercentage: int("depositPercentage").default(0),
   // QR
   qrToken: varchar("qrToken", { length: 64 }).unique(),
   qrStatus: restaurantQrStatusEnum.default("inactive"),

@@ -41,6 +41,7 @@ function mapReservation(r: any) {
     paymentAmount: r.payment_amount ?? r.paymentAmount ?? null,
     paymentProvider: r.payment_provider ?? r.paymentProvider ?? null,
     paymentReference: r.payment_reference ?? r.paymentReference ?? null,
+    depositPercentage: r.deposit_percentage ?? r.depositPercentage ?? 0,
     qrToken: r.qr_token ?? r.qrToken ?? null,
     qrStatus: r.qr_status ?? r.qrStatus ?? 'inactive',
     expiresAt: rawExpiresAt ? new Date(rawExpiresAt) : null,
@@ -357,6 +358,59 @@ export async function markRestaurantReservationAsNoShow(id: number) {
     return await getRestaurantReservationById(id);
   } catch (error) {
     console.error("[markRestaurantReservationAsNoShow] Error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Mettre à jour le pourcentage d'acompte reçu et ajuster le statut automatiquement.
+ * - 100% → paid_confirmed (QR activé)
+ * - 1-99% → validated_pending_payment
+ * - 0% → validated_pending_payment (aucun paiement)
+ */
+export async function updateDepositPercentage(id: number, percentage: number) {
+  try {
+    const client = getClient();
+
+    // Determine new status based on percentage
+    let newStatus: string;
+    let newPaymentStatus: string;
+    let newQrStatus: string | undefined;
+
+    if (percentage >= 100) {
+      newStatus = 'paid_confirmed';
+      newPaymentStatus = 'paid';
+      newQrStatus = 'active';
+    } else if (percentage > 0) {
+      newStatus = 'validated_pending_payment';
+      newPaymentStatus = 'pending_payment';
+      newQrStatus = undefined; // don't change
+    } else {
+      newStatus = 'validated_pending_payment';
+      newPaymentStatus = 'pending_payment';
+      newQrStatus = undefined;
+    }
+
+    const updateData: Record<string, any> = {
+      deposit_percentage: percentage,
+      status: newStatus,
+      payment_status: newPaymentStatus,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (newQrStatus) {
+      updateData.qr_status = newQrStatus;
+    }
+
+    const { error } = await client
+      .from('restaurant_reservations')
+      .update(updateData)
+      .eq('id', id);
+
+    if (error) throw error;
+    return await getRestaurantReservationById(id);
+  } catch (error) {
+    console.error("[updateDepositPercentage] Error:", error);
     throw error;
   }
 }
