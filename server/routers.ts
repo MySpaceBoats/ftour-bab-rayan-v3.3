@@ -205,6 +205,18 @@ const volunteersRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Veuillez sélectionner au moins un créneau de participation' });
       }
 
+      // Normalize email
+      const normalizedEmail = input.email.toLowerCase().trim();
+
+      // Check for duplicate email on the same day
+      const emailExists = await supabaseServices.checkVolunteerEmailExistsForDay(normalizedEmail, input.dayId);
+      if (emailExists) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Cette adresse email est déjà inscrite pour ce jour. Si vous souhaitez modifier votre inscription, veuillez nous contacter.',
+        });
+      }
+
       // Check day availability
       const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
       if (!day) {
@@ -227,7 +239,7 @@ const volunteersRouter = router({
       const volunteer = await supabaseServices.createVolunteerShiftSupabase({
         firstName: input.firstName,
         lastName: input.lastName,
-        email: input.email,
+        email: normalizedEmail,
         phone: input.phone,
         city: input.city,
         dayId: input.dayId,
@@ -253,7 +265,7 @@ const volunteersRouter = router({
         const emailData = generateVolunteerConfirmationEmail({
           firstName: input.firstName,
           lastName: input.lastName,
-          email: input.email,
+          email: normalizedEmail,
           dayNumber: day.dayNumber,
           dayDate: new Date(day.date).toLocaleDateString('fr-FR', {
             weekday: 'long',
@@ -268,11 +280,11 @@ const volunteersRouter = router({
         });
 
         await sendEmail({
-          to: input.email,
+          to: normalizedEmail,
           subject: emailData.subject,
           html: emailData.html,
         });
-        console.log('[Volunteer Registration] Email sent successfully to:', input.email);
+        console.log('[Volunteer Registration] Email sent successfully to:', normalizedEmail);
       } catch (error) {
         console.error('[Volunteer Registration] Email send failed:', error);
       }
@@ -366,6 +378,16 @@ const volunteersRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Format de fichier non supporté. Utilisez .xlsx, .xls ou .csv' });
       }
 
+      // Normalize email and check for duplicates
+      const normalizedGroupEmail = input.responsibleEmail.toLowerCase().trim();
+      const groupEmailExists = await supabaseServices.checkVolunteerEmailExistsForDay(normalizedGroupEmail, input.dayId);
+      if (groupEmailExists) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Cette adresse email est déjà inscrite pour ce jour. Si vous souhaitez modifier votre inscription, veuillez nous contacter.',
+        });
+      }
+
       // Get day info for the email
       const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
 
@@ -373,7 +395,7 @@ const volunteersRouter = router({
       const volunteer = await supabaseServices.createVolunteerShiftSupabase({
         firstName: `[Groupe] ${input.groupName}`,
         lastName: input.responsibleName,
-        email: input.responsibleEmail,
+        email: normalizedGroupEmail,
         phone: input.responsiblePhone,
         dayId: input.dayId,
         volunteerSlots: input.volunteerSlots,

@@ -303,23 +303,23 @@ export interface VolunteerData {
   acceptedTerms: boolean;
 }
 
-export async function checkVolunteerEmailExistsSupabase(email: string, dayId: number): Promise<boolean> {
+export async function checkVolunteerEmailExistsForDay(email: string, dayId: number): Promise<boolean> {
   const client = getSupabaseAdminClient();
   if (!client) return false;
 
-  const { count, error } = await client
+  const { data, error } = await client
     .from('volunteers')
-    .select('id', { count: 'exact', head: true })
-    .ilike('email', email.toLowerCase().trim())
+    .select('id')
+    .eq('email', email.toLowerCase().trim())
     .eq('day_id', dayId)
-    .not('status', 'eq', 'cancelled');
+    .limit(1);
 
   if (error) {
-    console.error('[Volunteer] Email duplicate check failed:', error);
+    console.error('[Volunteer] Email duplicate check error:', error);
     return false;
   }
 
-  return (count ?? 0) > 0;
+  return (data?.length ?? 0) > 0;
 }
 
 export async function createVolunteerShiftSupabase(data: VolunteerData) {

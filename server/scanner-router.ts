@@ -88,35 +88,53 @@ export const scannerRouter = router({
    */
   identify: scannerProcedure
     .input(z.object({ rawCode: z.string().min(1) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const token = extractTokenFromUrl(input.rawCode);
       let qrType = detectQrType(token);
       const supabase = getSupabaseAdminClient();
 
-      // ---- VOLUNTEER ----
+      // ---- VOLUNTEER (auto-validation) ----
       if (qrType === 'volunteer') {
         const volunteer = await supabaseServices.getVolunteerByTokenSupabase(token);
         if (!volunteer) {
           return { type: 'unknown' as QrType, typeLabel: 'Inconnu', token, found: false, error: 'Token bénévole introuvable' };
         }
+
+        // Auto-validate: immediately confirm the volunteer on scan
+        const validationResult = await supabaseServices.scanAndValidateTokenSupabase(
+          token,
+          ctx.user?.id
+        );
+
+        const vol = validationResult.volunteer;
+        const fullName = vol ? `${vol.firstName} ${vol.lastName}` : `${volunteer.firstName} ${volunteer.lastName}`;
+
         return {
           type: 'volunteer' as QrType,
           typeLabel: QR_TYPE_LABELS.volunteer,
           token,
           found: true,
+          autoValidated: true,
+          validationState: validationResult.state || (validationResult.success ? 'confirmed' : 'error'),
+          validationMessage: validationResult.success
+            ? (validationResult.state === 'already_confirmed'
+                ? `Déjà confirmé — ${fullName}`
+                : `Bénévole confirmé — ${fullName}`)
+            : (validationResult.error || 'Erreur de validation'),
+          validationSuccess: validationResult.success,
           entity: {
             id: volunteer.id,
-            name: `${volunteer.firstName} ${volunteer.lastName}`,
-            email: volunteer.email,
-            phone: volunteer.phone,
-            status: volunteer.status,
-            qrStatus: volunteer.qrStatus,
+            name: fullName,
+            email: vol?.email || volunteer.email,
+            phone: vol?.phone || volunteer.phone,
+            status: vol?.status || volunteer.status,
+            qrStatus: vol?.qrStatus || volunteer.qrStatus,
             dayNumber: volunteer.day?.dayNumber,
             dayDate: volunteer.day?.date,
             location: volunteer.day?.location,
             iftarTime: volunteer.day?.iftarTime,
-            alreadyValidated: volunteer.qrStatus === 'validated',
-            scannedAt: volunteer.scannedAt,
+            alreadyValidated: validationResult.state === 'already_confirmed' || volunteer.qrStatus === 'validated',
+            scannedAt: vol?.scannedAt || volunteer.scannedAt,
           },
         };
       }

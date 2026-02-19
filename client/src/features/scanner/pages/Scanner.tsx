@@ -48,10 +48,30 @@ export default function Scanner() {
 
   // ============ MUTATIONS ============
   const identifyMutation = trpc.scanner.identify.useMutation({
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       setIdentifiedResult(data);
       if (!data.found) {
         toast.error(data.error || 'QR code non reconnu');
+      } else if (data.autoValidated) {
+        // Volunteer auto-validated: show validation result directly
+        if (data.validationSuccess) {
+          setValidationDone({
+            success: true,
+            message: data.validationMessage,
+            state: data.validationState,
+          });
+          if (data.validationState === 'already_confirmed') {
+            toast.warning(data.validationMessage);
+          } else {
+            toast.success(data.validationMessage);
+          }
+        } else {
+          setValidationDone({
+            success: false,
+            message: data.validationMessage,
+          });
+          toast.error(data.validationMessage);
+        }
       } else {
         toast.success(`${data.typeLabel} détecté`);
       }
@@ -410,7 +430,7 @@ export default function Scanner() {
 
                   {/* Action buttons */}
                   <div className="flex gap-2 pt-2">
-                    {!validationDone && !identifiedResult.entity.alreadyValidated && (
+                    {!validationDone && !identifiedResult.entity.alreadyValidated && !identifiedResult.autoValidated && (
                       <Button onClick={handleValidate} disabled={validateMutation.isPending} className="flex-1" size="lg">
                         {validateMutation.isPending ? (
                           <><Loader2 className="h-5 w-5 mr-2 animate-spin" />Validation...</>
@@ -419,7 +439,7 @@ export default function Scanner() {
                         )}
                       </Button>
                     )}
-                    <Button onClick={handleNewScan} variant="outline" className={validationDone || identifiedResult.entity.alreadyValidated ? 'flex-1' : ''} size="lg">
+                    <Button onClick={handleNewScan} variant="outline" className={validationDone || identifiedResult.entity.alreadyValidated || identifiedResult.autoValidated ? 'flex-1' : ''} size="lg">
                       <RefreshCw className="h-4 w-4 mr-2" />Nouveau scan
                     </Button>
                   </div>
