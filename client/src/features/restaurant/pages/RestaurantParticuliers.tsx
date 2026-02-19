@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { MapPin } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { trpc } from '@/lib/trpc';
 
 export default function RestaurantParticuliers() {
@@ -18,6 +19,7 @@ export default function RestaurantParticuliers() {
   const [formData, setFormData] = useState({
     date: '',
     seats: 5,
+    salle: '' as '' | 'jardin' | 'brasserie',
     fullName: '',
     phone: '',
     email: '',
@@ -40,7 +42,7 @@ export default function RestaurantParticuliers() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.date || !formData.fullName || !formData.phone || !formData.email) {
+    if (!formData.date || !formData.salle || !formData.fullName || !formData.phone || !formData.email) {
       toast.error('Merci de compléter tous les champs requis');
       return;
     }
@@ -63,6 +65,7 @@ export default function RestaurantParticuliers() {
         phone: formData.phone,
         date: formData.date,
         participantsCount: formData.seats,
+        displayChoice: formData.salle as 'jardin' | 'brasserie',
       });
       
       if (result.success && result.reservation) {
@@ -176,6 +179,23 @@ export default function RestaurantParticuliers() {
                   onChange={(e) => setFormData((p) => ({ ...p, seats: Math.max(5, Math.min(12, parseInt(e.target.value) || 5)) }))}
                   required
                 />
+              </div>
+
+              {/* Salle */}
+              <div>
+                <Label htmlFor="salle">Salle *</Label>
+                <Select
+                  value={formData.salle}
+                  onValueChange={(value) => setFormData((p) => ({ ...p, salle: value as 'jardin' | 'brasserie' }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choisissez une salle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="jardin">Jardin</SelectItem>
+                    <SelectItem value="brasserie">Brasserie</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Nom complet */}

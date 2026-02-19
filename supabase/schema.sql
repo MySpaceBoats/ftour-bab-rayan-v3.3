@@ -384,6 +384,8 @@ CREATE TABLE IF NOT EXISTS restaurant_reservations (
   -- Group (groupe)
   group_name VARCHAR(255),
   group_type VARCHAR(50),
+  -- Room choice
+  display_choice VARCHAR(20),
   -- Status
   status VARCHAR(30) NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted', 'pending_confirmation', 'pending_validation', 'validated_pending_payment', 'confirmed', 'paid_confirmed', 'rejected', 'refused', 'cancelled', 'completed', 'no_show', 'checked_in')),
   payment_status VARCHAR(20) NOT NULL DEFAULT 'not_applicable' CHECK (payment_status IN ('not_applicable', 'not_requested', 'pending', 'pending_payment', 'paid', 'failed', 'refunded')),

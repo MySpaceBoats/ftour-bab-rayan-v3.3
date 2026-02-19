@@ -757,6 +757,7 @@ export interface ParticulierReservationRequestEmailData {
   date: string;
   participantsCount: number;
   reference: string;
+  displayChoice?: string;
 }
 
 export function generateParticulierReservationRequestEmail(data: ParticulierReservationRequestEmailData): { subject: string; html: string } {
@@ -780,6 +781,7 @@ export function generateParticulierReservationRequestEmail(data: ParticulierRese
           <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de votre demande</h3>
           <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Nombre de places :</strong> ${data.participantsCount}</p>
+          ${data.displayChoice ? `<p style="margin: 5px 0; color: #374151;"><strong>Salle :</strong> ${data.displayChoice}</p>` : ''}
           <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;"><strong>Référence :</strong> ${data.reference}</p>
         </td>
       </tr>
@@ -968,6 +970,7 @@ export interface NewBookingNotificationData {
   contactPhone: string;
   reference: string;
   companyName?: string;
+  displayChoice?: string;
 }
 
 export function generateNewBookingNotificationEmail(data: NewBookingNotificationData): { subject: string; html: string } {
@@ -989,6 +992,7 @@ export function generateNewBookingNotificationEmail(data: NewBookingNotification
           <p style="margin: 5px 0; color: #374151;"><strong>Type :</strong> ${typeLabel}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Participants :</strong> ${data.participantsCount}</p>
+          ${data.displayChoice ? `<p style="margin: 5px 0; color: #374151;"><strong>Salle :</strong> ${data.displayChoice}</p>` : ''}
           ${data.companyName ? `<p style="margin: 5px 0; color: #374151;"><strong>Entreprise :</strong> ${data.companyName}</p>` : ''}
           <p style="margin: 5px 0; color: #374151;"><strong>Contact :</strong> ${data.contactName}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Email :</strong> ${data.contactEmail}</p>

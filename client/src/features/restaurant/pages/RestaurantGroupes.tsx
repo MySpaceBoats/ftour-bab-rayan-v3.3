@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { MapPin } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { trpc } from '@/lib/trpc';
 
 export default function RestaurantGroupes() {
@@ -22,6 +23,7 @@ export default function RestaurantGroupes() {
   const [formData, setFormData] = useState({
     date: '',
     groupSize: '',
+    salle: '' as '' | 'jardin' | 'brasserie',
     organizationName: '',
     contactName: '',
     phone: '',
@@ -54,7 +56,7 @@ export default function RestaurantGroupes() {
     e.preventDefault();
 
     // Validation
-    if (!formData.date || !formData.contactName || !formData.phone || !formData.email) {
+    if (!formData.date || !formData.salle || !formData.contactName || !formData.phone || !formData.email) {
       toast.error('Veuillez remplir tous les champs obligatoires');
       return;
     }
@@ -80,6 +82,7 @@ export default function RestaurantGroupes() {
         email: formData.email,
         phone: formData.phone,
         groupName: formData.organizationName || '',
+        displayChoice: formData.salle as 'jardin' | 'brasserie',
       });
 
       if (result.success && result.reservation) {
@@ -191,6 +194,23 @@ export default function RestaurantGroupes() {
                   placeholder="Ex: 45"
                   required
                 />
+              </div>
+
+              {/* Salle */}
+              <div>
+                <Label htmlFor="salle">Salle *</Label>
+                <Select
+                  value={formData.salle}
+                  onValueChange={(value) => handleInputChange('salle', value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choisissez une salle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="jardin">Jardin</SelectItem>
+                    <SelectItem value="brasserie">Brasserie</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Nom du groupe (optionnel) */}
