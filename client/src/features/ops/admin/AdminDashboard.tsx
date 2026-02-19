@@ -199,7 +199,7 @@ const sections: SectionDefinition[] = [
     ],
   },
   {
-    title: "Engagement",
+    title: "Task Force",
     modules: [
       {
         label: "Bénévoles",
@@ -223,7 +223,7 @@ const sections: SectionDefinition[] = [
     ],
   },
   {
-    title: "Ops",
+    title: "Goodies",
     modules: [
       {
         label: "Calendrier",
