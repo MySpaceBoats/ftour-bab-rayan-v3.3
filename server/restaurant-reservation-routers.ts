@@ -33,6 +33,7 @@ export const restaurantReservationsRouter = router({
           phone: z.string().min(1, "Téléphone requis"),
           date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide"),
           participantsCount: z.number().int().min(5).max(12),
+          displayChoice: z.enum(['jardin', 'brasserie']),
         })
       )
       .mutation(async ({ input }) => {
@@ -49,6 +50,7 @@ export const restaurantReservationsRouter = router({
             date: new Date(input.date),
             seatsTotal: input.participantsCount,
             qrToken,
+            displayChoice: input.displayChoice,
           });
 
           await sendEmail({
@@ -59,6 +61,7 @@ export const restaurantReservationsRouter = router({
               date: input.date,
               participantsCount: input.participantsCount,
               reference,
+              displayChoice: input.displayChoice,
             }).subject,
             html: generateParticulierReservationRequestEmail({
               firstName: input.firstName,
@@ -66,6 +69,7 @@ export const restaurantReservationsRouter = router({
               date: input.date,
               participantsCount: input.participantsCount,
               reference,
+              displayChoice: input.displayChoice,
             }).html,
             cc: ['heartfulness@myspace.boats'],
           });
@@ -80,6 +84,7 @@ export const restaurantReservationsRouter = router({
               contactEmail: input.email,
               contactPhone: input.phone,
               reference,
+              displayChoice: input.displayChoice,
             }).subject,
             html: generateNewBookingNotificationEmail({
               type: 'particulier',
@@ -89,6 +94,7 @@ export const restaurantReservationsRouter = router({
               contactEmail: input.email,
               contactPhone: input.phone,
               reference,
+              displayChoice: input.displayChoice,
             }).html,
           });
 
@@ -125,6 +131,7 @@ export const restaurantReservationsRouter = router({
           companyNotes: z.string().optional(),
           date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide"),
           participantsCount: z.number().int().min(10).max(120),
+          displayChoice: z.enum(['jardin', 'corpo']),
         })
       )
       .mutation(async ({ input }) => {
@@ -151,6 +158,7 @@ export const restaurantReservationsRouter = router({
             qrToken,
             companyName: input.companyName,
             notes: input.companyNotes,
+            displayChoice: input.displayChoice,
           });
 
           const customerEmailResult = await sendEmail({
@@ -162,6 +170,7 @@ export const restaurantReservationsRouter = router({
               <p>Nous avons bien reçu la demande de réservation de <strong>${input.companyName}</strong> pour le ftour solidaire.</p>
               <p><strong>Date souhaitée :</strong> ${input.date}</p>
               <p><strong>Nombre de participants :</strong> ${input.participantsCount}</p>
+              <p><strong>Salle :</strong> ${input.displayChoice}</p>
               <p>Notre équipe reviendra vers vous sous 48 heures avec une proposition de confirmation et les modalités d'organisation.</p>
               <p><strong>Référence :</strong> ${reference}</p>
               <p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>
@@ -181,6 +190,7 @@ export const restaurantReservationsRouter = router({
               contactPhone: input.phone,
               reference,
               companyName: input.companyName,
+              displayChoice: input.displayChoice,
             }).html,
           });
 
@@ -230,6 +240,7 @@ export const restaurantReservationsRouter = router({
           groupType: z.string().optional(),
           date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide"),
           participantsCount: z.number().int().min(5),
+          displayChoice: z.enum(['jardin', 'brasserie']),
         })
       )
       .mutation(async ({ input }) => {
@@ -248,6 +259,7 @@ export const restaurantReservationsRouter = router({
             qrToken,
             groupName: input.groupName,
             groupType: input.groupType,
+            displayChoice: input.displayChoice,
           });
 
           await sendEmail({
@@ -258,6 +270,7 @@ export const restaurantReservationsRouter = router({
               <p>Bonjour <strong>${input.contactName}</strong>,</p>
               <p>Votre demande de réservation groupe pour le <strong>${input.date}</strong> a bien été enregistrée.</p>
               <p><strong>Nombre estimé de participants :</strong> ${input.participantsCount}</p>
+              <p><strong>Salle :</strong> ${input.displayChoice}</p>
               <p>Nous vous confirmerons les disponibilités sous 48 heures.</p>
               <p><strong>Référence :</strong> ${reference}</p>
               <p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>
@@ -276,6 +289,7 @@ export const restaurantReservationsRouter = router({
               contactEmail: input.email,
               contactPhone: input.phone,
               reference,
+              displayChoice: input.displayChoice,
             }).html,
           });
 

@@ -283,7 +283,10 @@ export default function AdminRestaurantReservations() {
                       <p className="text-sm font-medium">{res.groupName || res.companyName}</p>
                     )}
                     <p className="text-sm text-muted-foreground">{res.name} {res.email ? `• ${res.email}` : ''}</p>
-                    <p className="text-sm text-muted-foreground">{res.seatsTotal} places • Ftour {formatDate(res.date)} • Créé {formatDate(res.createdAt)}</p>
+                    <p className="text-sm">
+                      <span className="font-medium">{res.seatsTotal || 0} places</span>
+                      <span className="text-muted-foreground"> • Ftour {formatDate(res.date)} • Créé {formatDate(res.createdAt)}</span>
+                    </p>
                   </button>
                 ))}
               </div>

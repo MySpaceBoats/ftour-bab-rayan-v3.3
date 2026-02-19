@@ -735,6 +735,8 @@ export const restaurantReservations = mysqlTable("restaurant_reservations", {
   // Group fields (groupe)
   groupName: varchar("groupName", { length: 255 }),
   groupType: varchar("groupType", { length: 50 }), // asso, famille, tourisme, autre
+  // Room choice
+  displayChoice: varchar("displayChoice", { length: 20 }),
   // Status
   status: restaurantReservationStatusEnum.default("pending_validation").notNull(),
   paymentStatus: restaurantPaymentStatusEnum.default("not_requested").notNull(),
