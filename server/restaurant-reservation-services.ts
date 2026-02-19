@@ -29,36 +29,39 @@ const RESERVATION_COLUMNS = [
 
 /**
  * Map DB row to camelCase object expected by frontend.
- * Handles both snake_case (Supabase/PostgreSQL) and camelCase (Drizzle/MySQL) column names.
+ * Handles ALL possible column naming conventions:
+ *   - snake_case: seats_total, group_name (Supabase DDL)
+ *   - camelCase: seatsTotal, groupName (Drizzle MySQL)
+ *   - lowercase: seatstotal, groupname (PostgreSQL lowercases unquoted identifiers)
  */
 function mapReservation(r: any) {
   const rawDate = r.date;
-  const rawCreatedAt = r.created_at ?? r.createdAt;
-  const rawUpdatedAt = r.updated_at ?? r.updatedAt;
-  const rawExpiresAt = r.expires_at ?? r.expiresAt;
-  const rawProcessedAt = r.processed_at ?? r.processedAt;
+  const rawCreatedAt = r.created_at ?? r.createdAt ?? r.createdat;
+  const rawUpdatedAt = r.updated_at ?? r.updatedAt ?? r.updatedat;
+  const rawExpiresAt = r.expires_at ?? r.expiresAt ?? r.expiresat;
+  const rawProcessedAt = r.processed_at ?? r.processedAt ?? r.processedat;
 
   return {
     id: r.id,
     reference: r.reference,
     type: r.type,
-    seatsTotal: r.seats_total ?? r.seatsTotal ?? 0,
+    seatsTotal: r.seats_total ?? r.seatsTotal ?? r.seatstotal ?? 0,
     date: rawDate ? new Date(rawDate) : null,
     name: r.name,
     phone: r.phone,
     email: r.email,
-    companyName: r.company_name ?? r.companyName ?? null,
-    groupName: r.group_name ?? r.groupName ?? null,
-    groupType: r.group_type ?? r.groupType ?? null,
+    companyName: r.company_name ?? r.companyName ?? r.companyname ?? null,
+    groupName: r.group_name ?? r.groupName ?? r.groupname ?? null,
+    groupType: r.group_type ?? r.groupType ?? r.grouptype ?? null,
     status: r.status,
-    paymentStatus: r.payment_status ?? r.paymentStatus ?? 'not_requested',
-    paymentAmount: r.payment_amount ?? r.paymentAmount ?? null,
-    paymentProvider: r.payment_provider ?? r.paymentProvider ?? null,
-    paymentReference: r.payment_reference ?? r.paymentReference ?? null,
-    qrToken: r.qr_token ?? r.qrToken ?? null,
-    qrStatus: r.qr_status ?? r.qrStatus ?? 'inactive',
+    paymentStatus: r.payment_status ?? r.paymentStatus ?? r.paymentstatus ?? 'not_requested',
+    paymentAmount: r.payment_amount ?? r.paymentAmount ?? r.paymentamount ?? null,
+    paymentProvider: r.payment_provider ?? r.paymentProvider ?? r.paymentprovider ?? null,
+    paymentReference: r.payment_reference ?? r.paymentReference ?? r.paymentreference ?? null,
+    qrToken: r.qr_token ?? r.qrToken ?? r.qrtoken ?? null,
+    qrStatus: r.qr_status ?? r.qrStatus ?? r.qrstatus ?? 'inactive',
     expiresAt: rawExpiresAt ? new Date(rawExpiresAt) : null,
-    processedBy: r.processed_by ?? r.processedBy ?? null,
+    processedBy: r.processed_by ?? r.processedBy ?? r.processedby ?? null,
     processedAt: rawProcessedAt ? new Date(rawProcessedAt) : null,
     notes: r.notes,
     createdAt: rawCreatedAt ? new Date(rawCreatedAt) : new Date(),
@@ -108,7 +111,7 @@ export async function createRestaurantReservation(data: {
         payment_status: 'not_requested',
         qr_status: 'inactive',
       })
-      .select(RESERVATION_COLUMNS)
+      .select('*')
       .single();
 
     if (error) throw error;
@@ -127,7 +130,7 @@ export async function getRestaurantReservationByReference(reference: string) {
     const client = getClient();
     const { data, error } = await client
       .from('restaurant_reservations')
-      .select(RESERVATION_COLUMNS)
+      .select('*')
       .eq('reference', reference)
       .limit(1)
       .single();
@@ -151,7 +154,7 @@ export async function getRestaurantReservationByQrToken(qrToken: string) {
     const client = getClient();
     const { data, error } = await client
       .from('restaurant_reservations')
-      .select(RESERVATION_COLUMNS)
+      .select('*')
       .eq('qr_token', qrToken)
       .limit(1)
       .single();
@@ -175,7 +178,7 @@ export async function getRestaurantReservationById(id: number) {
     const client = getClient();
     const { data, error } = await client
       .from('restaurant_reservations')
-      .select(RESERVATION_COLUMNS)
+      .select('*')
       .eq('id', id)
       .single();
 
@@ -208,7 +211,7 @@ export async function listRestaurantReservations(filters?: {
 
     let query = client
       .from('restaurant_reservations')
-      .select(RESERVATION_COLUMNS)
+      .select('*')
       .order('id', { ascending: false })
       .range(queryOffset, queryOffset + queryLimit - 1);
 
@@ -221,6 +224,16 @@ export async function listRestaurantReservations(filters?: {
 
     const { data, error } = await query;
     if (error) throw error;
+
+    // Diagnostic: log actual column names and sample values from Supabase
+    if (data && data.length > 0) {
+      const firstRow = data[0];
+      console.log("[DEBUG restaurant_reservations] columns:", Object.keys(firstRow));
+      console.log("[DEBUG restaurant_reservations] seats_total:", firstRow.seats_total, "| seatsTotal:", firstRow.seatsTotal, "| seatstotal:", firstRow.seatstotal);
+      console.log("[DEBUG restaurant_reservations] group_name:", firstRow.group_name, "| groupName:", firstRow.groupName, "| groupname:", firstRow.groupname);
+      console.log("[DEBUG restaurant_reservations] company_name:", firstRow.company_name, "| companyName:", firstRow.companyName, "| companyname:", firstRow.companyname);
+    }
+
     return (data || []).map(mapReservation);
   } catch (error) {
     console.error("[listRestaurantReservations] Error:", error);
