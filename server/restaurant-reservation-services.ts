@@ -35,6 +35,7 @@ function mapReservation(r: any) {
     companyName: r.company_name ?? r.companyName ?? null,
     groupName: r.group_name ?? r.groupName ?? null,
     groupType: r.group_type ?? r.groupType ?? null,
+    displayChoice: r.display_choice ?? r.displayChoice ?? null,
     status: r.status,
     paymentStatus: r.payment_status ?? r.paymentStatus ?? 'not_requested',
     paymentAmount: r.payment_amount ?? r.paymentAmount ?? null,
@@ -71,6 +72,7 @@ export async function createRestaurantReservation(data: {
   groupName?: string;
   groupType?: string;
   notes?: string;
+  displayChoice?: string;
 }) {
   try {
     const client = getClient();
@@ -89,6 +91,7 @@ export async function createRestaurantReservation(data: {
         group_name: data.groupName || null,
         group_type: data.groupType || null,
         notes: data.notes || null,
+        display_choice: data.displayChoice || null,
         status: 'pending_validation',
         payment_status: 'not_requested',
         qr_status: 'inactive',

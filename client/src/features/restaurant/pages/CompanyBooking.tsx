@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { trpc } from '@/lib/trpc';
 
 export default function CompanyBooking() {
@@ -28,6 +29,7 @@ export default function CompanyBooking() {
     // Étape 2 - Détails de la demande
     date: '',
     participantsCount: 10,
+    salle: '' as '' | 'jardin' | 'corpo',
   });
 
   // Dates autorisées : 20 février - 13 mars 2026
@@ -66,6 +68,11 @@ export default function CompanyBooking() {
         return;
       }
 
+      if (!formData.salle) {
+        toast.error('Veuillez choisir une salle');
+        return;
+      }
+
       if (formData.participantsCount < 10 || formData.participantsCount > 120) {
         toast.error('Le nombre de participants doit être entre 10 et 120');
         return;
@@ -82,6 +89,7 @@ export default function CompanyBooking() {
           companyNotes: formData.companyNotes || undefined,
           date: formData.date,
           participantsCount: formData.participantsCount,
+          displayChoice: formData.salle as 'jardin' | 'corpo',
         });
         
         if (result.success && result.reservation) {
@@ -268,6 +276,23 @@ export default function CompanyBooking() {
                     onChange={(e) => handleInputChange('participantsCount', Math.max(10, Math.min(120, parseInt(e.target.value) || 10)))}
                     required
                   />
+                </div>
+
+                {/* Salle */}
+                <div>
+                  <Label htmlFor="salle">Salle *</Label>
+                  <Select
+                    value={formData.salle}
+                    onValueChange={(value) => handleInputChange('salle', value)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Choisissez une salle" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="jardin">Jardin</SelectItem>
+                      <SelectItem value="corpo">Corpo</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Info Block */}
