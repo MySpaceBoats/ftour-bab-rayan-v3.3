@@ -73,8 +73,8 @@ export default function CompanyBooking() {
         return;
       }
 
-      if (formData.participantsCount < 10 || formData.participantsCount > 120) {
-        toast.error('Le nombre de participants doit être entre 10 et 120');
+      if (formData.participantsCount < 10 || formData.participantsCount > 130) {
+        toast.error('Le nombre de participants doit être entre 10 et 130');
         return;
       }
 
@@ -271,9 +271,9 @@ export default function CompanyBooking() {
                     id="participantsCount"
                     type="number"
                     min="10"
-                    max="120"
+                    max="130"
                     value={formData.participantsCount}
-                    onChange={(e) => handleInputChange('participantsCount', Math.max(10, Math.min(120, parseInt(e.target.value) || 10)))}
+                    onChange={(e) => handleInputChange('participantsCount', Math.max(10, Math.min(130, parseInt(e.target.value) || 10)))}
                     required
                   />
                 </div>
