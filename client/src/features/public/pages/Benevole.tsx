@@ -11,7 +11,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
-import { Users, Calendar, CheckCircle, Mail, Phone, MapPin, ArrowRight, Loader2, QrCode, Clock, AlertCircle, Upload, UsersRound } from "lucide-react";
+import { Users, Calendar, CheckCircle, Mail, Phone, MapPin, ArrowRight, Loader2, QrCode, Clock, AlertCircle, Upload, UsersRound, Download } from "lucide-react";
 import { useI18n } from "@/i18n";
 
 export default function Benevole() {
@@ -239,6 +239,8 @@ export default function Benevole() {
     estimatedSizePlaceholder: lang === 'ar' ? 'عدد المتطوعين تقريباً' : lang === 'en' ? 'Approximate number of volunteers' : 'Nombre approximatif de bénévoles',
     uploadFile: lang === 'ar' ? 'رفع ملف Excel (قائمة المتطوعين) *' : lang === 'en' ? 'Upload Excel file (volunteer list) *' : 'Upload fichier Excel (liste des bénévoles) *',
     uploadFileDesc: lang === 'ar' ? 'ملفات مقبولة: .xlsx, .xls, .csv (الحد الأقصى 5 ميغا)' : lang === 'en' ? 'Accepted files: .xlsx, .xls, .csv (max 5 MB)' : 'Fichiers acceptés : .xlsx, .xls, .csv (max 5 Mo)',
+    downloadTemplate: lang === 'ar' ? 'تحميل نموذج الاستمارة' : lang === 'en' ? 'Download the form template' : 'Télécharger le formulaire',
+    downloadTemplateDesc: lang === 'ar' ? 'حمّل الاستمارة، املأها بمعلومات المتطوعين، ثم ارفعها أدناه.' : lang === 'en' ? 'Download the form, fill it with the volunteers\' information, then upload it below.' : 'Téléchargez le formulaire, remplissez-le avec les informations des bénévoles, puis uploadez-le ci-dessous.',
     registerGroup: lang === 'ar' ? 'تسجيل المجموعة' : lang === 'en' ? 'Register group' : 'Inscrire le groupe',
     registeringGroup: lang === 'ar' ? 'جاري تسجيل المجموعة...' : lang === 'en' ? 'Registering group...' : 'Inscription du groupe en cours...',
   };
@@ -583,6 +585,21 @@ export default function Benevole() {
                               onChange={(e) => setGroupData(prev => ({ ...prev, estimatedSize: e.target.value }))}
                               placeholder={formTexts.estimatedSizePlaceholder}
                             />
+                          </div>
+
+                          {/* Download Template */}
+                          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-2">
+                            <p className="text-sm text-muted-foreground">{formTexts.downloadTemplateDesc}</p>
+                            <a
+                              href="https://jgnzhrlumlydmseusnbo.supabase.co/storage/v1/object/public/Formulaire/FORMULAIRE.xlsx"
+                              download
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                            >
+                              <Download className="h-4 w-4" />
+                              {formTexts.downloadTemplate}
+                            </a>
                           </div>
 
                           {/* File Upload */}
