@@ -2953,6 +2953,39 @@ function generateQrToken(): string {
   return Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+/**
+ * Map DB row (snake_case) to camelCase object expected by frontend.
+ */
+function mapReservation(r: any) {
+  return {
+    id: r.id,
+    reference: r.reference,
+    type: r.type,
+    seatsTotal: r.seats_total ?? r.seatsTotal ?? 0,
+    date: r.date ? new Date(r.date) : null,
+    name: r.name,
+    phone: r.phone,
+    email: r.email,
+    companyName: r.company_name ?? r.companyName ?? null,
+    groupName: r.group_name ?? r.groupName ?? null,
+    groupType: r.group_type ?? r.groupType ?? null,
+    displayChoice: r.display_choice ?? r.displayChoice ?? null,
+    status: r.status,
+    paymentStatus: r.payment_status ?? r.paymentStatus ?? 'not_requested',
+    paymentAmount: r.payment_amount ?? r.paymentAmount ?? null,
+    paymentProvider: r.payment_provider ?? r.paymentProvider ?? null,
+    paymentReference: r.payment_reference ?? r.paymentReference ?? null,
+    qrToken: r.qr_token ?? r.qrToken ?? null,
+    qrStatus: r.qr_status ?? r.qrStatus ?? 'inactive',
+    expiresAt: r.expires_at ? new Date(r.expires_at) : r.expiresAt ? new Date(r.expiresAt) : null,
+    processedBy: r.processed_by ?? r.processedBy ?? null,
+    processedAt: r.processed_at ? new Date(r.processed_at) : r.processedAt ? new Date(r.processedAt) : null,
+    notes: r.notes,
+    createdAt: r.created_at ? new Date(r.created_at) : r.createdAt ? new Date(r.createdAt) : new Date(),
+    updatedAt: r.updated_at ? new Date(r.updated_at) : r.updatedAt ? new Date(r.updatedAt) : new Date(),
+  };
+}
+
 const restaurantReservationsRouter = router({
   particulier: router({
     create: publicProcedure
@@ -3230,7 +3263,7 @@ const restaurantReservationsRouter = router({
         console.error('[adminListParticuliers] Error:', error);
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
       }
-      return data || [];
+      return (data || []).map(mapReservation);
     }),
 
   adminListGroupes: protectedProcedure
@@ -3249,7 +3282,7 @@ const restaurantReservationsRouter = router({
         console.error('[adminListGroupes] Error:', error);
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
       }
-      return data || [];
+      return (data || []).map(mapReservation);
     }),
 
   adminListEntreprises: protectedProcedure
@@ -3268,7 +3301,7 @@ const restaurantReservationsRouter = router({
         console.error('[adminListEntreprises] Error:', error);
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
       }
-      return data || [];
+      return (data || []).map(mapReservation);
     }),
 
   adminUpdateStatus: protectedProcedure
