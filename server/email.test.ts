@@ -35,7 +35,7 @@ describe("Email Templates", () => {
       lastName: "Benali",
       email: "ahmed@example.com",
       dayNumber: 15,
-      dayDate: "15 Mars 2026",
+      dayDate: "samedi 15 mars",
       location: "Association Bab Rayan, Casablanca",
       startTime: "18h00",
       qrToken: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
@@ -48,7 +48,7 @@ describe("Email Templates", () => {
     expect(email.subject).toContain("Jour 15");
     expect(email.html).toContain("Ahmed Benali");
     expect(email.html).toContain("15 du Ramadan");
-    expect(email.html).toContain("15 Mars 2026");
+    expect(email.html).toContain("samedi 15 mars");
     expect(email.html).toContain("QR Code");
     expect(email.html).toContain("api.qrserver.com");
     expect(email.html).toContain(data.qrToken);

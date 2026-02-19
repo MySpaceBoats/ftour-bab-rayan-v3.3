@@ -812,7 +812,7 @@ const volunteersRouter = router({
           lastName: input.lastName,
           email: input.email,
           dayNumber: day.day_number,
-          dayDate: new Date(day.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+          dayDate: new Date(day.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }),
           location: day.location || 'Association Bab Rayan, Casablanca',
           startTime: day.iftar_time || '18h00',
           volunteerSlots: input.volunteerSlots,

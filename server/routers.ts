@@ -248,7 +248,6 @@ const volunteersRouter = router({
           dayNumber: day.dayNumber,
           dayDate: new Date(day.date).toLocaleDateString('fr-FR', {
             weekday: 'long',
-            year: 'numeric',
             month: 'long',
             day: 'numeric'
           }),
