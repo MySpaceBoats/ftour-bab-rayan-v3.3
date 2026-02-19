@@ -471,6 +471,16 @@ export const restaurantReservationsRouter = router({
       }
     }),
 
+  // Debug: returns raw Supabase data without mapping, to diagnose column issues
+  debugRawData: protectedProcedure
+    .query(async ({ ctx }) => {
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
+      if (!allowedRoles.includes(ctx.user?.role || '')) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      }
+      return await reservationServices.debugRawReservationData();
+    }),
+
   adminUpdateStatus: protectedProcedure
     .input(z.object({
       id: z.number(),

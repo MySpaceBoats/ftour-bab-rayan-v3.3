@@ -28,44 +28,75 @@ const RESERVATION_COLUMNS = [
 ].join(', ');
 
 /**
+ * Case-insensitive field lookup.
+ * Searches the row object for a matching key using multiple naming conventions.
+ * Returns the value if found, or undefined if no match.
+ */
+function getField(r: any, ...names: string[]): any {
+  // First try direct property access (fast path)
+  for (const name of names) {
+    if (r[name] !== undefined && r[name] !== null) return r[name];
+  }
+  // If all direct lookups returned null/undefined, try case-insensitive match on all keys
+  const keys = Object.keys(r);
+  for (const name of names) {
+    const lower = name.toLowerCase();
+    const found = keys.find(k => k.toLowerCase() === lower);
+    if (found && r[found] !== undefined && r[found] !== null) return r[found];
+  }
+  return undefined;
+}
+
+/**
  * Map DB row to camelCase object expected by frontend.
- * Handles ALL possible column naming conventions:
+ * Uses case-insensitive field lookup to handle ANY column naming convention:
  *   - snake_case: seats_total, group_name (Supabase DDL)
  *   - camelCase: seatsTotal, groupName (Drizzle MySQL)
  *   - lowercase: seatstotal, groupname (PostgreSQL lowercases unquoted identifiers)
+ *   - Any other casing variation
+ *
+ * Also includes _debug field with raw column info for troubleshooting.
  */
 function mapReservation(r: any) {
-  const rawDate = r.date;
-  const rawCreatedAt = r.created_at ?? r.createdAt ?? r.createdat;
-  const rawUpdatedAt = r.updated_at ?? r.updatedAt ?? r.updatedat;
-  const rawExpiresAt = r.expires_at ?? r.expiresAt ?? r.expiresat;
-  const rawProcessedAt = r.processed_at ?? r.processedAt ?? r.processedat;
+  const rawDate = getField(r, 'date');
+  const rawCreatedAt = getField(r, 'created_at', 'createdAt', 'createdat');
+  const rawUpdatedAt = getField(r, 'updated_at', 'updatedAt', 'updatedat');
+  const rawExpiresAt = getField(r, 'expires_at', 'expiresAt', 'expiresat');
+  const rawProcessedAt = getField(r, 'processed_at', 'processedAt', 'processedat');
 
   return {
     id: r.id,
     reference: r.reference,
     type: r.type,
-    seatsTotal: r.seats_total ?? r.seatsTotal ?? r.seatstotal ?? 0,
+    seatsTotal: getField(r, 'seats_total', 'seatsTotal', 'seatstotal', 'seats') ?? 0,
     date: rawDate ? new Date(rawDate) : null,
     name: r.name,
     phone: r.phone,
     email: r.email,
-    companyName: r.company_name ?? r.companyName ?? r.companyname ?? null,
-    groupName: r.group_name ?? r.groupName ?? r.groupname ?? null,
-    groupType: r.group_type ?? r.groupType ?? r.grouptype ?? null,
+    companyName: getField(r, 'company_name', 'companyName', 'companyname') ?? null,
+    groupName: getField(r, 'group_name', 'groupName', 'groupname') ?? null,
+    groupType: getField(r, 'group_type', 'groupType', 'grouptype') ?? null,
     status: r.status,
-    paymentStatus: r.payment_status ?? r.paymentStatus ?? r.paymentstatus ?? 'not_requested',
-    paymentAmount: r.payment_amount ?? r.paymentAmount ?? r.paymentamount ?? null,
-    paymentProvider: r.payment_provider ?? r.paymentProvider ?? r.paymentprovider ?? null,
-    paymentReference: r.payment_reference ?? r.paymentReference ?? r.paymentreference ?? null,
-    qrToken: r.qr_token ?? r.qrToken ?? r.qrtoken ?? null,
-    qrStatus: r.qr_status ?? r.qrStatus ?? r.qrstatus ?? 'inactive',
+    paymentStatus: getField(r, 'payment_status', 'paymentStatus', 'paymentstatus') ?? 'not_requested',
+    paymentAmount: getField(r, 'payment_amount', 'paymentAmount', 'paymentamount') ?? null,
+    paymentProvider: getField(r, 'payment_provider', 'paymentProvider', 'paymentprovider') ?? null,
+    paymentReference: getField(r, 'payment_reference', 'paymentReference', 'paymentreference') ?? null,
+    qrToken: getField(r, 'qr_token', 'qrToken', 'qrtoken') ?? null,
+    qrStatus: getField(r, 'qr_status', 'qrStatus', 'qrstatus') ?? 'inactive',
     expiresAt: rawExpiresAt ? new Date(rawExpiresAt) : null,
-    processedBy: r.processed_by ?? r.processedBy ?? r.processedby ?? null,
+    processedBy: getField(r, 'processed_by', 'processedBy', 'processedby') ?? null,
     processedAt: rawProcessedAt ? new Date(rawProcessedAt) : null,
     notes: r.notes,
     createdAt: rawCreatedAt ? new Date(rawCreatedAt) : new Date(),
     updatedAt: rawUpdatedAt ? new Date(rawUpdatedAt) : new Date(),
+    // Debug info: raw column names and key values for troubleshooting
+    _debug: {
+      rawKeys: Object.keys(r),
+      rawSeatsTotal: { seats_total: r.seats_total, seatsTotal: r.seatsTotal, seatstotal: r.seatstotal },
+      rawGroupName: { group_name: r.group_name, groupName: r.groupName, groupname: r.groupname },
+      rawCompanyName: { company_name: r.company_name, companyName: r.companyName, companyname: r.companyname },
+      rawRow: JSON.stringify(r).substring(0, 500),
+    },
   };
 }
 
@@ -339,6 +370,61 @@ export async function markQrCodeAsUsed(qrToken: string) {
   } catch (error) {
     console.error("[markQrCodeAsUsed] Error:", error);
     throw error;
+  }
+}
+
+/**
+ * Debug: return raw Supabase data without any mapping.
+ * Used to diagnose column naming issues.
+ */
+export async function debugRawReservationData() {
+  try {
+    const client = getClient();
+    const { data, error } = await client
+      .from('restaurant_reservations')
+      .select('*')
+      .order('id', { ascending: false })
+      .limit(3);
+
+    if (error) {
+      return {
+        error: error.message,
+        code: error.code,
+        hint: error.hint,
+        details: error.details,
+      };
+    }
+
+    if (!data || data.length === 0) {
+      return {
+        error: null,
+        rowCount: 0,
+        columns: [],
+        rows: [],
+        message: 'No rows found in restaurant_reservations table',
+      };
+    }
+
+    return {
+      error: null,
+      rowCount: data.length,
+      columns: Object.keys(data[0]),
+      rows: data.map(row => {
+        // Return stringified row to preserve exact values
+        const processed: Record<string, string> = {};
+        for (const [key, value] of Object.entries(row)) {
+          processed[key] = JSON.stringify(value);
+        }
+        return processed;
+      }),
+    };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      rowCount: 0,
+      columns: [],
+      rows: [],
+    };
   }
 }
 

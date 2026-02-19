@@ -11,19 +11,26 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import {
   ArrowLeft, Search, Loader2, CheckCircle, XCircle,
-  Clock, UsersRound, Users, CreditCard
+  Clock, UsersRound, Users, CreditCard, Bug
 } from "lucide-react";
 
 export default function AdminRestaurantGroupes() {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [showDebug, setShowDebug] = useState(false);
 
   const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
   const hasAccess = user?.role && allowedRoles.includes(user.role);
 
   const { data: reservations, isLoading, isError, error, refetch } = trpc.restaurantReservations.adminListGroupes.useQuery(undefined, {
     enabled: !!hasAccess,
+    retry: 1,
+  });
+
+  // Debug: fetch raw Supabase data to diagnose column issues
+  const { data: debugData } = trpc.restaurantReservations.debugRawData.useQuery(undefined, {
+    enabled: !!hasAccess && showDebug,
     retry: 1,
   });
 
@@ -165,6 +172,50 @@ export default function AdminRestaurantGroupes() {
               <SelectItem value="no_show">No show</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Debug Panel */}
+        <div className="mb-4">
+          <Button variant="outline" size="sm" onClick={() => setShowDebug(!showDebug)} className="text-xs">
+            <Bug className="h-3 w-3 mr-1" />
+            {showDebug ? 'Masquer debug' : 'Afficher debug'}
+          </Button>
+          {showDebug && (
+            <Card className="mt-2 border-yellow-300 bg-yellow-50">
+              <CardContent className="p-4 text-xs font-mono space-y-2">
+                <p className="font-bold text-yellow-800">Diagnostic Supabase (raw data)</p>
+                {debugData?.error && (
+                  <p className="text-red-600">Erreur: {debugData.error}</p>
+                )}
+                {debugData && !debugData.error && (
+                  <>
+                    <p><strong>Colonnes DB:</strong> {debugData.columns?.join(', ') || 'aucune'}</p>
+                    <p><strong>Nombre de lignes:</strong> {debugData.rowCount}</p>
+                    {debugData.rows?.map((row: any, i: number) => (
+                      <details key={i} className="border border-yellow-200 rounded p-2">
+                        <summary className="cursor-pointer text-yellow-800">
+                          Ligne {i + 1} - seats_total: {row.seats_total} | group_name: {row.group_name}
+                        </summary>
+                        <pre className="mt-1 whitespace-pre-wrap break-all text-xs">
+                          {JSON.stringify(row, null, 2)}
+                        </pre>
+                      </details>
+                    ))}
+                  </>
+                )}
+                {reservations && reservations.length > 0 && (
+                  <details className="border border-blue-200 rounded p-2 bg-blue-50">
+                    <summary className="cursor-pointer text-blue-800">
+                      Mapped data (1ere reservation) - groupName: {(reservations[0] as any).groupName} | seatsTotal: {(reservations[0] as any).seatsTotal}
+                    </summary>
+                    <pre className="mt-1 whitespace-pre-wrap break-all text-xs">
+                      {JSON.stringify((reservations[0] as any)._debug, null, 2)}
+                    </pre>
+                  </details>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Table */}

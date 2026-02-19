@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Download, Search, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, Search, CheckCircle, XCircle, Loader2, Bug } from 'lucide-react';
 import { toast } from 'sonner';
 
 type ReservationType = 'all' | 'particulier' | 'entreprise' | 'groupe';
@@ -17,6 +17,7 @@ export default function AdminRestaurantReservations() {
   const [statusFilter, setStatusFilter] = useState<ReservationStatus>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
 
   // Fetch reservations via restaurantReservations router
   const { data: particuliers = [], isLoading: loadingP, isError: errorP, refetch: refetchP } = trpc.restaurantReservations.adminListParticuliers.useQuery(undefined, { retry: 1 });
@@ -25,6 +26,12 @@ export default function AdminRestaurantReservations() {
 
   const isLoading = loadingP || loadingE || loadingG;
   const hasError = errorP || errorE || errorG;
+
+  // Debug: fetch raw Supabase data to diagnose column issues
+  const { data: debugData } = trpc.restaurantReservations.debugRawData.useQuery(undefined, {
+    enabled: showDebug,
+    retry: 1,
+  });
 
   const refetchAll = () => {
     refetchP();
@@ -241,10 +248,53 @@ export default function AdminRestaurantReservations() {
                 </Button>
               </div>
 
-              <Button variant="outline" onClick={exportCsv}>
-                <Download className="h-4 w-4 mr-2" />CSV
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={exportCsv}>
+                  <Download className="h-4 w-4 mr-2" />CSV
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setShowDebug(!showDebug)} className="text-xs">
+                  <Bug className="h-3 w-3 mr-1" />
+                  {showDebug ? 'Masquer debug' : 'Debug'}
+                </Button>
+              </div>
             </div>
+
+            {showDebug && (
+              <Card className="border-yellow-300 bg-yellow-50">
+                <CardContent className="p-4 text-xs font-mono space-y-2">
+                  <p className="font-bold text-yellow-800">Diagnostic Supabase (raw data)</p>
+                  {debugData?.error && (
+                    <p className="text-red-600">Erreur: {debugData.error}</p>
+                  )}
+                  {debugData && !debugData.error && (
+                    <>
+                      <p><strong>Colonnes DB:</strong> {(debugData as any).columns?.join(', ') || 'aucune'}</p>
+                      <p><strong>Nombre de lignes:</strong> {(debugData as any).rowCount}</p>
+                      {(debugData as any).rows?.map((row: any, i: number) => (
+                        <details key={i} className="border border-yellow-200 rounded p-2">
+                          <summary className="cursor-pointer text-yellow-800">
+                            Ligne {i + 1} - seats_total: {row.seats_total} | group_name: {row.group_name}
+                          </summary>
+                          <pre className="mt-1 whitespace-pre-wrap break-all text-xs">
+                            {JSON.stringify(row, null, 2)}
+                          </pre>
+                        </details>
+                      ))}
+                    </>
+                  )}
+                  {allReservations.length > 0 && (
+                    <details className="border border-blue-200 rounded p-2 bg-blue-50">
+                      <summary className="cursor-pointer text-blue-800">
+                        Mapped data (1ere) - groupName: {(allReservations[0] as any).groupName} | seatsTotal: {(allReservations[0] as any).seatsTotal}
+                      </summary>
+                      <pre className="mt-1 whitespace-pre-wrap break-all text-xs">
+                        {JSON.stringify((allReservations[0] as any)._debug, null, 2)}
+                      </pre>
+                    </details>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {isLoading ? (
               <div className="flex justify-center py-12">
