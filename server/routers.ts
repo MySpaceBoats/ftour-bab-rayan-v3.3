@@ -1107,7 +1107,7 @@ const reservationsRouter = router({
               to: reservation.email,
               subject,
               html,
-              bcc: ['contact@ftourbabrayan.ma'],
+              bcc: ['contact@ftourbabrayan.ma', 'rsebbani@myspace.boats'],
             });
           } catch (emailError) {
             console.error('[Reservation] Email error:', emailError);
