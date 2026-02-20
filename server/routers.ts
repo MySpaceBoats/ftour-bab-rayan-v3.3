@@ -13,6 +13,7 @@ import { companyBookingsRouter } from "./company-booking-routers";
 import { restaurantReservationsRouter } from "./restaurant-reservation-routers";
 import { contentRouter } from "./content-router";
 import { scannerRouter } from "./scanner-router";
+import * as XLSX from "xlsx";
 
 // ============================================
 // ROLE-BASED PROCEDURES
@@ -423,6 +424,159 @@ const volunteersRouter = router({
       }
 
       return { success: true, volunteerId: volunteer.id };
+    }),
+
+  processGroupExcel: adminOpsProcedure
+    .input(z.object({
+      dayId: z.number(),
+      volunteerSlots: z.array(z.enum(["preparation_ftour", "service_ftour"])).min(1),
+      fileBase64: z.string().max(7_000_000, "Fichier trop volumineux (max 5 Mo)"),
+      fileName: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      // Get day info
+      const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
+      if (!day) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Jour non trouvé' });
+      }
+
+      // Parse the Excel file from base64
+      const fileBuffer = Buffer.from(input.fileBase64, 'base64');
+      let workbook: XLSX.WorkBook;
+      try {
+        workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+      } catch {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Impossible de lire le fichier Excel. Vérifiez le format.' });
+      }
+
+      const sheetName = workbook.SheetNames[0];
+      if (!sheetName) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Le fichier Excel est vide.' });
+      }
+
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '' });
+
+      if (rows.length === 0) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Aucune ligne trouvée dans le fichier Excel.' });
+      }
+
+      // Normalize column names: map various French/English column names to standard keys
+      function findColumn(row: Record<string, any>, candidates: string[]): string {
+        for (const key of Object.keys(row)) {
+          const normalized = key.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          for (const candidate of candidates) {
+            if (normalized.includes(candidate)) return key;
+          }
+        }
+        return '';
+      }
+
+      // Detect column mapping from first row
+      const sampleRow = rows[0];
+      const colFirstName = findColumn(sampleRow, ['prenom', 'first', 'firstname']);
+      const colLastName = findColumn(sampleRow, ['nom', 'last', 'lastname', 'family']);
+      const colEmail = findColumn(sampleRow, ['email', 'mail', 'courriel']);
+      const colPhone = findColumn(sampleRow, ['telephone', 'tel', 'phone', 'mobile', 'gsm']);
+      const colCity = findColumn(sampleRow, ['ville', 'city']);
+
+      if (!colFirstName || !colLastName || !colEmail) {
+        const detectedCols = Object.keys(sampleRow).join(', ');
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Colonnes requises introuvables (Prénom, Nom, Email). Colonnes détectées : ${detectedCols}`,
+        });
+      }
+
+      const baseUrl = process.env.NODE_ENV === 'production'
+        ? 'https://ftourbabrayan.ma'
+        : 'http://localhost:3000';
+
+      const results: { email: string; success: boolean; error?: string }[] = [];
+
+      for (const row of rows) {
+        const firstName = String(row[colFirstName] || '').trim();
+        const lastName = String(row[colLastName] || '').trim();
+        const email = String(row[colEmail] || '').toLowerCase().trim();
+        const phone = colPhone ? String(row[colPhone] || '').trim() : '';
+        const city = colCity ? String(row[colCity] || '').trim() : undefined;
+
+        // Skip empty rows
+        if (!firstName || !lastName || !email) {
+          results.push({ email: email || '(vide)', success: false, error: 'Données incomplètes (prénom, nom ou email manquant)' });
+          continue;
+        }
+
+        // Basic email validation
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          results.push({ email, success: false, error: 'Email invalide' });
+          continue;
+        }
+
+        try {
+          // Check if already registered for this day
+          const emailExists = await supabaseServices.checkVolunteerEmailExistsForDay(email, input.dayId);
+          if (emailExists) {
+            results.push({ email, success: false, error: 'Déjà inscrit pour ce jour' });
+            continue;
+          }
+
+          // Create volunteer entry
+          const volunteer = await supabaseServices.createVolunteerShiftSupabase({
+            firstName,
+            lastName,
+            email,
+            phone,
+            city,
+            dayId: input.dayId,
+            volunteerSlots: input.volunteerSlots,
+            acceptedTerms: true,
+          });
+
+          // Send confirmation email with QR code
+          const emailData = generateVolunteerConfirmationEmail({
+            firstName,
+            lastName,
+            email,
+            dayNumber: day.dayNumber,
+            dayDate: new Date(day.date).toLocaleDateString('fr-FR', {
+              weekday: 'long',
+              month: 'long',
+              day: 'numeric',
+            }),
+            location: day.location || 'Association Bab Rayan, Casablanca',
+            startTime: day.iftarTime || '18h00',
+            volunteerSlots: input.volunteerSlots,
+            qrToken: volunteer.qrToken,
+            baseUrl,
+          });
+
+          const emailResult = await sendEmail({
+            to: email,
+            subject: emailData.subject,
+            html: emailData.html,
+          });
+
+          if (emailResult.success) {
+            results.push({ email, success: true });
+            console.log(`[ProcessGroupExcel] Email sent to ${email}`);
+          } else {
+            results.push({ email, success: true, error: `Inscrit mais email non envoyé: ${emailResult.error}` });
+            console.warn(`[ProcessGroupExcel] Volunteer created but email failed for ${email}: ${emailResult.error}`);
+          }
+        } catch (error) {
+          const errMsg = error instanceof Error ? error.message : 'Erreur inconnue';
+          results.push({ email, success: false, error: errMsg });
+          console.error(`[ProcessGroupExcel] Error for ${email}:`, error);
+        }
+      }
+
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.filter(r => !r.success).length;
+
+      console.log(`[ProcessGroupExcel] Completed: ${successCount} success, ${failCount} failures out of ${rows.length} rows`);
+
+      return { results, successCount, failCount, totalRows: rows.length };
     }),
 });
 

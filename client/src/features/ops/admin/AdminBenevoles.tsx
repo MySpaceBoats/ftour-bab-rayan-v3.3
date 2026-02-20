@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,11 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { 
-  ArrowLeft, Search, Download, Users, CheckCircle, XCircle, 
-  Clock, Filter, Loader2, QrCode, Mail, Phone, Calendar, Trash2
+import {
+  ArrowLeft, Search, Download, Users, CheckCircle, XCircle,
+  Clock, Filter, Loader2, QrCode, Mail, Phone, Calendar, Trash2,
+  Upload, FileSpreadsheet
 } from "lucide-react";
 import {
   AlertDialog,
@@ -39,6 +42,14 @@ export default function AdminBenevoles() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [slotFilter, setSlotFilter] = useState<string>("all");
   const [selectedVolunteer, setSelectedVolunteer] = useState<number | null>(null);
+
+  // Import Excel state
+  const [importOpen, setImportOpen] = useState(false);
+  const [importDayId, setImportDayId] = useState<string>("");
+  const [importSlots, setImportSlots] = useState<string[]>([]);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importResults, setImportResults] = useState<{ email: string; success: boolean; error?: string }[] | null>(null);
+  const importFileRef = useRef<HTMLInputElement>(null);
 
   const { data: days } = trpc.days.list.useQuery();
   const { data: volunteers, isLoading, refetch } = trpc.volunteers.listByDay.useQuery(
@@ -69,6 +80,45 @@ export default function AdminBenevoles() {
       toast.error(error.message);
     },
   });
+
+  const processExcelMutation = trpc.volunteers.processGroupExcel.useMutation({
+    onSuccess: (data) => {
+      setImportResults(data.results);
+      toast.success(`${data.successCount} bénévole(s) inscrit(s), ${data.failCount} erreur(s)`);
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const handleImportExcel = async () => {
+    if (!importFile || !importDayId || importSlots.length === 0) {
+      toast.error("Veuillez remplir tous les champs et sélectionner un fichier");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1];
+      processExcelMutation.mutate({
+        dayId: parseInt(importDayId),
+        volunteerSlots: importSlots as ("preparation_ftour" | "service_ftour")[],
+        fileBase64: base64,
+        fileName: importFile.name,
+      });
+    };
+    reader.readAsDataURL(importFile);
+  };
+
+  const resetImportDialog = () => {
+    setImportOpen(false);
+    setImportDayId("");
+    setImportSlots([]);
+    setImportFile(null);
+    setImportResults(null);
+    if (importFileRef.current) importFileRef.current.value = "";
+  };
 
   const volunteersList = volunteers?.volunteers || [];
   const filteredVolunteers = volunteersList.filter((v: any) => {
@@ -219,6 +269,10 @@ export default function AdminBenevoles() {
               <Button variant="outline" onClick={handleExportCSV}>
                 <Download className="h-4 w-4 mr-2" />
                 Export CSV
+              </Button>
+              <Button variant="default" onClick={() => setImportOpen(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Import Excel
               </Button>
             </div>
           </CardContent>
@@ -412,7 +466,7 @@ export default function AdminBenevoles() {
           <DialogHeader>
             <DialogTitle>Détails du bénévole</DialogTitle>
           </DialogHeader>
-          
+
           {currentVolunteer && (
             <div className="space-y-4">
               <div className="text-center">
@@ -471,14 +525,14 @@ export default function AdminBenevoles() {
               <div className="bg-muted/50 rounded-lg p-4 text-center">
                 <p className="text-xs text-muted-foreground mb-2">Code QR</p>
                 <div className="bg-white p-3 rounded inline-block">
-                  <img 
+                  <img
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${window.location.origin}/checkin/${currentVolunteer.qrToken}`)}`}
                     alt="QR Code"
                     className="w-24 h-24"
                   />
                 </div>
                 <p className="text-xs mt-2 text-muted-foreground">
-                  <a 
+                  <a
                     href={`${window.location.origin}/checkin/${currentVolunteer.qrToken}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -487,6 +541,196 @@ export default function AdminBenevoles() {
                     Tester le lien
                   </a>
                 </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Excel Dialog */}
+      <Dialog open={importOpen} onOpenChange={(open) => { if (!open) resetImportDialog(); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5" />
+              Importer un fichier Excel de bénévoles
+            </DialogTitle>
+            <DialogDescription>
+              Uploadez un fichier Excel contenant la liste des bénévoles. Chaque personne sera inscrite individuellement et recevra un email de confirmation avec son QR code.
+            </DialogDescription>
+          </DialogHeader>
+
+          {!importResults ? (
+            <div className="space-y-4">
+              {/* Day selection */}
+              <div className="space-y-2">
+                <Label>Jour du Ramadan *</Label>
+                <Select value={importDayId} onValueChange={setImportDayId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un jour" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {days?.map((day) => (
+                      <SelectItem key={day.id} value={day.id.toString()}>
+                        Jour {day.dayNumber} — {new Date(day.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Slots selection */}
+              <div className="space-y-2">
+                <Label>Créneaux de participation *</Label>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="import-prep"
+                      checked={importSlots.includes("preparation_ftour")}
+                      onCheckedChange={(checked) => {
+                        setImportSlots(prev =>
+                          checked
+                            ? [...prev, "preparation_ftour"]
+                            : prev.filter(s => s !== "preparation_ftour")
+                        );
+                      }}
+                    />
+                    <Label htmlFor="import-prep" className="font-normal">Préparation ftour</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="import-service"
+                      checked={importSlots.includes("service_ftour")}
+                      onCheckedChange={(checked) => {
+                        setImportSlots(prev =>
+                          checked
+                            ? [...prev, "service_ftour"]
+                            : prev.filter(s => s !== "service_ftour")
+                        );
+                      }}
+                    />
+                    <Label htmlFor="import-service" className="font-normal">Service ftour</Label>
+                  </div>
+                </div>
+              </div>
+
+              {/* File upload */}
+              <div className="space-y-2">
+                <Label>Fichier Excel *</Label>
+                <div className="border-2 border-dashed rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    ref={importFileRef}
+                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                    className="hidden"
+                    id="import-excel-upload"
+                  />
+                  <label htmlFor="import-excel-upload" className="cursor-pointer">
+                    {importFile ? (
+                      <div className="flex items-center justify-center gap-2 text-sm">
+                        <FileSpreadsheet className="h-5 w-5 text-green-600" />
+                        <span className="font-medium">{importFile.name}</span>
+                        <span className="text-muted-foreground">({(importFile.size / 1024).toFixed(0)} Ko)</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">Cliquez pour sélectionner un fichier</p>
+                        <p className="text-xs text-muted-foreground">.xlsx, .xls, .csv (max 5 Mo)</p>
+                      </div>
+                    )}
+                  </label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Le fichier doit contenir les colonnes : Prénom, Nom, Email (+ Téléphone, Ville optionnels)
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={resetImportDialog}>
+                  Annuler
+                </Button>
+                <Button
+                  onClick={handleImportExcel}
+                  disabled={!importFile || !importDayId || importSlots.length === 0 || processExcelMutation.isPending}
+                >
+                  {processExcelMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Traitement en cours...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="h-4 w-4 mr-2" />
+                      Inscrire et envoyer les emails
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Results summary */}
+              <div className="grid grid-cols-3 gap-3">
+                <Card>
+                  <CardContent className="p-3 text-center">
+                    <div className="text-xl font-bold">{importResults.length}</div>
+                    <div className="text-xs text-muted-foreground">Total</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-3 text-center">
+                    <div className="text-xl font-bold text-green-600">
+                      {importResults.filter(r => r.success).length}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Inscrits</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-3 text-center">
+                    <div className="text-xl font-bold text-red-600">
+                      {importResults.filter(r => !r.success).length}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Erreurs</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Detailed results */}
+              <div className="max-h-60 overflow-y-auto border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Statut</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {importResults.map((r, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="text-sm">{r.email}</TableCell>
+                        <TableCell>
+                          {r.success ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              OK
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">
+                              <XCircle className="h-3 w-3 mr-1" />
+                              {r.error}
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={resetImportDialog}>Fermer</Button>
               </div>
             </div>
           )}
