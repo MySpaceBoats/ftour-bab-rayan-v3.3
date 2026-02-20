@@ -209,6 +209,15 @@ const volunteersRouter = router({
       // Normalize email
       const normalizedEmail = input.email.toLowerCase().trim();
 
+      // Check if volunteer has been absent 2+ times (blocked from re-registering)
+      const absenceCount = await supabaseServices.countVolunteerAbsencesByEmail(normalizedEmail);
+      if (absenceCount >= 2) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: `Inscription impossible : vous avez été noté(e) absent(e) ${absenceCount} fois lors de précédentes inscriptions. Les réinscriptions ne sont plus autorisées.`,
+        });
+      }
+
       // Check for duplicate email on the same day
       const emailExists = await supabaseServices.checkVolunteerEmailExistsForDay(normalizedEmail, input.dayId);
       if (emailExists) {
@@ -370,8 +379,18 @@ const volunteersRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Format de fichier non supporté. Utilisez .xlsx, .xls ou .csv' });
       }
 
-      // Normalize email and check for duplicates
+      // Normalize email and check for absences / duplicates
       const normalizedGroupEmail = input.responsibleEmail.toLowerCase().trim();
+
+      // Check if responsible person has been absent 2+ times (blocked from re-registering)
+      const groupAbsenceCount = await supabaseServices.countVolunteerAbsencesByEmail(normalizedGroupEmail);
+      if (groupAbsenceCount >= 2) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: `Inscription impossible : vous avez été noté(e) absent(e) ${groupAbsenceCount} fois lors de précédentes inscriptions. Les réinscriptions ne sont plus autorisées.`,
+        });
+      }
+
       const groupEmailExists = await supabaseServices.checkVolunteerEmailExistsForDay(normalizedGroupEmail, input.dayId);
       if (groupEmailExists) {
         throw new TRPCError({

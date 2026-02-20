@@ -322,6 +322,24 @@ export async function checkVolunteerEmailExistsForDay(email: string, dayId: numb
   return (data?.length ?? 0) > 0;
 }
 
+export async function countVolunteerAbsencesByEmail(email: string): Promise<number> {
+  const client = getSupabaseAdminClient();
+  if (!client) return 0;
+
+  const { count, error } = await client
+    .from('volunteers')
+    .select('id', { count: 'exact', head: true })
+    .eq('email', email.toLowerCase().trim())
+    .eq('status', 'absent');
+
+  if (error) {
+    console.error('[Volunteer] Absence count error:', error);
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
 export async function createVolunteerShiftSupabase(data: VolunteerData) {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error('Supabase not configured');
