@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -325,10 +326,20 @@ export default function Admin() {
     enabled: isAuthenticated && !!canManageRestaurant,
   });
 
+  const allRestaurantReservations = useMemo(() => {
+    if (!canManageRestaurant) return [];
+    const all = [
+      ...(restaurantParticuliers || []).map((r: any) => ({ ...r, type: r.type || 'particulier' })),
+      ...(restaurantGroupes || []).map((r: any) => ({ ...r, type: r.type || 'groupe' })),
+      ...(restaurantEntreprises || []).map((r: any) => ({ ...r, type: r.type || 'entreprise' })),
+    ];
+    return all.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [canManageRestaurant, restaurantParticuliers, restaurantGroupes, restaurantEntreprises]);
+
   const restaurantStats = canManageRestaurant ? {
-    total: (restaurantParticuliers?.length || 0) + (restaurantGroupes?.length || 0) + (restaurantEntreprises?.length || 0),
-    pending: [...(restaurantParticuliers || []), ...(restaurantGroupes || []), ...(restaurantEntreprises || [])].filter((r: any) => r.status === 'pending_validation' || r.status === 'submitted').length,
-    totalSeats: [...(restaurantParticuliers || []), ...(restaurantGroupes || []), ...(restaurantEntreprises || [])].reduce((sum: number, r: any) => sum + (r.seatsTotal || 0), 0),
+    total: allRestaurantReservations.length,
+    pending: allRestaurantReservations.filter((r: any) => r.status === 'pending_validation' || r.status === 'submitted').length,
+    totalSeats: allRestaurantReservations.reduce((sum: number, r: any) => sum + (r.seatsTotal || 0), 0),
   } : null;
 
   const { data: days } = trpc.days.list.useQuery();
@@ -509,6 +520,90 @@ export default function Admin() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Restaurant Reservations - Names & Seats */}
+        {canManageRestaurant && allRestaurantReservations.length > 0 && (
+          <Card className="mb-8 border-[#5d5a3c]/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-[#5d5a3c]">
+                <UtensilsCrossed className="h-5 w-5" />
+                Réservations Restaurant
+                <Badge variant="secondary" className="ml-2">{allRestaurantReservations.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="pb-2 font-semibold text-muted-foreground">Nom</th>
+                      <th className="pb-2 font-semibold text-muted-foreground">Places</th>
+                      <th className="pb-2 font-semibold text-muted-foreground hidden sm:table-cell">Type</th>
+                      <th className="pb-2 font-semibold text-muted-foreground hidden md:table-cell">Statut</th>
+                      <th className="pb-2 font-semibold text-muted-foreground hidden lg:table-cell">Date Ftour</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {allRestaurantReservations.map((res: any) => (
+                      <tr key={`${res.type}-${res.id}`} className="hover:bg-muted/50">
+                        <td className="py-2 pr-4">
+                          <p className="font-medium">{res.name}</p>
+                          {(res.groupName || res.companyName) && (
+                            <p className="text-xs text-muted-foreground">{res.groupName || res.companyName}</p>
+                          )}
+                        </td>
+                        <td className="py-2 pr-4">
+                          <span className="font-semibold">{res.seatsTotal || 0}</span>
+                        </td>
+                        <td className="py-2 pr-4 hidden sm:table-cell">
+                          <Badge variant="outline" className={
+                            res.type === 'entreprise' ? 'border-purple-300 text-purple-700' :
+                            res.type === 'groupe' ? 'border-orange-300 text-orange-700' :
+                            'border-blue-300 text-blue-700'
+                          }>
+                            {res.type === 'entreprise' ? 'Entreprise' : res.type === 'groupe' ? 'Groupe' : 'Particulier'}
+                          </Badge>
+                        </td>
+                        <td className="py-2 pr-4 hidden md:table-cell">
+                          <Badge className={
+                            res.status === 'paid_confirmed' || res.status === 'confirmed' ? 'bg-green-600' :
+                            res.status === 'refused' || res.status === 'cancelled' ? 'bg-red-600' :
+                            res.status === 'validated_pending_payment' || res.status === 'pending_confirmation' ? 'bg-amber-500' :
+                            res.status === 'completed' ? 'bg-emerald-600' :
+                            'bg-gray-500'
+                          }>
+                            {res.status === 'pending_validation' || res.status === 'submitted' ? 'En attente' :
+                             res.status === 'validated_pending_payment' || res.status === 'pending_confirmation' ? 'Paiement attendu' :
+                             res.status === 'paid_confirmed' || res.status === 'confirmed' ? 'Confirmée' :
+                             res.status === 'refused' ? 'Refusée' :
+                             res.status === 'cancelled' ? 'Annulée' :
+                             res.status === 'completed' ? 'Terminée' :
+                             res.status === 'no_show' ? 'No show' :
+                             res.status}
+                          </Badge>
+                        </td>
+                        <td className="py-2 hidden lg:table-cell text-muted-foreground">
+                          {res.date ? new Date(res.date).toLocaleDateString('fr-FR') : '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-4 pt-3 border-t flex justify-between items-center">
+                <p className="text-sm text-muted-foreground">
+                  Total : <span className="font-semibold text-foreground">{restaurantStats?.totalSeats || 0} places</span>
+                </p>
+                <Link href="/admin/restaurant/groupes">
+                  <Button variant="outline" size="sm" className="border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10">
+                    Voir tout
+                    <ArrowRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Module Sections */}
         {visibleSections.map((section) => (
