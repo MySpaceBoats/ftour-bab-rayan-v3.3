@@ -37,13 +37,14 @@ const scannerProcedure = protectedProcedure.use(({ ctx, next }) => {
 // ============================================
 // QR TYPE DETECTION
 // ============================================
-type QrType = 'volunteer' | 'reservation_particulier' | 'reservation_entreprise' | 'reservation_groupe' | 'pastry' | 'terroir' | 'goodies' | 'unknown';
+type QrType = 'volunteer' | 'reservation_particulier' | 'reservation_entreprise' | 'reservation_groupe' | 'pastry' | 'terroir' | 'goodies' | 'donation' | 'unknown';
 
 function detectQrType(token: string): QrType {
   if (token.startsWith('rp-')) return 'reservation_particulier';
   if (token.startsWith('re-')) return 'reservation_entreprise';
   if (token.startsWith('rg-')) return 'reservation_groupe';
   if (token.startsWith('ter-')) return 'terroir';
+  if (token.startsWith('DON-')) return 'donation';
   // Hex tokens (128-bit) are volunteers
   if (/^[a-f0-9]{32,}$/i.test(token)) return 'volunteer';
   // Fallback: try to detect by looking up in DB
@@ -76,6 +77,7 @@ const QR_TYPE_LABELS: Record<QrType, string> = {
   pastry: 'Commande Pâtisserie',
   terroir: 'Commande Terroir',
   goodies: 'Commande Goodies',
+  donation: 'Don',
   unknown: 'Inconnu',
 };
 
@@ -201,6 +203,35 @@ export const scannerRouter = router({
         };
       }
 
+      // ---- DONATION ----
+      if (qrType === 'donation' && supabase) {
+        const { data: donation } = await supabase
+          .from('donations')
+          .select('*')
+          .eq('donation_reference', token)
+          .single();
+        if (!donation) {
+          return { type: 'donation' as QrType, typeLabel: QR_TYPE_LABELS.donation, token, found: false, error: 'Don introuvable' };
+        }
+        return {
+          type: 'donation' as QrType,
+          typeLabel: QR_TYPE_LABELS.donation,
+          token,
+          found: true,
+          entity: {
+            id: donation.id,
+            name: donation.donor_name,
+            phone: donation.donor_phone,
+            email: donation.donor_email,
+            status: donation.status,
+            reference: donation.donation_reference,
+            amount: parseFloat(donation.amount) || 0,
+            paymentMethod: donation.payment_method,
+            alreadyValidated: donation.status === 'received',
+          },
+        };
+      }
+
       // ---- UNKNOWN: try all tables ----
       if (qrType === 'unknown' && supabase) {
         // Try volunteer
@@ -317,6 +348,31 @@ export const scannerRouter = router({
             },
           };
         }
+        // Try donation by reference
+        const { data: donationRow } = await supabase
+          .from('donations')
+          .select('*')
+          .eq('donation_reference', token)
+          .single();
+        if (donationRow) {
+          return {
+            type: 'donation' as QrType,
+            typeLabel: QR_TYPE_LABELS.donation,
+            token,
+            found: true,
+            entity: {
+              id: donationRow.id,
+              name: donationRow.donor_name,
+              phone: donationRow.donor_phone,
+              email: donationRow.donor_email,
+              status: donationRow.status,
+              reference: donationRow.donation_reference,
+              amount: parseFloat(donationRow.amount) || 0,
+              paymentMethod: donationRow.payment_method,
+              alreadyValidated: donationRow.status === 'received',
+            },
+          };
+        }
       }
 
       return { type: 'unknown' as QrType, typeLabel: 'Inconnu', token, found: false, error: 'QR code non reconnu dans le système' };
@@ -333,7 +389,7 @@ export const scannerRouter = router({
   validate: scannerProcedure
     .input(z.object({
       token: z.string().min(1),
-      type: z.enum(['volunteer', 'reservation_particulier', 'reservation_entreprise', 'reservation_groupe', 'pastry', 'terroir', 'goodies', 'unknown']),
+      type: z.enum(['volunteer', 'reservation_particulier', 'reservation_entreprise', 'reservation_groupe', 'pastry', 'terroir', 'goodies', 'donation', 'unknown']),
       entityId: z.number(),
     }))
     .mutation(async ({ input, ctx }) => {
@@ -414,6 +470,21 @@ export const scannerRouter = router({
         } catch (err: any) {
           throw new TRPCError({ code: 'BAD_REQUEST', message: err.message });
         }
+      }
+
+      // ---- DONATION ----
+      if (input.type === 'donation' && supabase) {
+        const { data: donation } = await supabase
+          .from('donations')
+          .select('status')
+          .eq('id', input.entityId)
+          .single();
+        if (!donation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Don introuvable' });
+        if (donation.status === 'received') throw new TRPCError({ code: 'BAD_REQUEST', message: 'Don déjà marqué comme reçu' });
+        await supabase.from('donations')
+          .update({ status: 'received' })
+          .eq('id', input.entityId);
+        return { success: true, message: 'Don marqué comme reçu !' };
       }
 
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'Type de QR non supporté pour la validation' });

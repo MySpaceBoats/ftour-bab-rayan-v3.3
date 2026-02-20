@@ -98,6 +98,9 @@ import Scanner from "@/features/scanner/pages/Scanner";
 import Checkin from "@/features/scanner/pages/Checkin";
 import ScannerPatisserie from "@/features/scanner/pages/ScannerPatisserie";
 import ScannerUnifie from "@/features/scanner/pages/ScannerUnifie";
+import ScannerGoodies from "@/features/scanner/pages/ScannerGoodies";
+import ScannerBenevoles from "@/features/scanner/pages/ScannerBenevoles";
+import ScannerFtours from "@/features/scanner/pages/ScannerFtours";
 
 // ============================================
 // CONTENU — features/contenu
@@ -194,6 +197,9 @@ function LocalizedRoutes() {
           ================================================ */}
       <Route path="/scanner/patisserie" component={ScannerPatisserie} />
       <Route path="/scanner/unifie" component={ScannerUnifie} />
+      <Route path="/scanner/goodies" component={ScannerGoodies} />
+      <Route path="/scanner/benevoles" component={ScannerBenevoles} />
+      <Route path="/scanner/ftours" component={ScannerFtours} />
       <Route path="/scanner" component={Scanner} />
 
       {/* ================================================
