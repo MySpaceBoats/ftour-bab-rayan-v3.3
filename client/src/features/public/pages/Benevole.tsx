@@ -170,7 +170,7 @@ export default function Benevole() {
     }
   };
 
-  const availableDays = days?.filter(d => d.isOpen && d.registeredCount < d.capacity) || [];
+  const availableDays = days?.filter(d => d.isOpen) || [];
   const dateLocale = lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-US' : 'fr-FR';
 
   // Success screen translations

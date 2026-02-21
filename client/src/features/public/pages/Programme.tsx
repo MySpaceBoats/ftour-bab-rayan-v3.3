@@ -26,16 +26,11 @@ export default function Programme() {
 
   const getAvailabilityColor = (day: DayType) => {
     if (!day.isOpen) return "bg-red-100 text-red-800 border-red-200";
-    const percentage = (day.registeredCount / day.capacity) * 100;
-    if (percentage >= 90) return "bg-orange-100 text-orange-800 border-orange-200";
-    if (percentage >= 70) return "bg-yellow-100 text-yellow-800 border-yellow-200";
     return "bg-green-100 text-green-800 border-green-200";
   };
 
   const getAvailabilityText = (day: DayType) => {
-    if (!day.isOpen) return "Complet";
-    const remaining = day.capacity - day.registeredCount;
-    if (remaining <= 5) return `${remaining} places`;
+    if (!day.isOpen) return "Fermé";
     return "Disponible";
   };
 
@@ -135,17 +130,10 @@ export default function Programme() {
                         )}
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Users className="h-4 w-4" />
-                          <span>{day.registeredCount} / {day.capacity} inscrits</span>
+                          <span>{day.registeredCount} inscrits</span>
                         </div>
                       </div>
 
-                      {/* Progress bar */}
-                      <div className="w-full bg-muted rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full transition-all ${!day.isOpen ? 'bg-red-500' : 'bg-primary'}`}
-                          style={{ width: `${Math.min((day.registeredCount / day.capacity) * 100, 100)}%` }}
-                        />
-                      </div>
 
                       {/* Action */}
                       <Link href={`/${lang}/benevole?day=${day.id}`}>

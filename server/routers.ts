@@ -232,8 +232,8 @@ const volunteersRouter = router({
       if (!day) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Jour non trouvé' });
       }
-      if (!day.isOpen || day.registeredCount >= day.capacity) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ce jour est complet' });
+      if (!day.isOpen) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ce jour est fermé aux inscriptions' });
       }
 
       // Create volunteer with QR token
@@ -248,10 +248,6 @@ const volunteersRouter = router({
         acceptedTerms: input.acceptedTerms,
       });
 
-      // Check if day is now full and close it
-      if (day.registeredCount + 1 >= day.capacity) {
-        await supabaseServices.updateRamadanDaySupabase(input.dayId, { isOpen: false });
-      }
 
       // Send confirmation email with QR code
       // Always use input.volunteerSlots (from form) to ensure slots appear
