@@ -8,12 +8,12 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, Loader2, Users,
-  UtensilsCrossed, UsersRound, CalendarDays, XCircle
+  UtensilsCrossed, UsersRound, CalendarDays, XCircle, Moon
 } from "lucide-react";
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   eachDayOfInterval, format, isSameMonth, isSameDay,
-  addMonths, subMonths, isToday
+  addMonths, subMonths, isToday, isWithinInterval, parseISO
 } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -187,6 +187,33 @@ export default function AdminReservationsCalendar() {
     return { totalSeats, totalGroups, daysWithReservations };
   }, [calendarData, currentMonth]);
 
+  // Ramadan stats (19 février – 13 mars 2026)
+  const RAMADAN_START = new Date(2026, 1, 19); // Feb 19
+  const RAMADAN_END = new Date(2026, 2, 13);   // Mar 13
+
+  const ramadanStats = useMemo(() => {
+    const ramadanReservations = allReservations.filter((r) => {
+      if (!r.date) return false;
+      if (!ACTIVE_STATUSES.includes(r.status)) return false;
+      const d = typeof r.date === "string" ? new Date(r.date) : new Date(r.date);
+      return isWithinInterval(d, { start: RAMADAN_START, end: RAMADAN_END });
+    });
+
+    const totalSeats = ramadanReservations.reduce((sum, r) => sum + (r.seatsTotal || 0), 0);
+    const totalGroups = ramadanReservations.length;
+
+    const daysSet = new Set<string>();
+    for (const r of ramadanReservations) {
+      if (!r.date) continue;
+      const dateStr = typeof r.date === "string"
+        ? r.date.split("T")[0]
+        : format(new Date(r.date), "yyyy-MM-dd");
+      daysSet.add(dateStr);
+    }
+
+    return { totalSeats, totalGroups, daysWithReservations: daysSet.size };
+  }, [allReservations]);
+
   const handleDayClick = (dayData: DayData) => {
     if (dayData.reservations.length === 0) return;
     setSelectedDay(dayData);
@@ -239,38 +266,81 @@ export default function AdminReservationsCalendar() {
       </header>
 
       <main className="container py-8 space-y-6">
+        {/* Ramadan Stats */}
+        <Card className="border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Moon className="h-5 w-5 text-amber-600" />
+              <h2 className="font-bold text-amber-800">Ramadan 2026</h2>
+              <span className="text-xs text-amber-600 ml-1">19 février – 13 mars</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="flex items-center gap-3 bg-white/70 rounded-xl p-3 border border-amber-200">
+                <div className="w-11 h-11 rounded-full bg-amber-500 flex items-center justify-center">
+                  <UtensilsCrossed className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-amber-700 font-medium">Places réservées</p>
+                  <p className="text-2xl font-bold text-amber-900">{ramadanStats.totalSeats}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 bg-white/70 rounded-xl p-3 border border-amber-200">
+                <div className="w-11 h-11 rounded-full bg-orange-500 flex items-center justify-center">
+                  <UsersRound className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-amber-700 font-medium">Réservations</p>
+                  <p className="text-2xl font-bold text-amber-900">{ramadanStats.totalGroups}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 bg-white/70 rounded-xl p-3 border border-amber-200">
+                <div className="w-11 h-11 rounded-full bg-yellow-500 flex items-center justify-center">
+                  <CalendarDays className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-amber-700 font-medium">Jours avec réservations</p>
+                  <p className="text-2xl font-bold text-amber-900">{ramadanStats.daysWithReservations}</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Month Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card className="border-[#d4d4aa]">
+          <Card className="border-emerald-200 bg-emerald-50/50">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-[#5d5a3c]/10 flex items-center justify-center">
-                <UtensilsCrossed className="h-6 w-6 text-[#5d5a3c]" />
+              <div className="w-12 h-12 rounded-full bg-emerald-600 flex items-center justify-center">
+                <UtensilsCrossed className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-sm text-[#6b6b4e]">Places réservées</p>
-                <p className="text-2xl font-bold text-[#5d5a3c]">{monthStats.totalSeats}</p>
+                <p className="text-sm text-emerald-700 font-medium">Places réservées</p>
+                <p className="text-2xl font-bold text-emerald-900">{monthStats.totalSeats}</p>
+                <p className="text-[10px] text-emerald-600 capitalize">{format(currentMonth, "MMMM yyyy", { locale: fr })}</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-[#d4d4aa]">
+          <Card className="border-blue-200 bg-blue-50/50">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-[#5d5a3c]/10 flex items-center justify-center">
-                <UsersRound className="h-6 w-6 text-[#5d5a3c]" />
+              <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
+                <UsersRound className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-sm text-[#6b6b4e]">Groupes inscrits</p>
-                <p className="text-2xl font-bold text-[#5d5a3c]">{monthStats.totalGroups}</p>
+                <p className="text-sm text-blue-700 font-medium">Groupes inscrits</p>
+                <p className="text-2xl font-bold text-blue-900">{monthStats.totalGroups}</p>
+                <p className="text-[10px] text-blue-600 capitalize">{format(currentMonth, "MMMM yyyy", { locale: fr })}</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-[#d4d4aa]">
+          <Card className="border-violet-200 bg-violet-50/50">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-[#5d5a3c]/10 flex items-center justify-center">
-                <CalendarDays className="h-6 w-6 text-[#5d5a3c]" />
+              <div className="w-12 h-12 rounded-full bg-violet-600 flex items-center justify-center">
+                <CalendarDays className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-sm text-[#6b6b4e]">Jours avec réservations</p>
-                <p className="text-2xl font-bold text-[#5d5a3c]">{monthStats.daysWithReservations}</p>
+                <p className="text-sm text-violet-700 font-medium">Jours avec réservations</p>
+                <p className="text-2xl font-bold text-violet-900">{monthStats.daysWithReservations}</p>
+                <p className="text-[10px] text-violet-600 capitalize">{format(currentMonth, "MMMM yyyy", { locale: fr })}</p>
               </div>
             </CardContent>
           </Card>
