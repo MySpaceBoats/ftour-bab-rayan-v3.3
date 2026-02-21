@@ -11,7 +11,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
-import { Users, Calendar, CheckCircle, Mail, Phone, MapPin, ArrowRight, Loader2, QrCode, Clock, AlertCircle, Upload, UsersRound, Download } from "lucide-react";
+import { Users, Calendar, CheckCircle, Mail, Phone, MapPin, ArrowRight, Loader2, QrCode, Clock, AlertCircle, Upload, UsersRound, Download, Info } from "lucide-react";
 import { useI18n } from "@/i18n";
 
 export default function Benevole() {
@@ -377,6 +377,32 @@ export default function Benevole() {
               </h1>
               <p className="text-lg text-muted-foreground">
                 {formTexts.subtitle}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Registration Notices */}
+        <section className="pb-0 pt-2">
+          <div className="container max-w-3xl space-y-3">
+            <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+              <p className="text-sm text-blue-900 font-medium">
+                {lang === 'ar'
+                  ? 'تُغلق التسجيلات في الساعة 15:30 لنفس اليوم.'
+                  : lang === 'en'
+                  ? 'Registrations are closed at 3:30 PM for the same day.'
+                  : 'Les inscriptions sont fermées à 15h30 pour le jour même.'}
+              </p>
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+              <p className="text-sm text-blue-900 font-medium">
+                {lang === 'ar'
+                  ? 'عدد المشاركين محدود لأسباب لوجستية داخل المؤسسة.'
+                  : lang === 'en'
+                  ? 'The number of participants is limited for logistical reasons within the establishment.'
+                  : 'Le nombre de participants est limité pour des raisons de logistique à l\'intérieur de l\'établissement.'}
               </p>
             </div>
           </div>
