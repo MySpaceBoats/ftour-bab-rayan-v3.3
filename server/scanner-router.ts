@@ -37,7 +37,7 @@ const scannerProcedure = protectedProcedure.use(({ ctx, next }) => {
 // ============================================
 // QR TYPE DETECTION
 // ============================================
-type QrType = 'volunteer' | 'reservation_particulier' | 'reservation_entreprise' | 'reservation_groupe' | 'pastry' | 'terroir' | 'goodies' | 'donation' | 'product_goodie' | 'product_pastry' | 'unknown';
+type QrType = 'volunteer' | 'reservation_particulier' | 'reservation_entreprise' | 'reservation_groupe' | 'pastry' | 'terroir' | 'goodies' | 'donation' | 'product_goodie' | 'product_pastry' | 'product_terroir' | 'unknown';
 
 function detectQrType(token: string): QrType {
   if (token.startsWith('rp-')) return 'reservation_particulier';
@@ -50,6 +50,7 @@ function detectQrType(token: string): QrType {
   // Product catalog QR codes (numeric IDs prefixed by type)
   if (token.startsWith('PROD-GOODIE-')) return 'product_goodie';
   if (token.startsWith('PROD-PASTRY-')) return 'product_pastry';
+  if (token.startsWith('PROD-TERROIR-')) return 'product_terroir';
   // Hex tokens (128-bit) are volunteers
   if (/^[a-f0-9]{32,}$/i.test(token)) return 'volunteer';
   // Fallback: try to detect by looking up in DB
@@ -82,9 +83,21 @@ function extractTokenFromUrl(rawInput: string): string {
       const productId = parts[parts.length - 1].split('?')[0];
       return `PROD-PASTRY-${productId}`;
     }
+    if (rawInput.includes('/buy/terroir/')) {
+      const parts = rawInput.split('/buy/terroir/');
+      const productId = parts[parts.length - 1].split('?')[0];
+      return `PROD-TERROIR-${productId}`;
+    }
     if (rawInput.includes('/checkin/')) {
       const parts = rawInput.split('/checkin/');
       return parts[parts.length - 1].split('?')[0];
+    }
+    // Generic page URLs (legacy catalog QR codes without product ID)
+    if (/\/terroir\/?(\?|$)/.test(rawInput)) {
+      return 'PAGE-TERROIR';
+    }
+    if (/\/dons\/?(\?|$)/.test(rawInput)) {
+      return 'PAGE-DONS';
     }
     // Already a token
     return rawInput.trim();
@@ -104,6 +117,7 @@ const QR_TYPE_LABELS: Record<QrType, string> = {
   donation: 'Don',
   product_goodie: 'Produit Goodies',
   product_pastry: 'Produit Pâtisserie',
+  product_terroir: 'Produit Terroir',
   unknown: 'Inconnu',
 };
 
@@ -118,6 +132,15 @@ export const scannerRouter = router({
     .input(z.object({ rawCode: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
       const token = extractTokenFromUrl(input.rawCode);
+
+      // Handle legacy generic page QR codes (no specific product ID)
+      if (token === 'PAGE-TERROIR') {
+        return { type: 'unknown' as QrType, typeLabel: 'Page Terroir', token, found: false, error: 'Ce QR code renvoie vers la page terroir générale. Veuillez scanner un QR code produit spécifique.' };
+      }
+      if (token === 'PAGE-DONS') {
+        return { type: 'unknown' as QrType, typeLabel: 'Page Dons', token, found: false, error: 'Ce QR code renvoie vers la page de dons. Aucun produit à identifier.' };
+      }
+
       let qrType = detectQrType(token);
       const supabase = getSupabaseAdminClient();
 
@@ -367,6 +390,36 @@ export const scannerRouter = router({
         return { type: 'product_pastry' as QrType, typeLabel: QR_TYPE_LABELS.product_pastry, token, found: false, error: 'Produit pâtisserie introuvable' };
       }
 
+      // ---- PRODUCT TERROIR (catalog QR) ----
+      if (qrType === 'product_terroir' && supabase) {
+        const productId = parseInt(token.replace('PROD-TERROIR-', ''), 10);
+        if (!isNaN(productId)) {
+          const { data: product } = await supabase
+            .from('terroir_products')
+            .select('*, terroir_product_variants(price_unit)')
+            .eq('id', productId)
+            .single();
+          if (product) {
+            const firstVariant = (product as any).terroir_product_variants?.[0];
+            return {
+              type: 'product_terroir' as QrType,
+              typeLabel: QR_TYPE_LABELS.product_terroir,
+              token,
+              found: true,
+              entity: {
+                id: product.id,
+                name: product.name,
+                status: product.is_active ? 'active' : 'inactive',
+                totalAmount: firstVariant?.price_unit ? parseFloat(firstVariant.price_unit) : 0,
+                alreadyValidated: false,
+                isProduct: true,
+              },
+            };
+          }
+        }
+        return { type: 'product_terroir' as QrType, typeLabel: QR_TYPE_LABELS.product_terroir, token, found: false, error: 'Produit terroir introuvable' };
+      }
+
       // ---- DONATION ----
       if (qrType === 'donation' && supabase) {
         const { data: donation } = await supabase
@@ -602,7 +655,7 @@ export const scannerRouter = router({
   validate: scannerProcedure
     .input(z.object({
       token: z.string().min(1),
-      type: z.enum(['volunteer', 'reservation_particulier', 'reservation_entreprise', 'reservation_groupe', 'pastry', 'terroir', 'goodies', 'donation', 'product_goodie', 'product_pastry', 'unknown']),
+      type: z.enum(['volunteer', 'reservation_particulier', 'reservation_entreprise', 'reservation_groupe', 'pastry', 'terroir', 'goodies', 'donation', 'product_goodie', 'product_pastry', 'product_terroir', 'unknown']),
       entityId: z.number(),
     }))
     .mutation(async ({ input, ctx }) => {
@@ -701,7 +754,7 @@ export const scannerRouter = router({
       }
 
       // ---- PRODUCT (catalog QR - no validation needed) ----
-      if (input.type === 'product_goodie' || input.type === 'product_pastry') {
+      if (input.type === 'product_goodie' || input.type === 'product_pastry' || input.type === 'product_terroir') {
         return { success: true, message: 'QR code produit catalogue — aucune validation nécessaire' };
       }
 
