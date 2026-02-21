@@ -3579,7 +3579,7 @@ const qrRouter = router({
     }
 
     for (const t of terroirRes.data || []) {
-      const url = `${baseUrl}/fr/terroir`;
+      const url = `${baseUrl}/fr/buy/terroir/${t.id}`;
       const firstVariant = (t as any).terroir_product_variants?.[0];
       items.push({
         id: t.id,
