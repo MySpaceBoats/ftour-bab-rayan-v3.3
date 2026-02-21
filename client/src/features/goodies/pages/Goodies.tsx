@@ -58,6 +58,8 @@ export default function Goodies() {
     const price = goodie.price + (variant?.priceModifier ? Number(variant.priceModifier) : 0);
 
     addToCartContext({
+      productType: 'goodies',
+      productId: goodie.id,
       goodieId: goodie.id,
       variantId: variant?.id,
       name: goodie.name,
@@ -98,7 +100,7 @@ export default function Goodies() {
       deliveryPhone: checkoutForm.deliveryMode === 'home_delivery' ? checkoutForm.deliveryPhone : undefined,
       deliveryInstructions: checkoutForm.deliveryMode === 'home_delivery' ? checkoutForm.deliveryInstructions : undefined,
       items: cart.map(item => ({
-        goodieId: item.goodieId,
+        goodieId: item.productId,
         variantId: item.variantId,
         quantity: item.quantity,
         unitPrice: item.price,

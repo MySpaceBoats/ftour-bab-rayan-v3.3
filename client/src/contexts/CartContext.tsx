@@ -1,13 +1,18 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
+export type ProductType = 'goodies' | 'terroir' | 'pastry';
+
 export type CartItem = {
-  goodieId: number;
+  productType: ProductType;
+  productId: number;
   variantId?: number;
   name: string;
   variant?: string;
   price: number;
   quantity: number;
   imageUrl?: string;
+  /** @deprecated Use productId instead */
+  goodieId?: number;
 };
 
 type CartContextType = {
@@ -21,22 +26,40 @@ type CartContextType = {
   removeFromCart: (index: number) => void;
   clearCart: () => void;
   setCart: (cart: CartItem[]) => void;
+  getCartByType: (type: ProductType) => CartItem[];
+  getCartCountByType: (type: ProductType) => number;
+  getCartTotalByType: (type: ProductType) => number;
+  clearCartByType: (type: ProductType) => void;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const CART_STORAGE_KEY = 'ftour-goodies-cart';
+const CART_STORAGE_KEY = 'ftour-unified-cart';
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  // Load cart from localStorage on mount
+  // Load cart from localStorage on mount (migrate old format if needed)
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(CART_STORAGE_KEY);
+      // Try new unified key first
+      let stored = localStorage.getItem(CART_STORAGE_KEY);
       if (stored) {
         setCart(JSON.parse(stored));
+        return;
+      }
+      // Migrate from old goodies-only key
+      const oldStored = localStorage.getItem('ftour-goodies-cart');
+      if (oldStored) {
+        const oldCart: any[] = JSON.parse(oldStored);
+        const migrated = oldCart.map(item => ({
+          ...item,
+          productType: 'goodies' as ProductType,
+          productId: item.goodieId ?? item.productId,
+        }));
+        setCart(migrated);
+        localStorage.removeItem('ftour-goodies-cart');
       }
     } catch (error) {
       console.error('Error loading cart:', error);
@@ -56,16 +79,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   const addToCart = (newItem: CartItem) => {
+    // Ensure backward compat: set goodieId for goodies
+    const item = {
+      ...newItem,
+      goodieId: newItem.productType === 'goodies' ? newItem.productId : undefined,
+    };
+
     const existingIndex = cart.findIndex(
-      item => item.goodieId === newItem.goodieId && item.variantId === newItem.variantId
+      ci => ci.productType === item.productType && ci.productId === item.productId && ci.variantId === item.variantId
     );
 
     if (existingIndex >= 0) {
       const newCart = [...cart];
-      newCart[existingIndex].quantity += newItem.quantity;
+      newCart[existingIndex].quantity += item.quantity;
       setCart(newCart);
     } else {
-      setCart([...cart, newItem]);
+      setCart([...cart, item]);
     }
   };
 
@@ -88,6 +117,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCart([]);
   };
 
+  const getCartByType = (type: ProductType) => cart.filter(item => item.productType === type);
+  const getCartCountByType = (type: ProductType) => getCartByType(type).reduce((sum, item) => sum + item.quantity, 0);
+  const getCartTotalByType = (type: ProductType) => getCartByType(type).reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const clearCartByType = (type: ProductType) => setCart(cart.filter(item => item.productType !== type));
+
   return (
     <CartContext.Provider
       value={{
@@ -101,6 +135,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         removeFromCart,
         clearCart,
         setCart,
+        getCartByType,
+        getCartCountByType,
+        getCartTotalByType,
+        clearCartByType,
       }}
     >
       {children}
