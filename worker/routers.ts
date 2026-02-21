@@ -760,8 +760,26 @@ const volunteersRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Jour non trouvé' });
       }
 
-      if (!day.is_open || day.registered_count >= day.capacity) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ce jour est complet' });
+      if (!day.is_open) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ce jour est fermé aux inscriptions' });
+      }
+
+      // Check if registrations are closed for today (after 15:30 Morocco time)
+      const now = new Date();
+      const moroccoTime = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Casablanca' }));
+      const dayDate = new Date(day.date + 'T00:00:00');
+      const todayStart = new Date(moroccoTime.getFullYear(), moroccoTime.getMonth(), moroccoTime.getDate());
+
+      if (dayDate <= todayStart) {
+        const isToday = dayDate.getTime() === todayStart.getTime();
+        if (!isToday) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Les inscriptions pour ce jour sont fermées' });
+        }
+        const hours = moroccoTime.getHours();
+        const minutes = moroccoTime.getMinutes();
+        if (hours > 15 || (hours === 15 && minutes >= 30)) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Les inscriptions pour aujourd\'hui sont fermées (après 15h30)' });
+        }
       }
 
       // Generate QR token
@@ -797,13 +815,6 @@ const volunteersRouter = router({
         .update({ registered_count: day.registered_count + 1 })
         .eq('id', input.dayId);
 
-      // Close day if full
-      if (day.registered_count + 1 >= day.capacity) {
-        await supabase
-          .from('ramadan_days')
-          .update({ is_open: false })
-          .eq('id', input.dayId);
-      }
 
       // Send confirmation email
       try {
