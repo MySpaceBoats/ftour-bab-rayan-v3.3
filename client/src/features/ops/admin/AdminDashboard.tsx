@@ -9,7 +9,7 @@ import {
   Users, ShoppingBag, Heart, Calendar, QrCode,
   ArrowRight, Loader2, BarChart3, Package, MessageSquare,
   UserCog, FileText, Home, LogOut, UtensilsCrossed, Store,
-  UsersRound, CakeSlice, type LucideIcon
+  UsersRound, CakeSlice, CalendarDays, type LucideIcon
 } from "lucide-react";
 
 // ============================================
@@ -53,6 +53,16 @@ const sections: SectionDefinition[] = [
         iconColor: "text-[#5d5a3c]",
         iconBg: "bg-[#5d5a3c]/10",
         allowedRoles: ['admin', 'super_admin', 'admin_restaurant'],
+        buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
+      },
+      {
+        label: "Calendrier Réservations",
+        description: "Vue calendrier des réservations par jour avec places et groupes",
+        route: "/admin/reservations-calendar",
+        icon: CalendarDays,
+        iconColor: "text-[#5d5a3c]",
+        iconBg: "bg-[#5d5a3c]/10",
+        allowedRoles: ['admin', 'super_admin', 'admin_restaurant', 'admin_ops'],
         buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
       },
       {

@@ -41,6 +41,7 @@ import AdminRestaurants from "@/features/restaurant/admin/AdminRestaurants";
 import AdminRestaurantReservations from "@/features/restaurant/admin/AdminRestaurantReservations";
 import AdminCompanyBookings from "@/features/restaurant/admin/AdminCompanyBookings";
 import AdminScanReservation from "@/features/restaurant/admin/AdminScanReservation";
+import AdminReservationsCalendar from "@/features/restaurant/admin/AdminReservationsCalendar";
 
 // ============================================
 // PATISSERIE — features/patisserie
@@ -158,6 +159,7 @@ function LocalizedRoutes() {
       <Route path="/admin/restaurant-reservations" component={AdminRestaurantReservations} />
       <Route path="/admin/reservations" component={AdminRestaurantReservations} />
       <Route path="/admin/company-bookings" component={AdminCompanyBookings} />
+      <Route path="/admin/reservations-calendar" component={AdminReservationsCalendar} />
       <Route path="/admin/scan-reservation" component={AdminScanReservation} />
 
       {/* Admin Pâtisserie */}
