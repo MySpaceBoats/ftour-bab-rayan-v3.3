@@ -200,6 +200,11 @@ export const pastryOrdersRouter = router({
           const qrData = await supabaseServices.generateQRTokenSupabase('pastry', order.id);
           if (qrData) {
             order.qr_token = qrData.token;
+            // Save qr_token back to pastry_orders table
+            const supabase = getSupabaseAdminClient();
+            if (supabase) {
+              await supabase.from('pastry_orders').update({ qr_token: qrData.token }).eq('id', order.id);
+            }
           }
         }
 

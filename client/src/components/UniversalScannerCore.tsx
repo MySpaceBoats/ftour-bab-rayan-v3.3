@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import jsQR from "jsqr";
 
-type QrType = 'volunteer' | 'reservation_particulier' | 'reservation_entreprise' | 'reservation_groupe' | 'pastry' | 'terroir' | 'goodies' | 'donation' | 'unknown';
+type QrType = 'volunteer' | 'reservation_particulier' | 'reservation_entreprise' | 'reservation_groupe' | 'pastry' | 'terroir' | 'goodies' | 'donation' | 'product_goodie' | 'product_pastry' | 'unknown';
 
 const TYPE_CONFIG: Record<QrType, { label: string; icon: typeof Users; color: string; bg: string }> = {
   volunteer: { label: 'Benevole', icon: Users, color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
@@ -23,6 +23,8 @@ const TYPE_CONFIG: Record<QrType, { label: string; icon: typeof Users; color: st
   terroir: { label: 'Terroir', icon: Package, color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
   goodies: { label: 'Goodies', icon: ShoppingBag, color: 'text-orange-700', bg: 'bg-orange-50 border-orange-200' },
   donation: { label: 'Don', icon: Heart, color: 'text-red-700', bg: 'bg-red-50 border-red-200' },
+  product_goodie: { label: 'Produit Goodies', icon: ShoppingBag, color: 'text-orange-700', bg: 'bg-orange-50 border-orange-200' },
+  product_pastry: { label: 'Produit Patisserie', icon: ShoppingBag, color: 'text-pink-700', bg: 'bg-pink-50 border-pink-200' },
   unknown: { label: 'Inconnu', icon: QrCode, color: 'text-gray-700', bg: 'bg-gray-50 border-gray-200' },
 };
 
@@ -328,8 +330,8 @@ export default function UniversalScannerCore({ onBack }: UniversalScannerCorePro
                     </>
                   )}
 
-                  {/* Pastry / Terroir / Goodies */}
-                  {(identifiedResult.type === 'pastry' || identifiedResult.type === 'terroir' || identifiedResult.type === 'goodies') && (
+                  {/* Pastry / Terroir / Goodies / Product catalog */}
+                  {(identifiedResult.type === 'pastry' || identifiedResult.type === 'terroir' || identifiedResult.type === 'goodies' || identifiedResult.type === 'product_goodie' || identifiedResult.type === 'product_pastry') && (
                     <>
                       {identifiedResult.entity.totalAmount != null && (
                         <div className="flex items-center gap-2 text-sm">

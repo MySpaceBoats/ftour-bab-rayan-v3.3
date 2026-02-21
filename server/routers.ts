@@ -2881,6 +2881,8 @@ const pastryOrdersRouter = router({
       if (input.channel === 'online' || input.channel === 'on_site_qr') {
         const qrData = await supabaseServices.generateQRTokenSupabase('pastry', order.id);
         order.qr_token = qrData.token;
+        // Save qr_token back to pastry_orders table
+        await supabase.from('pastry_orders').update({ qr_token: qrData.token }).eq('id', order.id);
       }
 
       // Envoyer email de confirmation avec QR code
