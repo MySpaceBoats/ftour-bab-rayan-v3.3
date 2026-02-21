@@ -43,7 +43,8 @@ function detectQrType(token: string): QrType {
   if (token.startsWith('rp-')) return 'reservation_particulier';
   if (token.startsWith('re-')) return 'reservation_entreprise';
   if (token.startsWith('rg-')) return 'reservation_groupe';
-  if (token.startsWith('ter-')) return 'terroir';
+  if (token.startsWith('ter-') || token.startsWith('TER-')) return 'terroir';
+  if (token.startsWith('PASTRY-')) return 'pastry';
   if (token.startsWith('DON-')) return 'donation';
   // Hex tokens (128-bit) are volunteers
   if (/^[a-f0-9]{32,}$/i.test(token)) return 'volunteer';
@@ -56,6 +57,18 @@ function extractTokenFromUrl(rawInput: string): string {
     // Handle full URLs
     if (rawInput.includes('/checkin-reservation/')) {
       const parts = rawInput.split('/checkin-reservation/');
+      return parts[parts.length - 1].split('?')[0];
+    }
+    if (rawInput.includes('/qr/pastry/')) {
+      const parts = rawInput.split('/qr/pastry/');
+      return parts[parts.length - 1].split('?')[0];
+    }
+    if (rawInput.includes('/qr/terroir/')) {
+      const parts = rawInput.split('/qr/terroir/');
+      return parts[parts.length - 1].split('?')[0];
+    }
+    if (rawInput.includes('/buy/goodie/')) {
+      const parts = rawInput.split('/buy/goodie/');
       return parts[parts.length - 1].split('?')[0];
     }
     if (rawInput.includes('/checkin/')) {
@@ -98,47 +111,48 @@ export const scannerRouter = router({
       // ---- VOLUNTEER (auto-validation) ----
       if (qrType === 'volunteer') {
         const volunteer = await supabaseServices.getVolunteerByTokenSupabase(token);
-        if (!volunteer) {
-          return { type: 'unknown' as QrType, typeLabel: 'Inconnu', token, found: false, error: 'Token bénévole introuvable' };
+        if (volunteer) {
+          // Auto-validate: immediately confirm the volunteer on scan
+          const validationResult = await supabaseServices.scanAndValidateTokenSupabase(
+            token,
+            ctx.user?.id
+          );
+
+          const vol = validationResult.volunteer;
+          const fullName = vol ? `${vol.firstName} ${vol.lastName}` : `${volunteer.firstName} ${volunteer.lastName}`;
+
+          return {
+            type: 'volunteer' as QrType,
+            typeLabel: QR_TYPE_LABELS.volunteer,
+            token,
+            found: true,
+            autoValidated: true,
+            validationState: validationResult.state || (validationResult.success ? 'confirmed' : 'error'),
+            validationMessage: validationResult.success
+              ? (validationResult.state === 'already_confirmed'
+                  ? `Déjà confirmé — ${fullName}`
+                  : `Bénévole confirmé — ${fullName}`)
+              : (validationResult.error || 'Erreur de validation'),
+            validationSuccess: validationResult.success,
+            entity: {
+              id: volunteer.id,
+              name: fullName,
+              email: vol?.email || volunteer.email,
+              phone: vol?.phone || volunteer.phone,
+              status: vol?.status || volunteer.status,
+              qrStatus: vol?.qrStatus || volunteer.qrStatus,
+              dayNumber: volunteer.day?.dayNumber,
+              dayDate: volunteer.day?.date,
+              location: volunteer.day?.location,
+              iftarTime: volunteer.day?.iftarTime,
+              alreadyValidated: validationResult.state === 'already_confirmed' || volunteer.qrStatus === 'validated',
+              scannedAt: vol?.scannedAt || volunteer.scannedAt,
+            },
+          };
         }
-
-        // Auto-validate: immediately confirm the volunteer on scan
-        const validationResult = await supabaseServices.scanAndValidateTokenSupabase(
-          token,
-          ctx.user?.id
-        );
-
-        const vol = validationResult.volunteer;
-        const fullName = vol ? `${vol.firstName} ${vol.lastName}` : `${volunteer.firstName} ${volunteer.lastName}`;
-
-        return {
-          type: 'volunteer' as QrType,
-          typeLabel: QR_TYPE_LABELS.volunteer,
-          token,
-          found: true,
-          autoValidated: true,
-          validationState: validationResult.state || (validationResult.success ? 'confirmed' : 'error'),
-          validationMessage: validationResult.success
-            ? (validationResult.state === 'already_confirmed'
-                ? `Déjà confirmé — ${fullName}`
-                : `Bénévole confirmé — ${fullName}`)
-            : (validationResult.error || 'Erreur de validation'),
-          validationSuccess: validationResult.success,
-          entity: {
-            id: volunteer.id,
-            name: fullName,
-            email: vol?.email || volunteer.email,
-            phone: vol?.phone || volunteer.phone,
-            status: vol?.status || volunteer.status,
-            qrStatus: vol?.qrStatus || volunteer.qrStatus,
-            dayNumber: volunteer.day?.dayNumber,
-            dayDate: volunteer.day?.date,
-            location: volunteer.day?.location,
-            iftarTime: volunteer.day?.iftarTime,
-            alreadyValidated: validationResult.state === 'already_confirmed' || volunteer.qrStatus === 'validated',
-            scannedAt: vol?.scannedAt || volunteer.scannedAt,
-          },
-        };
+        // Hex token not found as volunteer — fall through to unknown handler
+        // (restaurant reservations also use hex tokens)
+        qrType = 'unknown';
       }
 
       // ---- RESERVATION (all types) ----
@@ -171,11 +185,20 @@ export const scannerRouter = router({
 
       // ---- TERROIR ----
       if (qrType === 'terroir' && supabase) {
-        const { data: order } = await supabase
+        // Try by qr_token first, then by order_reference (QR codes encode the reference)
+        let { data: order } = await supabase
           .from('terroir_orders')
           .select('*, terroir_order_items(*, terroir_products(name))')
           .eq('qr_token', token)
           .single();
+        if (!order) {
+          const { data: orderByRef } = await supabase
+            .from('terroir_orders')
+            .select('*, terroir_order_items(*, terroir_products(name))')
+            .eq('order_reference', token)
+            .single();
+          order = orderByRef;
+        }
         if (!order) {
           return { type: 'terroir' as QrType, typeLabel: QR_TYPE_LABELS.terroir, token, found: false, error: 'Commande terroir introuvable' };
         }
@@ -199,6 +222,43 @@ export const scannerRouter = router({
               quantity: i.quantity,
               price: i.unit_price,
             })),
+          },
+        };
+      }
+
+      // ---- PASTRY ----
+      if (qrType === 'pastry' && supabase) {
+        // Try by qr_token first, then by order_reference (QR codes encode the reference)
+        let { data: pastryOrder } = await supabase
+          .from('pastry_orders')
+          .select('*')
+          .eq('qr_token', token)
+          .single();
+        if (!pastryOrder) {
+          const { data: pastryByRef } = await supabase
+            .from('pastry_orders')
+            .select('*')
+            .eq('order_reference', token)
+            .single();
+          pastryOrder = pastryByRef;
+        }
+        if (!pastryOrder) {
+          return { type: 'pastry' as QrType, typeLabel: QR_TYPE_LABELS.pastry, token, found: false, error: 'Commande pâtisserie introuvable' };
+        }
+        return {
+          type: 'pastry' as QrType,
+          typeLabel: QR_TYPE_LABELS.pastry,
+          token,
+          found: true,
+          entity: {
+            id: pastryOrder.id,
+            name: pastryOrder.customer_name,
+            phone: pastryOrder.customer_phone,
+            email: pastryOrder.customer_email,
+            status: pastryOrder.order_status,
+            qrStatus: pastryOrder.qr_status,
+            alreadyValidated: pastryOrder.order_status === 'handed',
+            reference: pastryOrder.order_reference,
           },
         };
       }
@@ -278,12 +338,22 @@ export const scannerRouter = router({
             },
           };
         }
-        // Try pastry order
-        const { data: pastryOrder } = await supabase
+        // Try pastry order (by qr_token or order_reference)
+        let pastryOrder = null;
+        const { data: pastryByToken } = await supabase
           .from('pastry_orders')
           .select('*')
           .eq('qr_token', token)
           .single();
+        pastryOrder = pastryByToken;
+        if (!pastryOrder) {
+          const { data: pastryByRef } = await supabase
+            .from('pastry_orders')
+            .select('*')
+            .eq('order_reference', token)
+            .single();
+          pastryOrder = pastryByRef;
+        }
         if (pastryOrder) {
           return {
             type: 'pastry' as QrType,
@@ -302,12 +372,22 @@ export const scannerRouter = router({
             },
           };
         }
-        // Try terroir order
-        const { data: terroirOrder } = await supabase
+        // Try terroir order (by qr_token or order_reference)
+        let terroirOrder = null;
+        const { data: terroirByToken } = await supabase
           .from('terroir_orders')
           .select('*')
           .eq('qr_token', token)
           .single();
+        terroirOrder = terroirByToken;
+        if (!terroirOrder) {
+          const { data: terroirByRef } = await supabase
+            .from('terroir_orders')
+            .select('*')
+            .eq('order_reference', token)
+            .single();
+          terroirOrder = terroirByRef;
+        }
         if (terroirOrder) {
           return {
             type: 'terroir' as QrType,
