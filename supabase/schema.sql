@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS ramadan_days (
   day_number INTEGER NOT NULL UNIQUE,
   date DATE NOT NULL UNIQUE,
   hijri_date VARCHAR(50),
-  capacity INTEGER NOT NULL DEFAULT 120,
+  capacity INTEGER NOT NULL DEFAULT 200,
   registered_count INTEGER NOT NULL DEFAULT 0,
   is_open BOOLEAN NOT NULL DEFAULT true,
   iftar_time TIME,

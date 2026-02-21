@@ -586,7 +586,7 @@ const daysRouter = router({
     .input(z.object({
       date: z.string(),
       dayNumber: z.number().min(1).max(30),
-      capacity: z.number().min(1).default(50),
+      capacity: z.number().min(1).default(200),
       location: z.string().optional(),
       iftarTime: z.string().optional(),
       hijriDate: z.string().optional(),
@@ -594,7 +594,7 @@ const daysRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
-      
+
       const { data, error } = await supabase
         .from('ramadan_days')
         .insert({
@@ -673,7 +673,7 @@ const daysRouter = router({
     .input(z.object({
       startDate: z.string(),
       daysCount: z.number().min(1).max(30).default(30),
-      capacity: z.number().min(1).default(50),
+      capacity: z.number().min(1).default(200),
       location: z.string().optional(),
       iftarTime: z.string().optional(),
     }))

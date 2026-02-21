@@ -23,7 +23,7 @@ export default function AdminJours() {
   const [formData, setFormData] = useState({
     date: "",
     dayNumber: 1,
-    maxCapacity: 120,
+    maxCapacity: 200,
     location: "",
     startTime: "15:00",
     endTime: "22:00",
@@ -33,7 +33,7 @@ export default function AdminJours() {
   const [bulkFormData, setBulkFormData] = useState({
     startDate: "",
     daysCount: 30,
-    maxCapacity: 120,
+    maxCapacity: 200,
     location: "",
     startTime: "15:00",
     endTime: "22:00",
@@ -91,7 +91,7 @@ export default function AdminJours() {
     setFormData({
       date: "",
       dayNumber: 1,
-      maxCapacity: 120,
+      maxCapacity: 200,
       location: "",
       startTime: "15:00",
       endTime: "22:00",
@@ -100,7 +100,7 @@ export default function AdminJours() {
     setBulkFormData({
       startDate: "",
       daysCount: 30,
-      maxCapacity: 120,
+      maxCapacity: 200,
       location: "",
       startTime: "15:00",
       endTime: "22:00",
