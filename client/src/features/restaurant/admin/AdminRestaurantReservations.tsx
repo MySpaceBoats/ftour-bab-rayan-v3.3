@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Download, Search, CheckCircle, XCircle, Loader2, Percent } from 'lucide-react';
+import { ArrowLeft, Download, Search, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 type ReservationType = 'all' | 'particulier' | 'entreprise' | 'groupe';
@@ -17,7 +17,6 @@ export default function AdminRestaurantReservations() {
   const [statusFilter, setStatusFilter] = useState<ReservationStatus>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [depositInput, setDepositInput] = useState<string>('');
 
   // Fetch reservations via restaurantReservations router
   const { data: particuliers = [], isLoading: loadingP, isError: errorP, refetch: refetchP } = trpc.restaurantReservations.adminListParticuliers.useQuery(undefined, { retry: 1 });
@@ -92,27 +91,6 @@ export default function AdminRestaurantReservations() {
     },
   });
 
-  // Update deposit percentage
-  const depositMutation = trpc.restaurantReservations.adminUpdateDepositPercentage.useMutation({
-    onSuccess: () => {
-      toast.success('Pourcentage d\'acompte mis à jour, statut ajusté');
-      setDepositInput('');
-      refetchAll();
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Erreur lors de la mise à jour');
-    },
-  });
-
-  const handleDepositUpdate = (id: number) => {
-    const pct = parseInt(depositInput, 10);
-    if (isNaN(pct) || pct < 0 || pct > 100) {
-      toast.error('Veuillez entrer un pourcentage entre 0 et 100');
-      return;
-    }
-    depositMutation.mutate({ id, percentage: pct });
-  };
-
   const handleValidate = (reference: string) => {
     validateMutation.mutate({
       reference,
@@ -130,7 +108,7 @@ export default function AdminRestaurantReservations() {
       return;
     }
 
-    const header = ['Référence', 'Type', 'Statut', 'Contact', 'Email', 'Téléphone', 'Places', 'Date Ftour', 'Acompte %', 'Créé le', 'Notes'];
+    const header = ['Référence', 'Type', 'Statut', 'Contact', 'Email', 'Téléphone', 'Places', 'Date Ftour', 'Créé le', 'Notes'];
     const rows = filteredReservations.map((res: any) => [
       res.reference,
       res.type,
@@ -140,7 +118,6 @@ export default function AdminRestaurantReservations() {
       res.phone,
       res.seatsTotal || '-',
       res.date ? new Date(res.date).toLocaleDateString('fr-FR') : '-',
-      res.depositPercentage || 0,
       res.createdAt ? new Date(res.createdAt).toLocaleString('fr-FR') : '-',
       (res.notes || '').replace(/\n/g, ' '),
     ]);
@@ -309,11 +286,6 @@ export default function AdminRestaurantReservations() {
                     <p className="text-sm">
                       <span className="font-medium">{res.seatsTotal || 0} places</span>
                       <span className="text-muted-foreground"> • Ftour {formatDate(res.date)} • Créé {formatDate(res.createdAt)}</span>
-                      {res.depositPercentage > 0 && (
-                        <span className={`ml-2 font-medium ${res.depositPercentage >= 100 ? 'text-green-600' : 'text-amber-600'}`}>
-                          • Acompte {res.depositPercentage}%
-                        </span>
-                      )}
                     </p>
                   </button>
                 ))}
@@ -375,59 +347,6 @@ export default function AdminRestaurantReservations() {
                   <div>
                     <p className="text-xs text-muted-foreground">Notes</p>
                     <Textarea value={selectedReservation.notes} readOnly className="min-h-[80px]" />
-                  </div>
-                )}
-
-                {/* Deposit percentage section */}
-                {!['refused', 'cancelled'].includes(selectedReservation.status) && (
-                  <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
-                    <p className="text-xs font-medium text-muted-foreground">Acompte reçu</p>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1">
-                        <div className="w-full bg-gray-200 rounded-full h-2.5">
-                          <div
-                            className={`h-2.5 rounded-full transition-all ${
-                              (selectedReservation.depositPercentage || 0) >= 100
-                                ? 'bg-green-600'
-                                : (selectedReservation.depositPercentage || 0) > 0
-                                ? 'bg-amber-500'
-                                : 'bg-gray-400'
-                            }`}
-                            style={{ width: `${Math.min(selectedReservation.depositPercentage || 0, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                      <span className="text-sm font-semibold min-w-[40px] text-right">
-                        {selectedReservation.depositPercentage || 0}%
-                      </span>
-                    </div>
-                    <div className="flex gap-2 items-center">
-                      <Input
-                        type="number"
-                        min={0}
-                        max={100}
-                        placeholder="0-100"
-                        value={depositInput}
-                        onChange={(e) => setDepositInput(e.target.value)}
-                        className="w-24"
-                      />
-                      <span className="text-xs text-muted-foreground">%</span>
-                      <Button
-                        size="sm"
-                        onClick={() => handleDepositUpdate(selectedReservation.id)}
-                        disabled={depositMutation.isPending || !depositInput}
-                      >
-                        <Percent className="h-3 w-3 mr-1" />
-                        Mettre à jour
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {(selectedReservation.depositPercentage || 0) >= 100
-                        ? 'Acompte complet - réservation confirmée'
-                        : (selectedReservation.depositPercentage || 0) > 0
-                        ? 'Acompte partiel - en attente du solde'
-                        : 'Aucun acompte reçu'}
-                    </p>
                   </div>
                 )}
 

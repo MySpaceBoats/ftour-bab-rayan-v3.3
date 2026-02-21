@@ -485,29 +485,6 @@ export const restaurantReservationsRouter = router({
       }
     }),
 
-  adminUpdateDepositPercentage: protectedProcedure
-    .input(z.object({
-      id: z.number(),
-      percentage: z.number().int().min(0).max(100),
-    }))
-    .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
-      if (!allowedRoles.includes(ctx.user?.role || '')) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
-      }
-
-      try {
-        const reservation = await reservationServices.updateDepositPercentage(input.id, input.percentage);
-        return { success: true, reservation };
-      } catch (error) {
-        console.error("[Admin Update Deposit Percentage] Error:", error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Erreur lors de la mise à jour du pourcentage d\'acompte',
-        });
-      }
-    }),
-
   adminUpdateStatus: protectedProcedure
     .input(z.object({
       id: z.number(),
