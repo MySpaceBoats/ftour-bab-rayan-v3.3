@@ -308,15 +308,15 @@ export default function AdminReservationsCalendar() {
 
         {/* Month Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card className="border-emerald-200 bg-emerald-50/50">
+          <Card className="border-[#d4d4aa] bg-[#f5f5e8]/50">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-emerald-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-[#5d5a3c] flex items-center justify-center">
                 <UtensilsCrossed className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-sm text-emerald-700 font-medium">Places réservées</p>
-                <p className="text-2xl font-bold text-emerald-900">{monthStats.totalSeats}</p>
-                <p className="text-[10px] text-emerald-600 capitalize">{format(currentMonth, "MMMM yyyy", { locale: fr })}</p>
+                <p className="text-sm text-[#6b6b4e] font-medium">Places réservées</p>
+                <p className="text-2xl font-bold text-[#5d5a3c]">{monthStats.totalSeats}</p>
+                <p className="text-[10px] text-[#8b8b6e] capitalize">{format(currentMonth, "MMMM yyyy", { locale: fr })}</p>
               </div>
             </CardContent>
           </Card>
