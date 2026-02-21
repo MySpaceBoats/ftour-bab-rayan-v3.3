@@ -170,7 +170,19 @@ export default function Benevole() {
     }
   };
 
-  const availableDays = days?.filter(d => d.isOpen) || [];
+  const isRegistrationOpen = (day: { isOpen: boolean; date: string }) => {
+    if (!day.isOpen) return false;
+    const now = new Date();
+    const dayDate = new Date(day.date + 'T00:00:00');
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (dayDate < today) return false;
+    if (dayDate.getTime() === today.getTime()) {
+      return now.getHours() < 15 || (now.getHours() === 15 && now.getMinutes() < 30);
+    }
+    return true;
+  };
+
+  const availableDays = days?.filter(d => isRegistrationOpen(d)) || [];
   const dateLocale = lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-US' : 'fr-FR';
 
   // Success screen translations

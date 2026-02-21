@@ -236,6 +236,24 @@ const volunteersRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ce jour est fermé aux inscriptions' });
       }
 
+      // Check if registrations are closed for today (after 15:30 Morocco time)
+      const now = new Date();
+      const moroccoTime = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Casablanca' }));
+      const dayDate = new Date(day.date + 'T00:00:00');
+      const todayStart = new Date(moroccoTime.getFullYear(), moroccoTime.getMonth(), moroccoTime.getDate());
+
+      if (dayDate <= todayStart) {
+        const isToday = dayDate.getTime() === todayStart.getTime();
+        if (!isToday) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Les inscriptions pour ce jour sont fermées' });
+        }
+        const hours = moroccoTime.getHours();
+        const minutes = moroccoTime.getMinutes();
+        if (hours > 15 || (hours === 15 && minutes >= 30)) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Les inscriptions pour aujourd\'hui sont fermées (après 15h30)' });
+        }
+      }
+
       // Create volunteer with QR token
       const volunteer = await supabaseServices.createVolunteerShiftSupabase({
         firstName: input.firstName,

@@ -24,13 +24,25 @@ export default function Programme() {
 
   type DayType = NonNullable<typeof days>[number];
 
+  const isRegistrationOpen = (day: DayType) => {
+    if (!day.isOpen) return false;
+    const now = new Date();
+    const dayDate = new Date(day.date + 'T00:00:00');
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (dayDate < today) return false;
+    if (dayDate.getTime() === today.getTime()) {
+      return now.getHours() < 15 || (now.getHours() === 15 && now.getMinutes() < 30);
+    }
+    return true;
+  };
+
   const getAvailabilityColor = (day: DayType) => {
-    if (!day.isOpen) return "bg-red-100 text-red-800 border-red-200";
+    if (!isRegistrationOpen(day)) return "bg-red-100 text-red-800 border-red-200";
     return "bg-green-100 text-green-800 border-green-200";
   };
 
   const getAvailabilityText = (day: DayType) => {
-    if (!day.isOpen) return "Fermé";
+    if (!isRegistrationOpen(day)) return "Fermé";
     return "Disponible";
   };
 
@@ -137,13 +149,13 @@ export default function Programme() {
 
                       {/* Action */}
                       <Link href={`/${lang}/benevole?day=${day.id}`}>
-                        <Button 
-                          className="w-full" 
-                          disabled={!day.isOpen}
-                          variant={!day.isOpen ? "outline" : "default"}
+                        <Button
+                          className="w-full"
+                          disabled={!isRegistrationOpen(day)}
+                          variant={!isRegistrationOpen(day) ? "outline" : "default"}
                         >
-                          {!day.isOpen ? "Complet" : "S'inscrire"}
-                          {day.isOpen && <ArrowRight className="h-4 w-4 ml-2" />}
+                          {!isRegistrationOpen(day) ? "Fermé" : "S'inscrire"}
+                          {isRegistrationOpen(day) && <ArrowRight className="h-4 w-4 ml-2" />}
                         </Button>
                       </Link>
                     </CardContent>
