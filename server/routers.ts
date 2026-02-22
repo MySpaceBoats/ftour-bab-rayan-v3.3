@@ -451,17 +451,19 @@ const volunteersRouter = router({
         if (sheetName) {
           const sheet = workbook.Sheets[sheetName];
 
-          // Find the actual header row (template may have a title row before column headers)
+          // Find the actual header row (template may have title/info rows before column headers)
           const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
           let headerRowIndex = 0;
           const headerKeywords = ['prenom', 'nom', 'email', 'mail', 'first', 'last'];
           for (let i = 0; i < Math.min(rawRows.length, 10); i++) {
-            const cells = (rawRows[i] || []).map((c: any) =>
-              String(c || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-            );
             let matches = 0;
-            for (const kw of headerKeywords) {
-              if (cells.some((cell: string) => cell.includes(kw))) matches++;
+            for (const cell of (rawRows[i] || [])) {
+              const val = String(cell || '').trim();
+              if (val.length === 0 || val.length > 30) continue;
+              const normalized = val.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+              for (const kw of headerKeywords) {
+                if (normalized.includes(kw)) { matches++; break; }
+              }
             }
             if (matches >= 2) { headerRowIndex = i; break; }
           }
@@ -576,17 +578,19 @@ const volunteersRouter = router({
 
       const sheet = workbook.Sheets[sheetName];
 
-      // Find the actual header row (template may have a title row before column headers)
+      // Find the actual header row (template may have title/info rows before column headers)
       const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
       let headerRowIndex = 0;
       const headerKeywords = ['prenom', 'nom', 'email', 'mail', 'first', 'last'];
       for (let i = 0; i < Math.min(rawRows.length, 10); i++) {
-        const cells = (rawRows[i] || []).map((c: any) =>
-          String(c || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        );
         let matches = 0;
-        for (const kw of headerKeywords) {
-          if (cells.some((cell: string) => cell.includes(kw))) matches++;
+        for (const cell of (rawRows[i] || [])) {
+          const val = String(cell || '').trim();
+          if (val.length === 0 || val.length > 30) continue;
+          const normalized = val.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          for (const kw of headerKeywords) {
+            if (normalized.includes(kw)) { matches++; break; }
+          }
         }
         if (matches >= 2) { headerRowIndex = i; break; }
       }
