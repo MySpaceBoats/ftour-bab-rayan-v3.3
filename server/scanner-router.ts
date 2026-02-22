@@ -810,7 +810,78 @@ export const scannerRouter = router({
       }
 
       // ---- PRODUCT (catalog QR) ----
-      if (input.type === 'product_goodie' || input.type === 'product_pastry' || input.type === 'product_terroir') {
+      if (input.type === 'product_goodie') {
+        if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+
+        const { data: product } = await supabase
+          .from('goodies')
+          .select('id, name, price, is_active')
+          .eq('id', input.entityId)
+          .single();
+
+        if (!product) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Produit goodies introuvable' });
+        }
+        if (!product.is_active) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ce produit goodies est inactif' });
+        }
+
+        const unitPrice = parseFloat(product.price as any) || 0;
+        const orderReference = `FBR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+        const { data: createdOrder, error: orderError } = await supabase
+          .from('orders')
+          .insert({
+            order_reference: orderReference,
+            customer_name: 'Vente scanner goodies',
+            customer_email: 'scanner-goodies@ftourbabrayan.ma',
+            customer_phone: '0000000000',
+            total_amount: unitPrice,
+            status: 'paid',
+            payment_method: 'cash',
+            notes: `Commande créée via scanner catalogue par ${ctx.user?.name || ctx.user?.email || 'scanner'}`,
+            processed_by: ctx.user?.id,
+          })
+          .select('id, order_reference')
+          .single();
+
+        if (orderError || !createdOrder) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: orderError?.message || 'Création commande impossible' });
+        }
+
+        const { error: itemError } = await supabase
+          .from('order_items')
+          .insert({
+            order_id: createdOrder.id,
+            goodie_id: product.id,
+            quantity: 1,
+            unit_price: unitPrice,
+            total_price: unitPrice,
+          });
+
+        if (itemError) {
+          await supabase.from('orders').delete().eq('id', createdOrder.id);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: itemError.message });
+        }
+
+        await supabaseServices.logQRScanSupabase(
+          input.token,
+          input.type,
+          input.entityId,
+          'catalog_scan',
+          ctx.user?.id || 0,
+          true
+        );
+
+        return {
+          success: true,
+          message: `Produit ajouté au board commandes (${createdOrder.order_reference}).`,
+          orderId: createdOrder.id,
+          orderReference: createdOrder.order_reference,
+        };
+      }
+
+      if (input.type === 'product_pastry' || input.type === 'product_terroir') {
         await supabaseServices.logQRScanSupabase(
           input.token,
           input.type,
