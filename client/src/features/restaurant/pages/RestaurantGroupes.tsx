@@ -207,8 +207,8 @@ export default function RestaurantGroupes() {
                     <SelectValue placeholder="Choisissez une salle" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="jardin">Jardin</SelectItem>
-                    <SelectItem value="brasserie">Brasserie</SelectItem>
+                    <SelectItem value="jardin">Pavillon du Jardin</SelectItem>
+                    <SelectItem value="brasserie">Salon Palmier</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
