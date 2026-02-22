@@ -53,7 +53,22 @@ const scannerProcedure = protectedProcedure.use(({ ctx, next }) => {
 
 
 
-type WorkerQrType = 'volunteer' | 'reservation_particulier' | 'reservation_entreprise' | 'reservation_groupe' | 'unknown';
+type WorkerQrType = 'volunteer' | 'reservation_particulier' | 'reservation_entreprise' | 'reservation_groupe' | 'pastry' | 'terroir' | 'goodies' | 'donation' | 'product_goodie' | 'product_pastry' | 'product_terroir' | 'unknown';
+
+const QR_TYPE_LABELS: Record<WorkerQrType, string> = {
+  volunteer: 'Bénévole',
+  reservation_particulier: 'Réservation Particulier',
+  reservation_entreprise: 'Réservation Entreprise',
+  reservation_groupe: 'Réservation Groupe',
+  pastry: 'Commande Pâtisserie',
+  terroir: 'Commande Terroir',
+  goodies: 'Commande Goodies',
+  donation: 'Don',
+  product_goodie: 'Produit Goodies',
+  product_pastry: 'Produit Pâtisserie',
+  product_terroir: 'Produit Terroir',
+  unknown: 'Inconnu',
+};
 
 function extractTokenFromUrl(rawInput: string): string {
   try {
@@ -61,9 +76,40 @@ function extractTokenFromUrl(rawInput: string): string {
       const parts = rawInput.split('/checkin-reservation/');
       return parts[parts.length - 1].split('?')[0];
     }
+    if (rawInput.includes('/qr/pastry/')) {
+      const parts = rawInput.split('/qr/pastry/');
+      return parts[parts.length - 1].split('?')[0];
+    }
+    if (rawInput.includes('/qr/terroir/')) {
+      const parts = rawInput.split('/qr/terroir/');
+      return parts[parts.length - 1].split('?')[0];
+    }
+    // Product catalog QR codes: /buy/goodie/{id}, /buy/pastry/{id}, /buy/terroir/{id}
+    if (rawInput.includes('/buy/goodie/')) {
+      const parts = rawInput.split('/buy/goodie/');
+      const productId = parts[parts.length - 1].split('?')[0];
+      return `PROD-GOODIE-${productId}`;
+    }
+    if (rawInput.includes('/buy/pastry/')) {
+      const parts = rawInput.split('/buy/pastry/');
+      const productId = parts[parts.length - 1].split('?')[0];
+      return `PROD-PASTRY-${productId}`;
+    }
+    if (rawInput.includes('/buy/terroir/')) {
+      const parts = rawInput.split('/buy/terroir/');
+      const productId = parts[parts.length - 1].split('?')[0];
+      return `PROD-TERROIR-${productId}`;
+    }
     if (rawInput.includes('/checkin/')) {
       const parts = rawInput.split('/checkin/');
       return parts[parts.length - 1].split('?')[0];
+    }
+    // Generic page URLs (legacy catalog QR codes without product ID)
+    if (/\/terroir\/?(\?|$)/.test(rawInput)) {
+      return 'PAGE-TERROIR';
+    }
+    if (/\/dons\/?(\?|$)/.test(rawInput)) {
+      return 'PAGE-DONS';
     }
     return rawInput.trim();
   } catch {
@@ -75,6 +121,13 @@ function detectWorkerQrType(token: string): WorkerQrType {
   if (token.startsWith('rp-')) return 'reservation_particulier';
   if (token.startsWith('re-')) return 'reservation_entreprise';
   if (token.startsWith('rg-')) return 'reservation_groupe';
+  if (token.startsWith('ter-') || token.startsWith('TER-')) return 'terroir';
+  if (token.startsWith('PASTRY-')) return 'pastry';
+  if (token.startsWith('FBR-')) return 'goodies';
+  if (token.startsWith('DON-')) return 'donation';
+  if (token.startsWith('PROD-GOODIE-')) return 'product_goodie';
+  if (token.startsWith('PROD-PASTRY-')) return 'product_pastry';
+  if (token.startsWith('PROD-TERROIR-')) return 'product_terroir';
   if (/^[a-f0-9]{32,}$/i.test(token)) return 'volunteer';
   return 'unknown';
 }
@@ -85,19 +138,335 @@ const scannerRouter = router({
     .mutation(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       const token = extractTokenFromUrl(input.rawCode);
-      let type = detectWorkerQrType(token);
+      let qrType = detectWorkerQrType(token);
 
-      if (type === 'volunteer' || type === 'unknown') {
+      // Handle legacy generic page QR codes
+      if (token === 'PAGE-TERROIR') {
+        return { type: 'unknown' as WorkerQrType, typeLabel: 'Page Terroir', token, found: false, error: 'Ce QR code renvoie vers la page terroir générale. Veuillez scanner un QR code produit spécifique.' };
+      }
+      if (token === 'PAGE-DONS') {
+        return { type: 'unknown' as WorkerQrType, typeLabel: 'Page Dons', token, found: false, error: 'Ce QR code renvoie vers la page de dons. Aucun produit à identifier.' };
+      }
+
+      // ---- VOLUNTEER (auto-validation) ----
+      if (qrType === 'volunteer') {
+        const { data: volunteer } = await supabase
+          .from('volunteers')
+          .select('id, first_name, last_name, email, phone, status, qr_status, scanned_at, day_id')
+          .eq('qr_token', token)
+          .single();
+
+        if (volunteer) {
+          // Auto-validate on scan
+          const alreadyValidated = volunteer.qr_status === 'validated';
+          if (!alreadyValidated) {
+            await supabase.from('volunteers').update({
+              qr_status: 'validated',
+              status: 'confirmed',
+              scanned_at: new Date().toISOString(),
+              scanned_by: ctx.user?.id,
+            }).eq('id', volunteer.id);
+          }
+
+          const fullName = `${volunteer.first_name} ${volunteer.last_name}`;
+          return {
+            type: 'volunteer' as WorkerQrType,
+            typeLabel: QR_TYPE_LABELS.volunteer,
+            token,
+            found: true,
+            autoValidated: true,
+            validationState: alreadyValidated ? 'already_confirmed' : 'confirmed',
+            validationMessage: alreadyValidated
+              ? `Déjà confirmé — ${fullName}`
+              : `Bénévole confirmé — ${fullName}`,
+            validationSuccess: true,
+            entity: {
+              id: volunteer.id,
+              name: fullName,
+              email: volunteer.email,
+              phone: volunteer.phone,
+              status: alreadyValidated ? volunteer.status : 'confirmed',
+              qrStatus: 'validated',
+              alreadyValidated,
+              scannedAt: volunteer.scanned_at,
+            },
+          };
+        }
+        // Hex token not found as volunteer — fall through to unknown handler
+        qrType = 'unknown';
+      }
+
+      // ---- RESERVATION (all types) ----
+      if (qrType === 'reservation_particulier' || qrType === 'reservation_entreprise' || qrType === 'reservation_groupe') {
+        const { data: reservation } = await supabase
+          .from('restaurant_reservations')
+          .select('id, name, email, phone, status, seats, date, reference, qr_token')
+          .eq('qr_token', token)
+          .single();
+
+        if (!reservation) {
+          return { type: qrType, typeLabel: QR_TYPE_LABELS[qrType], token, found: false, error: 'Réservation introuvable' };
+        }
+        return {
+          type: qrType,
+          typeLabel: QR_TYPE_LABELS[qrType],
+          token,
+          found: true,
+          entity: {
+            id: reservation.id,
+            name: reservation.name,
+            email: reservation.email,
+            phone: reservation.phone,
+            status: reservation.status,
+            guests: reservation.seats,
+            date: reservation.date,
+            reference: reservation.reference,
+            qrStatus: reservation.status,
+            alreadyValidated: reservation.status === 'checked_in',
+          },
+        };
+      }
+
+      // ---- TERROIR ----
+      if (qrType === 'terroir') {
+        let { data: order } = await supabase
+          .from('terroir_orders')
+          .select('*, terroir_order_items(*, terroir_products(name))')
+          .eq('qr_token', token)
+          .single();
+        if (!order) {
+          const { data: orderByRef } = await supabase
+            .from('terroir_orders')
+            .select('*, terroir_order_items(*, terroir_products(name))')
+            .eq('order_reference', token)
+            .single();
+          order = orderByRef;
+        }
+        if (!order) {
+          return { type: 'terroir' as WorkerQrType, typeLabel: QR_TYPE_LABELS.terroir, token, found: false, error: 'Commande terroir introuvable' };
+        }
+        return {
+          type: 'terroir' as WorkerQrType,
+          typeLabel: QR_TYPE_LABELS.terroir,
+          token,
+          found: true,
+          entity: {
+            id: order.id,
+            name: order.customer_name,
+            phone: order.customer_phone,
+            email: order.customer_email,
+            status: order.status,
+            reference: order.order_reference,
+            totalAmount: order.total_amount,
+            qrStatus: order.qr_status,
+            alreadyValidated: order.qr_status === 'validated',
+            items: (order.terroir_order_items || []).map((i: any) => ({
+              name: i.terroir_products?.name || `Produit #${i.product_id}`,
+              quantity: i.quantity,
+              price: i.unit_price,
+            })),
+          },
+        };
+      }
+
+      // ---- PASTRY ----
+      if (qrType === 'pastry') {
+        let { data: pastryOrder } = await supabase
+          .from('pastry_orders')
+          .select('*')
+          .eq('qr_token', token)
+          .single();
+        if (!pastryOrder) {
+          const { data: pastryByRef } = await supabase
+            .from('pastry_orders')
+            .select('*')
+            .eq('reference', token)
+            .single();
+          pastryOrder = pastryByRef;
+        }
+        if (!pastryOrder) {
+          return { type: 'pastry' as WorkerQrType, typeLabel: QR_TYPE_LABELS.pastry, token, found: false, error: 'Commande pâtisserie introuvable' };
+        }
+        return {
+          type: 'pastry' as WorkerQrType,
+          typeLabel: QR_TYPE_LABELS.pastry,
+          token,
+          found: true,
+          entity: {
+            id: pastryOrder.id,
+            name: pastryOrder.customer_name,
+            phone: pastryOrder.phone,
+            email: pastryOrder.email,
+            status: pastryOrder.order_status,
+            qrStatus: pastryOrder.qr_status,
+            alreadyValidated: pastryOrder.order_status === 'handed',
+            reference: pastryOrder.reference,
+          },
+        };
+      }
+
+      // ---- GOODIES (orders table with FBR- prefix) ----
+      if (qrType === 'goodies') {
+        const { data: goodieOrder } = await supabase
+          .from('orders')
+          .select('*, order_items(*, goodies(name))')
+          .eq('order_reference', token)
+          .single();
+        if (!goodieOrder) {
+          return { type: 'goodies' as WorkerQrType, typeLabel: QR_TYPE_LABELS.goodies, token, found: false, error: 'Commande goodies introuvable' };
+        }
+        return {
+          type: 'goodies' as WorkerQrType,
+          typeLabel: QR_TYPE_LABELS.goodies,
+          token,
+          found: true,
+          entity: {
+            id: goodieOrder.id,
+            name: goodieOrder.customer_name,
+            phone: goodieOrder.customer_phone,
+            email: goodieOrder.customer_email,
+            status: goodieOrder.status,
+            reference: goodieOrder.order_reference,
+            totalAmount: parseFloat(goodieOrder.total_amount) || 0,
+            alreadyValidated: goodieOrder.status === 'delivered',
+            items: (goodieOrder.order_items || []).map((i: any) => ({
+              name: i.goodies?.name || `Goodie #${i.goodie_id}`,
+              quantity: i.quantity,
+              price: i.unit_price,
+            })),
+          },
+        };
+      }
+
+      // ---- PRODUCT GOODIE (catalog QR) ----
+      if (qrType === 'product_goodie') {
+        const productId = parseInt(token.replace('PROD-GOODIE-', ''), 10);
+        if (!isNaN(productId)) {
+          const { data: product } = await supabase
+            .from('goodies')
+            .select('*')
+            .eq('id', productId)
+            .single();
+          if (product) {
+            return {
+              type: 'product_goodie' as WorkerQrType,
+              typeLabel: QR_TYPE_LABELS.product_goodie,
+              token,
+              found: true,
+              entity: {
+                id: product.id,
+                name: product.name,
+                status: product.is_active ? 'active' : 'inactive',
+                totalAmount: parseFloat(product.price) || 0,
+                alreadyValidated: false,
+                isProduct: true,
+              },
+            };
+          }
+        }
+        return { type: 'product_goodie' as WorkerQrType, typeLabel: QR_TYPE_LABELS.product_goodie, token, found: false, error: 'Produit goodies introuvable' };
+      }
+
+      // ---- PRODUCT PASTRY (catalog QR) ----
+      if (qrType === 'product_pastry') {
+        const productId = parseInt(token.replace('PROD-PASTRY-', ''), 10);
+        if (!isNaN(productId)) {
+          const { data: product } = await supabase
+            .from('pastries')
+            .select('*')
+            .eq('id', productId)
+            .single();
+          if (product) {
+            return {
+              type: 'product_pastry' as WorkerQrType,
+              typeLabel: QR_TYPE_LABELS.product_pastry,
+              token,
+              found: true,
+              entity: {
+                id: product.id,
+                name: product.name,
+                status: product.active ? 'active' : 'inactive',
+                totalAmount: parseFloat(product.price) || 0,
+                alreadyValidated: false,
+                isProduct: true,
+              },
+            };
+          }
+        }
+        return { type: 'product_pastry' as WorkerQrType, typeLabel: QR_TYPE_LABELS.product_pastry, token, found: false, error: 'Produit pâtisserie introuvable' };
+      }
+
+      // ---- PRODUCT TERROIR (catalog QR) ----
+      if (qrType === 'product_terroir') {
+        const productId = parseInt(token.replace('PROD-TERROIR-', ''), 10);
+        if (!isNaN(productId)) {
+          const { data: product } = await supabase
+            .from('terroir_products')
+            .select('*, terroir_product_variants(price_unit)')
+            .eq('id', productId)
+            .single();
+          if (product) {
+            const firstVariant = (product as any).terroir_product_variants?.[0];
+            return {
+              type: 'product_terroir' as WorkerQrType,
+              typeLabel: QR_TYPE_LABELS.product_terroir,
+              token,
+              found: true,
+              entity: {
+                id: product.id,
+                name: product.name,
+                status: product.is_active ? 'active' : 'inactive',
+                totalAmount: firstVariant?.price_unit ? parseFloat(firstVariant.price_unit) : 0,
+                alreadyValidated: false,
+                isProduct: true,
+              },
+            };
+          }
+        }
+        return { type: 'product_terroir' as WorkerQrType, typeLabel: QR_TYPE_LABELS.product_terroir, token, found: false, error: 'Produit terroir introuvable' };
+      }
+
+      // ---- DONATION ----
+      if (qrType === 'donation') {
+        const { data: donation } = await supabase
+          .from('donations')
+          .select('*')
+          .eq('donation_reference', token)
+          .single();
+        if (!donation) {
+          return { type: 'donation' as WorkerQrType, typeLabel: QR_TYPE_LABELS.donation, token, found: false, error: 'Don introuvable' };
+        }
+        return {
+          type: 'donation' as WorkerQrType,
+          typeLabel: QR_TYPE_LABELS.donation,
+          token,
+          found: true,
+          entity: {
+            id: donation.id,
+            name: donation.donor_name,
+            phone: donation.donor_phone,
+            email: donation.donor_email,
+            status: donation.status,
+            reference: donation.donation_reference,
+            amount: parseFloat(donation.amount) || 0,
+            paymentMethod: donation.payment_method,
+            alreadyValidated: donation.status === 'received',
+          },
+        };
+      }
+
+      // ---- UNKNOWN: try all tables ----
+      if (qrType === 'unknown') {
+        // Try volunteer
         const { data: volunteer } = await supabase
           .from('volunteers')
           .select('id, first_name, last_name, email, phone, status, qr_status, scanned_at')
           .eq('qr_token', token)
           .single();
-
         if (volunteer) {
           return {
-            type: 'volunteer' as const,
-            typeLabel: 'Bénévole',
+            type: 'volunteer' as WorkerQrType,
+            typeLabel: QR_TYPE_LABELS.volunteer,
             token,
             found: true,
             entity: {
@@ -112,19 +481,15 @@ const scannerRouter = router({
             },
           };
         }
-      }
-
-      if (type.startsWith('reservation_') || type === 'unknown') {
+        // Try reservation
         const { data: reservation } = await supabase
           .from('restaurant_reservations')
           .select('id, name, email, phone, status, seats, date, reference, qr_token')
           .eq('qr_token', token)
           .single();
-
         if (reservation) {
-          if (type === 'unknown') type = 'reservation_particulier';
           return {
-            type,
+            type: 'reservation_particulier' as WorkerQrType,
             typeLabel: 'Réservation',
             token,
             found: true,
@@ -142,20 +507,128 @@ const scannerRouter = router({
             },
           };
         }
+        // Try goodies order
+        const { data: goodieOrder } = await supabase
+          .from('orders')
+          .select('*, order_items(*, goodies(name))')
+          .eq('order_reference', token)
+          .single();
+        if (goodieOrder) {
+          return {
+            type: 'goodies' as WorkerQrType,
+            typeLabel: QR_TYPE_LABELS.goodies,
+            token,
+            found: true,
+            entity: {
+              id: goodieOrder.id,
+              name: goodieOrder.customer_name,
+              phone: goodieOrder.customer_phone,
+              email: goodieOrder.customer_email,
+              status: goodieOrder.status,
+              reference: goodieOrder.order_reference,
+              totalAmount: parseFloat(goodieOrder.total_amount) || 0,
+              alreadyValidated: goodieOrder.status === 'delivered',
+              items: (goodieOrder.order_items || []).map((i: any) => ({
+                name: i.goodies?.name || `Goodie #${i.goodie_id}`,
+                quantity: i.quantity,
+                price: i.unit_price,
+              })),
+            },
+          };
+        }
+        // Try pastry order
+        let pastryOrder = null;
+        const { data: pastryByToken } = await supabase
+          .from('pastry_orders').select('*').eq('qr_token', token).single();
+        pastryOrder = pastryByToken;
+        if (!pastryOrder) {
+          const { data: pastryByRef } = await supabase
+            .from('pastry_orders').select('*').eq('reference', token).single();
+          pastryOrder = pastryByRef;
+        }
+        if (pastryOrder) {
+          return {
+            type: 'pastry' as WorkerQrType,
+            typeLabel: QR_TYPE_LABELS.pastry,
+            token,
+            found: true,
+            entity: {
+              id: pastryOrder.id,
+              name: pastryOrder.customer_name,
+              phone: pastryOrder.phone,
+              email: pastryOrder.email,
+              status: pastryOrder.order_status,
+              qrStatus: pastryOrder.qr_status,
+              alreadyValidated: pastryOrder.order_status === 'handed',
+              reference: pastryOrder.reference,
+            },
+          };
+        }
+        // Try terroir order
+        let terroirOrder = null;
+        const { data: terroirByToken } = await supabase
+          .from('terroir_orders').select('*').eq('qr_token', token).single();
+        terroirOrder = terroirByToken;
+        if (!terroirOrder) {
+          const { data: terroirByRef } = await supabase
+            .from('terroir_orders').select('*').eq('order_reference', token).single();
+          terroirOrder = terroirByRef;
+        }
+        if (terroirOrder) {
+          return {
+            type: 'terroir' as WorkerQrType,
+            typeLabel: QR_TYPE_LABELS.terroir,
+            token,
+            found: true,
+            entity: {
+              id: terroirOrder.id,
+              name: terroirOrder.customer_name,
+              phone: terroirOrder.customer_phone,
+              email: terroirOrder.customer_email,
+              status: terroirOrder.status,
+              qrStatus: terroirOrder.qr_status,
+              alreadyValidated: terroirOrder.qr_status === 'validated',
+              reference: terroirOrder.order_reference,
+            },
+          };
+        }
+        // Try donation
+        const { data: donationRow } = await supabase
+          .from('donations').select('*').eq('donation_reference', token).single();
+        if (donationRow) {
+          return {
+            type: 'donation' as WorkerQrType,
+            typeLabel: QR_TYPE_LABELS.donation,
+            token,
+            found: true,
+            entity: {
+              id: donationRow.id,
+              name: donationRow.donor_name,
+              phone: donationRow.donor_phone,
+              email: donationRow.donor_email,
+              status: donationRow.status,
+              reference: donationRow.donation_reference,
+              amount: parseFloat(donationRow.amount) || 0,
+              paymentMethod: donationRow.payment_method,
+              alreadyValidated: donationRow.status === 'received',
+            },
+          };
+        }
       }
 
-      return { type: 'unknown' as const, typeLabel: 'Inconnu', token, found: false, error: 'QR code non reconnu dans le système' };
+      return { type: 'unknown' as WorkerQrType, typeLabel: 'Inconnu', token, found: false, error: 'QR code non reconnu dans le système' };
     }),
 
   validate: scannerProcedure
     .input(z.object({
       token: z.string().min(1),
-      type: z.enum(['volunteer', 'reservation_particulier', 'reservation_entreprise', 'reservation_groupe', 'pastry', 'terroir', 'goodies', 'unknown']),
+      type: z.enum(['volunteer', 'reservation_particulier', 'reservation_entreprise', 'reservation_groupe', 'pastry', 'terroir', 'goodies', 'donation', 'product_goodie', 'product_pastry', 'product_terroir', 'unknown']),
       entityId: z.number(),
     }))
     .mutation(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
 
+      // ---- VOLUNTEER ----
       if (input.type === 'volunteer') {
         const { data: volunteer } = await supabase
           .from('volunteers')
@@ -178,6 +651,7 @@ const scannerRouter = router({
         return { success: true, message: `Bénévole confirmé — ${volunteer.first_name} ${volunteer.last_name}`, state: 'confirmed' as const };
       }
 
+      // ---- RESERVATION ----
       if (input.type.startsWith('reservation_')) {
         const { data: reservation } = await supabase
           .from('restaurant_reservations')
@@ -198,6 +672,71 @@ const scannerRouter = router({
         });
 
         return { success: true, message: 'Check-in réservation validé !', state: 'confirmed' as const };
+      }
+
+      // ---- TERROIR ----
+      if (input.type === 'terroir') {
+        const { data: order } = await supabase
+          .from('terroir_orders')
+          .select('qr_status, status')
+          .eq('id', input.entityId)
+          .single();
+        if (!order) throw new TRPCError({ code: 'NOT_FOUND', message: 'Commande terroir introuvable' });
+        if (order.qr_status === 'validated') throw new TRPCError({ code: 'BAD_REQUEST', message: 'Commande déjà validée' });
+        await supabase.from('terroir_orders')
+          .update({ qr_status: 'validated', status: 'handed' })
+          .eq('id', input.entityId);
+        return { success: true, message: 'Commande terroir remise !' };
+      }
+
+      // ---- PASTRY ----
+      if (input.type === 'pastry') {
+        const { data: order } = await supabase
+          .from('pastry_orders')
+          .select('qr_status, order_status')
+          .eq('id', input.entityId)
+          .single();
+        if (!order) throw new TRPCError({ code: 'NOT_FOUND', message: 'Commande pâtisserie introuvable' });
+        if (order.order_status === 'handed') throw new TRPCError({ code: 'BAD_REQUEST', message: 'Commande déjà remise' });
+        await supabase.from('pastry_orders')
+          .update({ qr_status: 'validated', order_status: 'handed' })
+          .eq('id', input.entityId);
+        return { success: true, message: 'Commande pâtisserie remise !' };
+      }
+
+      // ---- GOODIES ----
+      if (input.type === 'goodies') {
+        const { data: order } = await supabase
+          .from('orders')
+          .select('status')
+          .eq('id', input.entityId)
+          .single();
+        if (!order) throw new TRPCError({ code: 'NOT_FOUND', message: 'Commande goodies introuvable' });
+        if (order.status === 'delivered') throw new TRPCError({ code: 'BAD_REQUEST', message: 'Commande déjà remise' });
+        await supabase.from('orders')
+          .update({ status: 'delivered' })
+          .eq('id', input.entityId);
+        return { success: true, message: 'Commande goodies remise !' };
+      }
+
+      // ---- PRODUCT (catalog QR - no validation needed) ----
+      if (input.type === 'product_goodie' || input.type === 'product_pastry' || input.type === 'product_terroir') {
+        return { success: true, message: 'QR code produit catalogue — aucune validation nécessaire' };
+      }
+
+      // ---- DONATION ----
+      if (input.type === 'donation') {
+        const { data: donation } = await supabase
+          .from('donations')
+          .select('status')
+          .eq('id', input.entityId)
+          .single();
+        if (!donation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Don introuvable' });
+        if (donation.status === 'received') throw new TRPCError({ code: 'BAD_REQUEST', message: 'Don déjà marqué comme reçu' });
+        await supabase.from('donations')
+          .update({ status: 'received' })
+          .eq('id', input.entityId);
+        return { success: true, message: 'Don marqué comme reçu !' };
       }
 
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'Type de QR non supporté pour la validation' });
