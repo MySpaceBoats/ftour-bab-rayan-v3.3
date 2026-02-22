@@ -6,7 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Download, Search, CheckCircle, XCircle, Loader2, Percent } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, Download, Search, CheckCircle, XCircle, Loader2, Percent, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 
 type ReservationType = 'all' | 'particulier' | 'entreprise' | 'groupe';
@@ -18,6 +21,20 @@ export default function AdminRestaurantReservations() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [depositInput, setDepositInput] = useState<string>('');
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editForm, setEditForm] = useState<{
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+    date: string;
+    seatsTotal: number;
+    notes: string;
+    companyName: string;
+    groupName: string;
+    displayChoice: string;
+    type: string;
+  } | null>(null);
 
   // Fetch reservations via restaurantReservations router
   const { data: particuliers = [], isLoading: loadingP, isError: errorP, refetch: refetchP } = trpc.restaurantReservations.adminListParticuliers.useQuery(undefined, { retry: 1 });
@@ -103,6 +120,52 @@ export default function AdminRestaurantReservations() {
       toast.error(error.message || 'Erreur lors de la mise à jour');
     },
   });
+
+  // Edit reservation
+  const editMutation = trpc.restaurantReservations.adminEdit.useMutation({
+    onSuccess: () => {
+      toast.success('Réservation modifiée avec succès');
+      setEditDialogOpen(false);
+      setEditForm(null);
+      refetchAll();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Erreur lors de la modification');
+    },
+  });
+
+  const openEditDialog = (res: any) => {
+    setEditForm({
+      id: res.id,
+      name: res.name || '',
+      email: res.email || '',
+      phone: res.phone || '',
+      date: res.date ? new Date(res.date).toISOString().split('T')[0] : '',
+      seatsTotal: res.seatsTotal || 0,
+      notes: res.notes || '',
+      companyName: res.companyName || '',
+      groupName: res.groupName || '',
+      displayChoice: res.displayChoice || '',
+      type: res.type || '',
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = () => {
+    if (!editForm) return;
+    editMutation.mutate({
+      id: editForm.id,
+      name: editForm.name,
+      email: editForm.email,
+      phone: editForm.phone,
+      date: editForm.date,
+      seatsTotal: editForm.seatsTotal,
+      notes: editForm.notes,
+      companyName: editForm.companyName || undefined,
+      groupName: editForm.groupName || undefined,
+      displayChoice: editForm.displayChoice || undefined,
+    });
+  };
 
   const handleDepositUpdate = (id: number) => {
     const pct = parseInt(depositInput, 10);
@@ -378,6 +441,15 @@ export default function AdminRestaurantReservations() {
                   </div>
                 )}
 
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => openEditDialog(selectedReservation)}
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Modifier la réservation
+                </Button>
+
                 {/* Deposit percentage section */}
                 {!['refused', 'cancelled'].includes(selectedReservation.status) && (
                   <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
@@ -468,6 +540,138 @@ export default function AdminRestaurantReservations() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Edit reservation dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Modifier la réservation</DialogTitle>
+          </DialogHeader>
+          {editForm && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-name">Nom du contact</Label>
+                <Input
+                  id="edit-name"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-phone">Téléphone</Label>
+                <Input
+                  id="edit-phone"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-date">Date du Ftour</Label>
+                <Input
+                  id="edit-date"
+                  type="date"
+                  value={editForm.date}
+                  onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-seats">Nombre de places</Label>
+                <Input
+                  id="edit-seats"
+                  type="number"
+                  min={1}
+                  value={editForm.seatsTotal}
+                  onChange={(e) => setEditForm({ ...editForm, seatsTotal: parseInt(e.target.value, 10) || 0 })}
+                />
+              </div>
+
+              {editForm.type === 'entreprise' && (
+                <div>
+                  <Label htmlFor="edit-company">Nom de l'entreprise</Label>
+                  <Input
+                    id="edit-company"
+                    value={editForm.companyName}
+                    onChange={(e) => setEditForm({ ...editForm, companyName: e.target.value })}
+                  />
+                </div>
+              )}
+
+              {editForm.type === 'groupe' && (
+                <div>
+                  <Label htmlFor="edit-group">Nom du groupe</Label>
+                  <Input
+                    id="edit-group"
+                    value={editForm.groupName}
+                    onChange={(e) => setEditForm({ ...editForm, groupName: e.target.value })}
+                  />
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="edit-display">Salle</Label>
+                <Select
+                  value={editForm.displayChoice}
+                  onValueChange={(value) => setEditForm({ ...editForm, displayChoice: value })}
+                >
+                  <SelectTrigger id="edit-display">
+                    <SelectValue placeholder="Choisir une salle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="jardin">Jardin</SelectItem>
+                    <SelectItem value="brasserie">Brasserie</SelectItem>
+                    <SelectItem value="corpo">Corpo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-notes">Notes</Label>
+                <Textarea
+                  id="edit-notes"
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  className="min-h-[80px]"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  onClick={handleEditSubmit}
+                  disabled={editMutation.isPending}
+                  className="flex-1"
+                >
+                  {editMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                  )}
+                  Enregistrer
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setEditDialogOpen(false)}
+                  className="flex-1"
+                >
+                  Annuler
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

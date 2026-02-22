@@ -532,6 +532,43 @@ export const restaurantReservationsRouter = router({
       }
     }),
 
+  adminEdit: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().min(1).optional(),
+      email: z.string().email().optional(),
+      phone: z.string().min(1).optional(),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide").optional(),
+      seatsTotal: z.number().int().min(1).optional(),
+      notes: z.string().optional(),
+      companyName: z.string().optional(),
+      groupName: z.string().optional(),
+      displayChoice: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
+      if (!allowedRoles.includes(ctx.user?.role || '')) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      }
+
+      try {
+        const { id, date, ...rest } = input;
+        const updateData: any = { ...rest };
+        if (date) {
+          updateData.date = new Date(date);
+        }
+
+        const updated = await reservationServices.updateRestaurantReservation(id, updateData);
+        return { success: true, reservation: updated };
+      } catch (error) {
+        console.error("[Admin Edit Reservation] Error:", error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Erreur lors de la modification de la réservation',
+        });
+      }
+    }),
+
   adminUpdateStatus: protectedProcedure
     .input(z.object({
       id: z.number(),
