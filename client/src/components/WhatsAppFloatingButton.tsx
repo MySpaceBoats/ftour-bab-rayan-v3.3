@@ -4,17 +4,13 @@
  */
 
 const WHATSAPP_NUMBER = "212664216938"; // +212 664-216938 (sans +)
-const DEFAULT_MESSAGE =
-  "Bonjour, j'ai une question concernant Ftour Bab Rayan.";
 const MAPS_ITINERARY_URL = "https://share.google/VNwpwHz3v0g9kCpuz";
 
 const BUTTON_BASE =
   "w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow focus:outline-none focus:ring-2 focus:ring-offset-2";
 
 export default function WhatsAppFloatingButton() {
-  const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-    DEFAULT_MESSAGE
-  )}`;
+  const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}`;
   const telUrl = `tel:+${WHATSAPP_NUMBER}`;
 
   return (
