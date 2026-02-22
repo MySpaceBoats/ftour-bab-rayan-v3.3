@@ -1154,18 +1154,18 @@ const volunteersRouter = router({
       // Find the actual header row (template may have title/info rows before column headers)
       const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
       let headerRowIndex = 0;
-      const headerKeywords = ['prenom', 'nom', 'email', 'mail', 'first', 'last'];
-      for (let i = 0; i < Math.min(rawRows.length, 10); i++) {
-        let matches = 0;
-        for (const cell of (rawRows[i] || [])) {
+      for (let i = 0; i < Math.min(rawRows.length, 20); i++) {
+        const row = rawRows[i] || [];
+        let hasPrenom = false, hasNom = false, hasEmail = false;
+        for (const cell of row) {
           const val = String(cell || '').trim();
           if (val.length === 0 || val.length > 30) continue;
-          const normalized = val.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-          for (const kw of headerKeywords) {
-            if (normalized.includes(kw)) { matches++; break; }
-          }
+          const n = val.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          if (!hasPrenom && (n.includes('prenom') || n.includes('first'))) { hasPrenom = true; }
+          else if (!hasEmail && (n.includes('email') || n.includes('mail') || n.includes('courriel'))) { hasEmail = true; }
+          else if (!hasNom && (n.includes('nom') || n.includes('last') || n.includes('family'))) { hasNom = true; }
         }
-        if (matches >= 2) { headerRowIndex = i; break; }
+        if (hasPrenom && hasNom && hasEmail) { headerRowIndex = i; break; }
       }
 
       const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '', range: headerRowIndex });
@@ -1174,9 +1174,10 @@ const volunteersRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Aucune ligne trouvée dans le fichier Excel.' });
       }
 
-      // Normalize column names: map various French/English column names to standard keys
-      function findColumn(row: Record<string, any>, candidates: string[]): string {
+      // Normalize column names (exclude already-matched keys to avoid nom/prenom collision)
+      function findColumn(row: Record<string, any>, candidates: string[], exclude: string[] = []): string {
         for (const key of Object.keys(row)) {
+          if (exclude.includes(key)) continue;
           const normalized = key.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
           for (const candidate of candidates) {
             if (normalized.includes(candidate)) return key;
@@ -1188,10 +1189,10 @@ const volunteersRouter = router({
       // Detect column mapping from first row
       const sampleRow = rows[0];
       const colFirstName = findColumn(sampleRow, ['prenom', 'first', 'firstname']);
-      const colLastName = findColumn(sampleRow, ['nom', 'last', 'lastname', 'family']);
-      const colEmail = findColumn(sampleRow, ['email', 'mail', 'courriel']);
-      const colPhone = findColumn(sampleRow, ['telephone', 'tel', 'phone', 'mobile', 'gsm']);
-      const colCity = findColumn(sampleRow, ['ville', 'city']);
+      const colLastName = findColumn(sampleRow, ['nom', 'last', 'lastname', 'family'], [colFirstName]);
+      const colEmail = findColumn(sampleRow, ['email', 'mail', 'courriel'], [colFirstName, colLastName]);
+      const colPhone = findColumn(sampleRow, ['telephone', 'tel', 'phone', 'mobile', 'gsm'], [colFirstName, colLastName, colEmail]);
+      const colCity = findColumn(sampleRow, ['ville', 'city'], [colFirstName, colLastName, colEmail, colPhone]);
 
       if (!colFirstName || !colLastName || !colEmail) {
         const detectedCols = Object.keys(sampleRow).join(', ');
