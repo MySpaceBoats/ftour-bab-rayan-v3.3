@@ -45,7 +45,7 @@ export default function Programme() {
             <div className="max-w-3xl mx-auto text-center space-y-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
                 <Calendar className="h-4 w-4" />
-                Ramadan 2026
+                Ramadan
               </div>
               <h1 className="text-4xl md:text-5xl font-bold text-foreground">
                 Programme du Ftour

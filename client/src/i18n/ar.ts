@@ -47,7 +47,7 @@ export const ar: Translations = {
   home: {
     heroTitle: 'Ftour Bab Rayan',
     heroTitleAr: 'فطور باب ريان',
-    heroSubtitle: 'الدورة 12 — 2026',
+    heroSubtitle: 'الدورة 12',
     heroDescription: 'لأن كل طفل يستحق بداية جيدة في الحياة. دعونا نتشارك معًا لحظات التضامن خلال هذا الشهر الفضيل.',
     statsTitle: 'الأرقام الرئيسية السنوية',
     statsVolunteers: 'متطوع',
@@ -117,7 +117,7 @@ export const ar: Translations = {
     volunteerCardDesc: 'انضم لفريقنا من +6,000 متطوع وشارك في تنظيم الفطور التضامني. اختر أيام تواجدك.',
     register: 'سجل',
     shopTitle: 'المتجر التضامني',
-    shopDesc: 'اكتشف منتجاتنا الحصرية لرمضان 2026. جميع الأرباح تدعم أعمالنا للأطفال في وضع صعب.',
+    shopDesc: 'اكتشف منتجاتنا الحصرية لرمضان. جميع الأرباح تدعم أعمالنا للأطفال في وضع صعب.',
     viewShop: 'عرض المتجر',
     donationCardTitle: 'تبرع',
     donationCardDesc: 'كرمك يمول الوجبات والإيواء وتعليم الأطفال. كل تبرع مهم.',
@@ -187,7 +187,7 @@ export const ar: Translations = {
     termsLink: 'عرض الشروط',
     submitSuccess: 'تم التسجيل بنجاح! ستتلقى بريداً إلكترونياً للتأكيد مع رمز QR الخاص بك.',
     submitError: 'خطأ في التسجيل. يرجى المحاولة مرة أخرى.',
-    calendarTitle: 'تقويم رمضان 2026',
+    calendarTitle: 'تقويم رمضان',
     calendarSubtitle: 'اختر اليوم الذي ترغب في المشاركة فيه',
   },
 
@@ -496,7 +496,7 @@ export const ar: Translations = {
 
   // Programme Page
   programme: {
-    title: 'برنامج رمضان 2026',
+    title: 'برنامج رمضان',
     subtitle: 'تقويم الفطور',
     description: 'اكتشف البرنامج الكامل للدورة الـ12 من فطور باب ريان.',
   },
@@ -504,7 +504,7 @@ export const ar: Translations = {
   // Footer
   footer: {
     description: 'تنظم جمعية باب ريان كل عام منذ 2015 فطور باب ريان. هذا الحدث يجلب الدفء والألفة خلال شهر رمضان المبارك.',
-    edition: 'الدورة الـ 12 — 2026',
+    edition: 'الدورة الـ 12',
     quickLinks: 'روابط سريعة',
     program: 'البرنامج',
     shop: 'المتجر التضامني',
@@ -806,7 +806,7 @@ export const ar: Translations = {
     title: 'المتجر التضامني',
     subtitle: 'منتجات وحلويات تقليدية ومنتجات الأرض المغربية. جميع الأرباح تمول أعمالنا من أجل الأطفال في وضع صعب.',
     goodiesTitle: 'منتجات تضامنية',
-    goodiesDesc: 'تي شيرتات وحقائب وإكسسوارات حصرية لرمضان 2026.',
+    goodiesDesc: 'تي شيرتات وحقائب وإكسسوارات حصرية لرمضان.',
     goodiesCta: 'عرض المنتجات',
     pastriesTitle: 'حلويات تضامنية',
     pastriesDesc: 'حلويات مغربية تقليدية محضرة بعناية.',

@@ -31,7 +31,7 @@ export default function RestaurantGroupes() {
     notes: '',
   });
 
-  // Dates autorisées : 20 février - 13 mars 2026
+  // Dates autorisées : 20 février - 13 mars
   const startDate = new Date(2026, 1, 20);
   const endDate = new Date(2026, 2, 13);
 
@@ -178,7 +178,7 @@ export default function RestaurantGroupes() {
                   max={endDate.toISOString().split('T')[0]}
                   required
                 />
-                <p className="text-xs text-[#8b8b7a] mt-1">Entre le 20 février et le 13 mars 2026</p>
+                <p className="text-xs text-[#8b8b7a] mt-1">Entre le 20 février et le 13 mars</p>
               </div>
 
               {/* Taille du groupe */}

@@ -47,7 +47,7 @@ export const amz: Translations = {
   home: {
     heroTitle: 'Ftour Bab Rayan',
     heroTitleAr: 'فطور باب ريان',
-    heroSubtitle: '12th Edition — 2026',
+    heroSubtitle: '12th Edition',
     heroDescription: 'Because every child deserves a good start in life. Let us share moments of solidarity together during this sacred month.',
     statsTitle: 'Annual Key Figures',
     statsVolunteers: 'Volunteers',
@@ -117,7 +117,7 @@ export const amz: Translations = {
     volunteerCardDesc: 'Join our team of +6,000 volunteers and participate in organizing solidarity Ftours. Choose your available days.',
     register: 'Register',
     shopTitle: 'Solidarity Shop',
-    shopDesc: 'Discover our exclusive Ramadan 2026 goodies. All profits support our actions for children in difficulty.',
+    shopDesc: 'Discover our exclusive Ramadan goodies. All profits support our actions for children in difficulty.',
     viewShop: 'View Shop',
     donationCardTitle: 'Make a Donation',
     donationCardDesc: 'Your generosity funds meals, accommodation and education for children. Every donation counts.',
@@ -187,7 +187,7 @@ export const amz: Translations = {
     termsLink: 'View terms',
     submitSuccess: 'Registration successful! You will receive a confirmation email with your QR code.',
     submitError: 'Registration error. Please try again.',
-    calendarTitle: 'Ramadan 2026 Calendar',
+    calendarTitle: 'Ramadan Calendar',
     calendarSubtitle: 'Select the day you wish to participate',
   },
 
@@ -495,7 +495,7 @@ export const amz: Translations = {
 
   // Programme Page
   programme: {
-    title: 'Ramadan 2026 Program',
+    title: 'Ramadan Program',
     subtitle: 'Ftour Calendar',
     description: 'Discover the complete program of the 12th edition of Ftour Bab Rayan.',
   },
@@ -503,7 +503,7 @@ export const amz: Translations = {
   // Footer
   footer: {
     description: 'Bab Rayan Association has been organizing Ftour Bab Rayan every year since 2015. This event brings warmth and togetherness during the holy month of Ramadan.',
-    edition: '12th edition — 2026',
+    edition: '12th edition',
     quickLinks: 'Quick Links',
     program: 'Program',
     shop: 'Solidarity Shop',
@@ -805,7 +805,7 @@ export const amz: Translations = {
     title: 'Solidarity Shop',
     subtitle: 'Goodies, artisanal pastries and Moroccan terroir products. All profits fund our actions for children in difficulty.',
     goodiesTitle: 'Solidarity Goodies',
-    goodiesDesc: 'T-shirts, tote bags and exclusive Ramadan 2026 edition accessories.',
+    goodiesDesc: 'T-shirts, tote bags and exclusive Ramadan edition accessories.',
     goodiesCta: 'View goodies',
     pastriesTitle: 'Solidarity Pastries',
     pastriesDesc: 'Handmade Moroccan pastries prepared with care.',

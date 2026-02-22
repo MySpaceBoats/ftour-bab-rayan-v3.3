@@ -32,7 +32,7 @@ export default function CompanyBooking() {
     salle: '' as '' | 'jardin' | 'corpo',
   });
 
-  // Dates autorisées : 20 février - 13 mars 2026
+  // Dates autorisées : 20 février - 13 mars
   const startDate = new Date(2026, 1, 20);
   const endDate = new Date(2026, 2, 13);
 

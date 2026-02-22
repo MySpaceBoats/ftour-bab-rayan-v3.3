@@ -187,7 +187,7 @@ export default function AdminReservationsCalendar() {
     return { totalSeats, totalGroups, daysWithReservations };
   }, [calendarData, currentMonth]);
 
-  // Ramadan stats (19 février – 13 mars 2026)
+  // Ramadan stats (19 février – 13 mars)
   const RAMADAN_START = new Date(2026, 1, 19); // Feb 19
   const RAMADAN_END = new Date(2026, 2, 13);   // Mar 13
 
@@ -271,7 +271,7 @@ export default function AdminReservationsCalendar() {
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-3">
               <Moon className="h-5 w-5 text-amber-600" />
-              <h2 className="font-bold text-amber-800">Ramadan 2026</h2>
+              <h2 className="font-bold text-amber-800">Ramadan</h2>
               <span className="text-xs text-amber-600 ml-1">19 février – 13 mars</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
