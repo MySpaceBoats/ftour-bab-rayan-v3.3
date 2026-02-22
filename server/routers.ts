@@ -20,7 +20,7 @@ import * as XLSX from "xlsx";
 // ============================================
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'admin_restaurant', 'admin_patisserie', 'admin_terroir'];
+  const allowedRoles = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'admin_restaurant', 'admin_patisserie', 'admin_terroir', 'admin_contenu', 'admin_messages'];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès administrateur requis' });
   }

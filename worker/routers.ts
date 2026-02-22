@@ -27,7 +27,7 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
 
 // Admin procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_operations', 'admin_boutique', 'admin_dons'];
+  const allowedRoles = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'admin_restaurant', 'admin_patisserie', 'admin_terroir', 'admin_contenu', 'admin_messages'];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès administrateur requis' });
   }
@@ -44,7 +44,7 @@ const superAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
 
 // Scanner procedure
 const scannerProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_operations', 'scanner'];
+  const allowedRoles = ['admin', 'super_admin', 'admin_ops', 'scanner'];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès scanner requis' });
   }

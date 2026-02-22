@@ -5,7 +5,7 @@ import * as supabaseServices from './supabase-services';
 
 // Re-use admin guard
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_ops'];
+  const allowedRoles = ['admin', 'super_admin', 'admin_ops', 'admin_contenu'];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès administrateur requis' });
   }

@@ -36,7 +36,7 @@ type SectionDefinition = {
   borderClass?: string;
 };
 
-const ALL_ADMIN_ROLES = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'admin_patisserie', 'admin_terroir'];
+const ALL_ADMIN_ROLES = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'admin_patisserie', 'admin_terroir', 'admin_contenu', 'admin_messages'];
 
 const sections: SectionDefinition[] = [
   {
@@ -274,7 +274,7 @@ const sections: SectionDefinition[] = [
         icon: MessageSquare,
         iconColor: "text-green-600",
         iconBg: "bg-green-100",
-        allowedRoles: ['super_admin'],
+        allowedRoles: ['super_admin', 'admin', 'admin_messages'],
       },
       {
         label: "Contenu",
@@ -283,7 +283,7 @@ const sections: SectionDefinition[] = [
         icon: FileText,
         iconColor: "text-orange-600",
         iconBg: "bg-orange-100",
-        allowedRoles: ['super_admin'],
+        allowedRoles: ['super_admin', 'admin', 'admin_contenu'],
       },
       {
         label: "Tableau de bord unifié",
