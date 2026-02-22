@@ -45,7 +45,7 @@ export const fr = {
   home: {
     heroTitle: 'Ftour Bab Rayan',
     heroTitleAr: 'فطور باب ريان',
-    heroSubtitle: '12e édition — 2026',
+    heroSubtitle: '12e édition',
     heroDescription: 'Parce que chaque enfant mérite un bon départ dans la vie. Partageons ensemble des moments de solidarité pendant ce mois sacré.',
     statsTitle: 'Chiffres clés annuels',
     statsVolunteers: 'Bénévoles',
@@ -115,7 +115,7 @@ export const fr = {
     volunteerCardDesc: 'Rejoignez notre équipe de +6 000 bénévoles et participez à l\'organisation des Ftours solidaires. Choisissez vos jours de disponibilité.',
     register: 'S\'inscrire',
     shopTitle: 'Boutique solidaire',
-    shopDesc: 'Découvrez nos goodies exclusifs édition Ramadan 2026. Tous les bénéfices soutiennent nos actions pour les enfants en difficulté.',
+    shopDesc: 'Découvrez nos goodies exclusifs édition Ramadan. Tous les bénéfices soutiennent nos actions pour les enfants en difficulté.',
     viewShop: 'Voir la boutique',
     donationCardTitle: 'Faire un don',
     donationCardDesc: 'Votre générosité permet de financer les repas, l\'hébergement et l\'éducation des enfants. Chaque don compte.',
@@ -185,7 +185,7 @@ export const fr = {
     termsLink: 'Voir les conditions',
     submitSuccess: 'Inscription réussie ! Vous recevrez un email de confirmation avec votre QR code.',
     submitError: "Erreur lors de l'inscription. Veuillez réessayer.",
-    calendarTitle: 'Calendrier du Ramadan 2026',
+    calendarTitle: 'Calendrier du Ramadan',
     calendarSubtitle: 'Sélectionnez le jour où vous souhaitez participer',
   },
 
@@ -532,7 +532,7 @@ export const fr = {
 
   // Programme Page
   programme: {
-    title: 'Programme Ramadan 2026',
+    title: 'Programme Ramadan',
     subtitle: 'Calendrier des Ftours',
     description: 'Découvrez le programme complet de la 12e édition du Ftour Bab Rayan.',
   },
@@ -540,7 +540,7 @@ export const fr = {
   // Footer
   footer: {
     description: "L'association Bab Rayan organise chaque année depuis 2015 le Ftour Bab Rayan. Cette action apporte convivialité et chaleur pendant le mois sacré du Ramadan.",
-    edition: '12e édition — 2026',
+    edition: '12e édition',
     quickLinks: 'Liens rapides',
     program: 'Programme',
     shop: 'Boutique solidaire',
@@ -854,7 +854,7 @@ export const fr = {
     title: 'Boutique Solidaire',
     subtitle: 'Goodies, pâtisseries artisanales et produits du terroir marocain. Tous les bénéfices financent nos actions pour les enfants en difficulté.',
     goodiesTitle: 'Goodies solidaires',
-    goodiesDesc: 'T-shirts, tote bags et accessoires exclusifs édition Ramadan 2026.',
+    goodiesDesc: 'T-shirts, tote bags et accessoires exclusifs édition Ramadan.',
     goodiesCta: 'Voir les goodies',
     pastriesTitle: 'Pâtisserie solidaire',
     pastriesDesc: 'Pâtisseries artisanales marocaines préparées avec soin.',

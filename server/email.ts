@@ -656,7 +656,7 @@ export function generateReservationRequestEmail(data: ReservationRequestEmailDat
 
     <!-- RIB -->
     <div style="text-align: center; margin: 20px 0;">
-      <img src="https://jgnzhrlumlydmseusnbo.supabase.co/storage/v1/object/public/RIB%20RESA/Screenshot%202026-02-19%20at%2016.49.14.png" alt="RIB pour le virement" style="max-width: 100%; border-radius: 8px; border: 1px solid #e5e7eb;" />
+      <p style="margin: 0; color: #374151; font-size: 14px;"><strong>RIB :</strong> 007 780 0003 401 000 100 238 97<br/><strong>IBAN :</strong> MA64 007 780 0003 401 000 100 238 97</p>
     </div>
 
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
@@ -762,7 +762,7 @@ export function generateReservationConfirmationEmail(data: ReservationConfirmati
 
     <!-- RIB -->
     <div style="text-align: center; margin: 20px 0;">
-      <img src="https://jgnzhrlumlydmseusnbo.supabase.co/storage/v1/object/public/RIB%20RESA/Screenshot%202026-02-19%20at%2016.49.14.png" alt="RIB pour le virement" style="max-width: 100%; border-radius: 8px; border: 1px solid #e5e7eb;" />
+      <p style="margin: 0; color: #374151; font-size: 14px;"><strong>RIB :</strong> 007 780 0003 401 000 100 238 97<br/><strong>IBAN :</strong> MA64 007 780 0003 401 000 100 238 97</p>
     </div>
 
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
@@ -854,7 +854,7 @@ export function generateParticulierReservationRequestEmail(data: ParticulierRese
 
     <!-- RIB -->
     <div style="text-align: center; margin: 20px 0;">
-      <img src="https://jgnzhrlumlydmseusnbo.supabase.co/storage/v1/object/public/RIB%20RESA/Screenshot%202026-02-19%20at%2016.49.14.png" alt="RIB pour le virement" style="max-width: 100%; border-radius: 8px; border: 1px solid #e5e7eb;" />
+      <p style="margin: 0; color: #374151; font-size: 14px;"><strong>RIB :</strong> 007 780 0003 401 000 100 238 97<br/><strong>IBAN :</strong> MA64 007 780 0003 401 000 100 238 97</p>
     </div>
 
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
@@ -953,7 +953,7 @@ export function generateParticulierReservationConfirmedEmail(data: ParticulierRe
 
     <!-- RIB -->
     <div style="text-align: center; margin: 20px 0;">
-      <img src="https://jgnzhrlumlydmseusnbo.supabase.co/storage/v1/object/public/RIB%20RESA/Screenshot%202026-02-19%20at%2016.49.14.png" alt="RIB pour le virement" style="max-width: 100%; border-radius: 8px; border: 1px solid #e5e7eb;" />
+      <p style="margin: 0; color: #374151; font-size: 14px;"><strong>RIB :</strong> 007 780 0003 401 000 100 238 97<br/><strong>IBAN :</strong> MA64 007 780 0003 401 000 100 238 97</p>
     </div>
 
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">

@@ -50,7 +50,7 @@ export default function CompanyBookingSpace() {
             <CardContent>
               <div className="flex gap-2">
                 <Input
-                  placeholder="Ex: REF-2026-001"
+                  placeholder="Ex: REF-001"
                   value={bookingReference}
                   onChange={(e) => setBookingReference(e.target.value)}
                 />
