@@ -1214,6 +1214,10 @@ const volunteersRouter = router({
 
       const results: { email: string; success: boolean; error?: string }[] = [];
 
+      // 1. Extract and validate all rows first (no API calls)
+      const validRows: { firstName: string; lastName: string; email: string; phone: string; city?: string }[] = [];
+      const seenEmails = new Set<string>();
+
       for (const row of rows) {
         let firstName: string, lastName: string;
         if (colFullName) {
@@ -1234,115 +1238,136 @@ const volunteersRouter = router({
         const phone = colPhone ? String(row[colPhone] || '').trim() : '';
         const city = colCity ? String(row[colCity] || '').trim() : undefined;
 
-        // Skip empty rows
-        if (!firstName || !lastName || !email) {
-          results.push({ email: email || '(vide)', success: false, error: 'Données incomplètes (prénom, nom ou email manquant)' });
-          continue;
-        }
+        // Skip empty rows silently
+        if (!firstName || !lastName || !email) continue;
 
-        // Basic email validation
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
           results.push({ email, success: false, error: 'Email invalide' });
           continue;
         }
 
-        try {
-          // Check if already registered for this day
-          const { data: existing } = await supabase
-            .from('volunteers')
-            .select('id')
-            .eq('email', email)
-            .eq('day_id', input.dayId)
-            .maybeSingle();
-
-          if (existing) {
-            results.push({ email, success: false, error: 'Déjà inscrit pour ce jour' });
-            continue;
-          }
-
-          // Generate QR token
-          const qrToken = crypto.randomUUID();
-
-          // Create volunteer entry
-          const { data: volunteer, error: volError } = await supabase
-            .from('volunteers')
-            .insert({
-              first_name: firstName,
-              last_name: lastName,
-              email,
-              phone,
-              city,
-              day_id: input.dayId,
-              volunteer_slots: input.volunteerSlots,
-              qr_token: qrToken,
-              qr_status: 'generated',
-              status: 'registered',
-              accepted_terms: true,
-              email_sent: false,
-            })
-            .select()
-            .single();
-
-          if (volError) {
-            results.push({ email, success: false, error: volError.message });
-            continue;
-          }
-
-          // Send confirmation email with QR code
-          try {
-            const { sendEmail, generateVolunteerConfirmationEmail } = await import('./email');
-            const emailData = generateVolunteerConfirmationEmail({
-              firstName,
-              lastName,
-              email,
-              dayNumber: day.day_number,
-              dayDate: new Date(day.date).toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-              }),
-              location: day.location || 'Association Bab Rayan, Casablanca',
-              startTime: day.iftar_time || '18h00',
-              volunteerSlots: input.volunteerSlots,
-              qrToken,
-              baseUrl: 'https://www.ftourbabrayan.ma',
-            });
-
-            const emailResult = await sendEmail({
-              to: email,
-              subject: emailData.subject,
-              html: emailData.html,
-              apiKey: ctx.env.RESEND_API_KEY,
-            });
-
-            if (emailResult.success) {
-              await supabase
-                .from('volunteers')
-                .update({ email_sent: true })
-                .eq('id', volunteer.id);
-              results.push({ email, success: true });
-              console.log(`[ProcessGroupExcel] Email sent to ${email}`);
-            } else {
-              results.push({ email, success: true, error: `Inscrit mais email non envoyé: ${emailResult.error}` });
-              console.warn(`[ProcessGroupExcel] Volunteer created but email failed for ${email}: ${emailResult.error}`);
-            }
-          } catch (emailError) {
-            results.push({ email, success: true, error: 'Inscrit mais email non envoyé' });
-            console.error(`[ProcessGroupExcel] Email error for ${email}:`, emailError);
-          }
-        } catch (error) {
-          const errMsg = error instanceof Error ? error.message : 'Erreur inconnue';
-          results.push({ email, success: false, error: errMsg });
-          console.error(`[ProcessGroupExcel] Error for ${email}:`, error);
+        // Deduplicate within the file
+        if (seenEmails.has(email)) {
+          results.push({ email, success: false, error: 'Doublon dans le fichier' });
+          continue;
         }
+        seenEmails.add(email);
+        validRows.push({ firstName, lastName, email, phone, city });
+      }
+
+      if (validRows.length === 0) {
+        return { results, successCount: 0, failCount: results.length, totalRows: 0 };
+      }
+
+      // 2. Batch check existing emails (1 subrequest instead of N)
+      const allEmails = validRows.map(r => r.email);
+      const { data: existingVolunteers } = await supabase
+        .from('volunteers')
+        .select('email')
+        .eq('day_id', input.dayId)
+        .in('email', allEmails);
+
+      const existingEmails = new Set((existingVolunteers || []).map(v => v.email));
+      const newRows = validRows.filter(r => {
+        if (existingEmails.has(r.email)) {
+          results.push({ email: r.email, success: false, error: 'Déjà inscrit pour ce jour' });
+          return false;
+        }
+        return true;
+      });
+
+      if (newRows.length === 0) {
+        const successCount = results.filter(r => r.success).length;
+        const failCount = results.filter(r => !r.success).length;
+        return { results, successCount, failCount, totalRows: validRows.length };
+      }
+
+      // 3. Batch insert all new volunteers (1 subrequest instead of N)
+      const insertData = newRows.map(r => ({
+        first_name: r.firstName,
+        last_name: r.lastName,
+        email: r.email,
+        phone: r.phone,
+        city: r.city,
+        day_id: input.dayId,
+        volunteer_slots: input.volunteerSlots,
+        qr_token: crypto.randomUUID(),
+        qr_status: 'generated',
+        status: 'registered',
+        accepted_terms: true,
+        email_sent: false,
+      }));
+
+      const { data: insertedVolunteers, error: insertError } = await supabase
+        .from('volunteers')
+        .insert(insertData)
+        .select();
+
+      if (insertError) {
+        for (const r of newRows) {
+          results.push({ email: r.email, success: false, error: insertError.message });
+        }
+        const successCount = results.filter(r => r.success).length;
+        const failCount = results.filter(r => !r.success).length;
+        return { results, successCount, failCount, totalRows: validRows.length };
+      }
+
+      // 4. Send confirmation emails (1 subrequest each, no individual update calls)
+      const { sendEmail, generateVolunteerConfirmationEmail } = await import('./email');
+      const emailSentIds: string[] = [];
+
+      for (const vol of (insertedVolunteers || [])) {
+        try {
+          const emailData = generateVolunteerConfirmationEmail({
+            firstName: vol.first_name,
+            lastName: vol.last_name,
+            email: vol.email,
+            dayNumber: day.day_number,
+            dayDate: new Date(day.date).toLocaleDateString('fr-FR', {
+              weekday: 'long',
+              month: 'long',
+              day: 'numeric',
+            }),
+            location: day.location || 'Association Bab Rayan, Casablanca',
+            startTime: day.iftar_time || '18h00',
+            volunteerSlots: input.volunteerSlots,
+            qrToken: vol.qr_token,
+            baseUrl: 'https://www.ftourbabrayan.ma',
+          });
+
+          const emailResult = await sendEmail({
+            to: vol.email,
+            subject: emailData.subject,
+            html: emailData.html,
+            apiKey: ctx.env.RESEND_API_KEY,
+          });
+
+          if (emailResult.success) {
+            emailSentIds.push(vol.id);
+            results.push({ email: vol.email, success: true });
+          } else {
+            results.push({ email: vol.email, success: true, error: `Inscrit mais email non envoyé: ${emailResult.error}` });
+          }
+        } catch (emailError) {
+          results.push({ email: vol.email, success: true, error: 'Inscrit mais email non envoyé' });
+          console.error(`[ProcessGroupExcel] Email error for ${vol.email}:`, emailError);
+        }
+      }
+
+      // 5. Batch update email_sent status (1 subrequest instead of N)
+      if (emailSentIds.length > 0) {
+        await supabase
+          .from('volunteers')
+          .update({ email_sent: true })
+          .in('id', emailSentIds);
       }
 
       const successCount = results.filter(r => r.success).length;
       const failCount = results.filter(r => !r.success).length;
 
-      console.log(`[ProcessGroupExcel] Completed: ${successCount} success, ${failCount} failures out of ${rows.length} rows`);
+      console.log(`[ProcessGroupExcel] Completed: ${successCount} success, ${failCount} failures out of ${validRows.length} rows`);
 
-      return { results, successCount, failCount, totalRows: rows.length };
+      return { results, successCount, failCount, totalRows: validRows.length };
     }),
 });
 

@@ -689,9 +689,8 @@ const volunteersRouter = router({
         const phone = colPhone ? String(row[colPhone] || '').trim() : '';
         const city = colCity ? String(row[colCity] || '').trim() : undefined;
 
-        // Skip empty rows
+        // Skip empty rows silently
         if (!firstName || !lastName || !email) {
-          results.push({ email: email || '(vide)', success: false, error: 'Données incomplètes (prénom, nom ou email manquant)' });
           continue;
         }
 
