@@ -451,27 +451,30 @@ const volunteersRouter = router({
         if (sheetName) {
           const sheet = workbook.Sheets[sheetName];
 
-          // Find the actual header row (template may have a title row before column headers)
+          // Find the actual header row (template has title/info rows before column headers)
+          // Headers can be: "NOM PRENOM" + "EMAIL ADRESS" or "Prénom" + "Nom" + "Email"
           const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
           let headerRowIndex = 0;
-          const headerKeywords = ['prenom', 'nom', 'email', 'mail', 'first', 'last'];
-          for (let i = 0; i < Math.min(rawRows.length, 10); i++) {
-            const cells = (rawRows[i] || []).map((c: any) =>
-              String(c || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-            );
-            let matches = 0;
-            for (const kw of headerKeywords) {
-              if (cells.some((cell: string) => cell.includes(kw))) matches++;
+          for (let i = 0; i < Math.min(rawRows.length, 20); i++) {
+            const row = rawRows[i] || [];
+            let hasNameCol = false, hasEmailCol = false;
+            for (const cell of row) {
+              const val = String(cell || '').trim();
+              if (val.length === 0 || val.length > 30) continue;
+              const n = val.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+              if (n.includes('email') || n.includes('mail') || n.includes('courriel')) hasEmailCol = true;
+              if (n.includes('nom') || n.includes('name') || n.includes('prenom') || n.includes('first') || n.includes('last')) hasNameCol = true;
             }
-            if (matches >= 2) { headerRowIndex = i; break; }
+            if (hasNameCol && hasEmailCol) { headerRowIndex = i; break; }
           }
 
           const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '', range: headerRowIndex });
 
           if (rows.length > 0) {
-            // Detect columns from first row
-            const findCol = (row: Record<string, any>, candidates: string[]): string => {
+            // Detect columns (exclude already-matched keys to avoid collisions)
+            const findCol = (row: Record<string, any>, candidates: string[], exclude: string[] = []): string => {
               for (const key of Object.keys(row)) {
+                if (exclude.includes(key)) continue;
                 const n = key.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
                 for (const c of candidates) {
                   if (n.includes(c)) return key;
@@ -481,17 +484,40 @@ const volunteersRouter = router({
             };
 
             const sample = rows[0];
-            const colFirst = findCol(sample, ['prenom', 'first', 'firstname']);
-            const colLast = findCol(sample, ['nom', 'last', 'lastname', 'family']);
             const colEmail = findCol(sample, ['email', 'mail', 'courriel']);
-            const colPhone = findCol(sample, ['telephone', 'tel', 'phone', 'mobile', 'gsm']);
-            const colCity = findCol(sample, ['ville', 'city']);
 
-            if (colFirst && colLast && colEmail) {
+            // Try separate Prénom/Nom columns first
+            const colFirst = findCol(sample, ['prenom', 'first', 'firstname'], [colEmail]);
+            const colLast = findCol(sample, ['nom', 'last', 'lastname', 'family'], [colEmail, colFirst].filter(Boolean));
+
+            // Fall back to combined name column (e.g., "NOM PRENOM", "NOM ET PRENOM")
+            const colFullName = (!colFirst || !colLast)
+              ? findCol(sample, ['nom', 'name', 'prenom'], [colEmail].filter(Boolean))
+              : '';
+
+            const usedCols = [colEmail, colFirst, colLast, colFullName].filter(Boolean);
+            const colPhone = findCol(sample, ['telephone', 'tel', 'phone', 'mobile', 'gsm'], usedCols);
+            const colCity = findCol(sample, ['ville', 'city'], [...usedCols, colPhone].filter(Boolean));
+
+            const hasNames = (colFirst && colLast) || colFullName;
+            if (hasNames && colEmail) {
               let registeredCount = 0;
               for (const row of rows) {
-                const firstName = String(row[colFirst] || '').trim();
-                const lastName = String(row[colLast] || '').trim();
+                let firstName: string, lastName: string;
+                if (colFullName) {
+                  const fullName = String(row[colFullName] || '').trim();
+                  const parts = fullName.split(/\s+/);
+                  if (parts.length >= 2) {
+                    lastName = parts[0];
+                    firstName = parts.slice(1).join(' ');
+                  } else {
+                    lastName = fullName;
+                    firstName = fullName;
+                  }
+                } else {
+                  firstName = String(row[colFirst] || '').trim();
+                  lastName = String(row[colLast] || '').trim();
+                }
                 const email = String(row[colEmail] || '').toLowerCase().trim();
                 const phone = colPhone ? String(row[colPhone] || '').trim() : '';
                 const city = colCity ? String(row[colCity] || '').trim() : undefined;
@@ -576,19 +602,21 @@ const volunteersRouter = router({
 
       const sheet = workbook.Sheets[sheetName];
 
-      // Find the actual header row (template may have a title row before column headers)
+      // Find the actual header row (template has title/info rows before column headers)
+      // Headers can be: "NOM PRENOM" + "EMAIL ADRESS" or "Prénom" + "Nom" + "Email"
       const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
       let headerRowIndex = 0;
-      const headerKeywords = ['prenom', 'nom', 'email', 'mail', 'first', 'last'];
-      for (let i = 0; i < Math.min(rawRows.length, 10); i++) {
-        const cells = (rawRows[i] || []).map((c: any) =>
-          String(c || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        );
-        let matches = 0;
-        for (const kw of headerKeywords) {
-          if (cells.some((cell: string) => cell.includes(kw))) matches++;
+      for (let i = 0; i < Math.min(rawRows.length, 20); i++) {
+        const row = rawRows[i] || [];
+        let hasNameCol = false, hasEmailCol = false;
+        for (const cell of row) {
+          const val = String(cell || '').trim();
+          if (val.length === 0 || val.length > 30) continue;
+          const n = val.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          if (n.includes('email') || n.includes('mail') || n.includes('courriel')) hasEmailCol = true;
+          if (n.includes('nom') || n.includes('name') || n.includes('prenom') || n.includes('first') || n.includes('last')) hasNameCol = true;
         }
-        if (matches >= 2) { headerRowIndex = i; break; }
+        if (hasNameCol && hasEmailCol) { headerRowIndex = i; break; }
       }
 
       const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '', range: headerRowIndex });
@@ -597,9 +625,10 @@ const volunteersRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Aucune ligne trouvée dans le fichier Excel.' });
       }
 
-      // Normalize column names: map various French/English column names to standard keys
-      function findColumn(row: Record<string, any>, candidates: string[]): string {
+      // Normalize column names (exclude already-matched keys to avoid collisions)
+      function findColumn(row: Record<string, any>, candidates: string[], exclude: string[] = []): string {
         for (const key of Object.keys(row)) {
+          if (exclude.includes(key)) continue;
           const normalized = key.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
           for (const candidate of candidates) {
             if (normalized.includes(candidate)) return key;
@@ -610,17 +639,27 @@ const volunteersRouter = router({
 
       // Detect column mapping from first row
       const sampleRow = rows[0];
-      const colFirstName = findColumn(sampleRow, ['prenom', 'first', 'firstname']);
-      const colLastName = findColumn(sampleRow, ['nom', 'last', 'lastname', 'family']);
       const colEmail = findColumn(sampleRow, ['email', 'mail', 'courriel']);
-      const colPhone = findColumn(sampleRow, ['telephone', 'tel', 'phone', 'mobile', 'gsm']);
-      const colCity = findColumn(sampleRow, ['ville', 'city']);
 
-      if (!colFirstName || !colLastName || !colEmail) {
+      // Try separate Prénom/Nom columns first
+      const colFirstName = findColumn(sampleRow, ['prenom', 'first', 'firstname'], [colEmail]);
+      const colLastName = findColumn(sampleRow, ['nom', 'last', 'lastname', 'family'], [colEmail, colFirstName].filter(Boolean));
+
+      // Fall back to combined name column (e.g., "NOM PRENOM", "NOM ET PRENOM")
+      const colFullName = (!colFirstName || !colLastName)
+        ? findColumn(sampleRow, ['nom', 'name', 'prenom'], [colEmail].filter(Boolean))
+        : '';
+
+      const usedCols = [colEmail, colFirstName, colLastName, colFullName].filter(Boolean);
+      const colPhone = findColumn(sampleRow, ['telephone', 'tel', 'phone', 'mobile', 'gsm'], usedCols);
+      const colCity = findColumn(sampleRow, ['ville', 'city'], [...usedCols, colPhone].filter(Boolean));
+
+      const hasNames = (colFirstName && colLastName) || colFullName;
+      if (!hasNames || !colEmail) {
         const detectedCols = Object.keys(sampleRow).join(', ');
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: `Colonnes requises introuvables (Prénom, Nom, Email). Colonnes détectées : ${detectedCols}`,
+          message: `Colonnes requises introuvables (Nom/Prénom, Email). Colonnes détectées : ${detectedCols}`,
         });
       }
 
@@ -631,8 +670,21 @@ const volunteersRouter = router({
       const results: { email: string; success: boolean; error?: string }[] = [];
 
       for (const row of rows) {
-        const firstName = String(row[colFirstName] || '').trim();
-        const lastName = String(row[colLastName] || '').trim();
+        let firstName: string, lastName: string;
+        if (colFullName) {
+          const fullName = String(row[colFullName] || '').trim();
+          const parts = fullName.split(/\s+/);
+          if (parts.length >= 2) {
+            lastName = parts[0];
+            firstName = parts.slice(1).join(' ');
+          } else {
+            lastName = fullName;
+            firstName = fullName;
+          }
+        } else {
+          firstName = String(row[colFirstName] || '').trim();
+          lastName = String(row[colLastName] || '').trim();
+        }
         const email = String(row[colEmail] || '').toLowerCase().trim();
         const phone = colPhone ? String(row[colPhone] || '').trim() : '';
         const city = colCity ? String(row[colCity] || '').trim() : undefined;
