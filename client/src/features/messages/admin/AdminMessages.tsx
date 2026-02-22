@@ -8,8 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Download, Mail, Search, Trash2, CheckCircle, Loader2, Phone, AlertCircle, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
-import RequireRole from '@/components/RequireRole';
-
 type MessageFilter = 'all' | 'read' | 'unread';
 
 export default function AdminMessages() {
@@ -95,7 +93,6 @@ export default function AdminMessages() {
   };
 
   return (
-    <RequireRole route="/admin/messages">
     <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -251,6 +248,5 @@ export default function AdminMessages() {
         </div>
       )}
     </div>
-    </RequireRole>
   );
 }

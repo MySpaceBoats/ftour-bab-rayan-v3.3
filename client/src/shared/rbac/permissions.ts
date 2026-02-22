@@ -95,10 +95,14 @@ export const ROUTE_ROLES: Record<string, readonly Role[]> = {
   '/admin/restaurant/groupes': [...ADMIN_BASE, ROLES.ADMIN_RESTAURANT],
   '/admin/restaurants': [...ADMIN_BASE, ROLES.ADMIN_OPS],
   '/admin/reservations': [...ADMIN_BASE, ROLES.ADMIN_OPS],
+  '/admin/restaurant-reservations': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.ADMIN_RESTAURANT],
+  '/admin/reservations-calendar': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.ADMIN_RESTAURANT],
   '/admin/company-bookings': [...ADMIN_BASE, ROLES.ADMIN_RESTAURANT],
+  '/admin/scan-reservation': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.SCANNER],
 
   // Pâtisserie
   '/admin/patisserie': [...ADMIN_BASE, ROLES.ADMIN_PATISSERIE, ROLES.ADMIN_BOUTIQUE],
+  '/admin/pastries': [...ADMIN_BASE, ROLES.ADMIN_PATISSERIE, ROLES.ADMIN_BOUTIQUE],
   '/admin/patisserie/catalogue': [...ADMIN_BASE, ROLES.ADMIN_PATISSERIE, ROLES.ADMIN_BOUTIQUE],
 
   // Terroir
@@ -122,8 +126,16 @@ export const ROUTE_ROLES: Record<string, readonly Role[]> = {
   '/admin/scan-product': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.SCANNER],
   '/admin/payments': [...ADMIN_BASE, ROLES.ADMIN_BOUTIQUE, ROLES.ADMIN_DONS, ROLES.ADMIN_TERROIR],
 
+  // QR Codes
+  '/admin/qr-codes': [...ADMIN_BASE, ROLES.ADMIN_BOUTIQUE, ROLES.ADMIN_PATISSERIE, ROLES.ADMIN_TERROIR, ROLES.ADMIN_DONS],
+
   // Scanner (route publique scanner)
   '/scanner': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.SCANNER],
+  '/scanner/unifie': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.SCANNER],
+  '/scanner/patisserie': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.SCANNER],
+  '/scanner/goodies': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.SCANNER],
+  '/scanner/benevoles': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.SCANNER],
+  '/scanner/ftours': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.SCANNER],
 
   // Contenu
   '/admin/contenu': [...ADMIN_BASE, ROLES.ADMIN_CONTENU],

@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import RequireRole from "@/components/RequireRole";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -309,7 +308,6 @@ export default function AdminTerroirProducts() {
   );
 
   return (
-    <RequireRole allowedRoles={["admin", "super_admin", "admin_terroir"]}>
       <div className="min-h-screen bg-muted/30">
         <header className="sticky top-0 z-50 bg-background border-b">
           <div className="container flex h-16 items-center gap-4">
@@ -551,6 +549,5 @@ export default function AdminTerroirProducts() {
           )}
         </main>
       </div>
-    </RequireRole>
   );
 }

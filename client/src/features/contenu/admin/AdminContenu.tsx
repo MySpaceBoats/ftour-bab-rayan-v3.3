@@ -12,8 +12,6 @@ import {
   ArrowLeft, Plus, Trash2, Loader2, AlertCircle, Pencil, X,
   Users, MessageSquare, HelpCircle, Search,
 } from 'lucide-react';
-import RequireRole from '@/components/RequireRole';
-
 type SectionKey = 'partners' | 'testimonials' | 'faq';
 
 const SECTION_CONFIG: Record<SectionKey, { label: string; icon: typeof Users }> = {
@@ -165,7 +163,6 @@ export default function AdminContenu() {
   const isUpdating = updatePartner.isPending || updateTestimonial.isPending || updateFaq.isPending;
 
   return (
-    <RequireRole route="/admin/contenu">
     <div className="min-h-screen bg-muted/30">
       <header className="sticky top-0 z-50 bg-background border-b">
         <div className="container flex h-16 items-center gap-4">
@@ -330,6 +327,5 @@ export default function AdminContenu() {
         )}
       </main>
     </div>
-    </RequireRole>
   );
 }

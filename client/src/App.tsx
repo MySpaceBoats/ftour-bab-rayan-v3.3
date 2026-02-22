@@ -7,6 +7,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { CartProvider } from "./contexts/CartContext";
 import { useI18n, SUPPORTED_LOCALES, type Locale } from "./i18n";
+import RequireRole from "./components/RequireRole";
 
 // ============================================
 // PUBLIC PAGES — features/public
@@ -148,61 +149,62 @@ function LocalizedRoutes() {
     <Switch>
       {/* ================================================
           ADMIN ROUTES — sans :lang (section 4.2)
+          All wrapped with RequireRole for access control
           ================================================ */}
-      <Route path="/admin" component={AdminDashboard} />
-      <Route path="/admin/unified-dashboard" component={AdminUnifiedDashboard} />
+      <Route path="/admin">{() => <RequireRole route="/admin"><AdminDashboard /></RequireRole>}</Route>
+      <Route path="/admin/unified-dashboard">{() => <RequireRole route="/admin/unified-dashboard"><AdminUnifiedDashboard /></RequireRole>}</Route>
 
       {/* Admin Restaurant */}
-      <Route path="/admin/restaurant/groupes" component={AdminRestaurantGroupes} />
-      <Route path="/admin/restaurant/entreprises" component={AdminRestaurantEntreprises} />
-      <Route path="/admin/restaurants" component={AdminRestaurants} />
-      <Route path="/admin/restaurant-reservations" component={AdminRestaurantReservations} />
-      <Route path="/admin/reservations" component={AdminRestaurantReservations} />
-      <Route path="/admin/company-bookings" component={AdminCompanyBookings} />
-      <Route path="/admin/reservations-calendar" component={AdminReservationsCalendar} />
-      <Route path="/admin/scan-reservation" component={AdminScanReservation} />
+      <Route path="/admin/restaurant/groupes">{() => <RequireRole route="/admin/restaurant/groupes"><AdminRestaurantGroupes /></RequireRole>}</Route>
+      <Route path="/admin/restaurant/entreprises">{() => <RequireRole route="/admin/restaurant/entreprises"><AdminRestaurantEntreprises /></RequireRole>}</Route>
+      <Route path="/admin/restaurants">{() => <RequireRole route="/admin/restaurants"><AdminRestaurants /></RequireRole>}</Route>
+      <Route path="/admin/restaurant-reservations">{() => <RequireRole route="/admin/restaurant-reservations"><AdminRestaurantReservations /></RequireRole>}</Route>
+      <Route path="/admin/reservations">{() => <RequireRole route="/admin/reservations"><AdminRestaurantReservations /></RequireRole>}</Route>
+      <Route path="/admin/company-bookings">{() => <RequireRole route="/admin/company-bookings"><AdminCompanyBookings /></RequireRole>}</Route>
+      <Route path="/admin/reservations-calendar">{() => <RequireRole route="/admin/reservations-calendar"><AdminReservationsCalendar /></RequireRole>}</Route>
+      <Route path="/admin/scan-reservation">{() => <RequireRole route="/admin/scan-reservation"><AdminScanReservation /></RequireRole>}</Route>
 
       {/* Admin Pâtisserie */}
-      <Route path="/admin/patisserie" component={AdminPastries} />
-      <Route path="/admin/pastries" component={AdminPastries} />
-      <Route path="/admin/patisserie/catalogue" component={AdminPastryCatalog} />
+      <Route path="/admin/patisserie">{() => <RequireRole route="/admin/patisserie"><AdminPastries /></RequireRole>}</Route>
+      <Route path="/admin/pastries">{() => <RequireRole route="/admin/pastries"><AdminPastries /></RequireRole>}</Route>
+      <Route path="/admin/patisserie/catalogue">{() => <RequireRole route="/admin/patisserie/catalogue"><AdminPastryCatalog /></RequireRole>}</Route>
 
       {/* Admin Terroir */}
-      <Route path="/admin/terroir/products" component={AdminTerroirProducts} />
-      <Route path="/admin/terroir/orders" component={AdminTerroirOrders} />
+      <Route path="/admin/terroir/products">{() => <RequireRole route="/admin/terroir/products"><AdminTerroirProducts /></RequireRole>}</Route>
+      <Route path="/admin/terroir/orders">{() => <RequireRole route="/admin/terroir/orders"><AdminTerroirOrders /></RequireRole>}</Route>
 
       {/* Admin Goodies */}
-      <Route path="/admin/goodies" component={AdminGoodies} />
-      <Route path="/admin/commandes" component={AdminCommandes} />
+      <Route path="/admin/goodies">{() => <RequireRole route="/admin/goodies"><AdminGoodies /></RequireRole>}</Route>
+      <Route path="/admin/commandes">{() => <RequireRole route="/admin/commandes"><AdminCommandes /></RequireRole>}</Route>
 
       {/* Admin Dons */}
-      <Route path="/admin/dons" component={AdminDons} />
+      <Route path="/admin/dons">{() => <RequireRole route="/admin/dons"><AdminDons /></RequireRole>}</Route>
 
       {/* Admin Ops */}
-      <Route path="/admin/benevoles" component={AdminBenevoles} />
-      <Route path="/admin/jours" component={AdminJours} />
-      <Route path="/admin/scan-product" component={AdminScanProduct} />
-      <Route path="/admin/payments" component={AdminPayments} />
-      <Route path="/admin/utilisateurs" component={AdminUtilisateurs} />
+      <Route path="/admin/benevoles">{() => <RequireRole route="/admin/benevoles"><AdminBenevoles /></RequireRole>}</Route>
+      <Route path="/admin/jours">{() => <RequireRole route="/admin/jours"><AdminJours /></RequireRole>}</Route>
+      <Route path="/admin/scan-product">{() => <RequireRole route="/admin/scan-product"><AdminScanProduct /></RequireRole>}</Route>
+      <Route path="/admin/payments">{() => <RequireRole route="/admin/payments"><AdminPayments /></RequireRole>}</Route>
+      <Route path="/admin/utilisateurs">{() => <RequireRole route="/admin/utilisateurs"><AdminUtilisateurs /></RequireRole>}</Route>
 
       {/* Admin QR Codes Catalogue */}
-      <Route path="/admin/qr-codes" component={AdminQRCodes} />
+      <Route path="/admin/qr-codes">{() => <RequireRole route="/admin/qr-codes"><AdminQRCodes /></RequireRole>}</Route>
 
       {/* Admin Contenu */}
-      <Route path="/admin/contenu" component={AdminContenu} />
+      <Route path="/admin/contenu">{() => <RequireRole route="/admin/contenu"><AdminContenu /></RequireRole>}</Route>
 
       {/* Admin Messages */}
-      <Route path="/admin/messages" component={AdminMessages} />
+      <Route path="/admin/messages">{() => <RequireRole route="/admin/messages"><AdminMessages /></RequireRole>}</Route>
 
       {/* ================================================
           SCANNER — route unique (section 4.3)
           ================================================ */}
-      <Route path="/scanner/patisserie" component={ScannerPatisserie} />
-      <Route path="/scanner/unifie" component={ScannerUnifie} />
-      <Route path="/scanner/goodies" component={ScannerGoodies} />
-      <Route path="/scanner/benevoles" component={ScannerBenevoles} />
-      <Route path="/scanner/ftours" component={ScannerFtours} />
-      <Route path="/scanner" component={Scanner} />
+      <Route path="/scanner/patisserie">{() => <RequireRole route="/scanner/patisserie"><ScannerPatisserie /></RequireRole>}</Route>
+      <Route path="/scanner/unifie">{() => <RequireRole route="/scanner/unifie"><ScannerUnifie /></RequireRole>}</Route>
+      <Route path="/scanner/goodies">{() => <RequireRole route="/scanner/goodies"><ScannerGoodies /></RequireRole>}</Route>
+      <Route path="/scanner/benevoles">{() => <RequireRole route="/scanner/benevoles"><ScannerBenevoles /></RequireRole>}</Route>
+      <Route path="/scanner/ftours">{() => <RequireRole route="/scanner/ftours"><ScannerFtours /></RequireRole>}</Route>
+      <Route path="/scanner">{() => <RequireRole route="/scanner"><Scanner /></RequireRole>}</Route>
 
       {/* ================================================
           PUBLIC CHECK-IN — sans :lang

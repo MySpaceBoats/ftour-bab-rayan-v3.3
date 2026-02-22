@@ -8,7 +8,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import RequireRole from "@/components/RequireRole";
 import {
   ArrowLeft, Search, Loader2, Package, CheckCircle, XCircle, Clock, Truck
 } from "lucide-react";
@@ -46,7 +45,6 @@ export default function AdminTerroirOrders() {
   });
 
   return (
-    <RequireRole allowedRoles={["admin", "super_admin", "admin_terroir"]}>
       <div className="min-h-screen bg-muted/30">
         <header className="sticky top-0 z-50 bg-background border-b">
           <div className="container flex h-16 items-center gap-4">
@@ -187,6 +185,5 @@ export default function AdminTerroirOrders() {
           </Card>
         </main>
       </div>
-    </RequireRole>
   );
 }
