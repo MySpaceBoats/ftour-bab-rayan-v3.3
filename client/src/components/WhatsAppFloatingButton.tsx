@@ -10,6 +10,7 @@ const BUTTON_BASE =
   "w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow focus:outline-none focus:ring-2 focus:ring-offset-2";
 
 export default function WhatsAppFloatingButton() {
+  // Ouvre WhatsApp sans texte prérempli
   const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}`;
   const telUrl = `tel:+${WHATSAPP_NUMBER}`;
 
