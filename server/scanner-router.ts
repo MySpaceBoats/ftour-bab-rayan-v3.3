@@ -890,7 +890,154 @@ export const scannerRouter = router({
           ctx.user?.id || 0,
           true
         );
-        return { success: true, message: 'Scan produit catalogue enregistré dans le système.' };
+
+        return {
+          success: true,
+          message: `Produit ajouté au board commandes (${createdOrder.order_reference}).`,
+          orderId: createdOrder.id,
+          orderReference: createdOrder.order_reference,
+        };
+      }
+
+      if (input.type === 'product_pastry') {
+        if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+
+        const { data: product } = await supabase
+          .from('pastries')
+          .select('id, name, price, active')
+          .eq('id', input.entityId)
+          .single();
+
+        if (!product) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Produit pâtisserie introuvable' });
+        }
+        if (!product.active) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ce produit pâtisserie est inactif' });
+        }
+
+        const unitPrice = parseFloat(product.price as any) || 0;
+        const reference = `PASTRY-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+        const qrToken = `PASTRY-${Date.now()}-${Math.random().toString(36).substring(2, 14).toUpperCase()}`;
+
+        const { data: createdOrder, error: orderError } = await supabase
+          .from('pastry_orders')
+          .insert({
+            reference,
+            customer_name: 'Vente scanner pâtisserie',
+            phone: '0000000000',
+            email: 'scanner-pastry@ftourbabrayan.ma',
+            items: [{ pastryId: product.id, quantity: 1, price: unitPrice }],
+            total_amount: unitPrice,
+            payment_method: 'cash',
+            payment_status: 'paid',
+            order_status: 'paid',
+            qr_token: qrToken,
+            notes: `Commande créée via scanner catalogue par ${ctx.user?.name || ctx.user?.email || 'scanner'}`,
+          })
+          .select('id, reference')
+          .single();
+
+        if (orderError || !createdOrder) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: orderError?.message || 'Création commande pâtisserie impossible' });
+        }
+
+        await supabaseServices.logQRScanSupabase(
+          input.token,
+          input.type,
+          input.entityId,
+          'catalog_scan',
+          ctx.user?.id || 0,
+          true
+        );
+
+        return {
+          success: true,
+          message: `Produit ajouté au board commandes pâtisserie (${createdOrder.reference}).`,
+          orderId: createdOrder.id,
+          orderReference: createdOrder.reference,
+        };
+      }
+
+      if (input.type === 'product_terroir') {
+        if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+
+        const { data: product } = await supabase
+          .from('terroir_products')
+          .select('id, name, is_active, terroir_product_variants(id, price_unit, is_active)')
+          .eq('id', input.entityId)
+          .single();
+
+        if (!product) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Produit terroir introuvable' });
+        }
+        if (!product.is_active) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ce produit terroir est inactif' });
+        }
+
+        const variants = ((product as any).terroir_product_variants || []).filter((v: any) => v.is_active !== false);
+        if (variants.length === 0) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Aucune variante active disponible pour ce produit terroir' });
+        }
+
+        const variant = variants[0];
+        const unitPrice = parseFloat(variant.price_unit as any) || 0;
+        const orderReference = `TER-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+        const qrToken = `ter-${Date.now()}-${Math.random().toString(36).substring(2, 14)}`;
+
+        const { data: createdOrder, error: orderError } = await supabase
+          .from('terroir_orders')
+          .insert({
+            order_reference: orderReference,
+            customer_name: 'Vente scanner terroir',
+            customer_phone: '0000000000',
+            customer_email: 'scanner-terroir@ftourbabrayan.ma',
+            total_amount: unitPrice,
+            status: 'paid',
+            payment_status: 'paid',
+            qr_token: qrToken,
+            qr_status: 'active',
+            processed_by: ctx.user?.id,
+            processed_at: new Date().toISOString(),
+            notes: `Commande créée via scanner catalogue par ${ctx.user?.name || ctx.user?.email || 'scanner'}`,
+          })
+          .select('id, order_reference')
+          .single();
+
+        if (orderError || !createdOrder) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: orderError?.message || 'Création commande terroir impossible' });
+        }
+
+        const { error: itemError } = await supabase
+          .from('terroir_order_items')
+          .insert({
+            order_id: createdOrder.id,
+            product_id: product.id,
+            variant_id: variant.id,
+            quantity: 1,
+            unit_price: unitPrice,
+            total_price: unitPrice,
+          });
+
+        if (itemError) {
+          await supabase.from('terroir_orders').delete().eq('id', createdOrder.id);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: itemError.message });
+        }
+
+        await supabaseServices.logQRScanSupabase(
+          input.token,
+          input.type,
+          input.entityId,
+          'catalog_scan',
+          ctx.user?.id || 0,
+          true
+        );
+
+        return {
+          success: true,
+          message: `Produit ajouté au board commandes terroir (${createdOrder.order_reference}).`,
+          orderId: createdOrder.id,
+          orderReference: createdOrder.order_reference,
+        };
       }
 
       // ---- DONATION PAGE (catalog QR) ----
