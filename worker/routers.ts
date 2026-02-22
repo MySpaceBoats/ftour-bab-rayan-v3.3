@@ -1150,7 +1150,23 @@ const volunteersRouter = router({
       }
 
       const sheet = workbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '' });
+
+      // Find the actual header row (template may have a title row before column headers)
+      const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
+      let headerRowIndex = 0;
+      const headerKeywords = ['prenom', 'nom', 'email', 'mail', 'first', 'last'];
+      for (let i = 0; i < Math.min(rawRows.length, 10); i++) {
+        const cells = (rawRows[i] || []).map((c: any) =>
+          String(c || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        );
+        let matches = 0;
+        for (const kw of headerKeywords) {
+          if (cells.some((cell: string) => cell.includes(kw))) matches++;
+        }
+        if (matches >= 2) { headerRowIndex = i; break; }
+      }
+
+      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '', range: headerRowIndex });
 
       if (rows.length === 0) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Aucune ligne trouvée dans le fichier Excel.' });
