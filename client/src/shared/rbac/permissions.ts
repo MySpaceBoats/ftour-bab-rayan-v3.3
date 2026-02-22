@@ -96,6 +96,7 @@ export const ROUTE_ROLES: Record<string, readonly Role[]> = {
   '/admin/restaurants': [...ADMIN_BASE, ROLES.ADMIN_OPS],
   '/admin/reservations': [...ADMIN_BASE, ROLES.ADMIN_OPS],
   '/admin/company-bookings': [...ADMIN_BASE, ROLES.ADMIN_RESTAURANT],
+  '/admin/reservations-calendar': [...ADMIN_BASE, ROLES.ADMIN_RESTAURANT],
 
   // Pâtisserie
   '/admin/patisserie': [...ADMIN_BASE, ROLES.ADMIN_PATISSERIE, ROLES.ADMIN_BOUTIQUE],
