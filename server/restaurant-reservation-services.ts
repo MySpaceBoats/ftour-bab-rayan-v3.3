@@ -341,6 +341,53 @@ export async function cancelRestaurantReservation(id: number) {
 }
 
 /**
+ * Mettre à jour les champs d'une réservation (édition admin)
+ */
+export async function updateRestaurantReservation(
+  id: number,
+  data: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    date?: Date;
+    seatsTotal?: number;
+    notes?: string;
+    companyName?: string;
+    groupName?: string;
+    displayChoice?: string;
+  }
+) {
+  try {
+    const client = getClient();
+
+    const updateData: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.email !== undefined) updateData.email = data.email;
+    if (data.phone !== undefined) updateData.phone = data.phone;
+    if (data.date !== undefined) updateData.date = data.date.toISOString().split('T')[0];
+    if (data.seatsTotal !== undefined) updateData.seats_total = data.seatsTotal;
+    if (data.notes !== undefined) updateData.notes = data.notes || null;
+    if (data.companyName !== undefined) updateData.company_name = data.companyName || null;
+    if (data.groupName !== undefined) updateData.group_name = data.groupName || null;
+    if (data.displayChoice !== undefined) updateData.display_choice = data.displayChoice || null;
+
+    const { error } = await client
+      .from('restaurant_reservations')
+      .update(updateData)
+      .eq('id', id);
+
+    if (error) throw error;
+    return await getRestaurantReservationById(id);
+  } catch (error) {
+    console.error("[updateRestaurantReservation] Error:", error);
+    throw error;
+  }
+}
+
+/**
  * Marquer une réservation comme no-show
  */
 export async function markRestaurantReservationAsNoShow(id: number) {
