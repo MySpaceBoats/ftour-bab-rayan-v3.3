@@ -281,6 +281,19 @@ export const scannerRouter = router({
         if (!pastryOrder) {
           return { type: 'pastry' as QrType, typeLabel: QR_TYPE_LABELS.pastry, token, found: false, error: 'Commande pâtisserie introuvable' };
         }
+        // Resolve pastry names from the items JSONB column
+        const pastryItems: Array<{ pastryId: number; quantity: number; price: number }> = pastryOrder.items || [];
+        const pastryIds = pastryItems.map((i) => i.pastryId).filter(Boolean);
+        let pastryNamesMap: Record<number, string> = {};
+        if (pastryIds.length > 0) {
+          const { data: pastries } = await supabase
+            .from('pastries')
+            .select('id, name')
+            .in('id', pastryIds);
+          if (pastries) {
+            pastryNamesMap = Object.fromEntries(pastries.map((p: any) => [p.id, p.name]));
+          }
+        }
         return {
           type: 'pastry' as QrType,
           typeLabel: QR_TYPE_LABELS.pastry,
@@ -295,6 +308,12 @@ export const scannerRouter = router({
             qrStatus: pastryOrder.qr_status,
             alreadyValidated: pastryOrder.order_status === 'handed',
             reference: pastryOrder.reference,
+            totalAmount: parseFloat(pastryOrder.total_amount) || 0,
+            items: pastryItems.map((i) => ({
+              name: pastryNamesMap[i.pastryId] || `Pâtisserie #${i.pastryId}`,
+              quantity: i.quantity,
+              price: i.price,
+            })),
           },
         };
       }
@@ -512,6 +531,19 @@ export const scannerRouter = router({
           pastryOrder = pastryByRef;
         }
         if (pastryOrder) {
+          // Resolve pastry names from the items JSONB column
+          const pastryItems: Array<{ pastryId: number; quantity: number; price: number }> = pastryOrder.items || [];
+          const pastryIds = pastryItems.map((i) => i.pastryId).filter(Boolean);
+          let pastryNamesMap: Record<number, string> = {};
+          if (pastryIds.length > 0) {
+            const { data: pastries } = await supabase
+              .from('pastries')
+              .select('id, name')
+              .in('id', pastryIds);
+            if (pastries) {
+              pastryNamesMap = Object.fromEntries(pastries.map((p: any) => [p.id, p.name]));
+            }
+          }
           return {
             type: 'pastry' as QrType,
             typeLabel: QR_TYPE_LABELS.pastry,
@@ -526,6 +558,12 @@ export const scannerRouter = router({
               qrStatus: pastryOrder.qr_status,
               alreadyValidated: pastryOrder.order_status === 'handed',
               reference: pastryOrder.reference,
+              totalAmount: parseFloat(pastryOrder.total_amount) || 0,
+              items: pastryItems.map((i) => ({
+                name: pastryNamesMap[i.pastryId] || `Pâtisserie #${i.pastryId}`,
+                quantity: i.quantity,
+                price: i.price,
+              })),
             },
           };
         }
@@ -533,14 +571,14 @@ export const scannerRouter = router({
         let terroirOrder = null;
         const { data: terroirByToken } = await supabase
           .from('terroir_orders')
-          .select('*')
+          .select('*, terroir_order_items(*, terroir_products(name))')
           .eq('qr_token', token)
           .single();
         terroirOrder = terroirByToken;
         if (!terroirOrder) {
           const { data: terroirByRef } = await supabase
             .from('terroir_orders')
-            .select('*')
+            .select('*, terroir_order_items(*, terroir_products(name))')
             .eq('order_reference', token)
             .single();
           terroirOrder = terroirByRef;
@@ -560,6 +598,12 @@ export const scannerRouter = router({
               qrStatus: terroirOrder.qr_status,
               alreadyValidated: terroirOrder.qr_status === 'validated',
               reference: terroirOrder.order_reference,
+              totalAmount: terroirOrder.total_amount,
+              items: (terroirOrder.terroir_order_items || []).map((i: any) => ({
+                name: i.terroir_products?.name || `Produit #${i.product_id}`,
+                quantity: i.quantity,
+                price: i.unit_price,
+              })),
             },
           };
         }
