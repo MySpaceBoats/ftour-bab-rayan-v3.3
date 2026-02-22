@@ -62,7 +62,7 @@ const sections: SectionDefinition[] = [
         icon: CalendarDays,
         iconColor: "text-[#5d5a3c]",
         iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_restaurant', 'admin_ops'],
+        allowedRoles: ['admin', 'super_admin', 'admin_restaurant'],
         buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
       },
       {
