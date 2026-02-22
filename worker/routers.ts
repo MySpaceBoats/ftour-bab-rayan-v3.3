@@ -1312,49 +1312,47 @@ const volunteersRouter = router({
         return { results, successCount, failCount, totalRows: validRows.length };
       }
 
-      // 4. Send confirmation emails (1 subrequest each, no individual update calls)
-      const { sendEmail, generateVolunteerConfirmationEmail } = await import('./email');
+      // 4. Send confirmation emails in ONE batch call (1 subrequest instead of N)
+      const { sendBatchEmails, generateVolunteerConfirmationEmail } = await import('./email');
+
+      const emailPayloads = (insertedVolunteers || []).map(vol => {
+        const emailData = generateVolunteerConfirmationEmail({
+          firstName: vol.first_name,
+          lastName: vol.last_name,
+          email: vol.email,
+          dayNumber: day.day_number,
+          dayDate: new Date(day.date).toLocaleDateString('fr-FR', {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+          }),
+          location: day.location || 'Association Bab Rayan, Casablanca',
+          startTime: day.iftar_time || '18h00',
+          volunteerSlots: input.volunteerSlots,
+          qrToken: vol.qr_token,
+          baseUrl: 'https://www.ftourbabrayan.ma',
+        });
+        return { to: vol.email, subject: emailData.subject, html: emailData.html, volId: vol.id };
+      });
+
+      const batchResult = await sendBatchEmails(
+        emailPayloads.map(({ to, subject, html }) => ({ to, subject, html })),
+        ctx.env.RESEND_API_KEY
+      );
+
       const emailSentIds: string[] = [];
-
-      for (const vol of (insertedVolunteers || [])) {
-        try {
-          const emailData = generateVolunteerConfirmationEmail({
-            firstName: vol.first_name,
-            lastName: vol.last_name,
-            email: vol.email,
-            dayNumber: day.day_number,
-            dayDate: new Date(day.date).toLocaleDateString('fr-FR', {
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric',
-            }),
-            location: day.location || 'Association Bab Rayan, Casablanca',
-            startTime: day.iftar_time || '18h00',
-            volunteerSlots: input.volunteerSlots,
-            qrToken: vol.qr_token,
-            baseUrl: 'https://www.ftourbabrayan.ma',
-          });
-
-          const emailResult = await sendEmail({
-            to: vol.email,
-            subject: emailData.subject,
-            html: emailData.html,
-            apiKey: ctx.env.RESEND_API_KEY,
-          });
-
-          if (emailResult.success) {
-            emailSentIds.push(vol.id);
-            results.push({ email: vol.email, success: true });
-          } else {
-            results.push({ email: vol.email, success: true, error: `Inscrit mais email non envoyé: ${emailResult.error}` });
-          }
-        } catch (emailError) {
-          results.push({ email: vol.email, success: true, error: 'Inscrit mais email non envoyé' });
-          console.error(`[ProcessGroupExcel] Email error for ${vol.email}:`, emailError);
+      for (let i = 0; i < emailPayloads.length; i++) {
+        const vol = emailPayloads[i];
+        const emailRes = batchResult.results[i];
+        if (emailRes?.success) {
+          emailSentIds.push(vol.volId);
+          results.push({ email: vol.to, success: true });
+        } else {
+          results.push({ email: vol.to, success: true, error: `Inscrit mais email non envoyé: ${emailRes?.error || 'erreur'}` });
         }
       }
 
-      // 5. Batch update email_sent status (1 subrequest instead of N)
+      // 5. Batch update email_sent status (1 subrequest)
       if (emailSentIds.length > 0) {
         await supabase
           .from('volunteers')

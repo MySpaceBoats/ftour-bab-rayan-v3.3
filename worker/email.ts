@@ -88,6 +88,64 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
   }
 }
 
+interface BatchEmailItem {
+  to: string;
+  subject: string;
+  html: string;
+}
+
+export async function sendBatchEmails(
+  emails: BatchEmailItem[],
+  apiKey: string
+): Promise<{ success: boolean; results: { to: string; success: boolean; id?: string; error?: string }[] }> {
+  if (!apiKey) {
+    return { success: false, results: emails.map(e => ({ to: e.to, success: false, error: 'API key not configured' })) };
+  }
+  if (emails.length === 0) {
+    return { success: true, results: [] };
+  }
+
+  try {
+    const response = await fetch("https://api.resend.com/emails/batch", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(
+        emails.map(e => ({
+          from: FROM_EMAIL,
+          to: e.to,
+          subject: e.subject,
+          html: e.html,
+          reply_to: REPLY_TO,
+          bcc: [BCC_EMAIL],
+        }))
+      ),
+    });
+
+    const data = await response.json() as any;
+
+    if (!response.ok || data.error) {
+      const errMsg = data.error?.message || 'Batch send failed';
+      console.error("[Email] Batch failed:", errMsg);
+      return { success: false, results: emails.map(e => ({ to: e.to, success: false, error: errMsg })) };
+    }
+
+    // Resend batch returns { data: [{ id }, { id }, ...] }
+    const ids: { id: string }[] = data.data || data || [];
+    console.log(`[Email] Batch sent successfully: ${ids.length} emails`);
+    return {
+      success: true,
+      results: emails.map((e, i) => ({ to: e.to, success: true, id: ids[i]?.id })),
+    };
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : 'Unknown error';
+    console.error("[Email] Batch error:", error);
+    return { success: false, results: emails.map(e => ({ to: e.to, success: false, error: errMsg })) };
+  }
+}
+
 /**
  * Generate QR code URL using external service
  */
