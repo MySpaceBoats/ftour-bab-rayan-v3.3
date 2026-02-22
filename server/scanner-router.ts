@@ -881,6 +881,24 @@ export const scannerRouter = router({
         };
       }
 
+      if (input.type === 'product_pastry' || input.type === 'product_terroir') {
+        await supabaseServices.logQRScanSupabase(
+          input.token,
+          input.type,
+          input.entityId,
+          'catalog_scan',
+          ctx.user?.id || 0,
+          true
+        );
+
+        return {
+          success: true,
+          message: `Produit ajouté au board commandes (${createdOrder.order_reference}).`,
+          orderId: createdOrder.id,
+          orderReference: createdOrder.order_reference,
+        };
+      }
+
       if (input.type === 'product_pastry') {
         if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
 
