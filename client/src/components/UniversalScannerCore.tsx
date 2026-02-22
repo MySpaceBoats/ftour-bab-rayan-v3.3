@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import jsQR from "jsqr";
 
-type QrType = 'volunteer' | 'reservation_particulier' | 'reservation_entreprise' | 'reservation_groupe' | 'pastry' | 'terroir' | 'goodies' | 'donation' | 'product_goodie' | 'product_pastry' | 'product_terroir' | 'unknown';
+type QrType = 'volunteer' | 'reservation_particulier' | 'reservation_entreprise' | 'reservation_groupe' | 'pastry' | 'terroir' | 'goodies' | 'donation' | 'catalog_donation' | 'product_goodie' | 'product_pastry' | 'product_terroir' | 'unknown';
 
 const TYPE_CONFIG: Record<QrType, { label: string; icon: typeof Users; color: string; bg: string }> = {
   volunteer: { label: 'Benevole', icon: Users, color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
@@ -23,6 +23,7 @@ const TYPE_CONFIG: Record<QrType, { label: string; icon: typeof Users; color: st
   terroir: { label: 'Terroir', icon: Package, color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
   goodies: { label: 'Goodies', icon: ShoppingBag, color: 'text-orange-700', bg: 'bg-orange-50 border-orange-200' },
   donation: { label: 'Don', icon: Heart, color: 'text-red-700', bg: 'bg-red-50 border-red-200' },
+  catalog_donation: { label: 'Don Catalogue', icon: Heart, color: 'text-red-700', bg: 'bg-red-50 border-red-200' },
   product_goodie: { label: 'Produit Goodies', icon: ShoppingBag, color: 'text-orange-700', bg: 'bg-orange-50 border-orange-200' },
   product_pastry: { label: 'Produit Patisserie', icon: ShoppingBag, color: 'text-pink-700', bg: 'bg-pink-50 border-pink-200' },
   product_terroir: { label: 'Produit Terroir', icon: Package, color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
@@ -311,7 +312,7 @@ export default function UniversalScannerCore({ onBack }: UniversalScannerCorePro
                   )}
 
                   {/* Donation */}
-                  {identifiedResult.type === 'donation' && (
+                  {(identifiedResult.type === 'donation' || identifiedResult.type === 'catalog_donation') && (
                     <>
                       {identifiedResult.entity.amount != null && (
                         <div className="flex items-center gap-2 text-sm">

@@ -37,7 +37,7 @@ const scannerProcedure = protectedProcedure.use(({ ctx, next }) => {
 // ============================================
 // QR TYPE DETECTION
 // ============================================
-type QrType = 'volunteer' | 'reservation_particulier' | 'reservation_entreprise' | 'reservation_groupe' | 'pastry' | 'terroir' | 'goodies' | 'donation' | 'product_goodie' | 'product_pastry' | 'product_terroir' | 'unknown';
+type QrType = 'volunteer' | 'reservation_particulier' | 'reservation_entreprise' | 'reservation_groupe' | 'pastry' | 'terroir' | 'goodies' | 'donation' | 'catalog_donation' | 'product_goodie' | 'product_pastry' | 'product_terroir' | 'unknown';
 
 function detectQrType(token: string): QrType {
   if (token.startsWith('rp-')) return 'reservation_particulier';
@@ -115,6 +115,7 @@ const QR_TYPE_LABELS: Record<QrType, string> = {
   terroir: 'Commande Terroir',
   goodies: 'Commande Goodies',
   donation: 'Don',
+  catalog_donation: 'Don (Catalogue)',
   product_goodie: 'Produit Goodies',
   product_pastry: 'Produit Pâtisserie',
   product_terroir: 'Produit Terroir',
@@ -138,7 +139,18 @@ export const scannerRouter = router({
         return { type: 'unknown' as QrType, typeLabel: 'Page Terroir', token, found: false, error: 'Ce QR code renvoie vers la page terroir générale. Veuillez scanner un QR code produit spécifique.' };
       }
       if (token === 'PAGE-DONS') {
-        return { type: 'unknown' as QrType, typeLabel: 'Page Dons', token, found: false, error: 'Ce QR code renvoie vers la page de dons. Aucun produit à identifier.' };
+        return {
+          type: 'catalog_donation' as QrType,
+          typeLabel: QR_TYPE_LABELS.catalog_donation,
+          token,
+          found: true,
+          entity: {
+            id: 0,
+            name: 'Don sur place (QR catalogue)',
+            status: 'pending',
+            alreadyValidated: false,
+          },
+        };
       }
 
       let qrType = detectQrType(token);
@@ -699,7 +711,7 @@ export const scannerRouter = router({
   validate: scannerProcedure
     .input(z.object({
       token: z.string().min(1),
-      type: z.enum(['volunteer', 'reservation_particulier', 'reservation_entreprise', 'reservation_groupe', 'pastry', 'terroir', 'goodies', 'donation', 'product_goodie', 'product_pastry', 'product_terroir', 'unknown']),
+      type: z.enum(['volunteer', 'reservation_particulier', 'reservation_entreprise', 'reservation_groupe', 'pastry', 'terroir', 'goodies', 'donation', 'catalog_donation', 'product_goodie', 'product_pastry', 'product_terroir', 'unknown']),
       entityId: z.number(),
     }))
     .mutation(async ({ input, ctx }) => {
@@ -797,9 +809,30 @@ export const scannerRouter = router({
         }
       }
 
-      // ---- PRODUCT (catalog QR - no validation needed) ----
+      // ---- PRODUCT (catalog QR) ----
       if (input.type === 'product_goodie' || input.type === 'product_pastry' || input.type === 'product_terroir') {
-        return { success: true, message: 'QR code produit catalogue — aucune validation nécessaire' };
+        await supabaseServices.logQRScanSupabase(
+          input.token,
+          input.type,
+          input.entityId,
+          'catalog_scan',
+          ctx.user?.id || 0,
+          true
+        );
+        return { success: true, message: 'Scan produit catalogue enregistré dans le système.' };
+      }
+
+      // ---- DONATION PAGE (catalog QR) ----
+      if (input.type === 'catalog_donation') {
+        await supabaseServices.logQRScanSupabase(
+          input.token,
+          input.type,
+          0,
+          'catalog_scan',
+          ctx.user?.id || 0,
+          true
+        );
+        return { success: true, message: 'Scan don catalogue enregistré dans le système.' };
       }
 
       // ---- DONATION ----
