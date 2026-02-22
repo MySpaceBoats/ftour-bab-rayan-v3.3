@@ -173,6 +173,18 @@ export const restaurantReservationsRouter = router({
               <p><strong>Salle :</strong> ${input.displayChoice}</p>
               <p>Notre équipe reviendra vers vous sous 48 heures avec une proposition de confirmation et les modalités d'organisation.</p>
               <p><strong>Référence :</strong> ${reference}</p>
+              <div style="background-color: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h3 style="color: #9a3412; margin: 0 0 15px 0; font-size: 18px;">⚠️ Conditions de réservation</h3>
+                <p style="margin: 0 0 12px 0; color: #374151; font-size: 15px; line-height: 1.6;">
+                  <strong>Le nombre de personnes réservées sera facturé dans sa totalité, même en cas d'absence ou de modification le jour même.</strong>
+                </p>
+                <p style="margin: 0; color: #374151; font-size: 15px; line-height: 1.6;">
+                  Afin de confirmer votre réservation à Table du Jardin, nous vous remercions de bien vouloir verser <strong>50 % du montant</strong> à l'avance.
+                </p>
+              </div>
+              <div style="text-align: center; margin: 20px 0;">
+                <img src="https://jgnzhrlumlydmseusnbo.supabase.co/storage/v1/object/public/RIB%20RESA/Screenshot%202026-02-19%20at%2016.49.14.png" alt="RIB pour le virement" style="max-width: 100%; border-radius: 8px; border: 1px solid #e5e7eb;" />
+              </div>
               <p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>
             `,
             cc: ['heartfulness@myspace.boats'],
@@ -273,6 +285,18 @@ export const restaurantReservationsRouter = router({
               <p><strong>Salle :</strong> ${input.displayChoice}</p>
               <p>Nous vous confirmerons les disponibilités sous 48 heures.</p>
               <p><strong>Référence :</strong> ${reference}</p>
+              <div style="background-color: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h3 style="color: #9a3412; margin: 0 0 15px 0; font-size: 18px;">⚠️ Conditions de réservation</h3>
+                <p style="margin: 0 0 12px 0; color: #374151; font-size: 15px; line-height: 1.6;">
+                  <strong>Le nombre de personnes réservées sera facturé dans sa totalité, même en cas d'absence ou de modification le jour même.</strong>
+                </p>
+                <p style="margin: 0; color: #374151; font-size: 15px; line-height: 1.6;">
+                  Afin de confirmer votre réservation à Table du Jardin, nous vous remercions de bien vouloir verser <strong>50 % du montant</strong> à l'avance.
+                </p>
+              </div>
+              <div style="text-align: center; margin: 20px 0;">
+                <img src="https://jgnzhrlumlydmseusnbo.supabase.co/storage/v1/object/public/RIB%20RESA/Screenshot%202026-02-19%20at%2016.49.14.png" alt="RIB pour le virement" style="max-width: 100%; border-radius: 8px; border: 1px solid #e5e7eb;" />
+              </div>
               <p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>
             `,
             cc: ['heartfulness@myspace.boats'],
