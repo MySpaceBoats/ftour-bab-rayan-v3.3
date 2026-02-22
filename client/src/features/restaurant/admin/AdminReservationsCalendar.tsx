@@ -275,13 +275,13 @@ export default function AdminReservationsCalendar() {
               <span className="text-xs text-amber-600 ml-1">19 février – 13 mars</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="flex items-center gap-3 bg-white/70 rounded-xl p-3 border border-amber-200">
-                <div className="w-11 h-11 rounded-full bg-amber-500 flex items-center justify-center">
-                  <UtensilsCrossed className="h-5 w-5 text-white" />
+              <div className="flex items-center gap-3 bg-[#f5f5e8]/70 rounded-xl p-3 border border-[#d4d4aa]">
+                <div className="w-11 h-11 rounded-full bg-[#5E5B34] flex items-center justify-center">
+                  <UtensilsCrossed className="h-5 w-5 text-[#F2E9D3]" />
                 </div>
                 <div>
-                  <p className="text-xs text-amber-700 font-medium">Places réservées</p>
-                  <p className="text-2xl font-bold text-amber-900">{ramadanStats.totalSeats}</p>
+                  <p className="text-xs text-[#6b6b4e] font-medium">Places réservées</p>
+                  <p className="text-2xl font-bold text-[#5d5a3c]">{ramadanStats.totalSeats}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 bg-white/70 rounded-xl p-3 border border-amber-200">
@@ -308,15 +308,15 @@ export default function AdminReservationsCalendar() {
 
         {/* Month Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card className="border-emerald-200 bg-emerald-50/50">
+          <Card className="border-[#d4d4aa] bg-[#f5f5e8]/50">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-emerald-600 flex items-center justify-center">
-                <UtensilsCrossed className="h-6 w-6 text-white" />
+              <div className="w-12 h-12 rounded-full bg-[#5E5B34] flex items-center justify-center">
+                <UtensilsCrossed className="h-6 w-6 text-[#F2E9D3]" />
               </div>
               <div>
-                <p className="text-sm text-emerald-700 font-medium">Places réservées</p>
-                <p className="text-2xl font-bold text-emerald-900">{monthStats.totalSeats}</p>
-                <p className="text-[10px] text-emerald-600 capitalize">{format(currentMonth, "MMMM yyyy", { locale: fr })}</p>
+                <p className="text-sm text-[#6b6b4e] font-medium">Places réservées</p>
+                <p className="text-2xl font-bold text-[#5d5a3c]">{monthStats.totalSeats}</p>
+                <p className="text-[10px] text-[#8b8b6e] capitalize">{format(currentMonth, "MMMM yyyy", { locale: fr })}</p>
               </div>
             </CardContent>
           </Card>
