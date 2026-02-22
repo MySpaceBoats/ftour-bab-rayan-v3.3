@@ -30,6 +30,7 @@ import Signup from "@/features/auth/pages/Signup";
 // RESTAURANT — features/restaurant
 // ============================================
 import RestaurantGroupes from "@/features/restaurant/pages/RestaurantGroupes";
+import RestaurantParticuliers from "@/features/restaurant/pages/RestaurantParticuliers";
 import CompanyBooking from "@/features/restaurant/pages/CompanyBooking";
 import CompanyBookingConfirmation from "@/features/restaurant/pages/CompanyBookingConfirmation";
 import CompanyBookingSpace from "@/features/restaurant/pages/CompanyBookingSpace";
@@ -144,6 +145,25 @@ function LocalizedRoutes() {
     }
   }, [location, lang, setLang]);
 
+  useEffect(() => {
+    const endpoint = import.meta.env.VITE_ANALYTICS_ENDPOINT as string | undefined;
+    const websiteId = import.meta.env.VITE_ANALYTICS_WEBSITE_ID as string | undefined;
+
+    if (!endpoint || !websiteId) {
+      return;
+    }
+
+    if (document.querySelector('script[data-website-id]')) {
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.defer = true;
+    script.src = `${endpoint.replace(/\/$/, '')}/umami`;
+    script.setAttribute('data-website-id', websiteId);
+    document.body.appendChild(script);
+  }, []);
+
   return (
     <Switch>
       {/* ================================================
@@ -232,6 +252,7 @@ function LocalizedRoutes() {
       <Route path="/:lang/inscription" component={Signup} />
 
       {/* Restaurant public */}
+      <Route path="/:lang/restaurant/particuliers" component={RestaurantParticuliers} />
       <Route path="/:lang/restaurant/groupes" component={RestaurantGroupes} />
       <Route path="/:lang/reservation" component={Reservation} />
       <Route path="/:lang/company-booking" component={CompanyBooking} />

@@ -11,6 +11,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { trpc } from '@/lib/trpc';
+import { isDateInInclusiveRange } from '@/features/restaurant/utils/dateRange';
+
+const RESTAURANT_BOOKING_MIN_DATE = '2026-02-20';
+const RESTAURANT_BOOKING_MAX_DATE = '2026-03-13';
 
 export default function CompanyBooking() {
   const { lang } = useI18n();
@@ -32,14 +36,12 @@ export default function CompanyBooking() {
     salle: '' as '' | 'jardin' | 'corpo',
   });
 
-  // Dates autorisées : 20 février - 13 mars
-  const startDate = new Date(2026, 1, 20);
-  const endDate = new Date(2026, 2, 13);
-
   const isDateAllowed = (dateStr: string) => {
-    if (!dateStr) return false;
-    const date = new Date(dateStr);
-    return date >= startDate && date <= endDate;
+    return isDateInInclusiveRange(
+      dateStr,
+      RESTAURANT_BOOKING_MIN_DATE,
+      RESTAURANT_BOOKING_MAX_DATE,
+    );
   };
 
   const handleInputChange = (field: string, value: any) => {
@@ -256,8 +258,8 @@ export default function CompanyBooking() {
                   <Input
                     id="date"
                     type="date"
-                    min="2026-02-20"
-                    max="2026-03-13"
+                    min={RESTAURANT_BOOKING_MIN_DATE}
+                    max={RESTAURANT_BOOKING_MAX_DATE}
                     value={formData.date}
                     onChange={(e) => handleInputChange('date', e.target.value)}
                     required
