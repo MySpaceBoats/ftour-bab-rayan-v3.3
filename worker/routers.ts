@@ -72,6 +72,17 @@ const QR_TYPE_LABELS: Record<WorkerQrType, string> = {
 
 function extractTokenFromUrl(rawInput: string): string {
   try {
+    const decodedInput = decodeURIComponent(rawInput);
+
+    // If the scanner receives a full URL containing a known token in query/path,
+    // prefer that token over catalog route detection.
+    const knownTokenMatch = decodedInput.match(
+      /\b(rp-[a-z0-9-]+|re-[a-z0-9-]+|rg-[a-z0-9-]+|FBR-[A-Z0-9-]+|PASTRY-[A-Z0-9-]+|(?:ter|TER)-[A-Za-z0-9-]+|DON-[A-Za-z0-9-]+)\b/
+    );
+    if (knownTokenMatch) {
+      return knownTokenMatch[1];
+    }
+
     if (rawInput.includes('/checkin-reservation/')) {
       const parts = rawInput.split('/checkin-reservation/');
       return parts[parts.length - 1].split('?')[0];
