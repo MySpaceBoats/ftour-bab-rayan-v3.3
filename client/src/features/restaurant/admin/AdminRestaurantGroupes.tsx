@@ -3,15 +3,36 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Search, Loader2, CheckCircle, XCircle,
-  Clock, UsersRound, Users, CreditCard
+  ArrowLeft,
+  Search,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  Clock,
+  UsersRound,
+  Users,
+  CreditCard,
+  Trash2,
 } from "lucide-react";
 
 export default function AdminRestaurantGroupes() {
@@ -19,15 +40,27 @@ export default function AdminRestaurantGroupes() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
+  const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
   const hasAccess = user?.role && allowedRoles.includes(user.role);
 
-  const { data: groupes, isLoading: loadingG, isError: errorG, error: errorGroupes, refetch: refetchG } = trpc.restaurantReservations.adminListGroupes.useQuery(undefined, {
+  const {
+    data: groupes,
+    isLoading: loadingG,
+    isError: errorG,
+    error: errorGroupes,
+    refetch: refetchG,
+  } = trpc.restaurantReservations.adminListGroupes.useQuery(undefined, {
     enabled: !!hasAccess,
     retry: 1,
   });
 
-  const { data: entreprises, isLoading: loadingE, isError: errorE, error: errorEntreprises, refetch: refetchE } = trpc.restaurantReservations.adminListEntreprises.useQuery(undefined, {
+  const {
+    data: entreprises,
+    isLoading: loadingE,
+    isError: errorE,
+    error: errorEntreprises,
+    refetch: refetchE,
+  } = trpc.restaurantReservations.adminListEntreprises.useQuery(undefined, {
     enabled: !!hasAccess,
     retry: 1,
   });
@@ -37,18 +70,27 @@ export default function AdminRestaurantGroupes() {
   const error = errorGroupes || errorEntreprises;
 
   const reservations = [
-    ...(groupes || []).map((r: any) => ({ ...r, type: r.type || 'groupe' })),
-    ...(entreprises || []).map((r: any) => ({ ...r, type: r.type || 'entreprise' })),
-  ].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    ...(groupes || []).map((r: any) => ({ ...r, type: r.type || "groupe" })),
+    ...(entreprises || []).map((r: any) => ({
+      ...r,
+      type: r.type || "entreprise",
+    })),
+  ].sort(
+    (a: any, b: any) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 
-  const refetch = () => { refetchG(); refetchE(); };
+  const refetch = () => {
+    refetchG();
+    refetchE();
+  };
 
   const validateMutation = trpc.restaurantReservations.validate.useMutation({
     onSuccess: () => {
       toast.success("Réservation validée, email de confirmation envoyé");
       refetch();
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(error.message);
     },
   });
@@ -58,20 +100,44 @@ export default function AdminRestaurantGroupes() {
       toast.success("Réservation refusée, email de notification envoyé");
       refetch();
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(error.message);
     },
   });
 
-  const updateStatusMutation = trpc.restaurantReservations.adminUpdateStatus.useMutation({
+  const updateStatusMutation =
+    trpc.restaurantReservations.adminUpdateStatus.useMutation({
+      onSuccess: () => {
+        toast.success("Statut mis à jour");
+        refetch();
+      },
+      onError: error => {
+        toast.error(error.message);
+      },
+    });
+
+  const deleteMutation = trpc.restaurantReservations.adminDelete.useMutation({
     onSuccess: () => {
-      toast.success("Statut mis à jour");
+      toast.success("Réservation supprimée");
       refetch();
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: error => {
+      toast.error(error.message || "Erreur lors de la suppression");
     },
   });
+
+  const handleDeleteReservation = (reservation: any) => {
+    const name =
+      reservation.groupName ||
+      reservation.companyName ||
+      reservation.name ||
+      reservation.reference;
+    const confirmed = window.confirm(
+      `Supprimer définitivement la réservation ${reservation.reference} (${name}) ?`
+    );
+    if (!confirmed) return;
+    deleteMutation.mutate({ id: reservation.id });
+  };
 
   if (!hasAccess) {
     return (
@@ -95,7 +161,8 @@ export default function AdminRestaurantGroupes() {
   }
 
   const filteredReservations = reservations?.filter((r: any) => {
-    const matchesSearch = searchQuery === "" ||
+    const matchesSearch =
+      searchQuery === "" ||
       r.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.groupName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.companyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -106,32 +173,72 @@ export default function AdminRestaurantGroupes() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'pending_validation':
-      case 'submitted':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200"><Clock className="h-3 w-3 mr-1" />En attente</Badge>;
-      case 'validated_pending_payment':
-      case 'pending_confirmation':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200"><CreditCard className="h-3 w-3 mr-1" />Paiement attendu</Badge>;
-      case 'paid_confirmed':
-      case 'confirmed':
-        return <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Confirmée</Badge>;
-      case 'refused':
-      case 'rejected':
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Refusée</Badge>;
-      case 'cancelled':
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Annulée</Badge>;
-      case 'completed':
-        return <Badge className="bg-emerald-600"><CheckCircle className="h-3 w-3 mr-1" />Terminée</Badge>;
-      case 'no_show':
-        return <Badge variant="outline" className="bg-gray-50 text-gray-700">No show</Badge>;
+      case "pending_validation":
+      case "submitted":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-blue-50 text-blue-700 border-blue-200"
+          >
+            <Clock className="h-3 w-3 mr-1" />
+            En attente
+          </Badge>
+        );
+      case "validated_pending_payment":
+      case "pending_confirmation":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-yellow-50 text-yellow-700 border-yellow-200"
+          >
+            <CreditCard className="h-3 w-3 mr-1" />
+            Paiement attendu
+          </Badge>
+        );
+      case "paid_confirmed":
+      case "confirmed":
+        return (
+          <Badge className="bg-green-500">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Confirmée
+          </Badge>
+        );
+      case "refused":
+      case "rejected":
+        return (
+          <Badge variant="destructive">
+            <XCircle className="h-3 w-3 mr-1" />
+            Refusée
+          </Badge>
+        );
+      case "cancelled":
+        return (
+          <Badge variant="destructive">
+            <XCircle className="h-3 w-3 mr-1" />
+            Annulée
+          </Badge>
+        );
+      case "completed":
+        return (
+          <Badge className="bg-emerald-600">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Terminée
+          </Badge>
+        );
+      case "no_show":
+        return (
+          <Badge variant="outline" className="bg-gray-50 text-gray-700">
+            No show
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
 
   const formatDate = (date: any) => {
-    if (!date) return '-';
-    return new Date(date).toLocaleDateString('fr-FR');
+    if (!date) return "-";
+    return new Date(date).toLocaleDateString("fr-FR");
   };
 
   return (
@@ -149,7 +256,8 @@ export default function AdminRestaurantGroupes() {
               Réservations Groupes ou Entreprises
             </h1>
             <p className="text-xs text-muted-foreground">
-              {filteredReservations?.length || 0} réservation(s) - soumises à confirmation
+              {filteredReservations?.length || 0} réservation(s) - soumises à
+              confirmation
             </p>
           </div>
         </div>
@@ -163,7 +271,7 @@ export default function AdminRestaurantGroupes() {
             <Input
               placeholder="Rechercher (groupe, contact, référence)..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={e => setSearchQuery(e.target.value)}
               className="pl-10"
             />
           </div>
@@ -174,7 +282,9 @@ export default function AdminRestaurantGroupes() {
             <SelectContent>
               <SelectItem value="all">Tous les statuts</SelectItem>
               <SelectItem value="pending_validation">En attente</SelectItem>
-              <SelectItem value="validated_pending_payment">Paiement attendu</SelectItem>
+              <SelectItem value="validated_pending_payment">
+                Paiement attendu
+              </SelectItem>
               <SelectItem value="paid_confirmed">Confirmée</SelectItem>
               <SelectItem value="refused">Refusée</SelectItem>
               <SelectItem value="cancelled">Annulée</SelectItem>
@@ -195,9 +305,15 @@ export default function AdminRestaurantGroupes() {
               <div className="w-12 h-12 mx-auto rounded-full bg-red-100 flex items-center justify-center">
                 <XCircle className="h-6 w-6 text-red-600" />
               </div>
-              <p className="text-red-600 font-medium">Erreur lors du chargement des réservations</p>
-              <p className="text-sm text-muted-foreground">{error?.message || 'Erreur inconnue'}</p>
-              <Button variant="outline" onClick={() => refetch()}>Réessayer</Button>
+              <p className="text-red-600 font-medium">
+                Erreur lors du chargement des réservations
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {error?.message || "Erreur inconnue"}
+              </p>
+              <Button variant="outline" onClick={() => refetch()}>
+                Réessayer
+              </Button>
             </CardContent>
           </Card>
         ) : (
@@ -220,26 +336,44 @@ export default function AdminRestaurantGroupes() {
                 <TableBody>
                   {filteredReservations?.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableCell
+                        colSpan={9}
+                        className="text-center py-8 text-muted-foreground"
+                      >
                         Aucune réservation trouvée
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredReservations?.map((r: any) => (
                       <TableRow key={`${r.type}-${r.id}`}>
-                        <TableCell className="font-mono text-sm">{r.reference}</TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {r.reference}
+                        </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={r.type === 'groupe' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-purple-50 text-purple-700 border-purple-200'}>
-                            {r.type === 'groupe' ? 'Groupe' : 'Entreprise'}
+                          <Badge
+                            variant="outline"
+                            className={
+                              r.type === "groupe"
+                                ? "bg-orange-50 text-orange-700 border-orange-200"
+                                : "bg-purple-50 text-purple-700 border-purple-200"
+                            }
+                          >
+                            {r.type === "groupe" ? "Groupe" : "Entreprise"}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="font-medium">{r.groupName || r.companyName || '-'}</div>
+                          <div className="font-medium">
+                            {r.groupName || r.companyName || "-"}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div>{r.name}</div>
-                          <div className="text-xs text-muted-foreground">{r.phone}</div>
-                          <div className="text-xs text-muted-foreground">{r.email}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {r.phone}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {r.email}
+                          </div>
                         </TableCell>
                         <TableCell>{r.seatsTotal}</TableCell>
                         <TableCell>{formatDate(r.date)}</TableCell>
@@ -249,16 +383,19 @@ export default function AdminRestaurantGroupes() {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            {(r.status === 'pending_validation' || r.status === 'submitted') && (
+                            {(r.status === "pending_validation" ||
+                              r.status === "submitted") && (
                               <>
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   className="text-green-600"
-                                  onClick={() => validateMutation.mutate({
-                                    reference: r.reference,
-                                    baseUrl: window.location.origin,
-                                  })}
+                                  onClick={() =>
+                                    validateMutation.mutate({
+                                      reference: r.reference,
+                                      baseUrl: window.location.origin,
+                                    })
+                                  }
                                   disabled={validateMutation.isPending}
                                 >
                                   <CheckCircle className="h-3 w-3 mr-1" />
@@ -268,7 +405,11 @@ export default function AdminRestaurantGroupes() {
                                   size="sm"
                                   variant="outline"
                                   className="text-red-600"
-                                  onClick={() => refuseMutation.mutate({ reference: r.reference })}
+                                  onClick={() =>
+                                    refuseMutation.mutate({
+                                      reference: r.reference,
+                                    })
+                                  }
                                   disabled={refuseMutation.isPending}
                                 >
                                   <XCircle className="h-3 w-3 mr-1" />
@@ -276,15 +417,34 @@ export default function AdminRestaurantGroupes() {
                                 </Button>
                               </>
                             )}
-                            {(['validated_pending_payment', 'pending_confirmation', 'paid_confirmed', 'confirmed'].includes(r.status)) && (
+                            {[
+                              "validated_pending_payment",
+                              "pending_confirmation",
+                              "paid_confirmed",
+                              "confirmed",
+                            ].includes(r.status) && (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => updateStatusMutation.mutate({ id: r.id, status: 'completed' })}
+                                onClick={() =>
+                                  updateStatusMutation.mutate({
+                                    id: r.id,
+                                    status: "completed",
+                                  })
+                                }
                               >
                                 Terminer
                               </Button>
                             )}
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteReservation(r)}
+                              disabled={deleteMutation.isPending}
+                            >
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              Effacer
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>

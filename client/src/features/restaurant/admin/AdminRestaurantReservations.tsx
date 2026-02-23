@@ -1,19 +1,48 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'wouter';
-import { trpc } from '@/lib/trpc';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Download, Search, CheckCircle, XCircle, Loader2, Percent, Pencil } from 'lucide-react';
-import { toast } from 'sonner';
+import { useMemo, useState } from "react";
+import { Link } from "wouter";
+import { trpc } from "@/lib/trpc";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ArrowLeft,
+  Download,
+  Search,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Percent,
+  Pencil,
+  Trash2,
+} from "lucide-react";
+import { toast } from "sonner";
 
-type ReservationType = 'all' | 'particulier' | 'entreprise' | 'groupe';
-type ReservationStatus = 'all' | 'pending_validation' | 'validated_pending_payment' | 'paid_confirmed' | 'refused' | 'cancelled' | 'completed' | 'no_show';
+type ReservationType = "all" | "particulier" | "entreprise" | "groupe";
+type ReservationStatus =
+  | "all"
+  | "pending_validation"
+  | "validated_pending_payment"
+  | "paid_confirmed"
+  | "refused"
+  | "cancelled"
+  | "completed"
+  | "no_show";
 
 const getDisplayChoiceOptions = (type: string) => {
   const baseOptions = [{ value: 'jardin', label: 'Pavillon du Jardin' }];
@@ -26,11 +55,11 @@ const getDisplayChoiceOptions = (type: string) => {
 };
 
 export default function AdminRestaurantReservations() {
-  const [typeFilter, setTypeFilter] = useState<ReservationType>('all');
-  const [statusFilter, setStatusFilter] = useState<ReservationStatus>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<ReservationType>("all");
+  const [statusFilter, setStatusFilter] = useState<ReservationStatus>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [depositInput, setDepositInput] = useState<string>('');
+  const [depositInput, setDepositInput] = useState<string>("");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState<{
     id: number;
@@ -47,9 +76,30 @@ export default function AdminRestaurantReservations() {
   } | null>(null);
 
   // Fetch reservations via restaurantReservations router
-  const { data: particuliers = [], isLoading: loadingP, isError: errorP, refetch: refetchP } = trpc.restaurantReservations.adminListParticuliers.useQuery(undefined, { retry: 1 });
-  const { data: entreprises = [], isLoading: loadingE, isError: errorE, refetch: refetchE } = trpc.restaurantReservations.adminListEntreprises.useQuery(undefined, { retry: 1 });
-  const { data: groupes = [], isLoading: loadingG, isError: errorG, refetch: refetchG } = trpc.restaurantReservations.adminListGroupes.useQuery(undefined, { retry: 1 });
+  const {
+    data: particuliers = [],
+    isLoading: loadingP,
+    isError: errorP,
+    refetch: refetchP,
+  } = trpc.restaurantReservations.adminListParticuliers.useQuery(undefined, {
+    retry: 1,
+  });
+  const {
+    data: entreprises = [],
+    isLoading: loadingE,
+    isError: errorE,
+    refetch: refetchE,
+  } = trpc.restaurantReservations.adminListEntreprises.useQuery(undefined, {
+    retry: 1,
+  });
+  const {
+    data: groupes = [],
+    isLoading: loadingG,
+    isError: errorG,
+    refetch: refetchG,
+  } = trpc.restaurantReservations.adminListGroupes.useQuery(undefined, {
+    retry: 1,
+  });
 
   const isLoading = loadingP || loadingE || loadingG;
   const hasError = errorP || errorE || errorG;
@@ -63,20 +113,29 @@ export default function AdminRestaurantReservations() {
   // Combine all reservations
   const allReservations = useMemo(() => {
     const all = [
-      ...particuliers.map((r: any) => ({ ...r, type: r.type || 'particulier' })),
-      ...entreprises.map((r: any) => ({ ...r, type: r.type || 'entreprise' })),
-      ...groupes.map((r: any) => ({ ...r, type: r.type || 'groupe' })),
+      ...particuliers.map((r: any) => ({
+        ...r,
+        type: r.type || "particulier",
+      })),
+      ...entreprises.map((r: any) => ({ ...r, type: r.type || "entreprise" })),
+      ...groupes.map((r: any) => ({ ...r, type: r.type || "groupe" })),
     ];
-    return all.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return all.sort(
+      (a: any, b: any) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   }, [particuliers, entreprises, groupes]);
 
   // Filter reservations
   const filteredReservations = useMemo(() => {
     return allReservations.filter((res: any) => {
-      const matchesType = typeFilter === 'all' || res.type === typeFilter;
-      const matchesStatus = statusFilter === 'all' || res.status === statusFilter;
-      const text = `${res.reference} ${res.name} ${res.email} ${res.phone} ${res.groupName || ''} ${res.companyName || ''}`.toLowerCase();
-      const matchesSearch = searchQuery === '' || text.includes(searchQuery.toLowerCase());
+      const matchesType = typeFilter === "all" || res.type === typeFilter;
+      const matchesStatus =
+        statusFilter === "all" || res.status === statusFilter;
+      const text =
+        `${res.reference} ${res.name} ${res.email} ${res.phone} ${res.groupName || ""} ${res.companyName || ""}`.toLowerCase();
+      const matchesSearch =
+        searchQuery === "" || text.includes(searchQuery.toLowerCase());
       return matchesType && matchesStatus && matchesSearch;
     });
   }, [allReservations, typeFilter, statusFilter, searchQuery]);
@@ -87,77 +146,90 @@ export default function AdminRestaurantReservations() {
   // Validate reservation
   const validateMutation = trpc.restaurantReservations.validate.useMutation({
     onSuccess: () => {
-      toast.success('Réservation validée, email de confirmation envoyé');
+      toast.success("Réservation validée, email de confirmation envoyé");
       setSelectedId(null);
       refetchAll();
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Erreur lors de la validation');
+      toast.error(error.message || "Erreur lors de la validation");
     },
   });
 
   // Refuse reservation
   const refuseMutation = trpc.restaurantReservations.refuse.useMutation({
     onSuccess: () => {
-      toast.success('Réservation refusée, email de notification envoyé');
+      toast.success("Réservation refusée, email de notification envoyé");
       setSelectedId(null);
       refetchAll();
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Erreur lors du refus');
+      toast.error(error.message || "Erreur lors du refus");
     },
   });
 
   // Update status
-  const updateStatusMutation = trpc.restaurantReservations.adminUpdateStatus.useMutation({
-    onSuccess: () => {
-      toast.success('Statut mis à jour');
-      setSelectedId(null);
-      refetchAll();
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Erreur lors de la mise à jour');
-    },
-  });
+  const updateStatusMutation =
+    trpc.restaurantReservations.adminUpdateStatus.useMutation({
+      onSuccess: () => {
+        toast.success("Statut mis à jour");
+        setSelectedId(null);
+        refetchAll();
+      },
+      onError: (error: any) => {
+        toast.error(error.message || "Erreur lors de la mise à jour");
+      },
+    });
 
   // Update deposit percentage
-  const depositMutation = trpc.restaurantReservations.adminUpdateDepositPercentage.useMutation({
-    onSuccess: () => {
-      toast.success('Pourcentage d\'acompte mis à jour, statut ajusté');
-      setDepositInput('');
-      refetchAll();
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Erreur lors de la mise à jour');
-    },
-  });
+  const depositMutation =
+    trpc.restaurantReservations.adminUpdateDepositPercentage.useMutation({
+      onSuccess: () => {
+        toast.success("Pourcentage d'acompte mis à jour, statut ajusté");
+        setDepositInput("");
+        refetchAll();
+      },
+      onError: (error: any) => {
+        toast.error(error.message || "Erreur lors de la mise à jour");
+      },
+    });
 
   // Edit reservation
   const editMutation = trpc.restaurantReservations.adminEdit.useMutation({
     onSuccess: () => {
-      toast.success('Réservation modifiée avec succès');
+      toast.success("Réservation modifiée avec succès");
       setEditDialogOpen(false);
       setEditForm(null);
       refetchAll();
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Erreur lors de la modification');
+      toast.error(error.message || "Erreur lors de la modification");
+    },
+  });
+
+  const deleteMutation = trpc.restaurantReservations.adminDelete.useMutation({
+    onSuccess: () => {
+      toast.success("Réservation supprimée");
+      setSelectedId(null);
+      refetchAll();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erreur lors de la suppression");
     },
   });
 
   const openEditDialog = (res: any) => {
     setEditForm({
       id: res.id,
-      name: res.name || '',
-      email: res.email || '',
-      phone: res.phone || '',
-      date: res.date ? new Date(res.date).toISOString().split('T')[0] : '',
+      name: res.name || "",
+      email: res.email || "",
+      phone: res.phone || "",
+      date: res.date ? new Date(res.date).toISOString().split("T")[0] : "",
       seatsTotal: res.seatsTotal || 0,
-      notes: res.notes || '',
-      companyName: res.companyName || '',
-      groupName: res.groupName || '',
-      displayChoice: res.displayChoice || '',
-      type: res.type || '',
+      notes: res.notes || "",
+      companyName: res.companyName || "",
+      groupName: res.groupName || "",
+      displayChoice: res.displayChoice || "",
+      type: res.type || "",
     });
     setEditDialogOpen(true);
   };
@@ -181,7 +253,7 @@ export default function AdminRestaurantReservations() {
   const handleDepositUpdate = (id: number) => {
     const pct = parseInt(depositInput, 10);
     if (isNaN(pct) || pct < 0 || pct > 100) {
-      toast.error('Veuillez entrer un pourcentage entre 0 et 100');
+      toast.error("Veuillez entrer un pourcentage entre 0 et 100");
       return;
     }
     depositMutation.mutate({ id, percentage: pct });
@@ -198,60 +270,91 @@ export default function AdminRestaurantReservations() {
     refuseMutation.mutate({ reference });
   };
 
+  const handleDelete = (reservation: any) => {
+    const label =
+      reservation.groupName ||
+      reservation.companyName ||
+      reservation.name ||
+      reservation.reference;
+    const confirmed = window.confirm(
+      `Supprimer définitivement la réservation ${reservation.reference} (${label}) ?`
+    );
+    if (!confirmed) return;
+    deleteMutation.mutate({ id: reservation.id });
+  };
+
   const exportCsv = () => {
     if (filteredReservations.length === 0) {
-      toast.error('Aucune réservation à exporter');
+      toast.error("Aucune réservation à exporter");
       return;
     }
 
-    const header = ['Référence', 'Type', 'Statut', 'Contact', 'Email', 'Téléphone', 'Places', 'Date Ftour', 'Acompte %', 'Créé le', 'Notes'];
+    const header = [
+      "Référence",
+      "Type",
+      "Statut",
+      "Contact",
+      "Email",
+      "Téléphone",
+      "Places",
+      "Date Ftour",
+      "Acompte %",
+      "Créé le",
+      "Notes",
+    ];
     const rows = filteredReservations.map((res: any) => [
       res.reference,
       res.type,
       res.status,
       res.name,
-      res.email || '',
+      res.email || "",
       res.phone,
-      res.seatsTotal || '-',
-      res.date ? new Date(res.date).toLocaleDateString('fr-FR') : '-',
+      res.seatsTotal || "-",
+      res.date ? new Date(res.date).toLocaleDateString("fr-FR") : "-",
       res.depositPercentage || 0,
-      res.createdAt ? new Date(res.createdAt).toLocaleString('fr-FR') : '-',
-      (res.notes || '').replace(/\n/g, ' '),
+      res.createdAt ? new Date(res.createdAt).toLocaleString("fr-FR") : "-",
+      (res.notes || "").replace(/\n/g, " "),
     ]);
 
     const csv = [header, ...rows]
-      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-      .join('\n');
+      .map(row =>
+        row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+      )
+      .join("\n");
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `reservations_restaurant_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `reservations_restaurant_${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
 
-    toast.success('Export CSV téléchargé');
+    toast.success("Export CSV téléchargé");
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'pending_validation':
-      case 'submitted':
+      case "pending_validation":
+      case "submitted":
         return <Badge variant="outline">En attente</Badge>;
-      case 'validated_pending_payment':
-      case 'pending_confirmation':
+      case "validated_pending_payment":
+      case "pending_confirmation":
         return <Badge variant="secondary">Paiement attendu</Badge>;
-      case 'paid_confirmed':
-      case 'confirmed':
+      case "paid_confirmed":
+      case "confirmed":
         return <Badge className="bg-green-600">Confirmée</Badge>;
-      case 'refused':
-      case 'rejected':
+      case "refused":
+      case "rejected":
         return <Badge variant="destructive">Refusée</Badge>;
-      case 'cancelled':
+      case "cancelled":
         return <Badge variant="destructive">Annulée</Badge>;
-      case 'completed':
+      case "completed":
         return <Badge className="bg-emerald-600">Terminée</Badge>;
-      case 'no_show':
-        return <Badge variant="outline" className="bg-gray-50 text-gray-700">No show</Badge>;
+      case "no_show":
+        return (
+          <Badge variant="outline" className="bg-gray-50 text-gray-700">
+            No show
+          </Badge>
+        );
       default:
         return <Badge>{status}</Badge>;
     }
@@ -259,11 +362,11 @@ export default function AdminRestaurantReservations() {
 
   const getTypeBadge = (type: string) => {
     switch (type) {
-      case 'particulier':
+      case "particulier":
         return <Badge className="bg-blue-600">Particulier</Badge>;
-      case 'entreprise':
+      case "entreprise":
         return <Badge className="bg-purple-600">Entreprise</Badge>;
-      case 'groupe':
+      case "groupe":
         return <Badge className="bg-orange-600">Groupe</Badge>;
       default:
         return <Badge>{type}</Badge>;
@@ -271,8 +374,8 @@ export default function AdminRestaurantReservations() {
   };
 
   const formatDate = (date: any) => {
-    if (!date) return '-';
-    return new Date(date).toLocaleDateString('fr-FR');
+    if (!date) return "-";
+    return new Date(date).toLocaleDateString("fr-FR");
   };
 
   return (
@@ -286,7 +389,9 @@ export default function AdminRestaurantReservations() {
           </Link>
           <div>
             <h1 className="font-bold text-lg">Réservations Restaurant</h1>
-            <p className="text-xs text-muted-foreground">{filteredReservations.length} réservation(s)</p>
+            <p className="text-xs text-muted-foreground">
+              {filteredReservations.length} réservation(s)
+            </p>
           </div>
         </div>
       </header>
@@ -302,44 +407,87 @@ export default function AdminRestaurantReservations() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Rechercher une réservation..."
                   className="pl-10"
                 />
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Button variant={typeFilter === 'all' ? 'default' : 'outline'} onClick={() => setTypeFilter('all')} size="sm">
+                <Button
+                  variant={typeFilter === "all" ? "default" : "outline"}
+                  onClick={() => setTypeFilter("all")}
+                  size="sm"
+                >
                   Tous
                 </Button>
-                <Button variant={typeFilter === 'entreprise' ? 'default' : 'outline'} onClick={() => setTypeFilter('entreprise')} size="sm">
+                <Button
+                  variant={typeFilter === "entreprise" ? "default" : "outline"}
+                  onClick={() => setTypeFilter("entreprise")}
+                  size="sm"
+                >
                   Entreprises
                 </Button>
-                <Button variant={typeFilter === 'groupe' ? 'default' : 'outline'} onClick={() => setTypeFilter('groupe')} size="sm">
+                <Button
+                  variant={typeFilter === "groupe" ? "default" : "outline"}
+                  onClick={() => setTypeFilter("groupe")}
+                  size="sm"
+                >
                   Groupes
                 </Button>
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Button variant={statusFilter === 'all' ? 'default' : 'outline'} onClick={() => setStatusFilter('all')} size="sm">
+                <Button
+                  variant={statusFilter === "all" ? "default" : "outline"}
+                  onClick={() => setStatusFilter("all")}
+                  size="sm"
+                >
                   Tous statuts
                 </Button>
-                <Button variant={statusFilter === 'pending_validation' ? 'default' : 'outline'} onClick={() => setStatusFilter('pending_validation')} size="sm">
+                <Button
+                  variant={
+                    statusFilter === "pending_validation"
+                      ? "default"
+                      : "outline"
+                  }
+                  onClick={() => setStatusFilter("pending_validation")}
+                  size="sm"
+                >
                   En attente
                 </Button>
-                <Button variant={statusFilter === 'validated_pending_payment' ? 'default' : 'outline'} onClick={() => setStatusFilter('validated_pending_payment')} size="sm">
+                <Button
+                  variant={
+                    statusFilter === "validated_pending_payment"
+                      ? "default"
+                      : "outline"
+                  }
+                  onClick={() => setStatusFilter("validated_pending_payment")}
+                  size="sm"
+                >
                   Paiement attendu
                 </Button>
-                <Button variant={statusFilter === 'paid_confirmed' ? 'default' : 'outline'} onClick={() => setStatusFilter('paid_confirmed')} size="sm">
+                <Button
+                  variant={
+                    statusFilter === "paid_confirmed" ? "default" : "outline"
+                  }
+                  onClick={() => setStatusFilter("paid_confirmed")}
+                  size="sm"
+                >
                   Confirmées
                 </Button>
-                <Button variant={statusFilter === 'refused' ? 'default' : 'outline'} onClick={() => setStatusFilter('refused')} size="sm">
+                <Button
+                  variant={statusFilter === "refused" ? "default" : "outline"}
+                  onClick={() => setStatusFilter("refused")}
+                  size="sm"
+                >
                   Refusées
                 </Button>
               </div>
 
               <Button variant="outline" onClick={exportCsv}>
-                <Download className="h-4 w-4 mr-2" />CSV
+                <Download className="h-4 w-4 mr-2" />
+                CSV
               </Button>
             </div>
 
@@ -352,13 +500,19 @@ export default function AdminRestaurantReservations() {
                 <div className="w-12 h-12 mx-auto rounded-full bg-red-100 flex items-center justify-center">
                   <XCircle className="h-6 w-6 text-red-600" />
                 </div>
-                <p className="text-red-600 font-medium">Erreur lors du chargement des réservations</p>
-                <Button variant="outline" onClick={refetchAll}>Réessayer</Button>
+                <p className="text-red-600 font-medium">
+                  Erreur lors du chargement des réservations
+                </p>
+                <Button variant="outline" onClick={refetchAll}>
+                  Réessayer
+                </Button>
               </div>
             ) : (
               <div className="space-y-3">
                 {filteredReservations.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Aucune réservation trouvée.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Aucune réservation trouvée.
+                  </p>
                 )}
 
                 {filteredReservations.map((res: any) => (
@@ -366,7 +520,9 @@ export default function AdminRestaurantReservations() {
                     key={`${res.type}-${res.id}`}
                     onClick={() => setSelectedId(res.id)}
                     className={`w-full text-left p-4 rounded-lg border transition-colors ${
-                      selectedId === res.id ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
+                      selectedId === res.id
+                        ? "border-primary bg-primary/5"
+                        : "hover:bg-muted/50"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2 mb-2">
@@ -377,14 +533,26 @@ export default function AdminRestaurantReservations() {
                       </div>
                     </div>
                     {(res.groupName || res.companyName) && (
-                      <p className="text-sm font-medium">{res.groupName || res.companyName}</p>
+                      <p className="text-sm font-medium">
+                        {res.groupName || res.companyName}
+                      </p>
                     )}
-                    <p className="text-sm text-muted-foreground">{res.name} {res.email ? `• ${res.email}` : ''}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {res.name} {res.email ? `• ${res.email}` : ""}
+                    </p>
                     <p className="text-sm">
-                      <span className="font-medium">{res.seatsTotal || 0} places</span>
-                      <span className="text-muted-foreground"> • Ftour {formatDate(res.date)} • Créé {formatDate(res.createdAt)}</span>
+                      <span className="font-medium">
+                        {res.seatsTotal || 0} places
+                      </span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        • Ftour {formatDate(res.date)} • Créé{" "}
+                        {formatDate(res.createdAt)}
+                      </span>
                       {res.depositPercentage > 0 && (
-                        <span className={`ml-2 font-medium ${res.depositPercentage >= 100 ? 'text-green-600' : 'text-amber-600'}`}>
+                        <span
+                          className={`ml-2 font-medium ${res.depositPercentage >= 100 ? "text-green-600" : "text-amber-600"}`}
+                        >
                           • Acompte {res.depositPercentage}%
                         </span>
                       )}
@@ -401,12 +569,18 @@ export default function AdminRestaurantReservations() {
             <CardTitle>Détail</CardTitle>
           </CardHeader>
           <CardContent>
-            {!selectedReservation && <p className="text-sm text-muted-foreground">Sélectionnez une réservation.</p>}
+            {!selectedReservation && (
+              <p className="text-sm text-muted-foreground">
+                Sélectionnez une réservation.
+              </p>
+            )}
             {selectedReservation && (
               <div className="space-y-4">
                 <div>
                   <p className="text-xs text-muted-foreground">Référence</p>
-                  <p className="font-semibold">{selectedReservation.reference}</p>
+                  <p className="font-semibold">
+                    {selectedReservation.reference}
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -427,28 +601,42 @@ export default function AdminRestaurantReservations() {
                   <p className="text-sm">{selectedReservation.phone}</p>
                 </div>
 
-                {(selectedReservation.companyName || selectedReservation.groupName) && (
+                {(selectedReservation.companyName ||
+                  selectedReservation.groupName) && (
                   <div>
-                    <p className="text-xs text-muted-foreground">Entreprise/Groupe</p>
-                    <p className="font-medium">{selectedReservation.companyName || selectedReservation.groupName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Entreprise/Groupe
+                    </p>
+                    <p className="font-medium">
+                      {selectedReservation.companyName ||
+                        selectedReservation.groupName}
+                    </p>
                   </div>
                 )}
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <p className="text-xs text-muted-foreground">Places</p>
-                    <p className="font-medium">{selectedReservation.seatsTotal || '-'}</p>
+                    <p className="font-medium">
+                      {selectedReservation.seatsTotal || "-"}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Date Ftour</p>
-                    <p className="font-medium">{formatDate(selectedReservation.date)}</p>
+                    <p className="font-medium">
+                      {formatDate(selectedReservation.date)}
+                    </p>
                   </div>
                 </div>
 
                 {selectedReservation.notes && (
                   <div>
                     <p className="text-xs text-muted-foreground">Notes</p>
-                    <Textarea value={selectedReservation.notes} readOnly className="min-h-[80px]" />
+                    <Textarea
+                      value={selectedReservation.notes}
+                      readOnly
+                      className="min-h-[80px]"
+                    />
                   </div>
                 )}
 
@@ -461,22 +649,40 @@ export default function AdminRestaurantReservations() {
                   Modifier la réservation
                 </Button>
 
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={() => handleDelete(selectedReservation)}
+                  disabled={deleteMutation.isPending}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Effacer la réservation
+                </Button>
+
                 {/* Deposit percentage section */}
-                {!['refused', 'cancelled'].includes(selectedReservation.status) && (
+                {!["refused", "cancelled"].includes(
+                  selectedReservation.status
+                ) && (
                   <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
-                    <p className="text-xs font-medium text-muted-foreground">Acompte reçu</p>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Acompte reçu
+                    </p>
                     <div className="flex items-center gap-2">
                       <div className="flex-1">
                         <div className="w-full bg-gray-200 rounded-full h-2.5">
                           <div
                             className={`h-2.5 rounded-full transition-all ${
-                              (selectedReservation.depositPercentage || 0) >= 100
-                                ? 'bg-green-600'
-                                : (selectedReservation.depositPercentage || 0) > 0
-                                ? 'bg-amber-500'
-                                : 'bg-gray-400'
+                              (selectedReservation.depositPercentage || 0) >=
+                              100
+                                ? "bg-green-600"
+                                : (selectedReservation.depositPercentage || 0) >
+                                    0
+                                  ? "bg-amber-500"
+                                  : "bg-gray-400"
                             }`}
-                            style={{ width: `${Math.min(selectedReservation.depositPercentage || 0, 100)}%` }}
+                            style={{
+                              width: `${Math.min(selectedReservation.depositPercentage || 0, 100)}%`,
+                            }}
                           />
                         </div>
                       </div>
@@ -491,13 +697,15 @@ export default function AdminRestaurantReservations() {
                         max={100}
                         placeholder="0-100"
                         value={depositInput}
-                        onChange={(e) => setDepositInput(e.target.value)}
+                        onChange={e => setDepositInput(e.target.value)}
                         className="w-24"
                       />
                       <span className="text-xs text-muted-foreground">%</span>
                       <Button
                         size="sm"
-                        onClick={() => handleDepositUpdate(selectedReservation.id)}
+                        onClick={() =>
+                          handleDepositUpdate(selectedReservation.id)
+                        }
                         disabled={depositMutation.isPending || !depositInput}
                       >
                         <Percent className="h-3 w-3 mr-1" />
@@ -506,18 +714,21 @@ export default function AdminRestaurantReservations() {
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {(selectedReservation.depositPercentage || 0) >= 100
-                        ? 'Acompte complet - réservation confirmée'
+                        ? "Acompte complet - réservation confirmée"
                         : (selectedReservation.depositPercentage || 0) > 0
-                        ? 'Acompte partiel - en attente du solde'
-                        : 'Aucun acompte reçu'}
+                          ? "Acompte partiel - en attente du solde"
+                          : "Aucun acompte reçu"}
                     </p>
                   </div>
                 )}
 
-                {(selectedReservation.status === 'pending_validation' || selectedReservation.status === 'submitted') && (
+                {(selectedReservation.status === "pending_validation" ||
+                  selectedReservation.status === "submitted") && (
                   <div className="flex gap-2">
                     <Button
-                      onClick={() => handleValidate(selectedReservation.reference)}
+                      onClick={() =>
+                        handleValidate(selectedReservation.reference)
+                      }
                       disabled={validateMutation.isPending}
                       className="flex-1"
                     >
@@ -525,7 +736,9 @@ export default function AdminRestaurantReservations() {
                       Valider
                     </Button>
                     <Button
-                      onClick={() => handleRefuse(selectedReservation.reference)}
+                      onClick={() =>
+                        handleRefuse(selectedReservation.reference)
+                      }
                       disabled={refuseMutation.isPending}
                       variant="destructive"
                       className="flex-1"
@@ -536,9 +749,19 @@ export default function AdminRestaurantReservations() {
                   </div>
                 )}
 
-                {(['validated_pending_payment', 'pending_confirmation', 'paid_confirmed', 'confirmed'].includes(selectedReservation.status)) && (
+                {[
+                  "validated_pending_payment",
+                  "pending_confirmation",
+                  "paid_confirmed",
+                  "confirmed",
+                ].includes(selectedReservation.status) && (
                   <Button
-                    onClick={() => updateStatusMutation.mutate({ id: selectedReservation.id, status: 'completed' })}
+                    onClick={() =>
+                      updateStatusMutation.mutate({
+                        id: selectedReservation.id,
+                        status: "completed",
+                      })
+                    }
                     disabled={updateStatusMutation.isPending}
                     className="w-full"
                   >
@@ -565,7 +788,9 @@ export default function AdminRestaurantReservations() {
                 <Input
                   id="edit-name"
                   value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  onChange={e =>
+                    setEditForm({ ...editForm, name: e.target.value })
+                  }
                 />
               </div>
 
@@ -575,7 +800,9 @@ export default function AdminRestaurantReservations() {
                   id="edit-email"
                   type="email"
                   value={editForm.email}
-                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  onChange={e =>
+                    setEditForm({ ...editForm, email: e.target.value })
+                  }
                 />
               </div>
 
@@ -584,7 +811,9 @@ export default function AdminRestaurantReservations() {
                 <Input
                   id="edit-phone"
                   value={editForm.phone}
-                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  onChange={e =>
+                    setEditForm({ ...editForm, phone: e.target.value })
+                  }
                 />
               </div>
 
@@ -594,7 +823,9 @@ export default function AdminRestaurantReservations() {
                   id="edit-date"
                   type="date"
                   value={editForm.date}
-                  onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                  onChange={e =>
+                    setEditForm({ ...editForm, date: e.target.value })
+                  }
                 />
               </div>
 
@@ -605,28 +836,37 @@ export default function AdminRestaurantReservations() {
                   type="number"
                   min={1}
                   value={editForm.seatsTotal}
-                  onChange={(e) => setEditForm({ ...editForm, seatsTotal: parseInt(e.target.value, 10) || 0 })}
+                  onChange={e =>
+                    setEditForm({
+                      ...editForm,
+                      seatsTotal: parseInt(e.target.value, 10) || 0,
+                    })
+                  }
                 />
               </div>
 
-              {editForm.type === 'entreprise' && (
+              {editForm.type === "entreprise" && (
                 <div>
                   <Label htmlFor="edit-company">Nom de l'entreprise</Label>
                   <Input
                     id="edit-company"
                     value={editForm.companyName}
-                    onChange={(e) => setEditForm({ ...editForm, companyName: e.target.value })}
+                    onChange={e =>
+                      setEditForm({ ...editForm, companyName: e.target.value })
+                    }
                   />
                 </div>
               )}
 
-              {editForm.type === 'groupe' && (
+              {editForm.type === "groupe" && (
                 <div>
                   <Label htmlFor="edit-group">Nom du groupe</Label>
                   <Input
                     id="edit-group"
                     value={editForm.groupName}
-                    onChange={(e) => setEditForm({ ...editForm, groupName: e.target.value })}
+                    onChange={e =>
+                      setEditForm({ ...editForm, groupName: e.target.value })
+                    }
                   />
                 </div>
               )}
@@ -635,7 +875,9 @@ export default function AdminRestaurantReservations() {
                 <Label htmlFor="edit-display">Salle</Label>
                 <Select
                   value={editForm.displayChoice}
-                  onValueChange={(value) => setEditForm({ ...editForm, displayChoice: value })}
+                  onValueChange={value =>
+                    setEditForm({ ...editForm, displayChoice: value })
+                  }
                 >
                   <SelectTrigger id="edit-display">
                     <SelectValue placeholder="Choisir une salle" />
@@ -653,7 +895,9 @@ export default function AdminRestaurantReservations() {
                 <Textarea
                   id="edit-notes"
                   value={editForm.notes}
-                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  onChange={e =>
+                    setEditForm({ ...editForm, notes: e.target.value })
+                  }
                   className="min-h-[80px]"
                 />
               </div>

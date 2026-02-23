@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { sendEmail, generateParticulierReservationRequestEmail, generateParticulierReservationConfirmedEmail, generateParticulierReservationRefusedEmail, generateNewBookingNotificationEmail } from "./email";
+import {
+  sendEmail,
+  generateParticulierReservationRequestEmail,
+  generateParticulierReservationConfirmedEmail,
+  generateParticulierReservationRefusedEmail,
+  generateNewBookingNotificationEmail,
+} from "./email";
 import * as reservationServices from "./restaurant-reservation-services";
 import crypto from "crypto";
 
@@ -9,14 +15,17 @@ import crypto from "crypto";
 // HELPERS
 // ============================================
 
-function generateReservationReference(type: 'particulier' | 'entreprise' | 'groupe'): string {
-  const typeCode = type === 'particulier' ? 'P' : type === 'entreprise' ? 'E' : 'G';
-  const randomPart = crypto.randomBytes(3).toString('hex').toUpperCase();
+function generateReservationReference(
+  type: "particulier" | "entreprise" | "groupe"
+): string {
+  const typeCode =
+    type === "particulier" ? "P" : type === "entreprise" ? "E" : "G";
+  const randomPart = crypto.randomBytes(3).toString("hex").toUpperCase();
   return `RES-${typeCode}-${randomPart}`;
 }
 
 function generateQrToken(): string {
-  return crypto.randomBytes(16).toString('hex');
+  return crypto.randomBytes(16).toString("hex");
 }
 
 // ============================================
@@ -33,25 +42,26 @@ export const restaurantReservationsRouter = router({
           phone: z.string().min(1, "Téléphone requis"),
           date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide"),
           participantsCount: z.number().int().min(5).max(12),
-          displayChoice: z.enum(['jardin', 'brasserie']),
+          displayChoice: z.enum(["jardin", "brasserie"]),
         })
       )
       .mutation(async ({ input }) => {
         try {
-          const reference = generateReservationReference('particulier');
+          const reference = generateReservationReference("particulier");
           const qrToken = generateQrToken();
 
-          const reservation = await reservationServices.createRestaurantReservation({
-            reference,
-            type: 'particulier',
-            name: input.firstName,
-            email: input.email,
-            phone: input.phone,
-            date: new Date(input.date),
-            seatsTotal: input.participantsCount,
-            qrToken,
-            displayChoice: input.displayChoice,
-          });
+          const reservation =
+            await reservationServices.createRestaurantReservation({
+              reference,
+              type: "particulier",
+              name: input.firstName,
+              email: input.email,
+              phone: input.phone,
+              date: new Date(input.date),
+              seatsTotal: input.participantsCount,
+              qrToken,
+              displayChoice: input.displayChoice,
+            });
 
           await sendEmail({
             to: input.email,
@@ -71,13 +81,13 @@ export const restaurantReservationsRouter = router({
               reference,
               displayChoice: input.displayChoice,
             }).html,
-            cc: ['heartfulness@myspace.boats'],
+            cc: ["heartfulness@myspace.boats"],
           });
 
           await sendEmail({
-            to: 'digital@myspace.boats',
+            to: "digital@myspace.boats",
             subject: generateNewBookingNotificationEmail({
-              type: 'particulier',
+              type: "particulier",
               date: input.date,
               participantsCount: input.participantsCount,
               contactName: input.firstName,
@@ -87,7 +97,7 @@ export const restaurantReservationsRouter = router({
               displayChoice: input.displayChoice,
             }).subject,
             html: generateNewBookingNotificationEmail({
-              type: 'particulier',
+              type: "particulier",
               date: input.date,
               participantsCount: input.participantsCount,
               contactName: input.firstName,
@@ -106,8 +116,11 @@ export const restaurantReservationsRouter = router({
         } catch (error) {
           console.error("[Particulier Reservation] Error:", error);
           throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: error instanceof Error ? `Erreur lors de la création de la réservation: ${error.message}` : 'Erreur lors de la création de la réservation',
+            code: "INTERNAL_SERVER_ERROR",
+            message:
+              error instanceof Error
+                ? `Erreur lors de la création de la réservation: ${error.message}`
+                : "Erreur lors de la création de la réservation",
           });
         }
       }),
@@ -115,7 +128,9 @@ export const restaurantReservationsRouter = router({
     getByReference: publicProcedure
       .input(z.object({ reference: z.string() }))
       .query(async ({ input }) => {
-        return await reservationServices.getRestaurantReservationByReference(input.reference);
+        return await reservationServices.getRestaurantReservationByReference(
+          input.reference
+        );
       }),
   }),
 
@@ -131,12 +146,12 @@ export const restaurantReservationsRouter = router({
           companyNotes: z.string().optional(),
           date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide"),
           participantsCount: z.number().int().min(10).max(130),
-          displayChoice: z.enum(['jardin', 'corpo']),
+          displayChoice: z.enum(["jardin", "corpo"]),
         })
       )
       .mutation(async ({ input }) => {
         try {
-          const reference = generateReservationReference('entreprise');
+          const reference = generateReservationReference("entreprise");
           const qrToken = generateQrToken();
 
           console.info("[Entreprise Reservation] Creating reservation", {
@@ -147,19 +162,20 @@ export const restaurantReservationsRouter = router({
             contactEmail: input.email,
           });
 
-          const reservation = await reservationServices.createRestaurantReservation({
-            reference,
-            type: 'entreprise',
-            name: input.contactName,
-            email: input.email,
-            phone: input.phone,
-            date: new Date(input.date),
-            seatsTotal: input.participantsCount,
-            qrToken,
-            companyName: input.companyName,
-            notes: input.companyNotes,
-            displayChoice: input.displayChoice,
-          });
+          const reservation =
+            await reservationServices.createRestaurantReservation({
+              reference,
+              type: "entreprise",
+              name: input.contactName,
+              email: input.email,
+              phone: input.phone,
+              date: new Date(input.date),
+              seatsTotal: input.participantsCount,
+              qrToken,
+              companyName: input.companyName,
+              notes: input.companyNotes,
+              displayChoice: input.displayChoice,
+            });
 
           const customerEmailResult = await sendEmail({
             to: input.email,
@@ -187,14 +203,14 @@ export const restaurantReservationsRouter = router({
               </div>
               <p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>
             `,
-            cc: ['heartfulness@myspace.boats'],
+            cc: ["heartfulness@myspace.boats"],
           });
 
           const internalEmailResult = await sendEmail({
-            to: 'digital@myspace.boats',
+            to: "digital@myspace.boats",
             subject: `📬 Nouvelle demande Entreprise - ${input.date}`,
             html: generateNewBookingNotificationEmail({
-              type: 'entreprise',
+              type: "entreprise",
               date: input.date,
               participantsCount: input.participantsCount,
               contactName: input.contactName,
@@ -207,11 +223,14 @@ export const restaurantReservationsRouter = router({
           });
 
           if (!customerEmailResult.success || !internalEmailResult.success) {
-            console.warn("[Entreprise Reservation] Reservation created but one or more emails failed", {
-              reference,
-              customerEmailResult,
-              internalEmailResult,
-            });
+            console.warn(
+              "[Entreprise Reservation] Reservation created but one or more emails failed",
+              {
+                reference,
+                customerEmailResult,
+                internalEmailResult,
+              }
+            );
           }
 
           return {
@@ -220,16 +239,22 @@ export const restaurantReservationsRouter = router({
             message: "Demande reçue. Vérifiez votre email.",
           };
         } catch (error) {
-          console.error("[Entreprise Reservation] Error while creating reservation", {
-            companyName: input.companyName,
-            contactEmail: input.email,
-            date: input.date,
-            participantsCount: input.participantsCount,
-            error,
-          });
+          console.error(
+            "[Entreprise Reservation] Error while creating reservation",
+            {
+              companyName: input.companyName,
+              contactEmail: input.email,
+              date: input.date,
+              participantsCount: input.participantsCount,
+              error,
+            }
+          );
           throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: error instanceof Error ? `Erreur lors de la création de la réservation: ${error.message}` : 'Erreur lors de la création de la réservation',
+            code: "INTERNAL_SERVER_ERROR",
+            message:
+              error instanceof Error
+                ? `Erreur lors de la création de la réservation: ${error.message}`
+                : "Erreur lors de la création de la réservation",
           });
         }
       }),
@@ -237,7 +262,9 @@ export const restaurantReservationsRouter = router({
     getByReference: publicProcedure
       .input(z.object({ reference: z.string() }))
       .query(async ({ input }) => {
-        return await reservationServices.getRestaurantReservationByReference(input.reference);
+        return await reservationServices.getRestaurantReservationByReference(
+          input.reference
+        );
       }),
   }),
 
@@ -252,27 +279,28 @@ export const restaurantReservationsRouter = router({
           groupType: z.string().optional(),
           date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide"),
           participantsCount: z.number().int().min(5),
-          displayChoice: z.enum(['jardin', 'brasserie']),
+          displayChoice: z.enum(["jardin", "brasserie"]),
         })
       )
       .mutation(async ({ input }) => {
         try {
-          const reference = generateReservationReference('groupe');
+          const reference = generateReservationReference("groupe");
           const qrToken = generateQrToken();
 
-          const reservation = await reservationServices.createRestaurantReservation({
-            reference,
-            type: 'groupe',
-            name: input.contactName,
-            email: input.email,
-            phone: input.phone,
-            date: new Date(input.date),
-            seatsTotal: input.participantsCount,
-            qrToken,
-            groupName: input.groupName,
-            groupType: input.groupType,
-            displayChoice: input.displayChoice,
-          });
+          const reservation =
+            await reservationServices.createRestaurantReservation({
+              reference,
+              type: "groupe",
+              name: input.contactName,
+              email: input.email,
+              phone: input.phone,
+              date: new Date(input.date),
+              seatsTotal: input.participantsCount,
+              qrToken,
+              groupName: input.groupName,
+              groupType: input.groupType,
+              displayChoice: input.displayChoice,
+            });
 
           await sendEmail({
             to: input.email,
@@ -299,14 +327,14 @@ export const restaurantReservationsRouter = router({
               </div>
               <p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>
             `,
-            cc: ['heartfulness@myspace.boats'],
+            cc: ["heartfulness@myspace.boats"],
           });
 
           await sendEmail({
-            to: 'digital@myspace.boats',
+            to: "digital@myspace.boats",
             subject: `📬 Nouvelle demande Groupe - ${input.date}`,
             html: generateNewBookingNotificationEmail({
-              type: 'groupe',
+              type: "groupe",
               date: input.date,
               participantsCount: input.participantsCount,
               contactName: input.contactName,
@@ -325,8 +353,11 @@ export const restaurantReservationsRouter = router({
         } catch (error) {
           console.error("[Groupe Reservation] Error:", error);
           throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: error instanceof Error ? `Erreur lors de la création de la réservation: ${error.message}` : 'Erreur lors de la création de la réservation',
+            code: "INTERNAL_SERVER_ERROR",
+            message:
+              error instanceof Error
+                ? `Erreur lors de la création de la réservation: ${error.message}`
+                : "Erreur lors de la création de la réservation",
           });
         }
       }),
@@ -334,7 +365,9 @@ export const restaurantReservationsRouter = router({
     getByReference: publicProcedure
       .input(z.object({ reference: z.string() }))
       .query(async ({ input }) => {
-        return await reservationServices.getRestaurantReservationByReference(input.reference);
+        return await reservationServices.getRestaurantReservationByReference(
+          input.reference
+        );
       }),
   }),
 
@@ -346,26 +379,41 @@ export const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
-      if (!allowedRoles.includes(ctx.user?.role || '')) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      if (!allowedRoles.includes(ctx.user?.role || "")) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Permission refusée",
+        });
       }
 
       try {
-        const reservation = await reservationServices.getRestaurantReservationByReference(input.reference);
+        const reservation =
+          await reservationServices.getRestaurantReservationByReference(
+            input.reference
+          );
         if (!reservation) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Réservation non trouvée' });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Réservation non trouvée",
+          });
         }
 
-        await reservationServices.updateRestaurantReservationStatus(reservation.id, 'validated_pending_payment');
-        await reservationServices.updateRestaurantReservationPaymentStatus(reservation.id, 'pending_payment');
+        await reservationServices.updateRestaurantReservationStatus(
+          reservation.id,
+          "validated_pending_payment"
+        );
+        await reservationServices.updateRestaurantReservationPaymentStatus(
+          reservation.id,
+          "pending_payment"
+        );
 
         await sendEmail({
           to: reservation.email,
           subject: generateParticulierReservationConfirmedEmail({
             firstName: reservation.name,
             email: reservation.email,
-            date: reservation.date.toISOString().split('T')[0],
+            date: reservation.date.toISOString().split("T")[0],
             participantsCount: reservation.seatsTotal,
             reference: reservation.reference,
             qrToken: reservation.qrToken,
@@ -374,24 +422,25 @@ export const restaurantReservationsRouter = router({
           html: generateParticulierReservationConfirmedEmail({
             firstName: reservation.name,
             email: reservation.email,
-            date: reservation.date.toISOString().split('T')[0],
+            date: reservation.date.toISOString().split("T")[0],
             participantsCount: reservation.seatsTotal,
             reference: reservation.reference,
             qrToken: reservation.qrToken,
             baseUrl: input.baseUrl,
           }).html,
-          cc: ['heartfulness@myspace.boats'],
+          cc: ["heartfulness@myspace.boats"],
         });
 
         return {
           success: true,
-          message: "Réservation validée. Email de confirmation avec QR code envoyé.",
+          message:
+            "Réservation validée. Email de confirmation avec QR code envoyé.",
         };
       } catch (error) {
         console.error("[Validate Reservation] Error:", error);
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Erreur lors de la validation',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Erreur lors de la validation",
         });
       }
     }),
@@ -399,32 +448,44 @@ export const restaurantReservationsRouter = router({
   refuse: protectedProcedure
     .input(z.object({ reference: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
-      if (!allowedRoles.includes(ctx.user?.role || '')) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      if (!allowedRoles.includes(ctx.user?.role || "")) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Permission refusée",
+        });
       }
 
       try {
-        const reservation = await reservationServices.getRestaurantReservationByReference(input.reference);
+        const reservation =
+          await reservationServices.getRestaurantReservationByReference(
+            input.reference
+          );
         if (!reservation) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Réservation non trouvée' });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Réservation non trouvée",
+          });
         }
 
-        await reservationServices.updateRestaurantReservationStatus(reservation.id, 'refused');
+        await reservationServices.updateRestaurantReservationStatus(
+          reservation.id,
+          "refused"
+        );
 
         await sendEmail({
           to: reservation.email,
           subject: generateParticulierReservationRefusedEmail({
             firstName: reservation.name,
             email: reservation.email,
-            date: reservation.date.toISOString().split('T')[0],
+            date: reservation.date.toISOString().split("T")[0],
           }).subject,
           html: generateParticulierReservationRefusedEmail({
             firstName: reservation.name,
             email: reservation.email,
-            date: reservation.date.toISOString().split('T')[0],
+            date: reservation.date.toISOString().split("T")[0],
           }).html,
-          cc: ['heartfulness@myspace.boats'],
+          cc: ["heartfulness@myspace.boats"],
         });
 
         return {
@@ -434,8 +495,8 @@ export const restaurantReservationsRouter = router({
       } catch (error) {
         console.error("[Refuse Reservation] Error:", error);
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Erreur lors du refus',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Erreur lors du refus",
         });
       }
     }),
@@ -447,9 +508,15 @@ export const restaurantReservationsRouter = router({
   getByQrToken: publicProcedure
     .input(z.object({ qrToken: z.string() }))
     .query(async ({ input }) => {
-      const reservation = await reservationServices.getRestaurantReservationByQrToken(input.qrToken);
+      const reservation =
+        await reservationServices.getRestaurantReservationByQrToken(
+          input.qrToken
+        );
       if (!reservation) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Réservation non trouvée' });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Réservation non trouvée",
+        });
       }
       return reservation;
     }),
@@ -458,97 +525,125 @@ export const restaurantReservationsRouter = router({
   // ADMIN: LIST & MANAGE RESERVATIONS (MySQL/Drizzle)
   // ============================================
 
-  adminListParticuliers: protectedProcedure
-    .query(async ({ ctx }) => {
-      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
-      if (!allowedRoles.includes(ctx.user?.role || '')) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
-      }
-      try {
-        return await reservationServices.listRestaurantReservations({ type: 'particulier' });
-      } catch (error) {
-        console.error("[adminListParticuliers] Error:", error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error instanceof Error ? error.message : 'Erreur lors du chargement des réservations particuliers',
-        });
-      }
-    }),
+  adminListParticuliers: protectedProcedure.query(async ({ ctx }) => {
+    const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+    if (!allowedRoles.includes(ctx.user?.role || "")) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
+    }
+    try {
+      return await reservationServices.listRestaurantReservations({
+        type: "particulier",
+      });
+    } catch (error) {
+      console.error("[adminListParticuliers] Error:", error);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Erreur lors du chargement des réservations particuliers",
+      });
+    }
+  }),
 
-  adminListGroupes: protectedProcedure
-    .query(async ({ ctx }) => {
-      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
-      if (!allowedRoles.includes(ctx.user?.role || '')) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
-      }
-      try {
-        return await reservationServices.listRestaurantReservations({ type: 'groupe' });
-      } catch (error) {
-        console.error("[adminListGroupes] Error:", error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error instanceof Error ? error.message : 'Erreur lors du chargement des réservations groupes',
-        });
-      }
-    }),
+  adminListGroupes: protectedProcedure.query(async ({ ctx }) => {
+    const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+    if (!allowedRoles.includes(ctx.user?.role || "")) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
+    }
+    try {
+      return await reservationServices.listRestaurantReservations({
+        type: "groupe",
+      });
+    } catch (error) {
+      console.error("[adminListGroupes] Error:", error);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Erreur lors du chargement des réservations groupes",
+      });
+    }
+  }),
 
-  adminListEntreprises: protectedProcedure
-    .query(async ({ ctx }) => {
-      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
-      if (!allowedRoles.includes(ctx.user?.role || '')) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
-      }
-      try {
-        return await reservationServices.listRestaurantReservations({ type: 'entreprise' });
-      } catch (error) {
-        console.error("[adminListEntreprises] Error:", error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: error instanceof Error ? error.message : 'Erreur lors du chargement des réservations entreprises',
-        });
-      }
-    }),
+  adminListEntreprises: protectedProcedure.query(async ({ ctx }) => {
+    const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+    if (!allowedRoles.includes(ctx.user?.role || "")) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
+    }
+    try {
+      return await reservationServices.listRestaurantReservations({
+        type: "entreprise",
+      });
+    } catch (error) {
+      console.error("[adminListEntreprises] Error:", error);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Erreur lors du chargement des réservations entreprises",
+      });
+    }
+  }),
 
   adminUpdateDepositPercentage: protectedProcedure
-    .input(z.object({
-      id: z.number(),
-      percentage: z.number().int().min(0).max(100),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        percentage: z.number().int().min(0).max(100),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
-      if (!allowedRoles.includes(ctx.user?.role || '')) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      if (!allowedRoles.includes(ctx.user?.role || "")) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Permission refusée",
+        });
       }
 
       try {
-        const reservation = await reservationServices.updateDepositPercentage(input.id, input.percentage);
+        const reservation = await reservationServices.updateDepositPercentage(
+          input.id,
+          input.percentage
+        );
         return { success: true, reservation };
       } catch (error) {
         console.error("[Admin Update Deposit Percentage] Error:", error);
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Erreur lors de la mise à jour du pourcentage d\'acompte',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Erreur lors de la mise à jour du pourcentage d'acompte",
         });
       }
     }),
 
   adminEdit: protectedProcedure
-    .input(z.object({
-      id: z.number(),
-      name: z.string().min(1).optional(),
-      email: z.string().email().optional(),
-      phone: z.string().min(1).optional(),
-      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide").optional(),
-      seatsTotal: z.number().int().min(1).optional(),
-      notes: z.string().optional(),
-      companyName: z.string().optional(),
-      groupName: z.string().optional(),
-      displayChoice: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().min(1).optional(),
+        email: z.string().email().optional(),
+        phone: z.string().min(1).optional(),
+        date: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide")
+          .optional(),
+        seatsTotal: z.number().int().min(1).optional(),
+        notes: z.string().optional(),
+        companyName: z.string().optional(),
+        groupName: z.string().optional(),
+        displayChoice: z.string().optional(),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
-      if (!allowedRoles.includes(ctx.user?.role || '')) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      if (!allowedRoles.includes(ctx.user?.role || "")) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Permission refusée",
+        });
       }
 
       try {
@@ -558,33 +653,88 @@ export const restaurantReservationsRouter = router({
           updateData.date = new Date(date);
         }
 
-        const updated = await reservationServices.updateRestaurantReservation(id, updateData);
+        const updated = await reservationServices.updateRestaurantReservation(
+          id,
+          updateData
+        );
         return { success: true, reservation: updated };
       } catch (error) {
         console.error("[Admin Edit Reservation] Error:", error);
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Erreur lors de la modification de la réservation',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Erreur lors de la modification de la réservation",
         });
       }
     }),
 
-  adminUpdateStatus: protectedProcedure
-    .input(z.object({
-      id: z.number(),
-      status: z.enum(['pending_validation', 'validated_pending_payment', 'paid_confirmed', 'refused', 'cancelled', 'completed', 'no_show']),
-    }))
+  adminDelete: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
-      if (!allowedRoles.includes(ctx.user?.role || '')) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      if (!allowedRoles.includes(ctx.user?.role || "")) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Permission refusée",
+        });
       }
 
       try {
-        const updated = await reservationServices.updateRestaurantReservationStatus(input.id, input.status);
+        const reservation =
+          await reservationServices.getRestaurantReservationById(input.id);
+        if (!reservation) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Réservation non trouvée",
+          });
+        }
+
+        await reservationServices.deleteRestaurantReservation(input.id);
+        return { success: true };
+      } catch (error) {
+        console.error("[Admin Delete Reservation] Error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Erreur lors de la suppression de la réservation",
+        });
+      }
+    }),
+  adminUpdateStatus: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        status: z.enum([
+          "pending_validation",
+          "validated_pending_payment",
+          "paid_confirmed",
+          "refused",
+          "cancelled",
+          "completed",
+          "no_show",
+        ]),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      if (!allowedRoles.includes(ctx.user?.role || "")) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Permission refusée",
+        });
+      }
+
+      try {
+        const updated =
+          await reservationServices.updateRestaurantReservationStatus(
+            input.id,
+            input.status
+          );
 
         // Activate QR when confirmed
-        if (input.status === 'paid_confirmed') {
+        if (input.status === "paid_confirmed") {
           await reservationServices.activateQrCode(input.id);
         }
 
@@ -592,8 +742,8 @@ export const restaurantReservationsRouter = router({
       } catch (error) {
         console.error("[Admin Update Status] Error:", error);
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Erreur lors de la mise à jour du statut',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Erreur lors de la mise à jour du statut",
         });
       }
     }),
