@@ -99,7 +99,7 @@ function getQrCodeUrl(token: string, baseUrl: string): string {
 /**
  * Base template for all emails
  */
-function baseTemplate(content: string): string {
+function baseTemplate(content: string, headerBackground = 'linear-gradient(135deg, #166534 0%, #15803d 100%)'): string {
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -115,7 +115,7 @@ function baseTemplate(content: string): string {
         <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #166534 0%, #15803d 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+            <td style="background: ${headerBackground}; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
               <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">
                 Ftour <span style="color: #fbbf24;">Bab Rayan</span>
               </h1>
@@ -240,7 +240,7 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
 
   return {
     subject: `✅ Confirmation inscription - Ftour Bab Rayan Jour ${data.dayNumber}`,
-    html: baseTemplate(content),
+    html: baseTemplate(content, 'linear-gradient(135deg, #5E5B34 0%, #4A4829 100%)'),
   };
 }
 
