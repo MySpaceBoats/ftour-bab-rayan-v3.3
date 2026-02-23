@@ -33,6 +33,7 @@ export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const { t, lang, setLang, languages, dir } = useI18n();
   const { cartCount, setIsCartOpen } = useCart();
+  const currentLanguage = languages.find(language => language.code === lang);
 
   const isAdmin =
     user?.role &&
@@ -55,13 +56,13 @@ export default function Navbar() {
   const mainLinks = [
     { href: localizedHref("/"), label: t.nav.home, icon: Home },
     { href: localizedHref("/evenement"), label: t.nav.event, icon: Info },
-    { href: localizedHref("/galerie"), label: "Galerie", icon: Info },
-    { href: localizedHref("/benevole"), label: t.nav.volunteer, icon: Users },
     {
       href: localizedHref("/reservation"),
       label: t.nav.restaurant,
       icon: UtensilsCrossed,
     },
+    { href: localizedHref("/benevole"), label: t.nav.volunteer, icon: Users },
+    { href: localizedHref("/galerie"), label: "Galerie", icon: Info },
     {
       href: localizedHref("/boutique"),
       label: t.nav.boutique,
@@ -126,7 +127,9 @@ export default function Navbar() {
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-1 text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors">
                 <Globe className="h-4 w-4" />
-                <span className="text-sm font-semibold leading-none">ع</span>
+                <span className="text-sm font-semibold leading-none">
+                  {currentLanguage?.nativeName}
+                </span>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
