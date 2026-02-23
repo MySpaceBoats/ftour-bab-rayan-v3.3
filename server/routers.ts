@@ -4,8 +4,20 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { sendEmail, generateVolunteerConfirmationEmail, generateOrderConfirmationEmail, generateDonationConfirmationEmail, generateContactNotificationEmail, generateGroupRegistrationEmail } from "./email";
-import { signInUser, signUpUser, getUserFromToken, signOutUser } from "./supabase-auth";
+import {
+  sendEmail,
+  generateVolunteerConfirmationEmail,
+  generateOrderConfirmationEmail,
+  generateDonationConfirmationEmail,
+  generateContactNotificationEmail,
+  generateGroupRegistrationEmail,
+} from "./email";
+import {
+  signInUser,
+  signUpUser,
+  getUserFromToken,
+  signOutUser,
+} from "./supabase-auth";
 import * as supabaseServices from "./supabase-services";
 import * as reservationServices from "./reservation-services";
 import { getSupabaseAdminClient } from "./supabase";
@@ -13,6 +25,7 @@ import { companyBookingsRouter } from "./company-booking-routers";
 import { restaurantReservationsRouter } from "./restaurant-reservation-routers";
 import { contentRouter } from "./content-router";
 import { scannerRouter } from "./scanner-router";
+import * as galleryServices from "./gallery-services";
 import * as XLSX from "xlsx";
 
 // ============================================
@@ -20,74 +33,437 @@ import * as XLSX from "xlsx";
 // ============================================
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'admin_restaurant', 'admin_patisserie', 'admin_terroir'];
+  const allowedRoles = [
+    "admin",
+    "super_admin",
+    "admin_ops",
+    "admin_boutique",
+    "admin_dons",
+    "admin_restaurant",
+    "admin_patisserie",
+    "admin_terroir",
+  ];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès administrateur requis' });
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Accès administrateur requis",
+    });
   }
   return next({ ctx });
 });
 
 const superAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (!ctx.user || ctx.user.role !== 'super_admin') {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès super administrateur requis' });
+  if (!ctx.user || ctx.user.role !== "super_admin") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Accès super administrateur requis",
+    });
   }
   return next({ ctx });
 });
 
 const scannerProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_ops', 'scanner'];
+  const allowedRoles = ["admin", "super_admin", "admin_ops", "scanner"];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès scanner requis' });
+    throw new TRPCError({ code: "FORBIDDEN", message: "Accès scanner requis" });
   }
   return next({ ctx });
 });
 
 const adminOpsProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_ops'];
+  const allowedRoles = ["admin", "super_admin", "admin_ops"];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès opérations requis' });
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Accès opérations requis",
+    });
   }
   return next({ ctx });
 });
 
 const adminBoutiqueProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_boutique'];
+  const allowedRoles = ["admin", "super_admin", "admin_boutique"];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès boutique requis' });
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Accès boutique requis",
+    });
   }
   return next({ ctx });
 });
 
 const adminDonsProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_dons'];
+  const allowedRoles = ["admin", "super_admin", "admin_dons"];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès dons requis' });
+    throw new TRPCError({ code: "FORBIDDEN", message: "Accès dons requis" });
   }
   return next({ ctx });
 });
 
 const adminRestaurantProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
+  const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès restaurant requis' });
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Accès restaurant requis",
+    });
   }
   return next({ ctx });
 });
 
 const adminPatisserieProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_patisserie', 'admin_boutique'];
+  const allowedRoles = [
+    "admin",
+    "super_admin",
+    "admin_patisserie",
+    "admin_boutique",
+  ];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès pâtisserie requis' });
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Accès pâtisserie requis",
+    });
   }
   return next({ ctx });
 });
 
 const adminTerroirProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_terroir'];
+  const allowedRoles = ["admin", "super_admin", "admin_terroir"];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès produits du terroir requis' });
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Accès produits du terroir requis",
+    });
   }
   return next({ ctx });
+});
+
+const gallerySchema = z.object({
+  title: z.string().max(200).optional(),
+  description: z.string().max(2000).optional(),
+  eventDate: z.string().optional(),
+  tags: z.array(z.string().min(1).max(40)).max(20).optional(),
+  albumId: z.string().uuid().nullable().optional(),
+  sortOrder: z.number().int().default(0),
+  isFeatured: z.boolean().default(false),
+  status: z.enum(["draft", "published"]).default("draft"),
+});
+
+const galleryRouter = router({
+  listAlbums: adminProcedure.query(async () => {
+    return galleryServices.listGalleryAlbums(false);
+  }),
+
+  createAlbum: adminProcedure
+    .input(
+      z.object({
+        name: z.string().min(1).max(120),
+        slug: z.string().min(1).max(120),
+        sortOrder: z.number().int().default(0),
+        status: z.enum(["draft", "published"]).default("published"),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const client = getSupabaseAdminClient();
+      if (!client)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+      const { data, error } = await client
+        .from("gallery_albums")
+        .insert({
+          name: input.name,
+          slug: input.slug,
+          sort_order: input.sortOrder,
+          status: input.status,
+        })
+        .select("*")
+        .single();
+      if (error)
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      return data;
+    }),
+
+  listPhotos: adminProcedure
+    .input(
+      z
+        .object({
+          page: z.number().int().min(1).default(1),
+          pageSize: z.number().int().min(1).max(50).default(12),
+          search: z.string().optional(),
+          albumId: z.string().uuid().optional(),
+          tag: z.string().optional(),
+          featured: z.boolean().optional(),
+          status: z.enum(["draft", "published"]).optional(),
+        })
+        .optional()
+    )
+    .query(async ({ input }) => {
+      const client = getSupabaseAdminClient();
+      if (!client)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+      const page = input?.page ?? 1;
+      const pageSize = input?.pageSize ?? 12;
+      const start = (page - 1) * pageSize;
+      const end = start + pageSize - 1;
+
+      let query = client
+        .from("gallery_photos")
+        .select("*, gallery_albums(name, slug)", { count: "exact" });
+      if (input?.search)
+        query = query.or(
+          `title.ilike.%${input.search}%,description.ilike.%${input.search}%`
+        );
+      if (input?.albumId) query = query.eq("album_id", input.albumId);
+      if (input?.tag) query = query.contains("tags", [input.tag]);
+      if (typeof input?.featured === "boolean")
+        query = query.eq("is_featured", input.featured);
+      if (input?.status) query = query.eq("status", input.status);
+
+      const { data, error, count } = await query
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: false })
+        .range(start, end);
+      if (error)
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      return {
+        items: data ?? [],
+        total: count ?? 0,
+        page,
+        pageSize,
+      };
+    }),
+
+  getPhoto: adminProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ input }) => {
+      const client = getSupabaseAdminClient();
+      if (!client)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+      const { data, error } = await client
+        .from("gallery_photos")
+        .select("*")
+        .eq("id", input.id)
+        .single();
+      if (error)
+        throw new TRPCError({ code: "NOT_FOUND", message: error.message });
+      return data;
+    }),
+
+  uploadPhotos: adminProcedure
+    .input(
+      z.object({
+        photos: z
+          .array(
+            z.object({
+              fileName: z.string().min(1),
+              fileType: z.string(),
+              fileData: z.string(),
+              width: z.number().optional(),
+              height: z.number().optional(),
+              ...gallerySchema.shape,
+            })
+          )
+          .min(1)
+          .max(galleryServices.GALLERY_MAX_BATCH),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const results = [];
+      for (const photo of input.photos) {
+        if (
+          !galleryServices.GALLERY_ALLOWED_MIME_TYPES.includes(
+            photo.fileType as any
+          )
+        ) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Format non supporté. PNG, JPEG, WebP uniquement.",
+          });
+        }
+        const base64Data = photo.fileData.replace(
+          /^data:image\/[a-zA-Z0-9.+-]+;base64,/,
+          ""
+        );
+        const buffer = Buffer.from(base64Data, "base64");
+        if (buffer.length > galleryServices.GALLERY_MAX_FILE_SIZE_BYTES) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Fichier trop volumineux (max 8MB).",
+          });
+        }
+
+        const ext = photo.fileName.split(".").pop() || "jpg";
+        const uid = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const originalPath = `gallery/original/${uid}.${ext}`;
+        const thumbPath = `gallery/thumb/${uid}.${ext}`;
+
+        const originalUrl = await galleryServices.uploadGalleryAsset(
+          originalPath,
+          buffer,
+          photo.fileType
+        );
+        const thumbUrl = await galleryServices.uploadGalleryAsset(
+          thumbPath,
+          buffer,
+          photo.fileType
+        );
+
+        const created = await galleryServices.createGalleryPhoto({
+          title: photo.title,
+          description: photo.description,
+          eventDate: photo.eventDate,
+          tags: photo.tags,
+          albumId: photo.albumId,
+          sortOrder: photo.sortOrder,
+          isFeatured: photo.isFeatured,
+          status: photo.status,
+          imageOriginalUrl: originalUrl,
+          imageThumbUrl: thumbUrl,
+          storagePath: originalPath,
+          thumbStoragePath: thumbPath,
+          width: photo.width,
+          height: photo.height,
+          sizeBytes: buffer.length,
+          mimeType: photo.fileType,
+          uploadedBy: ctx.user?.email ?? undefined,
+        });
+        results.push(created);
+      }
+      return results;
+    }),
+
+  updatePhoto: adminProcedure
+    .input(
+      z.object({ id: z.string().uuid(), ...gallerySchema.partial().shape })
+    )
+    .mutation(async ({ input }) => {
+      const client = getSupabaseAdminClient();
+      if (!client)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+      const { id, ...rest } = input;
+      const { data, error } = await client
+        .from("gallery_photos")
+        .update({
+          title: rest.title,
+          description: rest.description,
+          event_date: rest.eventDate,
+          tags: rest.tags,
+          album_id: rest.albumId,
+          sort_order: rest.sortOrder,
+          is_featured: rest.isFeatured,
+          status: rest.status,
+        })
+        .eq("id", id)
+        .select("*")
+        .single();
+      if (error)
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      return data;
+    }),
+
+  publish: adminProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ input }) => {
+      const client = getSupabaseAdminClient();
+      if (!client)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+      const { error } = await client
+        .from("gallery_photos")
+        .update({ status: "published" })
+        .eq("id", input.id);
+      if (error)
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      return { success: true };
+    }),
+
+  unpublish: adminProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ input }) => {
+      const client = getSupabaseAdminClient();
+      if (!client)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+      const { error } = await client
+        .from("gallery_photos")
+        .update({ status: "draft" })
+        .eq("id", input.id);
+      if (error)
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      return { success: true };
+    }),
+
+  reorder: adminProcedure
+    .input(
+      z.object({
+        items: z.array(
+          z.object({ id: z.string().uuid(), sortOrder: z.number().int() })
+        ),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const client = getSupabaseAdminClient();
+      if (!client)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+      for (const item of input.items) {
+        const { error } = await client
+          .from("gallery_photos")
+          .update({ sort_order: item.sortOrder })
+          .eq("id", item.id);
+        if (error)
+          throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      }
+      return { success: true };
+    }),
+
+  deletePhoto: adminProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ input }) => {
+      const client = getSupabaseAdminClient();
+      if (!client)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+      const { data, error } = await client
+        .from("gallery_photos")
+        .select("storage_path,thumb_storage_path,medium_storage_path")
+        .eq("id", input.id)
+        .single();
+      if (error)
+        throw new TRPCError({ code: "NOT_FOUND", message: error.message });
+      await galleryServices.deleteGalleryAsset(data.storage_path);
+      await galleryServices.deleteGalleryAsset(data.thumb_storage_path);
+      await galleryServices.deleteGalleryAsset(data.medium_storage_path);
+      const { error: deleteError } = await client
+        .from("gallery_photos")
+        .delete()
+        .eq("id", input.id);
+      if (deleteError)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: deleteError.message,
+        });
+      return { success: true };
+    }),
 });
 
 // ============================================
@@ -98,23 +474,25 @@ const daysRouter = router({
   list: publicProcedure.query(async () => {
     return supabaseServices.getAllRamadanDaysSupabase();
   }),
-  
+
   getById: publicProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return supabaseServices.getRamadanDayByIdSupabase(input.id);
     }),
-  
+
   create: superAdminProcedure
-    .input(z.object({
-      date: z.string(),
-      dayNumber: z.number().min(1).max(30),
-      capacity: z.number().min(1).default(120),
-      location: z.string().optional(),
-      iftarTime: z.string().optional(),
-      hijriDate: z.string().optional(),
-      notes: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        date: z.string(),
+        dayNumber: z.number().min(1).max(30),
+        capacity: z.number().min(1).default(120),
+        location: z.string().optional(),
+        iftarTime: z.string().optional(),
+        hijriDate: z.string().optional(),
+        notes: z.string().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const day = await supabaseServices.createRamadanDaySupabase({
         dayNumber: input.dayNumber,
@@ -127,48 +505,52 @@ const daysRouter = router({
       });
       return { id: day.id };
     }),
-  
+
   update: superAdminProcedure
-    .input(z.object({
-      id: z.number(),
-      capacity: z.number().min(1).optional(),
-      isOpen: z.boolean().optional(),
-      location: z.string().optional(),
-      iftarTime: z.string().optional(),
-      hijriDate: z.string().optional(),
-      notes: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        capacity: z.number().min(1).optional(),
+        isOpen: z.boolean().optional(),
+        location: z.string().optional(),
+        iftarTime: z.string().optional(),
+        hijriDate: z.string().optional(),
+        notes: z.string().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const { id, ...data } = input;
       await supabaseServices.updateRamadanDaySupabase(id, data);
       return { success: true };
     }),
-  
+
   delete: superAdminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       await supabaseServices.deleteRamadanDaySupabase(input.id);
       return { success: true };
     }),
-  
+
   bulkCreate: superAdminProcedure
-    .input(z.object({
-      startDate: z.string(),
-      daysCount: z.number().min(1).max(30).default(30),
-      capacity: z.number().min(1).default(120),
-      location: z.string().optional(),
-      iftarTime: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        startDate: z.string(),
+        daysCount: z.number().min(1).max(30).default(30),
+        capacity: z.number().min(1).default(120),
+        location: z.string().optional(),
+        iftarTime: z.string().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const startDate = new Date(input.startDate);
       const createdIds: number[] = [];
-      
+
       for (let i = 0; i < input.daysCount; i++) {
         const date = new Date(startDate);
         date.setDate(date.getDate() + i);
-        
+
         const day = await supabaseServices.createRamadanDaySupabase({
-          date: date.toISOString().split('T')[0],
+          date: date.toISOString().split("T")[0],
           dayNumber: i + 1,
           capacity: input.capacity,
           location: input.location,
@@ -176,7 +558,7 @@ const daysRouter = router({
         });
         createdIds.push(day.id);
       }
-      
+
       return { createdIds, count: createdIds.length };
     }),
 });
@@ -187,53 +569,72 @@ const daysRouter = router({
 
 const volunteersRouter = router({
   register: publicProcedure
-    .input(z.object({
-      firstName: z.string().min(2),
-      lastName: z.string().min(2),
-      email: z.string().email(),
-      phone: z.string().min(8),
-      city: z.string().optional(),
-      dayId: z.number(),
-      volunteerSlots: z.array(z.enum(["preparation_ftour", "service_ftour"])).min(1, "Veuillez sélectionner au moins un créneau"),
-      acceptedTerms: z.boolean(),
-    }))
+    .input(
+      z.object({
+        firstName: z.string().min(2),
+        lastName: z.string().min(2),
+        email: z.string().email(),
+        phone: z.string().min(8),
+        city: z.string().optional(),
+        dayId: z.number(),
+        volunteerSlots: z
+          .array(z.enum(["preparation_ftour", "service_ftour"]))
+          .min(1, "Veuillez sélectionner au moins un créneau"),
+        acceptedTerms: z.boolean(),
+      })
+    )
     .mutation(async ({ input }) => {
       if (!input.acceptedTerms) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Vous devez accepter les conditions' });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Vous devez accepter les conditions",
+        });
       }
 
       if (!input.volunteerSlots || input.volunteerSlots.length === 0) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Veuillez sélectionner au moins un créneau de participation' });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Veuillez sélectionner au moins un créneau de participation",
+        });
       }
 
       // Normalize email
       const normalizedEmail = input.email.toLowerCase().trim();
 
       // Check if volunteer has been absent 2+ times (blocked from re-registering)
-      const absenceCount = await supabaseServices.countVolunteerAbsencesByEmail(normalizedEmail);
+      const absenceCount =
+        await supabaseServices.countVolunteerAbsencesByEmail(normalizedEmail);
       if (absenceCount >= 2) {
         throw new TRPCError({
-          code: 'FORBIDDEN',
+          code: "FORBIDDEN",
           message: `Inscription impossible : vous avez été noté(e) absent(e) ${absenceCount} fois lors de précédentes inscriptions. Les réinscriptions ne sont plus autorisées.`,
         });
       }
 
       // Check for duplicate email on the same day
-      const emailExists = await supabaseServices.checkVolunteerEmailExistsForDay(normalizedEmail, input.dayId);
+      const emailExists =
+        await supabaseServices.checkVolunteerEmailExistsForDay(
+          normalizedEmail,
+          input.dayId
+        );
       if (emailExists) {
         throw new TRPCError({
-          code: 'CONFLICT',
-          message: 'Cette adresse email est déjà inscrite pour ce jour. Si vous souhaitez modifier votre inscription, veuillez nous contacter.',
+          code: "CONFLICT",
+          message:
+            "Cette adresse email est déjà inscrite pour ce jour. Si vous souhaitez modifier votre inscription, veuillez nous contacter.",
         });
       }
 
       // Check day availability
       const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
       if (!day) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Jour non trouvé' });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
       }
       if (!day.isOpen) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ce jour est fermé aux inscriptions' });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Ce jour est fermé aux inscriptions",
+        });
       }
 
       // Create volunteer with QR token
@@ -248,29 +649,32 @@ const volunteersRouter = router({
         acceptedTerms: input.acceptedTerms,
       });
 
-
       // Send confirmation email with QR code
       // Always use input.volunteerSlots (from form) to ensure slots appear
       // in the email even if the DB column doesn't exist yet
       try {
-        const baseUrl = process.env.NODE_ENV === 'production'
-          ? 'https://ftourbabrayan.ma'
-          : 'http://localhost:3000';
+        const baseUrl =
+          process.env.NODE_ENV === "production"
+            ? "https://ftourbabrayan.ma"
+            : "http://localhost:3000";
 
-        console.log('[Volunteer Registration] Sending email with slots:', input.volunteerSlots);
+        console.log(
+          "[Volunteer Registration] Sending email with slots:",
+          input.volunteerSlots
+        );
 
         const emailData = generateVolunteerConfirmationEmail({
           firstName: input.firstName,
           lastName: input.lastName,
           email: normalizedEmail,
           dayNumber: day.dayNumber,
-          dayDate: new Date(day.date).toLocaleDateString('fr-FR', {
-            weekday: 'long',
-            month: 'long',
-            day: 'numeric'
+          dayDate: new Date(day.date).toLocaleDateString("fr-FR", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
           }),
-          location: day.location || 'Association Bab Rayan, Casablanca',
-          startTime: day.iftarTime || '18h00',
+          location: day.location || "Association Bab Rayan, Casablanca",
+          startTime: day.iftarTime || "18h00",
           volunteerSlots: input.volunteerSlots,
           qrToken: volunteer.qrToken,
           baseUrl,
@@ -281,24 +685,32 @@ const volunteersRouter = router({
           subject: emailData.subject,
           html: emailData.html,
         });
-        console.log('[Volunteer Registration] Email sent successfully to:', normalizedEmail);
+        console.log(
+          "[Volunteer Registration] Email sent successfully to:",
+          normalizedEmail
+        );
       } catch (error) {
-        console.error('[Volunteer Registration] Email send failed:', error);
+        console.error("[Volunteer Registration] Email send failed:", error);
       }
 
       return { id: volunteer.id, qrToken: volunteer.qrToken };
     }),
-  
+
   getByQrCode: scannerProcedure
     .input(z.object({ qrCode: z.string() }))
     .query(async ({ input }) => {
-      const volunteer = await supabaseServices.getVolunteerByTokenSupabase(input.qrCode);
+      const volunteer = await supabaseServices.getVolunteerByTokenSupabase(
+        input.qrCode
+      );
       if (!volunteer) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Bénévole non trouvé' });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Bénévole non trouvé",
+        });
       }
       return { volunteer, day: volunteer.day };
     }),
-  
+
   checkIn: scannerProcedure
     .input(z.object({ qrCode: z.string() }))
     .mutation(async ({ input, ctx }) => {
@@ -306,44 +718,58 @@ const volunteersRouter = router({
         input.qrCode,
         ctx.user?.id
       );
-      
+
       if (!result.success) {
-        throw new TRPCError({ 
-          code: 'BAD_REQUEST', 
-          message: result.error || 'Erreur de validation' 
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: result.error || "Erreur de validation",
         });
       }
-      
+
       return { success: true, volunteer: result.volunteer };
     }),
-  
+
   manualValidate: scannerProcedure
     .input(z.object({ volunteerId: z.number() }))
     .mutation(async ({ input, ctx }) => {
-      await supabaseServices.manualValidateSupabase(input.volunteerId, ctx.user!.id);
+      await supabaseServices.manualValidateSupabase(
+        input.volunteerId,
+        ctx.user!.id
+      );
       return { success: true };
     }),
-  
+
   listByDay: adminOpsProcedure
     .input(z.object({ dayId: z.number().optional() }))
     .query(async ({ input }) => {
       return supabaseServices.getVolunteersByDaySupabase(input.dayId);
     }),
-  
+
   updateStatus: adminOpsProcedure
-    .input(z.object({
-      volunteerId: z.number(),
-      status: z.enum(['registered', 'confirmed', 'present', 'absent', 'cancelled']),
-    }))
+    .input(
+      z.object({
+        volunteerId: z.number(),
+        status: z.enum([
+          "registered",
+          "confirmed",
+          "present",
+          "absent",
+          "cancelled",
+        ]),
+      })
+    )
     .mutation(async ({ input }) => {
-      await supabaseServices.updateVolunteerStatusSupabase(input.volunteerId, input.status);
+      await supabaseServices.updateVolunteerStatusSupabase(
+        input.volunteerId,
+        input.status
+      );
       return { success: true };
     }),
-  
+
   stats: adminOpsProcedure.query(async () => {
     return supabaseServices.getVolunteerStatsSupabase();
   }),
-  
+
   delete: adminOpsProcedure
     .input(z.object({ volunteerId: z.number() }))
     .mutation(async ({ input }) => {
@@ -352,46 +778,67 @@ const volunteersRouter = router({
     }),
 
   registerGroup: publicProcedure
-    .input(z.object({
-      groupName: z.string().min(2, "Nom du groupe requis"),
-      responsibleName: z.string().min(2, "Nom du responsable requis"),
-      responsibleEmail: z.string().email("Email invalide"),
-      responsiblePhone: z.string().min(8, "Téléphone invalide"),
-      estimatedSize: z.number().optional(),
-      dayId: z.number(),
-      volunteerSlots: z.array(z.enum(["preparation_ftour", "service_ftour"])).min(1, "Veuillez sélectionner au moins un créneau"),
-      fileName: z.string(),
-      fileBase64: z.string().max(7_000_000, "Fichier trop volumineux (max 5 Mo)"),
-      acceptedTerms: z.boolean(),
-    }))
+    .input(
+      z.object({
+        groupName: z.string().min(2, "Nom du groupe requis"),
+        responsibleName: z.string().min(2, "Nom du responsable requis"),
+        responsibleEmail: z.string().email("Email invalide"),
+        responsiblePhone: z.string().min(8, "Téléphone invalide"),
+        estimatedSize: z.number().optional(),
+        dayId: z.number(),
+        volunteerSlots: z
+          .array(z.enum(["preparation_ftour", "service_ftour"]))
+          .min(1, "Veuillez sélectionner au moins un créneau"),
+        fileName: z.string(),
+        fileBase64: z
+          .string()
+          .max(7_000_000, "Fichier trop volumineux (max 5 Mo)"),
+        acceptedTerms: z.boolean(),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       if (!input.acceptedTerms) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Vous devez accepter les conditions' });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Vous devez accepter les conditions",
+        });
       }
 
       // Validate file extension
-      const ext = input.fileName.toLowerCase().split('.').pop();
-      if (!ext || !['xlsx', 'xls', 'csv'].includes(ext)) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Format de fichier non supporté. Utilisez .xlsx, .xls ou .csv' });
+      const ext = input.fileName.toLowerCase().split(".").pop();
+      if (!ext || !["xlsx", "xls", "csv"].includes(ext)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Format de fichier non supporté. Utilisez .xlsx, .xls ou .csv",
+        });
       }
 
       // Normalize email and check for absences / duplicates
       const normalizedGroupEmail = input.responsibleEmail.toLowerCase().trim();
 
       // Check if responsible person has been absent 2+ times (blocked from re-registering)
-      const groupAbsenceCount = await supabaseServices.countVolunteerAbsencesByEmail(normalizedGroupEmail);
+      const groupAbsenceCount =
+        await supabaseServices.countVolunteerAbsencesByEmail(
+          normalizedGroupEmail
+        );
       if (groupAbsenceCount >= 2) {
         throw new TRPCError({
-          code: 'FORBIDDEN',
+          code: "FORBIDDEN",
           message: `Inscription impossible : vous avez été noté(e) absent(e) ${groupAbsenceCount} fois lors de précédentes inscriptions. Les réinscriptions ne sont plus autorisées.`,
         });
       }
 
-      const groupEmailExists = await supabaseServices.checkVolunteerEmailExistsForDay(normalizedGroupEmail, input.dayId);
+      const groupEmailExists =
+        await supabaseServices.checkVolunteerEmailExistsForDay(
+          normalizedGroupEmail,
+          input.dayId
+        );
       if (groupEmailExists) {
         throw new TRPCError({
-          code: 'CONFLICT',
-          message: 'Cette adresse email est déjà inscrite pour ce jour. Si vous souhaitez modifier votre inscription, veuillez nous contacter.',
+          code: "CONFLICT",
+          message:
+            "Cette adresse email est déjà inscrite pour ce jour. Si vous souhaitez modifier votre inscription, veuillez nous contacter.",
         });
       }
 
@@ -418,34 +865,43 @@ const volunteersRouter = router({
         estimatedSize: input.estimatedSize,
         volunteerSlots: input.volunteerSlots,
         dayNumber: day?.dayNumber,
-        dayDate: day?.date ? new Date(day.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : undefined,
-        startTime: day?.iftarTime || '18h00',
+        dayDate: day?.date
+          ? new Date(day.date).toLocaleDateString("fr-FR", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })
+          : undefined,
+        startTime: day?.iftarTime || "18h00",
         fileName: input.fileName,
       });
 
       try {
         await sendEmail({
-          to: 'admin@ftourbabrayan.ma',
+          to: "admin@ftourbabrayan.ma",
           subject: adminEmailData.subject,
           html: adminEmailData.html,
-          attachments: [{
-            filename: input.fileName,
-            content: input.fileBase64,
-          }],
+          attachments: [
+            {
+              filename: input.fileName,
+              content: input.fileBase64,
+            },
+          ],
         });
-        console.log('[Group Registration] Admin email sent successfully');
+        console.log("[Group Registration] Admin email sent successfully");
       } catch (error) {
-        console.error('[Group Registration] Admin email failed:', error);
+        console.error("[Group Registration] Admin email failed:", error);
       }
 
       // Parse the Excel file and register each volunteer individually
-      const baseUrl = process.env.NODE_ENV === 'production'
-        ? 'https://ftourbabrayan.ma'
-        : 'http://localhost:3000';
+      const baseUrl =
+        process.env.NODE_ENV === "production"
+          ? "https://ftourbabrayan.ma"
+          : "http://localhost:3000";
 
       try {
-        const fileBuffer = Buffer.from(input.fileBase64, 'base64');
-        const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+        const fileBuffer = Buffer.from(input.fileBase64, "base64");
+        const workbook = XLSX.read(fileBuffer, { type: "buffer" });
         const sheetName = workbook.SheetNames[0];
 
         if (sheetName) {
@@ -453,51 +909,107 @@ const volunteersRouter = router({
 
           // Find the actual header row (template has title/info rows before column headers)
           // Headers can be: "NOM PRENOM" + "EMAIL ADRESS" or "Prénom" + "Nom" + "Email"
-          const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
+          const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, {
+            header: 1,
+            defval: "",
+          });
           let headerRowIndex = 0;
           for (let i = 0; i < Math.min(rawRows.length, 20); i++) {
             const row = rawRows[i] || [];
-            let hasNameCol = false, hasEmailCol = false;
+            let hasNameCol = false,
+              hasEmailCol = false;
             for (const cell of row) {
-              const val = String(cell || '').trim();
+              const val = String(cell || "").trim();
               if (val.length === 0 || val.length > 30) continue;
-              const n = val.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-              if (n.includes('email') || n.includes('mail') || n.includes('courriel')) hasEmailCol = true;
-              if (n.includes('nom') || n.includes('name') || n.includes('prenom') || n.includes('first') || n.includes('last')) hasNameCol = true;
+              const n = val
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "");
+              if (
+                n.includes("email") ||
+                n.includes("mail") ||
+                n.includes("courriel")
+              )
+                hasEmailCol = true;
+              if (
+                n.includes("nom") ||
+                n.includes("name") ||
+                n.includes("prenom") ||
+                n.includes("first") ||
+                n.includes("last")
+              )
+                hasNameCol = true;
             }
-            if (hasNameCol && hasEmailCol) { headerRowIndex = i; break; }
+            if (hasNameCol && hasEmailCol) {
+              headerRowIndex = i;
+              break;
+            }
           }
 
-          const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '', range: headerRowIndex });
+          const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, {
+            defval: "",
+            range: headerRowIndex,
+          });
 
           if (rows.length > 0) {
             // Detect columns (exclude already-matched keys to avoid collisions)
-            const findCol = (row: Record<string, any>, candidates: string[], exclude: string[] = []): string => {
+            const findCol = (
+              row: Record<string, any>,
+              candidates: string[],
+              exclude: string[] = []
+            ): string => {
               for (const key of Object.keys(row)) {
                 if (exclude.includes(key)) continue;
-                const n = key.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                const n = key
+                  .toLowerCase()
+                  .trim()
+                  .normalize("NFD")
+                  .replace(/[\u0300-\u036f]/g, "");
                 for (const c of candidates) {
                   if (n.includes(c)) return key;
                 }
               }
-              return '';
+              return "";
             };
 
             const sample = rows[0];
-            const colEmail = findCol(sample, ['email', 'mail', 'courriel']);
+            const colEmail = findCol(sample, ["email", "mail", "courriel"]);
 
             // Try separate Prénom/Nom columns first
-            const colFirst = findCol(sample, ['prenom', 'first', 'firstname'], [colEmail]);
-            const colLast = findCol(sample, ['nom', 'last', 'lastname', 'family'], [colEmail, colFirst].filter(Boolean));
+            const colFirst = findCol(
+              sample,
+              ["prenom", "first", "firstname"],
+              [colEmail]
+            );
+            const colLast = findCol(
+              sample,
+              ["nom", "last", "lastname", "family"],
+              [colEmail, colFirst].filter(Boolean)
+            );
 
             // Fall back to combined name column (e.g., "NOM PRENOM", "NOM ET PRENOM")
-            const colFullName = (!colFirst || !colLast)
-              ? findCol(sample, ['nom', 'name', 'prenom'], [colEmail].filter(Boolean))
-              : '';
+            const colFullName =
+              !colFirst || !colLast
+                ? findCol(
+                    sample,
+                    ["nom", "name", "prenom"],
+                    [colEmail].filter(Boolean)
+                  )
+                : "";
 
-            const usedCols = [colEmail, colFirst, colLast, colFullName].filter(Boolean);
-            const colPhone = findCol(sample, ['telephone', 'tel', 'phone', 'mobile', 'gsm'], usedCols);
-            const colCity = findCol(sample, ['ville', 'city'], [...usedCols, colPhone].filter(Boolean));
+            const usedCols = [colEmail, colFirst, colLast, colFullName].filter(
+              Boolean
+            );
+            const colPhone = findCol(
+              sample,
+              ["telephone", "tel", "phone", "mobile", "gsm"],
+              usedCols
+            );
+            const colCity = findCol(
+              sample,
+              ["ville", "city"],
+              [...usedCols, colPhone].filter(Boolean)
+            );
 
             const hasNames = (colFirst && colLast) || colFullName;
             if (hasNames && colEmail) {
@@ -505,221 +1017,349 @@ const volunteersRouter = router({
               for (const row of rows) {
                 let firstName: string, lastName: string;
                 if (colFullName) {
-                  const fullName = String(row[colFullName] || '').trim();
+                  const fullName = String(row[colFullName] || "").trim();
                   const parts = fullName.split(/\s+/);
                   if (parts.length >= 2) {
                     lastName = parts[0];
-                    firstName = parts.slice(1).join(' ');
+                    firstName = parts.slice(1).join(" ");
                   } else {
                     lastName = fullName;
                     firstName = fullName;
                   }
                 } else {
-                  firstName = String(row[colFirst] || '').trim();
-                  lastName = String(row[colLast] || '').trim();
+                  firstName = String(row[colFirst] || "").trim();
+                  lastName = String(row[colLast] || "").trim();
                 }
-                const email = String(row[colEmail] || '').toLowerCase().trim();
-                const phone = colPhone ? String(row[colPhone] || '').trim() : '';
-                const city = colCity ? String(row[colCity] || '').trim() : undefined;
+                const email = String(row[colEmail] || "")
+                  .toLowerCase()
+                  .trim();
+                const phone = colPhone
+                  ? String(row[colPhone] || "").trim()
+                  : "";
+                const city = colCity
+                  ? String(row[colCity] || "").trim()
+                  : undefined;
 
-                if (!firstName || !lastName || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) continue;
+                if (
+                  !firstName ||
+                  !lastName ||
+                  !email ||
+                  !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+                )
+                  continue;
 
                 try {
-                  const exists = await supabaseServices.checkVolunteerEmailExistsForDay(email, input.dayId);
+                  const exists =
+                    await supabaseServices.checkVolunteerEmailExistsForDay(
+                      email,
+                      input.dayId
+                    );
                   if (exists) continue;
 
-                  const vol = await supabaseServices.createVolunteerShiftSupabase({
-                    firstName,
-                    lastName,
-                    email,
-                    phone,
-                    city,
-                    dayId: input.dayId,
-                    volunteerSlots: input.volunteerSlots,
-                    acceptedTerms: true,
-                  });
+                  const vol =
+                    await supabaseServices.createVolunteerShiftSupabase({
+                      firstName,
+                      lastName,
+                      email,
+                      phone,
+                      city,
+                      dayId: input.dayId,
+                      volunteerSlots: input.volunteerSlots,
+                      acceptedTerms: true,
+                    });
 
                   const volEmailData = generateVolunteerConfirmationEmail({
                     firstName,
                     lastName,
                     email,
                     dayNumber: day?.dayNumber || 1,
-                    dayDate: day?.date ? new Date(day.date).toLocaleDateString('fr-FR', { weekday: 'long', month: 'long', day: 'numeric' }) : '',
-                    location: day?.location || 'Association Bab Rayan, Casablanca',
-                    startTime: day?.iftarTime || '18h00',
+                    dayDate: day?.date
+                      ? new Date(day.date).toLocaleDateString("fr-FR", {
+                          weekday: "long",
+                          month: "long",
+                          day: "numeric",
+                        })
+                      : "",
+                    location:
+                      day?.location || "Association Bab Rayan, Casablanca",
+                    startTime: day?.iftarTime || "18h00",
                     volunteerSlots: input.volunteerSlots,
                     qrToken: vol.qrToken,
                     baseUrl,
                   });
 
-                  await sendEmail({ to: email, subject: volEmailData.subject, html: volEmailData.html });
+                  await sendEmail({
+                    to: email,
+                    subject: volEmailData.subject,
+                    html: volEmailData.html,
+                  });
                   registeredCount++;
-                  console.log(`[Group Registration] Individual email sent to ${email}`);
+                  console.log(
+                    `[Group Registration] Individual email sent to ${email}`
+                  );
                 } catch (err) {
-                  console.error(`[Group Registration] Failed to register ${email}:`, err);
+                  console.error(
+                    `[Group Registration] Failed to register ${email}:`,
+                    err
+                  );
                 }
               }
-              console.log(`[Group Registration] ${registeredCount} individual volunteers registered from Excel`);
+              console.log(
+                `[Group Registration] ${registeredCount} individual volunteers registered from Excel`
+              );
             } else {
-              console.warn('[Group Registration] Could not detect required columns (Prénom, Nom, Email) in Excel file');
+              console.warn(
+                "[Group Registration] Could not detect required columns (Prénom, Nom, Email) in Excel file"
+              );
             }
           }
         }
       } catch (excelError) {
-        console.error('[Group Registration] Excel parsing failed:', excelError);
+        console.error("[Group Registration] Excel parsing failed:", excelError);
       }
 
       return { success: true, volunteerId: volunteer.id };
     }),
 
   processGroupExcel: adminOpsProcedure
-    .input(z.object({
-      dayId: z.number(),
-      volunteerSlots: z.array(z.enum(["preparation_ftour", "service_ftour"])).min(1),
-      fileBase64: z.string().max(7_000_000, "Fichier trop volumineux (max 5 Mo)"),
-      fileName: z.string(),
-    }))
+    .input(
+      z.object({
+        dayId: z.number(),
+        volunteerSlots: z
+          .array(z.enum(["preparation_ftour", "service_ftour"]))
+          .min(1),
+        fileBase64: z
+          .string()
+          .max(7_000_000, "Fichier trop volumineux (max 5 Mo)"),
+        fileName: z.string(),
+      })
+    )
     .mutation(async ({ input }) => {
       // Get day info
       const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
       if (!day) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Jour non trouvé' });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
       }
 
       // Parse the Excel file from base64
-      const fileBuffer = Buffer.from(input.fileBase64, 'base64');
+      const fileBuffer = Buffer.from(input.fileBase64, "base64");
       let workbook: XLSX.WorkBook;
       try {
-        workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+        workbook = XLSX.read(fileBuffer, { type: "buffer" });
       } catch {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Impossible de lire le fichier Excel. Vérifiez le format.' });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Impossible de lire le fichier Excel. Vérifiez le format.",
+        });
       }
 
       const sheetName = workbook.SheetNames[0];
       if (!sheetName) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Le fichier Excel est vide.' });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Le fichier Excel est vide.",
+        });
       }
 
       const sheet = workbook.Sheets[sheetName];
 
       // Find the actual header row (template has title/info rows before column headers)
       // Headers can be: "NOM PRENOM" + "EMAIL ADRESS" or "Prénom" + "Nom" + "Email"
-      const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
+      const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, {
+        header: 1,
+        defval: "",
+      });
       let headerRowIndex = 0;
       for (let i = 0; i < Math.min(rawRows.length, 20); i++) {
         const row = rawRows[i] || [];
-        let hasNameCol = false, hasEmailCol = false;
+        let hasNameCol = false,
+          hasEmailCol = false;
         for (const cell of row) {
-          const val = String(cell || '').trim();
+          const val = String(cell || "").trim();
           if (val.length === 0 || val.length > 30) continue;
-          const n = val.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-          if (n.includes('email') || n.includes('mail') || n.includes('courriel')) hasEmailCol = true;
-          if (n.includes('nom') || n.includes('name') || n.includes('prenom') || n.includes('first') || n.includes('last')) hasNameCol = true;
+          const n = val
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
+          if (
+            n.includes("email") ||
+            n.includes("mail") ||
+            n.includes("courriel")
+          )
+            hasEmailCol = true;
+          if (
+            n.includes("nom") ||
+            n.includes("name") ||
+            n.includes("prenom") ||
+            n.includes("first") ||
+            n.includes("last")
+          )
+            hasNameCol = true;
         }
-        if (hasNameCol && hasEmailCol) { headerRowIndex = i; break; }
+        if (hasNameCol && hasEmailCol) {
+          headerRowIndex = i;
+          break;
+        }
       }
 
-      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '', range: headerRowIndex });
+      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, {
+        defval: "",
+        range: headerRowIndex,
+      });
 
       if (rows.length === 0) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Aucune ligne trouvée dans le fichier Excel.' });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Aucune ligne trouvée dans le fichier Excel.",
+        });
       }
 
       // Normalize column names (exclude already-matched keys to avoid collisions)
-      function findColumn(row: Record<string, any>, candidates: string[], exclude: string[] = []): string {
+      function findColumn(
+        row: Record<string, any>,
+        candidates: string[],
+        exclude: string[] = []
+      ): string {
         for (const key of Object.keys(row)) {
           if (exclude.includes(key)) continue;
-          const normalized = key.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          const normalized = key
+            .toLowerCase()
+            .trim()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
           for (const candidate of candidates) {
             if (normalized.includes(candidate)) return key;
           }
         }
-        return '';
+        return "";
       }
 
       // Detect column mapping from first row
       const sampleRow = rows[0];
-      const colEmail = findColumn(sampleRow, ['email', 'mail', 'courriel']);
+      const colEmail = findColumn(sampleRow, ["email", "mail", "courriel"]);
 
       // Try separate Prénom/Nom columns first
-      const colFirstName = findColumn(sampleRow, ['prenom', 'first', 'firstname'], [colEmail]);
-      const colLastName = findColumn(sampleRow, ['nom', 'last', 'lastname', 'family'], [colEmail, colFirstName].filter(Boolean));
+      const colFirstName = findColumn(
+        sampleRow,
+        ["prenom", "first", "firstname"],
+        [colEmail]
+      );
+      const colLastName = findColumn(
+        sampleRow,
+        ["nom", "last", "lastname", "family"],
+        [colEmail, colFirstName].filter(Boolean)
+      );
 
       // Fall back to combined name column (e.g., "NOM PRENOM", "NOM ET PRENOM")
-      const colFullName = (!colFirstName || !colLastName)
-        ? findColumn(sampleRow, ['nom', 'name', 'prenom'], [colEmail].filter(Boolean))
-        : '';
+      const colFullName =
+        !colFirstName || !colLastName
+          ? findColumn(
+              sampleRow,
+              ["nom", "name", "prenom"],
+              [colEmail].filter(Boolean)
+            )
+          : "";
 
-      const usedCols = [colEmail, colFirstName, colLastName, colFullName].filter(Boolean);
-      const colPhone = findColumn(sampleRow, ['telephone', 'tel', 'phone', 'mobile', 'gsm'], usedCols);
-      const colCity = findColumn(sampleRow, ['ville', 'city'], [...usedCols, colPhone].filter(Boolean));
+      const usedCols = [
+        colEmail,
+        colFirstName,
+        colLastName,
+        colFullName,
+      ].filter(Boolean);
+      const colPhone = findColumn(
+        sampleRow,
+        ["telephone", "tel", "phone", "mobile", "gsm"],
+        usedCols
+      );
+      const colCity = findColumn(
+        sampleRow,
+        ["ville", "city"],
+        [...usedCols, colPhone].filter(Boolean)
+      );
 
       const hasNames = (colFirstName && colLastName) || colFullName;
       if (!hasNames || !colEmail) {
-        const detectedCols = Object.keys(sampleRow).join(', ');
+        const detectedCols = Object.keys(sampleRow).join(", ");
         throw new TRPCError({
-          code: 'BAD_REQUEST',
+          code: "BAD_REQUEST",
           message: `Colonnes requises introuvables (Nom/Prénom, Email). Colonnes détectées : ${detectedCols}`,
         });
       }
 
-      const baseUrl = process.env.NODE_ENV === 'production'
-        ? 'https://ftourbabrayan.ma'
-        : 'http://localhost:3000';
+      const baseUrl =
+        process.env.NODE_ENV === "production"
+          ? "https://ftourbabrayan.ma"
+          : "http://localhost:3000";
 
       const results: { email: string; success: boolean; error?: string }[] = [];
 
       for (const row of rows) {
         let firstName: string, lastName: string;
         if (colFullName) {
-          const fullName = String(row[colFullName] || '').trim();
+          const fullName = String(row[colFullName] || "").trim();
           const parts = fullName.split(/\s+/);
           if (parts.length >= 2) {
             lastName = parts[0];
-            firstName = parts.slice(1).join(' ');
+            firstName = parts.slice(1).join(" ");
           } else {
             lastName = fullName;
             firstName = fullName;
           }
         } else {
-          firstName = String(row[colFirstName] || '').trim();
-          lastName = String(row[colLastName] || '').trim();
+          firstName = String(row[colFirstName] || "").trim();
+          lastName = String(row[colLastName] || "").trim();
         }
-        const email = String(row[colEmail] || '').toLowerCase().trim();
-        const phone = colPhone ? String(row[colPhone] || '').trim() : '';
-        const city = colCity ? String(row[colCity] || '').trim() : undefined;
+        const email = String(row[colEmail] || "")
+          .toLowerCase()
+          .trim();
+        const phone = colPhone ? String(row[colPhone] || "").trim() : "";
+        const city = colCity ? String(row[colCity] || "").trim() : undefined;
 
         // Skip empty rows
         if (!firstName || !lastName || !email) {
-          results.push({ email: email || '(vide)', success: false, error: 'Données incomplètes (prénom, nom ou email manquant)' });
+          results.push({
+            email: email || "(vide)",
+            success: false,
+            error: "Données incomplètes (prénom, nom ou email manquant)",
+          });
           continue;
         }
 
         // Basic email validation
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          results.push({ email, success: false, error: 'Email invalide' });
+          results.push({ email, success: false, error: "Email invalide" });
           continue;
         }
 
         try {
           // Check if already registered for this day
-          const emailExists = await supabaseServices.checkVolunteerEmailExistsForDay(email, input.dayId);
+          const emailExists =
+            await supabaseServices.checkVolunteerEmailExistsForDay(
+              email,
+              input.dayId
+            );
           if (emailExists) {
-            results.push({ email, success: false, error: 'Déjà inscrit pour ce jour' });
+            results.push({
+              email,
+              success: false,
+              error: "Déjà inscrit pour ce jour",
+            });
             continue;
           }
 
           // Create volunteer entry
-          const volunteer = await supabaseServices.createVolunteerShiftSupabase({
-            firstName,
-            lastName,
-            email,
-            phone,
-            city,
-            dayId: input.dayId,
-            volunteerSlots: input.volunteerSlots,
-            acceptedTerms: true,
-          });
+          const volunteer = await supabaseServices.createVolunteerShiftSupabase(
+            {
+              firstName,
+              lastName,
+              email,
+              phone,
+              city,
+              dayId: input.dayId,
+              volunteerSlots: input.volunteerSlots,
+              acceptedTerms: true,
+            }
+          );
 
           // Send confirmation email with QR code
           const emailData = generateVolunteerConfirmationEmail({
@@ -727,13 +1367,13 @@ const volunteersRouter = router({
             lastName,
             email,
             dayNumber: day.dayNumber,
-            dayDate: new Date(day.date).toLocaleDateString('fr-FR', {
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric',
+            dayDate: new Date(day.date).toLocaleDateString("fr-FR", {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
             }),
-            location: day.location || 'Association Bab Rayan, Casablanca',
-            startTime: day.iftarTime || '18h00',
+            location: day.location || "Association Bab Rayan, Casablanca",
+            startTime: day.iftarTime || "18h00",
             volunteerSlots: input.volunteerSlots,
             qrToken: volunteer.qrToken,
             baseUrl,
@@ -749,11 +1389,18 @@ const volunteersRouter = router({
             results.push({ email, success: true });
             console.log(`[ProcessGroupExcel] Email sent to ${email}`);
           } else {
-            results.push({ email, success: true, error: `Inscrit mais email non envoyé: ${emailResult.error}` });
-            console.warn(`[ProcessGroupExcel] Volunteer created but email failed for ${email}: ${emailResult.error}`);
+            results.push({
+              email,
+              success: true,
+              error: `Inscrit mais email non envoyé: ${emailResult.error}`,
+            });
+            console.warn(
+              `[ProcessGroupExcel] Volunteer created but email failed for ${email}: ${emailResult.error}`
+            );
           }
         } catch (error) {
-          const errMsg = error instanceof Error ? error.message : 'Erreur inconnue';
+          const errMsg =
+            error instanceof Error ? error.message : "Erreur inconnue";
           results.push({ email, success: false, error: errMsg });
           console.error(`[ProcessGroupExcel] Error for ${email}:`, error);
         }
@@ -762,7 +1409,9 @@ const volunteersRouter = router({
       const successCount = results.filter(r => r.success).length;
       const failCount = results.filter(r => !r.success).length;
 
-      console.log(`[ProcessGroupExcel] Completed: ${successCount} success, ${failCount} failures out of ${rows.length} rows`);
+      console.log(
+        `[ProcessGroupExcel] Completed: ${successCount} success, ${failCount} failures out of ${rows.length} rows`
+      );
 
       return { results, successCount, failCount, totalRows: rows.length };
     }),
@@ -776,18 +1425,25 @@ const checkinRouter = router({
   verify: publicProcedure
     .input(z.object({ token: z.string() }))
     .query(async ({ input }) => {
-      const volunteer = await supabaseServices.getVolunteerByTokenSupabase(input.token);
-      
+      const volunteer = await supabaseServices.getVolunteerByTokenSupabase(
+        input.token
+      );
+
       if (!volunteer) {
-        return { valid: false, error: 'Token invalide', code: 'INVALID_TOKEN', status: 'invalid' as const };
+        return {
+          valid: false,
+          error: "Token invalide",
+          code: "INVALID_TOKEN",
+          status: "invalid" as const,
+        };
       }
-      
-      if (volunteer.qrStatus === 'validated') {
-        return { 
-          valid: false, 
-          error: 'QR code déjà validé', 
-          code: 'ALREADY_VALIDATED',
-          status: 'already_validated' as const,
+
+      if (volunteer.qrStatus === "validated") {
+        return {
+          valid: false,
+          error: "QR code déjà validé",
+          code: "ALREADY_VALIDATED",
+          status: "already_validated" as const,
           volunteer: {
             firstName: volunteer.firstName,
             lastName: volunteer.lastName,
@@ -795,14 +1451,14 @@ const checkinRouter = router({
           },
         };
       }
-      
-      const today = new Date().toISOString().split('T')[0];
+
+      const today = new Date().toISOString().split("T")[0];
       if (volunteer.day?.date !== today) {
-        return { 
-          valid: false, 
-          error: 'Ce QR code n\'est pas valide pour aujourd\'hui', 
-          code: 'WRONG_DAY',
-          status: 'wrong_date' as const,
+        return {
+          valid: false,
+          error: "Ce QR code n'est pas valide pour aujourd'hui",
+          code: "WRONG_DAY",
+          status: "wrong_date" as const,
           volunteer: {
             firstName: volunteer.firstName,
             lastName: volunteer.lastName,
@@ -811,10 +1467,10 @@ const checkinRouter = router({
           day: volunteer.day,
         };
       }
-      
-      return { 
-        valid: true, 
-        status: 'valid' as const,
+
+      return {
+        valid: true,
+        status: "valid" as const,
         volunteer: {
           id: volunteer.id,
           firstName: volunteer.firstName,
@@ -825,7 +1481,7 @@ const checkinRouter = router({
         day: volunteer.day,
       };
     }),
-  
+
   validate: publicProcedure
     .input(z.object({ token: z.string() }))
     .mutation(async ({ input, ctx }) => {
@@ -833,7 +1489,7 @@ const checkinRouter = router({
         input.token,
         ctx.user?.id,
         ctx.req.ip,
-        ctx.req.headers['user-agent'] as string
+        ctx.req.headers["user-agent"] as string
       );
 
       return result;
@@ -848,43 +1504,47 @@ const goodiesRouter = router({
   list: publicProcedure.query(async () => {
     return supabaseServices.getAllGoodiesSupabase(true); // Active only for public
   }),
-  
+
   listAll: adminBoutiqueProcedure.query(async () => {
     return supabaseServices.getAllGoodiesSupabase(false); // All for admin
   }),
-  
+
   create: adminBoutiqueProcedure
-    .input(z.object({
-      name: z.string().min(2),
-      description: z.string().optional(),
-      price: z.number().min(0),
-      imageUrl: z.string().optional(),
-      category: z.string().optional(),
-      isActive: z.boolean().default(true),
-      sortOrder: z.number().default(0),
-    }))
+    .input(
+      z.object({
+        name: z.string().min(2),
+        description: z.string().optional(),
+        price: z.number().min(0),
+        imageUrl: z.string().optional(),
+        category: z.string().optional(),
+        isActive: z.boolean().default(true),
+        sortOrder: z.number().default(0),
+      })
+    )
     .mutation(async ({ input }) => {
       const goodie = await supabaseServices.createGoodieSupabase(input);
       return { id: goodie.id };
     }),
-  
+
   update: adminBoutiqueProcedure
-    .input(z.object({
-      id: z.number(),
-      name: z.string().min(2).optional(),
-      description: z.string().optional(),
-      price: z.number().min(0).optional(),
-      imageUrl: z.string().optional(),
-      category: z.string().optional(),
-      isActive: z.boolean().optional(),
-      sortOrder: z.number().optional(),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().min(2).optional(),
+        description: z.string().optional(),
+        price: z.number().min(0).optional(),
+        imageUrl: z.string().optional(),
+        category: z.string().optional(),
+        isActive: z.boolean().optional(),
+        sortOrder: z.number().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const { id, ...data } = input;
       await supabaseServices.updateGoodieSupabase(id, data);
       return { success: true };
     }),
-  
+
   delete: adminBoutiqueProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
@@ -899,28 +1559,34 @@ const goodiesRouter = router({
 
 const ordersRouter = router({
   create: publicProcedure
-    .input(z.object({
-      customerName: z.string().min(2),
-      customerEmail: z.string().email(),
-      customerPhone: z.string().min(8),
-      items: z.array(z.object({
-        goodieId: z.number(),
-        variantId: z.number().optional(),
-        quantity: z.number().min(1),
-        unitPrice: z.number().min(0),
-      })),
-      pickupDate: z.string().optional(),
-      pickupLocation: z.string().optional(),
-      notes: z.string().optional(),
-      deliveryMode: z.enum(['pickup', 'home_delivery']).default('pickup'),
-      deliveryAddress: z.string().optional(),
-      deliveryCity: z.string().optional(),
-      deliveryNeighborhood: z.string().optional(),
-      deliveryPostalCode: z.string().optional(),
-      deliveryPhone: z.string().optional(),
-      deliveryInstructions: z.string().optional(),
-      paymentMethod: z.enum(['bank_transfer', 'cheque', 'cash']).default('cash'),
-    }))
+    .input(
+      z.object({
+        customerName: z.string().min(2),
+        customerEmail: z.string().email(),
+        customerPhone: z.string().min(8),
+        items: z.array(
+          z.object({
+            goodieId: z.number(),
+            variantId: z.number().optional(),
+            quantity: z.number().min(1),
+            unitPrice: z.number().min(0),
+          })
+        ),
+        pickupDate: z.string().optional(),
+        pickupLocation: z.string().optional(),
+        notes: z.string().optional(),
+        deliveryMode: z.enum(["pickup", "home_delivery"]).default("pickup"),
+        deliveryAddress: z.string().optional(),
+        deliveryCity: z.string().optional(),
+        deliveryNeighborhood: z.string().optional(),
+        deliveryPostalCode: z.string().optional(),
+        deliveryPhone: z.string().optional(),
+        deliveryInstructions: z.string().optional(),
+        paymentMethod: z
+          .enum(["bank_transfer", "cheque", "cash"])
+          .default("cash"),
+      })
+    )
     .mutation(async ({ input }) => {
       // Validate stock for items with variants before creating order
       const supabase = getSupabaseAdminClient();
@@ -928,14 +1594,25 @@ const ordersRouter = router({
         for (const item of input.items) {
           if (item.variantId) {
             const { data: variant } = await supabase
-              .from('goodie_variants')
-              .select('stock, is_available')
-              .eq('id', item.variantId)
+              .from("goodie_variants")
+              .select("stock, is_available")
+              .eq("id", item.variantId)
               .single();
-            if (!variant) throw new TRPCError({ code: 'NOT_FOUND', message: `Variante #${item.variantId} introuvable` });
-            if (!variant.is_available) throw new TRPCError({ code: 'BAD_REQUEST', message: `Variante #${item.variantId} indisponible` });
+            if (!variant)
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message: `Variante #${item.variantId} introuvable`,
+              });
+            if (!variant.is_available)
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: `Variante #${item.variantId} indisponible`,
+              });
             if (variant.stock < item.quantity) {
-              throw new TRPCError({ code: 'BAD_REQUEST', message: `Stock insuffisant pour la variante #${item.variantId} (dispo: ${variant.stock}, demandé: ${item.quantity})` });
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: `Stock insuffisant pour la variante #${item.variantId} (dispo: ${variant.stock}, demandé: ${item.quantity})`,
+              });
             }
           }
         }
@@ -948,14 +1625,15 @@ const ordersRouter = router({
         for (const item of input.items) {
           if (item.variantId) {
             const { data: variant } = await supabase
-              .from('goodie_variants')
-              .select('stock')
-              .eq('id', item.variantId)
+              .from("goodie_variants")
+              .select("stock")
+              .eq("id", item.variantId)
               .single();
             if (variant) {
-              await supabase.from('goodie_variants')
+              await supabase
+                .from("goodie_variants")
                 .update({ stock: Math.max(0, variant.stock - item.quantity) })
-                .eq('id', item.variantId);
+                .eq("id", item.variantId);
             }
           }
         }
@@ -963,19 +1641,19 @@ const ordersRouter = router({
 
       // Send confirmation email with dynamic content
       try {
-        const nameParts = input.customerName.split(' ');
-        const { generateGoodiesOrderEmail } = await import('./email-templates');
-        
+        const nameParts = input.customerName.split(" ");
+        const { generateGoodiesOrderEmail } = await import("./email-templates");
+
         const emailData = generateGoodiesOrderEmail({
           firstName: nameParts[0] || input.customerName,
-          lastName: nameParts.slice(1).join(' ') || '',
+          lastName: nameParts.slice(1).join(" ") || "",
           email: input.customerEmail,
           phone: input.customerPhone,
           orderId: order.orderReference,
           totalAmount: order.totalAmount,
-          deliveryFee: input.deliveryMode === 'home_delivery' ? 30 : 0,
+          deliveryFee: input.deliveryMode === "home_delivery" ? 30 : 0,
           deliveryMode: input.deliveryMode,
-          paymentMethod: input.paymentMethod || 'cash',
+          paymentMethod: input.paymentMethod || "cash",
           deliveryAddress: input.deliveryAddress,
           deliveryCity: input.deliveryCity,
           deliveryNeighborhood: input.deliveryNeighborhood,
@@ -985,71 +1663,89 @@ const ordersRouter = router({
             quantity: item.quantity,
             price: item.unitPrice,
           })),
-          baseUrl: process.env.NODE_ENV === 'production' ? 'https://ftourbabrayan.ma' : 'http://localhost:3000',
+          baseUrl:
+            process.env.NODE_ENV === "production"
+              ? "https://ftourbabrayan.ma"
+              : "http://localhost:3000",
         });
-        
+
         await sendEmail({
           to: input.customerEmail,
           subject: emailData.subject,
           html: emailData.html,
         });
       } catch (error) {
-        console.error('[Order] Email send failed:', error);
+        console.error("[Order] Email send failed:", error);
       }
-      
+
       return order;
     }),
-  
+
   listAll: adminBoutiqueProcedure.query(async () => {
     return supabaseServices.getAllOrdersSupabase();
   }),
-  
+
   updateStatus: adminBoutiqueProcedure
-    .input(z.object({
-      orderId: z.number(),
-      status: z.enum(['reserved', 'confirmed', 'paid', 'delivered', 'cancelled']),
-    }))
+    .input(
+      z.object({
+        orderId: z.number(),
+        status: z.enum([
+          "reserved",
+          "confirmed",
+          "paid",
+          "delivered",
+          "cancelled",
+        ]),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       // Release stock when cancelling an order
-      if (input.status === 'cancelled') {
+      if (input.status === "cancelled") {
         const supabase = getSupabaseAdminClient();
         if (supabase) {
           const { data: orderItems } = await supabase
-            .from('order_items')
-            .select('variant_id, quantity')
-            .eq('order_id', input.orderId);
+            .from("order_items")
+            .select("variant_id, quantity")
+            .eq("order_id", input.orderId);
           if (orderItems) {
             for (const item of orderItems) {
               if (item.variant_id) {
                 const { data: variant } = await supabase
-                  .from('goodie_variants')
-                  .select('stock')
-                  .eq('id', item.variant_id)
+                  .from("goodie_variants")
+                  .select("stock")
+                  .eq("id", item.variant_id)
                   .single();
                 if (variant) {
-                  await supabase.from('goodie_variants')
+                  await supabase
+                    .from("goodie_variants")
                     .update({ stock: variant.stock + item.quantity })
-                    .eq('id', item.variant_id);
+                    .eq("id", item.variant_id);
                 }
               }
             }
           }
         }
       }
-      await supabaseServices.updateGoodieOrderStatusSupabase(input.orderId, input.status, ctx.user?.id);
+      await supabaseServices.updateGoodieOrderStatusSupabase(
+        input.orderId,
+        input.status,
+        ctx.user?.id
+      );
       return { success: true };
     }),
-  
+
   stats: adminBoutiqueProcedure.query(async () => {
     return supabaseServices.getOrderStatsSupabase();
   }),
-  
+
   getByReference: publicProcedure
     .input(z.object({ reference: z.string() }))
     .query(async ({ input }) => {
-      const order = await supabaseServices.getGoodieOrderByReferenceSupabase(input.reference);
+      const order = await supabaseServices.getGoodieOrderByReferenceSupabase(
+        input.reference
+      );
       if (!order) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Order not found' });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Order not found" });
       }
       return order;
     }),
@@ -1061,65 +1757,83 @@ const ordersRouter = router({
 
 const donationsRouter = router({
   create: publicProcedure
-    .input(z.object({
-      donorName: z.string().min(2),
-      donorEmail: z.string().email(),
-      donorPhone: z.string().optional(),
-      amount: z.union([z.number(), z.string()]).transform((val) => typeof val === 'string' ? parseInt(val, 10) : val).pipe(z.number().min(1)),
-      paymentMethod: z.enum(['transfer', 'on_site']),
-      message: z.string().optional(),
-      isAnonymous: z.boolean().default(false),
-      acceptsUpdates: z.boolean().default(false),
-    }))
+    .input(
+      z.object({
+        donorName: z.string().min(2),
+        donorEmail: z.string().email(),
+        donorPhone: z.string().optional(),
+        amount: z
+          .union([z.number(), z.string()])
+          .transform(val => (typeof val === "string" ? parseInt(val, 10) : val))
+          .pipe(z.number().min(1)),
+        paymentMethod: z.enum(["transfer", "on_site"]),
+        message: z.string().optional(),
+        isAnonymous: z.boolean().default(false),
+        acceptsUpdates: z.boolean().default(false),
+      })
+    )
     .mutation(async ({ input }) => {
-      const donation = await supabaseServices.createDonationPledgeSupabase(input);
-      
+      const donation =
+        await supabaseServices.createDonationPledgeSupabase(input);
+
       // Send confirmation email
       try {
-        const nameParts = input.donorName.split(' ');
+        const nameParts = input.donorName.split(" ");
         const emailData = generateDonationConfirmationEmail({
           firstName: nameParts[0] || input.donorName,
-          lastName: nameParts.slice(1).join(' ') || '',
+          lastName: nameParts.slice(1).join(" ") || "",
           email: input.donorEmail,
           amount: donation.amount,
           paymentMethod: input.paymentMethod,
           donationId: donation.donationReference,
-          baseUrl: process.env.NODE_ENV === 'production' ? 'https://ftourbabrayan.ma' : 'http://localhost:3000',
+          baseUrl:
+            process.env.NODE_ENV === "production"
+              ? "https://ftourbabrayan.ma"
+              : "http://localhost:3000",
         });
-        
+
         await sendEmail({
           to: input.donorEmail,
           subject: emailData.subject,
           html: emailData.html,
         });
       } catch (error) {
-        console.error('[Donation] Email send failed:', error);
+        console.error("[Donation] Email send failed:", error);
       }
-      
+
       return donation;
     }),
-  
+
   listAll: adminDonsProcedure.query(async () => {
     return supabaseServices.getAllDonationsSupabase();
   }),
-  
+
   updateStatus: adminDonsProcedure
-    .input(z.object({
-      donationId: z.number(),
-      status: z.enum(['promised', 'pending', 'received', 'cancelled']),
-    }))
+    .input(
+      z.object({
+        donationId: z.number(),
+        status: z.enum(["promised", "pending", "received", "cancelled"]),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
-      await supabaseServices.updateDonationStatusSupabase(input.donationId, input.status, ctx.user?.id);
+      await supabaseServices.updateDonationStatusSupabase(
+        input.donationId,
+        input.status,
+        ctx.user?.id
+      );
       return { success: true };
     }),
-  
+
   markReceived: adminDonsProcedure
     .input(z.object({ donationId: z.number() }))
     .mutation(async ({ input, ctx }) => {
-      await supabaseServices.markDonationReceivedSupabase(input.donationId, ctx.user?.id);
+      await supabaseServices.markDonationReceivedSupabase(
+        input.donationId,
+        ctx.user?.id
+      );
       return { success: true };
     }),
-  
+
   stats: adminDonsProcedure.query(async () => {
     return supabaseServices.getDonationStatsSupabase();
   }),
@@ -1131,17 +1845,19 @@ const donationsRouter = router({
 
 const contactRouter = router({
   send: publicProcedure
-    .input(z.object({
-      name: z.string().min(2),
-      email: z.string().email(),
-      phone: z.string().optional(),
-      subject: z.string().optional(),
-      message: z.string().min(10),
-    }))
+    .input(
+      z.object({
+        name: z.string().min(2),
+        email: z.string().email(),
+        phone: z.string().optional(),
+        subject: z.string().optional(),
+        message: z.string().min(10),
+      })
+    )
     .mutation(async ({ input }) => {
       // Save to database
       await supabaseServices.createContactMessageSupabase(input);
-      
+
       // Send notification email
       try {
         const emailData = generateContactNotificationEmail({
@@ -1151,19 +1867,19 @@ const contactRouter = router({
           subject: input.subject,
           message: input.message,
         });
-        
+
         await sendEmail({
-          to: 'contact@ftourbabrayan.ma',
+          to: "contact@ftourbabrayan.ma",
           subject: emailData.subject,
           html: emailData.html,
         });
       } catch (error) {
-        console.error('[Contact] Email send failed:', error);
+        console.error("[Contact] Email send failed:", error);
       }
-      
+
       return { success: true };
     }),
-  
+
   list: adminProcedure.query(async () => {
     return supabaseServices.getAllContactMessagesSupabase();
   }),
@@ -1191,30 +1907,66 @@ const usersRouter = router({
   }),
 
   create: superAdminProcedure
-    .input(z.object({
-      email: z.string().email(),
-      password: z.string().min(6),
-      name: z.string().optional(),
-      phone: z.string().optional(),
-      role: z.enum(['user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'admin_patisserie', 'admin_terroir']).default('user'),
-    }))
+    .input(
+      z.object({
+        email: z.string().email(),
+        password: z.string().min(6),
+        name: z.string().optional(),
+        phone: z.string().optional(),
+        role: z
+          .enum([
+            "user",
+            "admin",
+            "super_admin",
+            "admin_ops",
+            "admin_boutique",
+            "admin_dons",
+            "scanner",
+            "admin_restaurant",
+            "admin_patisserie",
+            "admin_terroir",
+          ])
+          .default("user"),
+      })
+    )
     .mutation(async ({ input }) => {
-      const result = await signUpUser({ email: input.email, password: input.password, name: input.name, phone: input.phone });
+      const result = await signUpUser({
+        email: input.email,
+        password: input.password,
+        name: input.name,
+        phone: input.phone,
+      });
       if (result.error) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: result.error });
+        throw new TRPCError({ code: "BAD_REQUEST", message: result.error });
       }
       // If a non-default role was specified, update it after creation
-      if (input.role !== 'user' && result.user) {
-        await supabaseServices.updateUserRoleByOpenIdSupabase(result.user.id, input.role);
+      if (input.role !== "user" && result.user) {
+        await supabaseServices.updateUserRoleByOpenIdSupabase(
+          result.user.id,
+          input.role
+        );
       }
       return { success: true, user: result.user };
     }),
 
   updateRole: superAdminProcedure
-    .input(z.object({
-      userId: z.number(),
-      role: z.enum(['user', 'admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'admin_patisserie', 'admin_terroir']),
-    }))
+    .input(
+      z.object({
+        userId: z.number(),
+        role: z.enum([
+          "user",
+          "admin",
+          "super_admin",
+          "admin_ops",
+          "admin_boutique",
+          "admin_dons",
+          "scanner",
+          "admin_restaurant",
+          "admin_patisserie",
+          "admin_terroir",
+        ]),
+      })
+    )
     .mutation(async ({ input }) => {
       await supabaseServices.updateUserRoleSupabase(input.userId, input.role);
       return { success: true };
@@ -1349,23 +2101,91 @@ const publicRouter = router({
       totalDays: 30, // Fixed for Ramadan
     };
   }),
-  
+
   days: publicProcedure.query(async () => {
     const days = await supabaseServices.getAllRamadanDaysSupabase();
     return days.filter(d => d.isOpen);
   }),
-  
+
   goodies: publicProcedure.query(async () => {
     return supabaseServices.getAllGoodiesSupabase(true);
   }),
-  
+
   testimonials: publicProcedure.query(async () => {
     return supabaseServices.getAllTestimonialsSupabase();
   }),
-  
+
   partners: publicProcedure.query(async () => {
     return supabaseServices.getAllPartnersSupabase();
   }),
+
+  galleryAlbums: publicProcedure.query(async () => {
+    return galleryServices.listGalleryAlbums(true);
+  }),
+
+  galleryPhotos: publicProcedure
+    .input(
+      z
+        .object({
+          album: z.string().optional(),
+          tag: z.string().optional(),
+          page: z.number().int().min(1).default(1),
+          pageSize: z.number().int().min(1).max(50).default(18),
+          sort: z.enum(["recent", "oldest", "featured"]).default("recent"),
+        })
+        .optional()
+    )
+    .query(async ({ input }) => {
+      const client = getSupabaseAdminClient();
+      if (!client)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+      const page = input?.page ?? 1;
+      const pageSize = input?.pageSize ?? 18;
+      const start = (page - 1) * pageSize;
+      const end = start + pageSize - 1;
+
+      let query = client
+        .from("gallery_photos")
+        .select("*, gallery_albums(name, slug)", { count: "exact" })
+        .eq("status", "published");
+      if (input?.album) {
+        if (input.album.includes("-")) {
+          const { data: album } = await client
+            .from("gallery_albums")
+            .select("id")
+            .eq("slug", input.album)
+            .maybeSingle();
+          if (album?.id) query = query.eq("album_id", album.id);
+        } else {
+          query = query.eq("album_id", input.album);
+        }
+      }
+      if (input?.tag) query = query.contains("tags", [input.tag]);
+
+      const sort = input?.sort ?? "recent";
+      if (sort === "featured") {
+        query = query
+          .order("is_featured", { ascending: false })
+          .order("event_date", { ascending: false, nullsFirst: false })
+          .order("created_at", { ascending: false });
+      } else if (sort === "oldest") {
+        query = query
+          .order("event_date", { ascending: true, nullsFirst: false })
+          .order("created_at", { ascending: true });
+      } else {
+        query = query
+          .order("event_date", { ascending: false, nullsFirst: false })
+          .order("created_at", { ascending: false });
+      }
+
+      const { data, error, count } = await query.range(start, end);
+      if (error)
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      return { items: data ?? [], total: count ?? 0, page, pageSize };
+    }),
 });
 
 // ============================================
@@ -1374,44 +2194,52 @@ const publicRouter = router({
 
 const uploadRouter = router({
   image: adminProcedure
-    .input(z.object({
-      fileName: z.string(),
-      fileType: z.string(),
-      fileData: z.string(), // Base64 encoded
-      folder: z.string().default('goodies'),
-    }))
+    .input(
+      z.object({
+        fileName: z.string(),
+        fileType: z.string(),
+        fileData: z.string(), // Base64 encoded
+        folder: z.string().default("goodies"),
+      })
+    )
     .mutation(async ({ input }) => {
       const supabase = getSupabaseAdminClient();
       if (!supabase) {
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
       }
 
       // Extract base64 data
-      const base64Data = input.fileData.replace(/^data:image\/\w+;base64,/, '');
-      const buffer = Buffer.from(base64Data, 'base64');
+      const base64Data = input.fileData.replace(/^data:image\/\w+;base64,/, "");
+      const buffer = Buffer.from(base64Data, "base64");
 
       // Generate unique filename
       const timestamp = Date.now();
       const randomId = Math.random().toString(36).substring(2, 8);
-      const extension = input.fileName.split('.').pop() || 'png';
+      const extension = input.fileName.split(".").pop() || "png";
       const uniqueFileName = `${input.folder}/${timestamp}-${randomId}.${extension}`;
 
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage
-        .from('images')
+        .from("images")
         .upload(uniqueFileName, buffer, {
           contentType: input.fileType,
           upsert: false,
         });
 
       if (error) {
-        console.error('[Upload] Supabase Storage error:', error);
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Erreur lors de l\'upload: ' + error.message });
+        console.error("[Upload] Supabase Storage error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Erreur lors de l'upload: " + error.message,
+        });
       }
 
       // Get public URL
       const { data: urlData } = supabase.storage
-        .from('images')
+        .from("images")
         .getPublicUrl(uniqueFileName);
 
       return {
@@ -1431,253 +2259,342 @@ const restaurantsRouter = router({
     .query(async ({ input }) => {
       return reservationServices.getAllRestaurantsSupabase(input?.activeOnly);
     }),
-  
+
   getById: publicProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return reservationServices.getRestaurantByIdSupabase(input.id);
     }),
-  
+
   create: superAdminProcedure
-    .input(z.object({
-      name: z.string().min(1),
-      address: z.string().min(1),
-      phone: z.string().optional(),
-      description: z.string().optional(),
-      capacity: z.number().min(1).max(50).default(50),
-      active: z.boolean().default(true),
-    }))
+    .input(
+      z.object({
+        name: z.string().min(1),
+        address: z.string().min(1),
+        phone: z.string().optional(),
+        description: z.string().optional(),
+        capacity: z.number().min(1).max(50).default(50),
+        active: z.boolean().default(true),
+      })
+    )
     .mutation(async ({ input }) => {
       return reservationServices.createRestaurantSupabase(input);
     }),
-  
+
   update: superAdminProcedure
-    .input(z.object({
-      id: z.number(),
-      name: z.string().optional(),
-      address: z.string().optional(),
-      phone: z.string().optional(),
-      description: z.string().optional(),
-      capacity: z.number().max(50).optional(),
-      active: z.boolean().optional(),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        address: z.string().optional(),
+        phone: z.string().optional(),
+        description: z.string().optional(),
+        capacity: z.number().max(50).optional(),
+        active: z.boolean().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const { id, ...updates } = input;
       await reservationServices.updateRestaurantSupabase(id, updates);
       return { success: true };
     }),
-  
+
   delete: superAdminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       await reservationServices.deleteRestaurantSupabase(input.id);
       return { success: true };
     }),
-  
+
   getSlots: publicProcedure
-    .input(z.object({
-      restaurantId: z.number(),
-      date: z.string(),
-    }))
+    .input(
+      z.object({
+        restaurantId: z.number(),
+        date: z.string(),
+      })
+    )
     .query(async ({ input }) => {
-      return reservationServices.getSlotsByRestaurantAndDateSupabase(input.restaurantId, input.date);
+      return reservationServices.getSlotsByRestaurantAndDateSupabase(
+        input.restaurantId,
+        input.date
+      );
     }),
-  
+
   createSlot: superAdminProcedure
-    .input(z.object({
-      restaurantId: z.number(),
-      date: z.string(),
-      startTime: z.string().optional(),
-      endTime: z.string().optional(),
-      capacity: z.number().min(1),
-    }))
+    .input(
+      z.object({
+        restaurantId: z.number(),
+        date: z.string(),
+        startTime: z.string().optional(),
+        endTime: z.string().optional(),
+        capacity: z.number().min(1),
+      })
+    )
     .mutation(async ({ input }) => {
       return reservationServices.createRestaurantSlotSupabase(input);
     }),
-  
+
   updateSlot: superAdminProcedure
-    .input(z.object({
-      id: z.number(),
-      date: z.string().optional(),
-      startTime: z.string().optional(),
-      endTime: z.string().optional(),
-      capacity: z.number().optional(),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        date: z.string().optional(),
+        startTime: z.string().optional(),
+        endTime: z.string().optional(),
+        capacity: z.number().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const { id, ...updates } = input;
       await reservationServices.updateSlotSupabase(id, updates);
       return { success: true };
     }),
-  
+
   deleteSlot: superAdminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       await reservationServices.deleteSlotSupabase(input.id);
       return { success: true };
     }),
-  
+
   getCapacityStats: publicProcedure
-    .input(z.object({
-      restaurantId: z.number(),
-      date: z.string(),
-    }))
+    .input(
+      z.object({
+        restaurantId: z.number(),
+        date: z.string(),
+      })
+    )
     .query(async ({ input }) => {
-      return reservationServices.getCapacityStatsSupabase(input.restaurantId, input.date);
+      return reservationServices.getCapacityStatsSupabase(
+        input.restaurantId,
+        input.date
+      );
     }),
 });
 
 const reservationsRouter = router({
   create: publicProcedure
-    .input(z.object({
-      restaurantId: z.number(),
-      date: z.string(),
-      slotId: z.number().optional(),
-      fullName: z.string().min(1),
-      phone: z.string().min(1),
-      email: z.union([
-        z.string().trim().transform(val => val === '' ? undefined : val).pipe(z.string().email()),
-        z.literal('').transform(() => undefined),
-      ]).optional(),
-      seats: z.number().min(1).max(20),
-      notes: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        restaurantId: z.number(),
+        date: z.string(),
+        slotId: z.number().optional(),
+        fullName: z.string().min(1),
+        phone: z.string().min(1),
+        email: z
+          .union([
+            z
+              .string()
+              .trim()
+              .transform(val => (val === "" ? undefined : val))
+              .pipe(z.string().email()),
+            z.literal("").transform(() => undefined),
+          ])
+          .optional(),
+        seats: z.number().min(1).max(20),
+        notes: z.string().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       try {
-        const reservation = await reservationServices.createReservationSupabase(input);
-        
+        const reservation =
+          await reservationServices.createReservationSupabase(input);
+
         // Fetch restaurant details for the response (will be added to response)
         // Restaurant details are now included in the response via the mutation return
-        
+
         // Send confirmation email if email provided
         if (reservation.email) {
           try {
-            const { html, subject } = generateReservationConfirmationEmail(reservation);
+            const { html, subject } =
+              generateReservationConfirmationEmail(reservation);
             await sendEmail({
               to: reservation.email,
               subject,
               html,
-              bcc: ['contact@ftourbabrayan.ma'],
+              bcc: ["contact@ftourbabrayan.ma"],
             });
           } catch (emailError) {
-            console.error('[Reservation] Email error:', emailError);
+            console.error("[Reservation] Email error:", emailError);
           }
         }
-        
+
         return reservation;
       } catch (error: any) {
-        throw new TRPCError({ 
-          code: 'BAD_REQUEST', 
-          message: error.message || 'Erreur lors de la création de la réservation' 
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            error.message || "Erreur lors de la création de la réservation",
         });
       }
     }),
-  
+
   getByReference: publicProcedure
     .input(z.object({ referenceCode: z.string() }))
     .query(async ({ input }) => {
-      return reservationServices.getReservationByReferenceSupabase(input.referenceCode);
+      return reservationServices.getReservationByReferenceSupabase(
+        input.referenceCode
+      );
     }),
-  
+
   getByQrToken: publicProcedure
     .input(z.object({ qrToken: z.string() }))
     .query(async ({ input }) => {
       return reservationServices.getReservationByQrTokenSupabase(input.qrToken);
     }),
-  
+
   getAvailableSeats: publicProcedure
-    .input(z.object({
-      restaurantId: z.number(),
-      date: z.string(),
-      slotId: z.number().optional(),
-    }))
+    .input(
+      z.object({
+        restaurantId: z.number(),
+        date: z.string(),
+        slotId: z.number().optional(),
+      })
+    )
     .query(async ({ input }) => {
-      return reservationServices.getAvailableSeatsSupabase(input.restaurantId, input.date, input.slotId);
+      return reservationServices.getAvailableSeatsSupabase(
+        input.restaurantId,
+        input.date,
+        input.slotId
+      );
     }),
-  
+
   list: adminProcedure
-    .input(z.object({
-      restaurantId: z.number().optional(),
-      date: z.string().optional(),
-      status: z.enum(['pending', 'confirmed', 'cancelled', 'no_show', 'checked_in']).optional(),
-      slotId: z.number().optional(),
-    }).optional())
+    .input(
+      z
+        .object({
+          restaurantId: z.number().optional(),
+          date: z.string().optional(),
+          status: z
+            .enum([
+              "pending",
+              "confirmed",
+              "cancelled",
+              "no_show",
+              "checked_in",
+            ])
+            .optional(),
+          slotId: z.number().optional(),
+        })
+        .optional()
+    )
     .query(async ({ input }) => {
       return reservationServices.getAllReservationsSupabase(input);
     }),
-  
+
   updateStatus: adminProcedure
-    .input(z.object({
-      id: z.number(),
-      status: z.enum(['pending', 'confirmed', 'cancelled', 'no_show', 'checked_in']),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        status: z.enum([
+          "pending",
+          "confirmed",
+          "cancelled",
+          "no_show",
+          "checked_in",
+        ]),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       await reservationServices.updateReservationStatusSupabase(
-        input.id, 
+        input.id,
         input.status,
-        ctx.user?.name || ctx.user?.email || 'Admin'
+        ctx.user?.name || ctx.user?.email || "Admin"
       );
       return { success: true };
     }),
-  
+
   cancel: publicProcedure
     .input(z.object({ referenceCode: z.string() }))
     .mutation(async ({ input }) => {
-      const reservation = await reservationServices.getReservationByReferenceSupabase(input.referenceCode);
+      const reservation =
+        await reservationServices.getReservationByReferenceSupabase(
+          input.referenceCode
+        );
       if (!reservation) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Réservation non trouvée' });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Réservation non trouvée",
+        });
       }
       await reservationServices.cancelReservationSupabase(reservation.id);
       return { success: true };
     }),
-  
+
   checkin: scannerProcedure
-    .input(z.object({
-      qrToken: z.string().optional(),
-      referenceCode: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        qrToken: z.string().optional(),
+        referenceCode: z.string().optional(),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       let reservation;
-      
+
       if (input.qrToken) {
-        reservation = await reservationServices.getReservationByQrTokenSupabase(input.qrToken);
+        reservation = await reservationServices.getReservationByQrTokenSupabase(
+          input.qrToken
+        );
       } else if (input.referenceCode) {
-        reservation = await reservationServices.getReservationByReferenceSupabase(input.referenceCode);
+        reservation =
+          await reservationServices.getReservationByReferenceSupabase(
+            input.referenceCode
+          );
       }
-      
+
       if (!reservation) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Réservation non trouvée' });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Réservation non trouvée",
+        });
       }
-      
+
       try {
         const checkin = await reservationServices.createCheckinSupabase({
           reservationId: reservation.id,
-          validationMode: input.qrToken ? 'scan' : 'manual',
-          validatedBy: ctx.user?.name || ctx.user?.email || 'Scanner',
+          validationMode: input.qrToken ? "scan" : "manual",
+          validatedBy: ctx.user?.name || ctx.user?.email || "Scanner",
         });
         return checkin;
       } catch (error: any) {
-        throw new TRPCError({ 
-          code: 'BAD_REQUEST', 
-          message: error.message || 'Erreur lors du check-in' 
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: error.message || "Erreur lors du check-in",
         });
       }
     }),
-  
+
   exportCSV: adminProcedure
-    .input(z.object({
-      restaurantId: z.number().optional(),
-      date: z.string().optional(),
-      status: z.enum(['pending', 'confirmed', 'cancelled', 'no_show', 'checked_in']).optional(),
-    }).optional())
+    .input(
+      z
+        .object({
+          restaurantId: z.number().optional(),
+          date: z.string().optional(),
+          status: z
+            .enum([
+              "pending",
+              "confirmed",
+              "cancelled",
+              "no_show",
+              "checked_in",
+            ])
+            .optional(),
+        })
+        .optional()
+    )
     .query(async ({ input }) => {
       return reservationServices.exportReservationsCSVSupabase(input);
     }),
-  
+
   getStats: adminProcedure
-    .input(z.object({
-      restaurantId: z.number().optional(),
-      date: z.string().optional(),
-    }).optional())
+    .input(
+      z
+        .object({
+          restaurantId: z.number().optional(),
+          date: z.string().optional(),
+        })
+        .optional()
+    )
     .query(async ({ input }) => {
       return reservationServices.getReservationStatsSupabase(input);
     }),
@@ -1685,9 +2602,9 @@ const reservationsRouter = router({
 
 // Helper function for reservation confirmation email
 function generateReservationConfirmationEmail(reservation: any) {
-  const baseUrl = process.env.VITE_APP_URL || 'https://ftourbabrayan.ma';
+  const baseUrl = process.env.VITE_APP_URL || "https://ftourbabrayan.ma";
   const qrUrl = `${baseUrl}/checkin-reservation/${reservation.qrToken}`;
-  
+
   const html = `
 <!DOCTYPE html>
 <html lang="fr">
@@ -1725,7 +2642,7 @@ function generateReservationConfirmationEmail(reservation: any) {
           </tr>
           <tr>
             <td style="padding: 8px 0; color: #666;">Restaurant:</td>
-            <td style="padding: 8px 0; color: #333;">${reservation.restaurant?.name || 'Non spécifié'}</td>
+            <td style="padding: 8px 0; color: #333;">${reservation.restaurant?.name || "Non spécifié"}</td>
           </tr>
           <tr>
             <td style="padding: 8px 0; color: #666;">Nombre de places:</td>
@@ -1745,7 +2662,7 @@ function generateReservationConfirmationEmail(reservation: any) {
       <!-- Address -->
       <div style="background-color: #5d5a3c; color: #f5f5dc; border-radius: 8px; padding: 20px; margin: 20px 0;">
         <h3 style="margin-top: 0;">📍 Adresse</h3>
-        <p style="margin: 0;">${reservation.restaurant?.address || '4 rue Bayt Lahm, quartier Palmier, Casablanca'}</p>
+        <p style="margin: 0;">${reservation.restaurant?.address || "4 rue Bayt Lahm, quartier Palmier, Casablanca"}</p>
       </div>
       
       <!-- Important Notes -->
@@ -1770,7 +2687,7 @@ function generateReservationConfirmationEmail(reservation: any) {
 </body>
 </html>
   `;
-  
+
   return {
     html,
     subject: `✅ Réservation confirmée - ${reservation.referenceCode} - Ftour Bab Rayan`,
@@ -1796,297 +2713,567 @@ function mapRestaurantReservation(r: any) {
     groupType: r.group_type ?? r.groupType ?? null,
     displayChoice: r.display_choice ?? r.displayChoice ?? null,
     status: r.status,
-    paymentStatus: r.payment_status ?? r.paymentStatus ?? 'not_requested',
+    paymentStatus: r.payment_status ?? r.paymentStatus ?? "not_requested",
     paymentAmount: r.payment_amount ?? r.paymentAmount ?? null,
     paymentProvider: r.payment_provider ?? r.paymentProvider ?? null,
     paymentReference: r.payment_reference ?? r.paymentReference ?? null,
     qrToken: r.qr_token ?? r.qrToken ?? null,
-    qrStatus: r.qr_status ?? r.qrStatus ?? 'inactive',
-    expiresAt: r.expires_at ? new Date(r.expires_at) : r.expiresAt ? new Date(r.expiresAt) : null,
+    qrStatus: r.qr_status ?? r.qrStatus ?? "inactive",
+    expiresAt: r.expires_at
+      ? new Date(r.expires_at)
+      : r.expiresAt
+        ? new Date(r.expiresAt)
+        : null,
     processedBy: r.processed_by ?? r.processedBy ?? null,
-    processedAt: r.processed_at ? new Date(r.processed_at) : r.processedAt ? new Date(r.processedAt) : null,
+    processedAt: r.processed_at
+      ? new Date(r.processed_at)
+      : r.processedAt
+        ? new Date(r.processedAt)
+        : null,
     notes: r.notes,
-    createdAt: r.created_at ? new Date(r.created_at) : r.createdAt ? new Date(r.createdAt) : new Date(),
-    updatedAt: r.updated_at ? new Date(r.updated_at) : r.updatedAt ? new Date(r.updatedAt) : new Date(),
+    createdAt: r.created_at
+      ? new Date(r.created_at)
+      : r.createdAt
+        ? new Date(r.createdAt)
+        : new Date(),
+    updatedAt: r.updated_at
+      ? new Date(r.updated_at)
+      : r.updatedAt
+        ? new Date(r.updatedAt)
+        : new Date(),
   };
 }
 
 const restaurantModuleRouter = router({
   // --- Public: list available slots ---
   listSlots: publicProcedure
-    .input(z.object({
-      fromDate: z.string().optional(),
-      toDate: z.string().optional(),
-    }).optional())
+    .input(
+      z
+        .object({
+          fromDate: z.string().optional(),
+          toDate: z.string().optional(),
+        })
+        .optional()
+    )
     .query(async () => {
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
       const { data, error } = await supabase
-        .from('restaurant_slots')
-        .select('*')
-        .eq('is_closed', false)
-        .order('start_at', { ascending: true });
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        .from("restaurant_slots")
+        .select("*")
+        .eq("is_closed", false)
+        .order("start_at", { ascending: true });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return data || [];
     }),
 
   // --- Public: create reservation (particulier) ---
   createParticulier: publicProcedure
-    .input(z.object({
-      slotId: z.number(),
-      displayChoice: z.enum(['jardin', 'brasserie']),
-      seats: z.number().min(1).max(10),
-      name: z.string().min(1),
-      phone: z.string().min(1),
-      email: z.string().email().optional(),
-      notes: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        slotId: z.number(),
+        displayChoice: z.enum(["jardin", "brasserie"]),
+        seats: z.number().min(1).max(10),
+        name: z.string().min(1),
+        phone: z.string().min(1),
+        email: z.string().email().optional(),
+        notes: z.string().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       if (input.seats > 10) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Maximum 10 places par réservation particulier' });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Maximum 10 places par réservation particulier",
+        });
       }
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
 
       // Fetch slot and validate capacity
-      const { data: slot } = await supabase.from('restaurant_slots').select('*').eq('id', input.slotId).single();
-      if (!slot) throw new TRPCError({ code: 'NOT_FOUND', message: 'Créneau introuvable' });
-      if (slot.is_closed) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Créneau fermé' });
+      const { data: slot } = await supabase
+        .from("restaurant_slots")
+        .select("*")
+        .eq("id", input.slotId)
+        .single();
+      if (!slot)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Créneau introuvable",
+        });
+      if (slot.is_closed)
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Créneau fermé" });
 
       // Allocation: Particulier -> brasserie or jardin(jardin_libre->brasserie)
       const allocations: { bucket: string; seats: number }[] = [];
-      if (input.displayChoice === 'brasserie') {
+      if (input.displayChoice === "brasserie") {
         const remaining = slot.cap_brasserie - slot.booked_brasserie;
-        if (remaining < input.seats) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Capacité insuffisante en Brasserie' });
-        allocations.push({ bucket: 'brasserie', seats: input.seats });
+        if (remaining < input.seats)
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Capacité insuffisante en Brasserie",
+          });
+        allocations.push({ bucket: "brasserie", seats: input.seats });
       } else {
         // Jardin: jardin_libre first, then brasserie
         const remJardin = slot.cap_jardin_libre - slot.booked_jardin_libre;
         const remBrasserie = slot.cap_brasserie - slot.booked_brasserie;
         const inJardin = Math.min(input.seats, remJardin);
         const inBrasserie = input.seats - inJardin;
-        if (inBrasserie > remBrasserie) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Capacité insuffisante' });
-        if (inJardin > 0) allocations.push({ bucket: 'jardin_libre', seats: inJardin });
-        if (inBrasserie > 0) allocations.push({ bucket: 'brasserie', seats: inBrasserie });
+        if (inBrasserie > remBrasserie)
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Capacité insuffisante",
+          });
+        if (inJardin > 0)
+          allocations.push({ bucket: "jardin_libre", seats: inJardin });
+        if (inBrasserie > 0)
+          allocations.push({ bucket: "brasserie", seats: inBrasserie });
       }
       // Check global
       const remGlobal = slot.cap_jardin_global - slot.booked_jardin_global;
-      if (remGlobal < input.seats) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Capacité globale insuffisante' });
+      if (remGlobal < input.seats)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Capacité globale insuffisante",
+        });
 
       const reference = `RES-P-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
       const qrToken = `rp-${Date.now()}-${Math.random().toString(36).substring(2, 14)}`;
 
-      const { data, error } = await supabase.from('restaurant_reservations').insert({
-        reference, type: 'particulier',
-        seats_total: input.seats, name: input.name, phone: input.phone, email: input.email,
-        notes: input.notes, status: 'submitted', payment_status: 'pending', qr_token: qrToken, qr_status: 'inactive',
-      }).select().single();
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      const { data, error } = await supabase
+        .from("restaurant_reservations")
+        .insert({
+          reference,
+          type: "particulier",
+          seats_total: input.seats,
+          name: input.name,
+          phone: input.phone,
+          email: input.email,
+          notes: input.notes,
+          status: "submitted",
+          payment_status: "pending",
+          qr_token: qrToken,
+          qr_status: "inactive",
+        })
+        .select()
+        .single();
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
 
       // Create allocations
       for (const alloc of allocations) {
-        await supabase.from('restaurant_reservation_allocations').insert({ reservation_id: data.id, bucket: alloc.bucket, seats: alloc.seats });
+        await supabase.from("restaurant_reservation_allocations").insert({
+          reservation_id: data.id,
+          bucket: alloc.bucket,
+          seats: alloc.seats,
+        });
       }
       // Update slot counters
-      const updates: any = { booked_jardin_global: slot.booked_jardin_global + input.seats };
+      const updates: any = {
+        booked_jardin_global: slot.booked_jardin_global + input.seats,
+      };
       for (const alloc of allocations) {
-        if (alloc.bucket === 'brasserie') updates.booked_brasserie = slot.booked_brasserie + alloc.seats;
-        if (alloc.bucket === 'jardin_libre') updates.booked_jardin_libre = slot.booked_jardin_libre + alloc.seats;
+        if (alloc.bucket === "brasserie")
+          updates.booked_brasserie = slot.booked_brasserie + alloc.seats;
+        if (alloc.bucket === "jardin_libre")
+          updates.booked_jardin_libre = slot.booked_jardin_libre + alloc.seats;
       }
-      await supabase.from('restaurant_slots').update(updates).eq('id', input.slotId);
+      await supabase
+        .from("restaurant_slots")
+        .update(updates)
+        .eq("id", input.slotId);
 
       return data;
     }),
 
   // --- Public: create reservation (entreprise) ---
   createEntreprise: publicProcedure
-    .input(z.object({
-      slotId: z.number(),
-      displayChoice: z.enum(['jardin', 'corpo']),
-      seats: z.number().min(1).max(120),
-      companyName: z.string().min(1),
-      name: z.string().min(1),
-      phone: z.string().min(1),
-      email: z.string().email().optional(),
-      notes: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        slotId: z.number(),
+        displayChoice: z.enum(["jardin", "corpo"]),
+        seats: z.number().min(1).max(120),
+        companyName: z.string().min(1),
+        name: z.string().min(1),
+        phone: z.string().min(1),
+        email: z.string().email().optional(),
+        notes: z.string().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
 
-      const { data: slot } = await supabase.from('restaurant_slots').select('*').eq('id', input.slotId).single();
-      if (!slot) throw new TRPCError({ code: 'NOT_FOUND', message: 'Créneau introuvable' });
-      if (slot.is_closed) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Créneau fermé' });
+      const { data: slot } = await supabase
+        .from("restaurant_slots")
+        .select("*")
+        .eq("id", input.slotId)
+        .single();
+      if (!slot)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Créneau introuvable",
+        });
+      if (slot.is_closed)
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Créneau fermé" });
 
       // Allocation: Entreprise -> corpo or jardin(jardin_libre->corpo)
       const allocations: { bucket: string; seats: number }[] = [];
-      if (input.displayChoice === 'corpo') {
+      if (input.displayChoice === "corpo") {
         const remaining = slot.cap_corpo - slot.booked_corpo;
-        if (remaining < input.seats) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Capacité insuffisante en Corpo' });
-        allocations.push({ bucket: 'corpo', seats: input.seats });
+        if (remaining < input.seats)
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Capacité insuffisante en Corpo",
+          });
+        allocations.push({ bucket: "corpo", seats: input.seats });
       } else {
         const remJardin = slot.cap_jardin_libre - slot.booked_jardin_libre;
         const remCorpo = slot.cap_corpo - slot.booked_corpo;
         const inJardin = Math.min(input.seats, remJardin);
         const inCorpo = input.seats - inJardin;
-        if (inCorpo > remCorpo) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Capacité insuffisante' });
-        if (inJardin > 0) allocations.push({ bucket: 'jardin_libre', seats: inJardin });
-        if (inCorpo > 0) allocations.push({ bucket: 'corpo', seats: inCorpo });
+        if (inCorpo > remCorpo)
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Capacité insuffisante",
+          });
+        if (inJardin > 0)
+          allocations.push({ bucket: "jardin_libre", seats: inJardin });
+        if (inCorpo > 0) allocations.push({ bucket: "corpo", seats: inCorpo });
       }
       const remGlobal = slot.cap_jardin_global - slot.booked_jardin_global;
-      if (remGlobal < input.seats) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Capacité globale insuffisante' });
+      if (remGlobal < input.seats)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Capacité globale insuffisante",
+        });
 
       const reference = `RES-E-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
       const qrToken = `re-${Date.now()}-${Math.random().toString(36).substring(2, 14)}`;
 
-      const { data, error } = await supabase.from('restaurant_reservations').insert({
-        reference, type: 'entreprise',
-        seats_total: input.seats, name: input.name, phone: input.phone, email: input.email,
-        company_name: input.companyName, notes: input.notes,
-        status: 'pending_confirmation', payment_status: 'not_applicable', qr_token: qrToken, qr_status: 'inactive',
-      }).select().single();
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      const { data, error } = await supabase
+        .from("restaurant_reservations")
+        .insert({
+          reference,
+          type: "entreprise",
+          seats_total: input.seats,
+          name: input.name,
+          phone: input.phone,
+          email: input.email,
+          company_name: input.companyName,
+          notes: input.notes,
+          status: "pending_confirmation",
+          payment_status: "not_applicable",
+          qr_token: qrToken,
+          qr_status: "inactive",
+        })
+        .select()
+        .single();
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
 
       for (const alloc of allocations) {
-        await supabase.from('restaurant_reservation_allocations').insert({ reservation_id: data.id, bucket: alloc.bucket, seats: alloc.seats });
+        await supabase.from("restaurant_reservation_allocations").insert({
+          reservation_id: data.id,
+          bucket: alloc.bucket,
+          seats: alloc.seats,
+        });
       }
-      const updates: any = { booked_jardin_global: slot.booked_jardin_global + input.seats };
+      const updates: any = {
+        booked_jardin_global: slot.booked_jardin_global + input.seats,
+      };
       for (const alloc of allocations) {
-        if (alloc.bucket === 'corpo') updates.booked_corpo = slot.booked_corpo + alloc.seats;
-        if (alloc.bucket === 'jardin_libre') updates.booked_jardin_libre = slot.booked_jardin_libre + alloc.seats;
+        if (alloc.bucket === "corpo")
+          updates.booked_corpo = slot.booked_corpo + alloc.seats;
+        if (alloc.bucket === "jardin_libre")
+          updates.booked_jardin_libre = slot.booked_jardin_libre + alloc.seats;
       }
-      await supabase.from('restaurant_slots').update(updates).eq('id', input.slotId);
+      await supabase
+        .from("restaurant_slots")
+        .update(updates)
+        .eq("id", input.slotId);
 
       return data;
     }),
 
   // --- Public: create reservation (groupe) ---
   createGroupe: publicProcedure
-    .input(z.object({
-      slotId: z.number(),
-      displayChoice: z.enum(['jardin', 'brasserie']),
-      seats: z.number().min(1).max(120),
-      groupName: z.string().min(1),
-      groupType: z.string().optional(),
-      name: z.string().min(1),
-      phone: z.string().min(1),
-      email: z.string().email().optional(),
-      notes: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        slotId: z.number(),
+        displayChoice: z.enum(["jardin", "brasserie"]),
+        seats: z.number().min(1).max(120),
+        groupName: z.string().min(1),
+        groupType: z.string().optional(),
+        name: z.string().min(1),
+        phone: z.string().min(1),
+        email: z.string().email().optional(),
+        notes: z.string().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
 
-      const { data: slot } = await supabase.from('restaurant_slots').select('*').eq('id', input.slotId).single();
-      if (!slot) throw new TRPCError({ code: 'NOT_FOUND', message: 'Créneau introuvable' });
-      if (slot.is_closed) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Créneau fermé' });
+      const { data: slot } = await supabase
+        .from("restaurant_slots")
+        .select("*")
+        .eq("id", input.slotId)
+        .single();
+      if (!slot)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Créneau introuvable",
+        });
+      if (slot.is_closed)
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Créneau fermé" });
 
       // Allocation: Groupe -> brasserie or jardin(jardin_libre->brasserie)
       const allocations: { bucket: string; seats: number }[] = [];
-      if (input.displayChoice === 'brasserie') {
+      if (input.displayChoice === "brasserie") {
         const remaining = slot.cap_brasserie - slot.booked_brasserie;
-        if (remaining < input.seats) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Capacité insuffisante en Brasserie' });
-        allocations.push({ bucket: 'brasserie', seats: input.seats });
+        if (remaining < input.seats)
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Capacité insuffisante en Brasserie",
+          });
+        allocations.push({ bucket: "brasserie", seats: input.seats });
       } else {
         const remJardin = slot.cap_jardin_libre - slot.booked_jardin_libre;
         const remBrasserie = slot.cap_brasserie - slot.booked_brasserie;
         const inJardin = Math.min(input.seats, remJardin);
         const inBrasserie = input.seats - inJardin;
-        if (inBrasserie > remBrasserie) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Capacité insuffisante' });
-        if (inJardin > 0) allocations.push({ bucket: 'jardin_libre', seats: inJardin });
-        if (inBrasserie > 0) allocations.push({ bucket: 'brasserie', seats: inBrasserie });
+        if (inBrasserie > remBrasserie)
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Capacité insuffisante",
+          });
+        if (inJardin > 0)
+          allocations.push({ bucket: "jardin_libre", seats: inJardin });
+        if (inBrasserie > 0)
+          allocations.push({ bucket: "brasserie", seats: inBrasserie });
       }
       const remGlobal = slot.cap_jardin_global - slot.booked_jardin_global;
-      if (remGlobal < input.seats) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Capacité globale insuffisante' });
+      if (remGlobal < input.seats)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Capacité globale insuffisante",
+        });
 
       const reference = `RES-G-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
       const qrToken = `rg-${Date.now()}-${Math.random().toString(36).substring(2, 14)}`;
 
-      const { data, error } = await supabase.from('restaurant_reservations').insert({
-        reference, type: 'groupe',
-        seats_total: input.seats, name: input.name, phone: input.phone, email: input.email,
-        group_name: input.groupName, group_type: input.groupType, notes: input.notes,
-        status: 'pending_confirmation', payment_status: 'not_applicable', qr_token: qrToken, qr_status: 'inactive',
-      }).select().single();
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      const { data, error } = await supabase
+        .from("restaurant_reservations")
+        .insert({
+          reference,
+          type: "groupe",
+          seats_total: input.seats,
+          name: input.name,
+          phone: input.phone,
+          email: input.email,
+          group_name: input.groupName,
+          group_type: input.groupType,
+          notes: input.notes,
+          status: "pending_confirmation",
+          payment_status: "not_applicable",
+          qr_token: qrToken,
+          qr_status: "inactive",
+        })
+        .select()
+        .single();
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
 
       for (const alloc of allocations) {
-        await supabase.from('restaurant_reservation_allocations').insert({ reservation_id: data.id, bucket: alloc.bucket, seats: alloc.seats });
+        await supabase.from("restaurant_reservation_allocations").insert({
+          reservation_id: data.id,
+          bucket: alloc.bucket,
+          seats: alloc.seats,
+        });
       }
-      const updates: any = { booked_jardin_global: slot.booked_jardin_global + input.seats };
+      const updates: any = {
+        booked_jardin_global: slot.booked_jardin_global + input.seats,
+      };
       for (const alloc of allocations) {
-        if (alloc.bucket === 'brasserie') updates.booked_brasserie = slot.booked_brasserie + alloc.seats;
-        if (alloc.bucket === 'jardin_libre') updates.booked_jardin_libre = slot.booked_jardin_libre + alloc.seats;
+        if (alloc.bucket === "brasserie")
+          updates.booked_brasserie = slot.booked_brasserie + alloc.seats;
+        if (alloc.bucket === "jardin_libre")
+          updates.booked_jardin_libre = slot.booked_jardin_libre + alloc.seats;
       }
-      await supabase.from('restaurant_slots').update(updates).eq('id', input.slotId);
+      await supabase
+        .from("restaurant_slots")
+        .update(updates)
+        .eq("id", input.slotId);
 
       return data;
     }),
 
   // --- Admin: list reservations by type ---
   adminListParticuliers: adminRestaurantProcedure
-    .input(z.object({
-      status: z.string().optional(),
-      fromDate: z.string().optional(),
-      toDate: z.string().optional(),
-      search: z.string().optional(),
-    }).optional())
+    .input(
+      z
+        .object({
+          status: z.string().optional(),
+          fromDate: z.string().optional(),
+          toDate: z.string().optional(),
+          search: z.string().optional(),
+        })
+        .optional()
+    )
     .query(async ({ input }) => {
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
-      let query = supabase.from('restaurant_reservations').select('*').eq('type', 'particulier').order('created_at', { ascending: false });
-      if (input?.status) query = query.eq('status', input.status);
-      if (input?.search) query = query.or(`name.ilike.%${input.search}%,phone.ilike.%${input.search}%,reference.ilike.%${input.search}%`);
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+      let query = supabase
+        .from("restaurant_reservations")
+        .select("*")
+        .eq("type", "particulier")
+        .order("created_at", { ascending: false });
+      if (input?.status) query = query.eq("status", input.status);
+      if (input?.search)
+        query = query.or(
+          `name.ilike.%${input.search}%,phone.ilike.%${input.search}%,reference.ilike.%${input.search}%`
+        );
       const { data, error } = await query;
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return (data || []).map(mapRestaurantReservation);
     }),
 
   adminListEntreprises: adminRestaurantProcedure
-    .input(z.object({
-      status: z.string().optional(),
-      fromDate: z.string().optional(),
-      toDate: z.string().optional(),
-      search: z.string().optional(),
-    }).optional())
+    .input(
+      z
+        .object({
+          status: z.string().optional(),
+          fromDate: z.string().optional(),
+          toDate: z.string().optional(),
+          search: z.string().optional(),
+        })
+        .optional()
+    )
     .query(async ({ input }) => {
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
-      let query = supabase.from('restaurant_reservations').select('*').eq('type', 'entreprise').order('created_at', { ascending: false });
-      if (input?.status) query = query.eq('status', input.status);
-      if (input?.search) query = query.or(`name.ilike.%${input.search}%,company_name.ilike.%${input.search}%,reference.ilike.%${input.search}%`);
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+      let query = supabase
+        .from("restaurant_reservations")
+        .select("*")
+        .eq("type", "entreprise")
+        .order("created_at", { ascending: false });
+      if (input?.status) query = query.eq("status", input.status);
+      if (input?.search)
+        query = query.or(
+          `name.ilike.%${input.search}%,company_name.ilike.%${input.search}%,reference.ilike.%${input.search}%`
+        );
       const { data, error } = await query;
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return (data || []).map(mapRestaurantReservation);
     }),
 
   adminListGroupes: adminRestaurantProcedure
-    .input(z.object({
-      status: z.string().optional(),
-      fromDate: z.string().optional(),
-      toDate: z.string().optional(),
-      search: z.string().optional(),
-    }).optional())
+    .input(
+      z
+        .object({
+          status: z.string().optional(),
+          fromDate: z.string().optional(),
+          toDate: z.string().optional(),
+          search: z.string().optional(),
+        })
+        .optional()
+    )
     .query(async ({ input }) => {
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
-      let query = supabase.from('restaurant_reservations').select('*').eq('type', 'groupe').order('created_at', { ascending: false });
-      if (input?.status) query = query.eq('status', input.status);
-      if (input?.search) query = query.or(`name.ilike.%${input.search}%,group_name.ilike.%${input.search}%,reference.ilike.%${input.search}%`);
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+      let query = supabase
+        .from("restaurant_reservations")
+        .select("*")
+        .eq("type", "groupe")
+        .order("created_at", { ascending: false });
+      if (input?.status) query = query.eq("status", input.status);
+      if (input?.search)
+        query = query.or(
+          `name.ilike.%${input.search}%,group_name.ilike.%${input.search}%,reference.ilike.%${input.search}%`
+        );
       const { data, error } = await query;
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return (data || []).map(mapRestaurantReservation);
     }),
 
   // --- Admin: update reservation status ---
   adminUpdateStatus: adminProcedure
-    .input(z.object({
-      id: z.number(),
-      status: z.enum(['submitted', 'pending_confirmation', 'confirmed', 'rejected', 'cancelled', 'completed', 'no_show']),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        status: z.enum([
+          "submitted",
+          "pending_confirmation",
+          "confirmed",
+          "rejected",
+          "cancelled",
+          "completed",
+          "no_show",
+        ]),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
 
       const updateData: any = {
         status: input.status,
@@ -2095,37 +3282,42 @@ const restaurantModuleRouter = router({
       };
 
       // Activate QR when confirmed
-      if (input.status === 'confirmed') {
-        updateData.qr_status = 'active';
+      if (input.status === "confirmed") {
+        updateData.qr_status = "active";
       }
       // Revoke QR when cancelled/rejected
-      if (input.status === 'cancelled' || input.status === 'rejected') {
-        updateData.qr_status = 'revoked';
+      if (input.status === "cancelled" || input.status === "rejected") {
+        updateData.qr_status = "revoked";
       }
 
       const { error } = await supabase
-        .from('restaurant_reservations')
+        .from("restaurant_reservations")
         .update(updateData)
-        .eq('id', input.id);
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        .eq("id", input.id);
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
 
       // Send confirmation email with QR code when reservation is confirmed
-      if (input.status === 'confirmed') {
+      if (input.status === "confirmed") {
         try {
           const { data: reservation } = await supabase
-            .from('restaurant_reservations')
-            .select('*')
-            .eq('id', input.id)
+            .from("restaurant_reservations")
+            .select("*")
+            .eq("id", input.id)
             .single();
 
           if (reservation?.email && reservation?.qr_token) {
-            const baseUrl = process.env.VITE_APP_URL || 'https://ftourbabrayan.ma';
+            const baseUrl =
+              process.env.VITE_APP_URL || "https://ftourbabrayan.ma";
             const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${baseUrl}/checkin-reservation/${reservation.qr_token}`)}`;
 
             const typeLabel: Record<string, string> = {
-              particulier: 'Particulier',
-              entreprise: 'Entreprise',
-              groupe: 'Groupe',
+              particulier: "Particulier",
+              entreprise: "Entreprise",
+              groupe: "Groupe",
             };
 
             const emailHtml = `
@@ -2149,8 +3341,8 @@ const restaurantModuleRouter = router({
               <h3 style="color:#5d5a3c;margin:0 0 15px 0;font-size:18px;">Détails de votre réservation</h3>
               <p style="margin:5px 0;color:#374151;"><strong>Type :</strong> ${typeLabel[reservation.type] || reservation.type}</p>
               <p style="margin:5px 0;color:#374151;"><strong>Nombre de places :</strong> ${reservation.seats_total}</p>
-              ${reservation.company_name ? `<p style="margin:5px 0;color:#374151;"><strong>Entreprise :</strong> ${reservation.company_name}</p>` : ''}
-              ${reservation.group_name ? `<p style="margin:5px 0;color:#374151;"><strong>Groupe :</strong> ${reservation.group_name}</p>` : ''}
+              ${reservation.company_name ? `<p style="margin:5px 0;color:#374151;"><strong>Entreprise :</strong> ${reservation.company_name}</p>` : ""}
+              ${reservation.group_name ? `<p style="margin:5px 0;color:#374151;"><strong>Groupe :</strong> ${reservation.group_name}</p>` : ""}
               <p style="margin:10px 0 0 0;color:#6b7280;font-size:14px;"><strong>Référence :</strong> ${reservation.reference}</p>
             </td></tr>
           </table>
@@ -2188,7 +3380,10 @@ const restaurantModuleRouter = router({
             });
           }
         } catch (emailError) {
-          console.error('[Restaurant Reservation] Confirmation email failed:', emailError);
+          console.error(
+            "[Restaurant Reservation] Confirmation email failed:",
+            emailError
+          );
         }
       }
 
@@ -2197,54 +3392,86 @@ const restaurantModuleRouter = router({
 
   // --- Admin: stats ---
   adminStats: adminProcedure
-    .input(z.object({
-      type: z.enum(['particulier', 'entreprise', 'groupe']).optional(),
-    }).optional())
+    .input(
+      z
+        .object({
+          type: z.enum(["particulier", "entreprise", "groupe"]).optional(),
+        })
+        .optional()
+    )
     .query(async ({ input }) => {
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
 
-      let query = supabase.from('restaurant_reservations').select('type, status, seats_total');
-      if (input?.type) query = query.eq('type', input.type);
+      let query = supabase
+        .from("restaurant_reservations")
+        .select("type, status, seats_total");
+      if (input?.type) query = query.eq("type", input.type);
       const { data, error } = await query;
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
 
       const reservations = data || [];
       return {
         total: reservations.length,
-        totalSeats: reservations.reduce((sum: number, r: any) => sum + (r.seats_total || 0), 0),
+        totalSeats: reservations.reduce(
+          (sum: number, r: any) => sum + (r.seats_total || 0),
+          0
+        ),
         byStatus: {
-          submitted: reservations.filter((r: any) => r.status === 'submitted').length,
-          pending_confirmation: reservations.filter((r: any) => r.status === 'pending_confirmation').length,
-          confirmed: reservations.filter((r: any) => r.status === 'confirmed').length,
-          rejected: reservations.filter((r: any) => r.status === 'rejected').length,
-          cancelled: reservations.filter((r: any) => r.status === 'cancelled').length,
-          completed: reservations.filter((r: any) => r.status === 'completed').length,
+          submitted: reservations.filter((r: any) => r.status === "submitted")
+            .length,
+          pending_confirmation: reservations.filter(
+            (r: any) => r.status === "pending_confirmation"
+          ).length,
+          confirmed: reservations.filter((r: any) => r.status === "confirmed")
+            .length,
+          rejected: reservations.filter((r: any) => r.status === "rejected")
+            .length,
+          cancelled: reservations.filter((r: any) => r.status === "cancelled")
+            .length,
+          completed: reservations.filter((r: any) => r.status === "completed")
+            .length,
         },
         byType: {
-          particulier: reservations.filter((r: any) => r.type === 'particulier').length,
-          entreprise: reservations.filter((r: any) => r.type === 'entreprise').length,
-          groupe: reservations.filter((r: any) => r.type === 'groupe').length,
+          particulier: reservations.filter((r: any) => r.type === "particulier")
+            .length,
+          entreprise: reservations.filter((r: any) => r.type === "entreprise")
+            .length,
+          groupe: reservations.filter((r: any) => r.type === "groupe").length,
         },
       };
     }),
 
   // --- Admin: manage slots ---
   adminCreateSlot: superAdminProcedure
-    .input(z.object({
-      startAt: z.string(),
-      endAt: z.string(),
-      capJardinGlobal: z.number().default(120),
-      capBrasserie: z.number().default(50),
-      capCorpo: z.number().default(50),
-      capJardinLibre: z.number().default(20),
-      notes: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        startAt: z.string(),
+        endAt: z.string(),
+        capJardinGlobal: z.number().default(120),
+        capBrasserie: z.number().default(50),
+        capCorpo: z.number().default(50),
+        capJardinLibre: z.number().default(20),
+        notes: z.string().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
       const { data, error } = await supabase
-        .from('restaurant_slots')
+        .from("restaurant_slots")
         .insert({
           start_at: input.startAt,
           end_at: input.endAt,
@@ -2256,18 +3483,30 @@ const restaurantModuleRouter = router({
         })
         .select()
         .single();
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return data;
     }),
 
   adminListSlots: adminProcedure.query(async () => {
     const supabase = getSupabaseAdminClient();
-    if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+    if (!supabase)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Supabase non configuré",
+      });
     const { data, error } = await supabase
-      .from('restaurant_slots')
-      .select('*')
-      .order('start_at', { ascending: true });
-    if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      .from("restaurant_slots")
+      .select("*")
+      .order("start_at", { ascending: true });
+    if (error)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      });
     return data || [];
   }),
 });
@@ -2280,86 +3519,130 @@ const terroirModuleRouter = router({
   // --- Public: list active products ---
   listProducts: publicProcedure.query(async () => {
     const supabase = getSupabaseAdminClient();
-    if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+    if (!supabase)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Supabase non configuré",
+      });
     const { data, error } = await supabase
-      .from('terroir_products')
-      .select('*, terroir_product_variants(*)')
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true });
-    if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      .from("terroir_products")
+      .select("*, terroir_product_variants(*)")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+    if (error)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      });
     return data || [];
   }),
 
   // --- Public: list pickup slots ---
   listPickupSlots: publicProcedure.query(async () => {
     const supabase = getSupabaseAdminClient();
-    if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+    if (!supabase)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Supabase non configuré",
+      });
     const { data, error } = await supabase
-      .from('terroir_pickup_slots')
-      .select('*')
-      .eq('is_closed', false)
-      .order('date', { ascending: true });
-    if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      .from("terroir_pickup_slots")
+      .select("*")
+      .eq("is_closed", false)
+      .order("date", { ascending: true });
+    if (error)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      });
     return data || [];
   }),
 
   // --- Public: create order ---
   createOrder: publicProcedure
-    .input(z.object({
-      customerName: z.string().min(2),
-      customerPhone: z.string().min(8),
-      customerEmail: z.string().email().optional(),
-      pickupSlotId: z.number().optional(),
-      notes: z.string().optional(),
-      items: z.array(z.object({
-        productId: z.number(),
-        variantId: z.number().optional(),
-        quantity: z.number().min(1),
-        unitPrice: z.number().min(0),
-      })).min(1),
-    }))
+    .input(
+      z.object({
+        customerName: z.string().min(2),
+        customerPhone: z.string().min(8),
+        customerEmail: z.string().email().optional(),
+        pickupSlotId: z.number().optional(),
+        notes: z.string().optional(),
+        items: z
+          .array(
+            z.object({
+              productId: z.number(),
+              variantId: z.number().optional(),
+              quantity: z.number().min(1),
+              unitPrice: z.number().min(0),
+            })
+          )
+          .min(1),
+      })
+    )
     .mutation(async ({ input }) => {
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
 
       // Validate stock for each item with a variant
       for (const item of input.items) {
         if (item.variantId) {
           const { data: variant } = await supabase
-            .from('terroir_product_variants')
-            .select('stock_total, stock_reserved')
-            .eq('id', item.variantId)
+            .from("terroir_product_variants")
+            .select("stock_total, stock_reserved")
+            .eq("id", item.variantId)
             .single();
-          if (!variant) throw new TRPCError({ code: 'NOT_FOUND', message: `Variante ${item.variantId} introuvable` });
+          if (!variant)
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: `Variante ${item.variantId} introuvable`,
+            });
           const available = variant.stock_total - variant.stock_reserved;
           if (available < item.quantity) {
-            throw new TRPCError({ code: 'BAD_REQUEST', message: `Stock insuffisant pour la variante ${item.variantId}` });
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Stock insuffisant pour la variante ${item.variantId}`,
+            });
           }
         }
       }
 
-      const totalAmount = input.items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
+      const totalAmount = input.items.reduce(
+        (sum, it) => sum + it.quantity * it.unitPrice,
+        0
+      );
       const reference = `TER-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
       const qrToken = `ter-${Date.now()}-${Math.random().toString(36).substring(2, 14)}`;
 
-      const { data: order, error } = await supabase.from('terroir_orders').insert({
-        order_reference: reference,
-        customer_name: input.customerName,
-        customer_phone: input.customerPhone,
-        customer_email: input.customerEmail,
-        pickup_slot_id: input.pickupSlotId,
-        total_amount: totalAmount,
-        status: 'created',
-        payment_status: 'pending',
-        qr_token: qrToken,
-        qr_status: 'inactive',
-        notes: input.notes,
-      }).select().single();
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      const { data: order, error } = await supabase
+        .from("terroir_orders")
+        .insert({
+          order_reference: reference,
+          customer_name: input.customerName,
+          customer_phone: input.customerPhone,
+          customer_email: input.customerEmail,
+          pickup_slot_id: input.pickupSlotId,
+          total_amount: totalAmount,
+          status: "created",
+          payment_status: "pending",
+          qr_token: qrToken,
+          qr_status: "inactive",
+          notes: input.notes,
+        })
+        .select()
+        .single();
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
 
       // Create order items and update stock
       for (const item of input.items) {
-        await supabase.from('terroir_order_items').insert({
+        await supabase.from("terroir_order_items").insert({
           order_id: order.id,
           product_id: item.productId,
           variant_id: item.variantId,
@@ -2371,14 +3654,17 @@ const terroirModuleRouter = router({
         // Increment stock_reserved on variant
         if (item.variantId) {
           const { data: variant } = await supabase
-            .from('terroir_product_variants')
-            .select('stock_reserved')
-            .eq('id', item.variantId)
+            .from("terroir_product_variants")
+            .select("stock_reserved")
+            .eq("id", item.variantId)
             .single();
           if (variant) {
-            await supabase.from('terroir_product_variants')
-              .update({ stock_reserved: variant.stock_reserved + item.quantity })
-              .eq('id', item.variantId);
+            await supabase
+              .from("terroir_product_variants")
+              .update({
+                stock_reserved: variant.stock_reserved + item.quantity,
+              })
+              .eq("id", item.variantId);
           }
         }
       }
@@ -2386,23 +3672,31 @@ const terroirModuleRouter = router({
       // Send confirmation email with QR code
       if (input.customerEmail) {
         try {
-          const baseUrl = process.env.VITE_APP_URL || 'https://ftourbabrayan.ma';
+          const baseUrl =
+            process.env.VITE_APP_URL || "https://ftourbabrayan.ma";
           const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${baseUrl}/qr/terroir/${reference}`)}`;
 
           // Fetch product names for the email
           const productNames: Record<number, string> = {};
           for (const item of input.items) {
-            const { data: product } = await supabase.from('terroir_products').select('name').eq('id', item.productId).single();
+            const { data: product } = await supabase
+              .from("terroir_products")
+              .select("name")
+              .eq("id", item.productId)
+              .single();
             if (product) productNames[item.productId] = product.name;
           }
 
-          const itemsHtml = input.items.map(item =>
-            `<tr>
+          const itemsHtml = input.items
+            .map(
+              item =>
+                `<tr>
               <td style="padding:8px;border-bottom:1px solid #e5e7eb;">${productNames[item.productId] || `Produit #${item.productId}`}</td>
               <td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td>
               <td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:right;">${item.unitPrice * item.quantity} MAD</td>
             </tr>`
-          ).join('');
+            )
+            .join("");
 
           const emailHtml = `
 <!DOCTYPE html>
@@ -2461,7 +3755,7 @@ const terroirModuleRouter = router({
             html: emailHtml,
           });
         } catch (emailError) {
-          console.error('[Terroir Order] Email send failed:', emailError);
+          console.error("[Terroir Order] Email send failed:", emailError);
         }
       }
 
@@ -2470,30 +3764,63 @@ const terroirModuleRouter = router({
 
   // --- Admin: list all orders ---
   adminListOrders: adminTerroirProcedure
-    .input(z.object({
-      status: z.string().optional(),
-      search: z.string().optional(),
-    }).optional())
+    .input(
+      z
+        .object({
+          status: z.string().optional(),
+          search: z.string().optional(),
+        })
+        .optional()
+    )
     .query(async ({ input }) => {
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
-      let query = supabase.from('terroir_orders').select('*, terroir_order_items(*, terroir_products(*), terroir_product_variants(*))').order('created_at', { ascending: false });
-      if (input?.status) query = query.eq('status', input.status);
-      if (input?.search) query = query.or(`customer_name.ilike.%${input.search}%,customer_phone.ilike.%${input.search}%,order_reference.ilike.%${input.search}%`);
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+      let query = supabase
+        .from("terroir_orders")
+        .select(
+          "*, terroir_order_items(*, terroir_products(*), terroir_product_variants(*))"
+        )
+        .order("created_at", { ascending: false });
+      if (input?.status) query = query.eq("status", input.status);
+      if (input?.search)
+        query = query.or(
+          `customer_name.ilike.%${input.search}%,customer_phone.ilike.%${input.search}%,order_reference.ilike.%${input.search}%`
+        );
       const { data, error } = await query;
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return data || [];
     }),
 
   // --- Admin: update order status ---
   adminUpdateOrderStatus: adminTerroirProcedure
-    .input(z.object({
-      id: z.number(),
-      status: z.enum(['created', 'paid', 'ready', 'picked_up', 'cancelled', 'no_show']),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        status: z.enum([
+          "created",
+          "paid",
+          "ready",
+          "picked_up",
+          "cancelled",
+          "no_show",
+        ]),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
 
       const updateData: any = {
         status: input.status,
@@ -2502,62 +3829,88 @@ const terroirModuleRouter = router({
       };
 
       // Activate QR when paid
-      if (input.status === 'paid') {
-        updateData.qr_status = 'active';
-        updateData.payment_status = 'paid';
+      if (input.status === "paid") {
+        updateData.qr_status = "active";
+        updateData.payment_status = "paid";
       }
       // Mark QR used when picked_up
-      if (input.status === 'picked_up') {
-        updateData.qr_status = 'used';
+      if (input.status === "picked_up") {
+        updateData.qr_status = "used";
       }
       // Revoke QR and release stock when cancelled
-      if (input.status === 'cancelled') {
-        updateData.qr_status = 'revoked';
+      if (input.status === "cancelled") {
+        updateData.qr_status = "revoked";
         // Release reserved stock
         const { data: orderItems } = await supabase
-          .from('terroir_order_items')
-          .select('variant_id, quantity')
-          .eq('order_id', input.id);
+          .from("terroir_order_items")
+          .select("variant_id, quantity")
+          .eq("order_id", input.id);
         if (orderItems) {
           for (const item of orderItems) {
             if (item.variant_id) {
               const { data: variant } = await supabase
-                .from('terroir_product_variants')
-                .select('stock_reserved')
-                .eq('id', item.variant_id)
+                .from("terroir_product_variants")
+                .select("stock_reserved")
+                .eq("id", item.variant_id)
                 .single();
               if (variant) {
-                await supabase.from('terroir_product_variants')
-                  .update({ stock_reserved: Math.max(0, variant.stock_reserved - item.quantity) })
-                  .eq('id', item.variant_id);
+                await supabase
+                  .from("terroir_product_variants")
+                  .update({
+                    stock_reserved: Math.max(
+                      0,
+                      variant.stock_reserved - item.quantity
+                    ),
+                  })
+                  .eq("id", item.variant_id);
               }
             }
           }
         }
       }
 
-      const { error } = await supabase.from('terroir_orders').update(updateData).eq('id', input.id);
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      const { error } = await supabase
+        .from("terroir_orders")
+        .update(updateData)
+        .eq("id", input.id);
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return { success: true };
     }),
 
   // --- Admin: stats ---
   adminStats: adminTerroirProcedure.query(async () => {
     const supabase = getSupabaseAdminClient();
-    if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
-    const { data, error } = await supabase.from('terroir_orders').select('status, total_amount');
-    if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+    if (!supabase)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Supabase non configuré",
+      });
+    const { data, error } = await supabase
+      .from("terroir_orders")
+      .select("status, total_amount");
+    if (error)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      });
     const orders = data || [];
     return {
       total: orders.length,
-      totalRevenue: orders.reduce((sum: number, o: any) => sum + parseFloat(o.total_amount || 0), 0),
+      totalRevenue: orders.reduce(
+        (sum: number, o: any) => sum + parseFloat(o.total_amount || 0),
+        0
+      ),
       byStatus: {
-        created: orders.filter((o: any) => o.status === 'created').length,
-        paid: orders.filter((o: any) => o.status === 'paid').length,
-        ready: orders.filter((o: any) => o.status === 'ready').length,
-        picked_up: orders.filter((o: any) => o.status === 'picked_up').length,
-        cancelled: orders.filter((o: any) => o.status === 'cancelled').length,
-        no_show: orders.filter((o: any) => o.status === 'no_show').length,
+        created: orders.filter((o: any) => o.status === "created").length,
+        paid: orders.filter((o: any) => o.status === "paid").length,
+        ready: orders.filter((o: any) => o.status === "ready").length,
+        picked_up: orders.filter((o: any) => o.status === "picked_up").length,
+        cancelled: orders.filter((o: any) => o.status === "cancelled").length,
+        no_show: orders.filter((o: any) => o.status === "no_show").length,
       },
     };
   }),
@@ -2565,143 +3918,234 @@ const terroirModuleRouter = router({
   // --- Admin: CRUD products ---
   adminListProducts: adminTerroirProcedure.query(async () => {
     const supabase = getSupabaseAdminClient();
-    if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+    if (!supabase)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Supabase non configuré",
+      });
     const { data, error } = await supabase
-      .from('terroir_products')
-      .select('*, terroir_product_variants(*)')
-      .order('sort_order', { ascending: true });
-    if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      .from("terroir_products")
+      .select("*, terroir_product_variants(*)")
+      .order("sort_order", { ascending: true });
+    if (error)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      });
     return data || [];
   }),
 
   adminCreateProduct: adminTerroirProcedure
-    .input(z.object({
-      name: z.string().min(2),
-      description: z.string().optional(),
-      category: z.string().optional(),
-      imageUrl: z.string().optional(),
-      isActive: z.boolean().default(true),
-      sortOrder: z.number().default(0),
-    }))
+    .input(
+      z.object({
+        name: z.string().min(2),
+        description: z.string().optional(),
+        category: z.string().optional(),
+        imageUrl: z.string().optional(),
+        isActive: z.boolean().default(true),
+        sortOrder: z.number().default(0),
+      })
+    )
     .mutation(async ({ input }) => {
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
-      const { data, error } = await supabase.from('terroir_products').insert({
-        name: input.name,
-        description: input.description,
-        category: input.category,
-        image_url: input.imageUrl,
-        is_active: input.isActive,
-        sort_order: input.sortOrder,
-      }).select().single();
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+      const { data, error } = await supabase
+        .from("terroir_products")
+        .insert({
+          name: input.name,
+          description: input.description,
+          category: input.category,
+          image_url: input.imageUrl,
+          is_active: input.isActive,
+          sort_order: input.sortOrder,
+        })
+        .select()
+        .single();
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return data;
     }),
 
   adminUpdateProduct: adminTerroirProcedure
-    .input(z.object({
-      id: z.number(),
-      name: z.string().min(2).optional(),
-      description: z.string().optional(),
-      category: z.string().optional(),
-      imageUrl: z.string().optional(),
-      isActive: z.boolean().optional(),
-      sortOrder: z.number().optional(),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().min(2).optional(),
+        description: z.string().optional(),
+        category: z.string().optional(),
+        imageUrl: z.string().optional(),
+        isActive: z.boolean().optional(),
+        sortOrder: z.number().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
       const { id, ...fields } = input;
       const updateData: any = {};
       if (fields.name !== undefined) updateData.name = fields.name;
-      if (fields.description !== undefined) updateData.description = fields.description;
+      if (fields.description !== undefined)
+        updateData.description = fields.description;
       if (fields.category !== undefined) updateData.category = fields.category;
       if (fields.imageUrl !== undefined) updateData.image_url = fields.imageUrl;
       if (fields.isActive !== undefined) updateData.is_active = fields.isActive;
-      if (fields.sortOrder !== undefined) updateData.sort_order = fields.sortOrder;
-      const { error } = await supabase.from('terroir_products').update(updateData).eq('id', id);
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      if (fields.sortOrder !== undefined)
+        updateData.sort_order = fields.sortOrder;
+      const { error } = await supabase
+        .from("terroir_products")
+        .update(updateData)
+        .eq("id", id);
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return { success: true };
     }),
 
   // --- Admin: CRUD variants ---
   adminCreateVariant: adminTerroirProcedure
-    .input(z.object({
-      productId: z.number(),
-      label: z.string().min(1),
-      sku: z.string().optional(),
-      priceUnit: z.number().min(0),
-      stockTotal: z.number().min(0).default(0),
-      isActive: z.boolean().default(true),
-    }))
+    .input(
+      z.object({
+        productId: z.number(),
+        label: z.string().min(1),
+        sku: z.string().optional(),
+        priceUnit: z.number().min(0),
+        stockTotal: z.number().min(0).default(0),
+        isActive: z.boolean().default(true),
+      })
+    )
     .mutation(async ({ input }) => {
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
-      const { data, error } = await supabase.from('terroir_product_variants').insert({
-        product_id: input.productId,
-        label: input.label,
-        sku: input.sku,
-        price_unit: input.priceUnit,
-        stock_total: input.stockTotal,
-        stock_reserved: 0,
-        is_active: input.isActive,
-      }).select().single();
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+      const { data, error } = await supabase
+        .from("terroir_product_variants")
+        .insert({
+          product_id: input.productId,
+          label: input.label,
+          sku: input.sku,
+          price_unit: input.priceUnit,
+          stock_total: input.stockTotal,
+          stock_reserved: 0,
+          is_active: input.isActive,
+        })
+        .select()
+        .single();
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return data;
     }),
 
   adminUpdateVariant: adminTerroirProcedure
-    .input(z.object({
-      id: z.number(),
-      label: z.string().optional(),
-      sku: z.string().optional(),
-      priceUnit: z.number().min(0).optional(),
-      stockTotal: z.number().min(0).optional(),
-      isActive: z.boolean().optional(),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        label: z.string().optional(),
+        sku: z.string().optional(),
+        priceUnit: z.number().min(0).optional(),
+        stockTotal: z.number().min(0).optional(),
+        isActive: z.boolean().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
       const { id, ...fields } = input;
       const updateData: any = {};
       if (fields.label !== undefined) updateData.label = fields.label;
       if (fields.sku !== undefined) updateData.sku = fields.sku;
-      if (fields.priceUnit !== undefined) updateData.price_unit = fields.priceUnit;
-      if (fields.stockTotal !== undefined) updateData.stock_total = fields.stockTotal;
+      if (fields.priceUnit !== undefined)
+        updateData.price_unit = fields.priceUnit;
+      if (fields.stockTotal !== undefined)
+        updateData.stock_total = fields.stockTotal;
       if (fields.isActive !== undefined) updateData.is_active = fields.isActive;
-      const { error } = await supabase.from('terroir_product_variants').update(updateData).eq('id', id);
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      const { error } = await supabase
+        .from("terroir_product_variants")
+        .update(updateData)
+        .eq("id", id);
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return { success: true };
     }),
 
   // --- Admin: manage pickup slots ---
   adminListPickupSlots: adminTerroirProcedure.query(async () => {
     const supabase = getSupabaseAdminClient();
-    if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
-    const { data, error } = await supabase.from('terroir_pickup_slots').select('*').order('date', { ascending: true });
-    if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+    if (!supabase)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Supabase non configuré",
+      });
+    const { data, error } = await supabase
+      .from("terroir_pickup_slots")
+      .select("*")
+      .order("date", { ascending: true });
+    if (error)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      });
     return data || [];
   }),
 
   adminCreatePickupSlot: adminTerroirProcedure
-    .input(z.object({
-      date: z.string(),
-      startTime: z.string().optional(),
-      endTime: z.string().optional(),
-      maxOrders: z.number().optional(),
-      notes: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        date: z.string(),
+        startTime: z.string().optional(),
+        endTime: z.string().optional(),
+        maxOrders: z.number().optional(),
+        notes: z.string().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
-      const { data, error } = await supabase.from('terroir_pickup_slots').insert({
-        date: input.date,
-        start_time: input.startTime,
-        end_time: input.endTime,
-        max_orders: input.maxOrders,
-        notes: input.notes,
-      }).select().single();
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+      const { data, error } = await supabase
+        .from("terroir_pickup_slots")
+        .insert({
+          date: input.date,
+          start_time: input.startTime,
+          end_time: input.endTime,
+          max_orders: input.maxOrders,
+          notes: input.notes,
+        })
+        .select()
+        .single();
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return data;
     }),
 });
@@ -2712,30 +4156,32 @@ const terroirModuleRouter = router({
 
 const paymentsRouter = router({
   create: publicProcedure
-    .input(z.object({
-      userName: z.string().min(1),
-      email: z.string().email(),
-      phone: z.string().min(1),
-      amount: z.number().positive(),
-      currency: z.string().optional().default('MAD'),
-      paymentMethod: z.enum(['bank_transfer', 'cheque', 'cash', 'paypal']),
-      description: z.string().optional(),
-      relatedEntityType: z.string().optional(),
-      relatedEntityId: z.string().optional(),
-      metadata: z.record(z.string(), z.any()).optional(),
-    }))
+    .input(
+      z.object({
+        userName: z.string().min(1),
+        email: z.string().email(),
+        phone: z.string().min(1),
+        amount: z.number().positive(),
+        currency: z.string().optional().default("MAD"),
+        paymentMethod: z.enum(["bank_transfer", "cheque", "cash", "paypal"]),
+        description: z.string().optional(),
+        relatedEntityType: z.string().optional(),
+        relatedEntityId: z.string().optional(),
+        metadata: z.record(z.string(), z.any()).optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       try {
         const payment = await supabaseServices.createPaymentSupabase(input);
         return {
           success: true,
           payment,
-          message: 'Paiement créé avec succès',
+          message: "Paiement créé avec succès",
         };
       } catch (error) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Erreur lors de la création du paiement',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Erreur lors de la création du paiement",
         });
       }
     }),
@@ -2743,9 +4189,14 @@ const paymentsRouter = router({
   getById: publicProcedure
     .input(z.object({ paymentId: z.number() }))
     .query(async ({ input }) => {
-      const payment = await supabaseServices.getPaymentByIdSupabase(input.paymentId);
+      const payment = await supabaseServices.getPaymentByIdSupabase(
+        input.paymentId
+      );
       if (!payment) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Paiement non trouvé' });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Paiement non trouvé",
+        });
       }
       return payment;
     }),
@@ -2753,27 +4204,38 @@ const paymentsRouter = router({
   getByReference: publicProcedure
     .input(z.object({ reference: z.string() }))
     .query(async ({ input }) => {
-      const payment = await supabaseServices.getPaymentByReferenceSupabase(input.reference);
+      const payment = await supabaseServices.getPaymentByReferenceSupabase(
+        input.reference
+      );
       if (!payment) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Paiement non trouvé' });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Paiement non trouvé",
+        });
       }
       return payment;
     }),
 
   list: adminProcedure
-    .input(z.object({
-      paymentMethod: z.string().optional(),
-      status: z.string().optional(),
-    }).optional())
+    .input(
+      z
+        .object({
+          paymentMethod: z.string().optional(),
+          status: z.string().optional(),
+        })
+        .optional()
+    )
     .query(async ({ input }) => {
       return supabaseServices.getPaymentsSupabase(input);
     }),
 
   validate: adminProcedure
-    .input(z.object({
-      paymentId: z.number(),
-      notes: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        paymentId: z.number(),
+        notes: z.string().optional(),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       try {
         const payment = await supabaseServices.validatePaymentSupabase(
@@ -2784,21 +4246,23 @@ const paymentsRouter = router({
         return {
           success: true,
           payment,
-          message: 'Paiement validé avec succès',
+          message: "Paiement validé avec succès",
         };
       } catch (error) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Erreur lors de la validation du paiement',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Erreur lors de la validation du paiement",
         });
       }
     }),
 
   cancel: adminProcedure
-    .input(z.object({
-      paymentId: z.number(),
-      notes: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        paymentId: z.number(),
+        notes: z.string().optional(),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       try {
         const payment = await supabaseServices.cancelPaymentSupabase(
@@ -2809,21 +4273,23 @@ const paymentsRouter = router({
         return {
           success: true,
           payment,
-          message: 'Paiement annulé avec succès',
+          message: "Paiement annulé avec succès",
         };
       } catch (error) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Erreur lors de l\'annulation du paiement',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Erreur lors de l'annulation du paiement",
         });
       }
     }),
 
   markChequeAsCashed: adminProcedure
-    .input(z.object({
-      paymentId: z.number(),
-      notes: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        paymentId: z.number(),
+        notes: z.string().optional(),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       try {
         const payment = await supabaseServices.markChequeAsCashedSupabase(
@@ -2834,12 +4300,12 @@ const paymentsRouter = router({
         return {
           success: true,
           payment,
-          message: 'Chèque marqué comme encaissé',
+          message: "Chèque marqué comme encaissé",
         };
       } catch (error) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Erreur lors du marquage du chèque',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Erreur lors du marquage du chèque",
         });
       }
     }),
@@ -2859,7 +4325,7 @@ export const appRouter = router({
     me: publicProcedure.query(async ({ ctx }) => {
       // Essayer de récupérer le token depuis le header Authorization
       const authHeader = ctx.req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
+      if (authHeader && authHeader.startsWith("Bearer ")) {
         const token = authHeader.substring(7);
         const user = await getUserFromToken(token);
         if (user) {
@@ -2868,35 +4334,39 @@ export const appRouter = router({
       }
       return ctx.user;
     }),
-    
+
     login: publicProcedure
-      .input(z.object({
-        email: z.string().email(),
-        password: z.string().min(6),
-      }))
+      .input(
+        z.object({
+          email: z.string().email(),
+          password: z.string().min(6),
+        })
+      )
       .mutation(async ({ input }) => {
         const result = await signInUser(input);
         if (result.error) {
-          throw new TRPCError({ code: 'UNAUTHORIZED', message: result.error });
+          throw new TRPCError({ code: "UNAUTHORIZED", message: result.error });
         }
         return { user: result.user, session: result.session };
       }),
-    
+
     signup: publicProcedure
-      .input(z.object({
-        email: z.string().email(),
-        password: z.string().min(6),
-        name: z.string().optional(),
-        phone: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          email: z.string().email(),
+          password: z.string().min(6),
+          name: z.string().optional(),
+          phone: z.string().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const result = await signUpUser(input);
         if (result.error) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: result.error });
+          throw new TRPCError({ code: "BAD_REQUEST", message: result.error });
         }
         return { user: result.user };
       }),
-    
+
     logout: publicProcedure.mutation(async ({ ctx }) => {
       // Nettoyer le cookie Manus OAuth si présent
       const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -2906,7 +4376,7 @@ export const appRouter = router({
       return { success: true } as const;
     }),
   }),
-  
+
   days: daysRouter,
   volunteers: volunteersRouter,
   checkin: checkinRouter,
@@ -2920,6 +4390,7 @@ export const appRouter = router({
   restaurants: restaurantsRouter,
   reservations: reservationsRouter,
   payments: paymentsRouter,
+  gallery: galleryRouter,
 });
 
 // ============================================
@@ -2927,37 +4398,48 @@ export const appRouter = router({
 // ============================================
 
 function isPastriesTableMissing(error: any): boolean {
-  return error?.code === 'PGRST204' || error?.code === '42P01' ||
-    error?.message?.includes('schema cache') || error?.message?.includes('does not exist');
+  return (
+    error?.code === "PGRST204" ||
+    error?.code === "42P01" ||
+    error?.message?.includes("schema cache") ||
+    error?.message?.includes("does not exist")
+  );
 }
 
-const PASTRIES_TABLE_MISSING_MSG = 'La table "pastries" n\'existe pas encore dans la base de données. Veuillez exécuter la migration SQL : supabase/migrations/add_pastry_and_qr_tables.sql dans l\'éditeur SQL de Supabase.';
+const PASTRIES_TABLE_MISSING_MSG =
+  "La table \"pastries\" n'existe pas encore dans la base de données. Veuillez exécuter la migration SQL : supabase/migrations/add_pastry_and_qr_tables.sql dans l'éditeur SQL de Supabase.";
 
 const pastriesRouter = router({
   list: publicProcedure.query(async () => {
     try {
       return await supabaseServices.getPastriesSupabase();
     } catch (error) {
-      console.error('Error fetching pastries:', error);
+      console.error("Error fetching pastries:", error);
       return [];
     }
   }),
 
   create: adminBoutiqueProcedure
-    .input(z.object({
-      name: z.string(),
-      description: z.string().optional(),
-      price: z.number().positive(),
-      imageUrl: z.string().optional(),
-      category: z.string().optional(),
-      sortOrder: z.number().default(0),
-    }))
+    .input(
+      z.object({
+        name: z.string(),
+        description: z.string().optional(),
+        price: z.number().positive(),
+        imageUrl: z.string().optional(),
+        category: z.string().optional(),
+        sortOrder: z.number().default(0),
+      })
+    )
     .mutation(async ({ input }) => {
       const client = getSupabaseAdminClient();
-      if (!client) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase not configured' });
+      if (!client)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase not configured",
+        });
 
       const { data, error } = await client
-        .from('pastries')
+        .from("pastries")
         .insert({
           name: input.name,
           description: input.description,
@@ -2972,28 +4454,42 @@ const pastriesRouter = router({
 
       if (error) {
         if (isPastriesTableMissing(error)) {
-          console.error('[Pastries] Table missing - run migration: supabase/migrations/add_pastry_and_qr_tables.sql');
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: PASTRIES_TABLE_MISSING_MSG });
+          console.error(
+            "[Pastries] Table missing - run migration: supabase/migrations/add_pastry_and_qr_tables.sql"
+          );
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: PASTRIES_TABLE_MISSING_MSG,
+          });
         }
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
       return data;
     }),
 
   update: adminBoutiqueProcedure
-    .input(z.object({
-      id: z.number(),
-      name: z.string().optional(),
-      description: z.string().optional(),
-      price: z.number().positive().optional(),
-      imageUrl: z.string().optional(),
-      category: z.string().optional(),
-      active: z.boolean().optional(),
-      sortOrder: z.number().optional(),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        description: z.string().optional(),
+        price: z.number().positive().optional(),
+        imageUrl: z.string().optional(),
+        category: z.string().optional(),
+        active: z.boolean().optional(),
+        sortOrder: z.number().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const client = getSupabaseAdminClient();
-      if (!client) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase not configured' });
+      if (!client)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase not configured",
+        });
 
       const updateData: any = {};
       if (input.name) updateData.name = input.name;
@@ -3002,21 +4498,30 @@ const pastriesRouter = router({
       if (input.imageUrl) updateData.image_url = input.imageUrl;
       if (input.category !== undefined) updateData.category = input.category;
       if (input.active !== undefined) updateData.active = input.active;
-      if (input.sortOrder !== undefined) updateData.sort_order = input.sortOrder;
+      if (input.sortOrder !== undefined)
+        updateData.sort_order = input.sortOrder;
 
       const { data, error } = await client
-        .from('pastries')
+        .from("pastries")
         .update(updateData)
-        .eq('id', input.id)
+        .eq("id", input.id)
         .select()
         .single();
 
       if (error) {
         if (isPastriesTableMissing(error)) {
-          console.error('[Pastries] Table missing - run migration: supabase/migrations/add_pastry_and_qr_tables.sql');
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: PASTRIES_TABLE_MISSING_MSG });
+          console.error(
+            "[Pastries] Table missing - run migration: supabase/migrations/add_pastry_and_qr_tables.sql"
+          );
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: PASTRIES_TABLE_MISSING_MSG,
+          });
         }
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
       return data;
     }),
@@ -3025,19 +4530,31 @@ const pastriesRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const client = getSupabaseAdminClient();
-      if (!client) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase not configured' });
+      if (!client)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase not configured",
+        });
 
       const { error } = await client
-        .from('pastries')
+        .from("pastries")
         .update({ active: false })
-        .eq('id', input.id);
+        .eq("id", input.id);
 
       if (error) {
         if (isPastriesTableMissing(error)) {
-          console.error('[Pastries] Table missing - run migration: supabase/migrations/add_pastry_and_qr_tables.sql');
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: PASTRIES_TABLE_MISSING_MSG });
+          console.error(
+            "[Pastries] Table missing - run migration: supabase/migrations/add_pastry_and_qr_tables.sql"
+          );
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: PASTRIES_TABLE_MISSING_MSG,
+          });
         }
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
       return { success: true };
     }),
@@ -3049,23 +4566,35 @@ const pastriesRouter = router({
 
 const pastryOrdersRouter = router({
   create: publicProcedure
-    .input(z.object({
-      customerName: z.string(),
-      phone: z.string(),
-      email: z.string().email().optional(),
-      items: z.array(z.object({
-        pastryId: z.number(),
-        quantity: z.number().positive(),
-        price: z.number().positive(),
-      })),
-      totalAmount: z.number().positive(),
-      paymentMethod: z.enum(['bank_transfer', 'cheque', 'cash', 'paypal', 'cmi']),
-      channel: z.enum(['online', 'on_site_qr', 'on_site_admin']).default('online'),
-    }))
+    .input(
+      z.object({
+        customerName: z.string(),
+        phone: z.string(),
+        email: z.string().email().optional(),
+        items: z.array(
+          z.object({
+            pastryId: z.number(),
+            quantity: z.number().positive(),
+            price: z.number().positive(),
+          })
+        ),
+        totalAmount: z.number().positive(),
+        paymentMethod: z.enum([
+          "bank_transfer",
+          "cheque",
+          "cash",
+          "paypal",
+          "cmi",
+        ]),
+        channel: z
+          .enum(["online", "on_site_qr", "on_site_admin"])
+          .default("online"),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       // Générer référence unique
       const reference = `PASTRY-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-      
+
       // Créer la commande
       const order = await supabaseServices.createPastryOrderSupabase({
         reference,
@@ -3078,28 +4607,41 @@ const pastryOrdersRouter = router({
       });
 
       // Générer QR token si nécessaire
-      if (input.channel === 'online' || input.channel === 'on_site_qr') {
-        const qrData = await supabaseServices.generateQRTokenSupabase('pastry', order.id);
+      const supabase = getSupabaseAdminClient();
+      if (input.channel === "online" || input.channel === "on_site_qr") {
+        const qrData = await supabaseServices.generateQRTokenSupabase(
+          "pastry",
+          order.id
+        );
         order.qr_token = qrData.token;
         // Save qr_token back to pastry_orders table
-        await supabase.from('pastry_orders').update({ qr_token: qrData.token }).eq('id', order.id);
+        if (supabase) {
+          await supabase
+            .from("pastry_orders")
+            .update({ qr_token: qrData.token })
+            .eq("id", order.id);
+        }
       }
 
       // Envoyer email de confirmation avec QR code
       if (input.email) {
         try {
-          const baseUrl = process.env.VITE_APP_URL || 'https://ftourbabrayan.ma';
+          const baseUrl =
+            process.env.VITE_APP_URL || "https://ftourbabrayan.ma";
           const qrCodeUrl = order.qr_token
             ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${baseUrl}/qr/pastry/${reference}`)}`
-            : '';
+            : "";
 
-          const itemsHtml = input.items.map(item =>
-            `<tr>
+          const itemsHtml = input.items
+            .map(
+              item =>
+                `<tr>
               <td style="padding:8px;border-bottom:1px solid #e5e7eb;">Pâtisserie #${item.pastryId}</td>
               <td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td>
               <td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:right;">${item.price} MAD</td>
             </tr>`
-          ).join('');
+            )
+            .join("");
 
           const emailHtml = `
 <!DOCTYPE html>
@@ -3134,12 +4676,16 @@ const pastryOrdersRouter = router({
               </tr>
             </tbody>
           </table>
-          ${qrCodeUrl ? `
+          ${
+            qrCodeUrl
+              ? `
           <div style="text-align:center;margin:30px 0;padding:20px;background-color:#ffffff;border:2px dashed #166534;border-radius:8px;">
             <h3 style="color:#166534;margin:0 0 15px 0;font-size:18px;">Votre QR Code</h3>
             <img src="${qrCodeUrl}" alt="QR Code" style="width:200px;height:200px;margin:10px 0;" />
             <p style="color:#6b7280;font-size:14px;margin:10px 0 0 0;">Présentez ce QR code lors du retrait de votre commande</p>
-          </div>` : ''}
+          </div>`
+              : ""
+          }
           <p style="color:#374151;font-size:16px;line-height:1.6;margin:20px 0 0 0;">Merci pour votre soutien !<br><strong>L'équipe Ftour Bab Rayan</strong></p>
         </td></tr>
         <tr><td style="background-color:#f8f9fa;padding:20px 30px;text-align:center;border-radius:0 0 8px 8px;border-top:1px solid #e5e7eb;">
@@ -3158,7 +4704,7 @@ const pastryOrdersRouter = router({
             html: emailHtml,
           });
         } catch (e) {
-          console.error('Email send error:', e);
+          console.error("Email send error:", e);
         }
       }
 
@@ -3168,16 +4714,20 @@ const pastryOrdersRouter = router({
   getByReference: publicProcedure
     .input(z.object({ reference: z.string() }))
     .query(async ({ input }) => {
-      return supabaseServices.getPastryOrderByReferenceSupabase(input.reference);
+      return supabaseServices.getPastryOrderByReferenceSupabase(
+        input.reference
+      );
     }),
 
   list: adminBoutiqueProcedure
-    .input(z.object({
-      status: z.string().optional(),
-      paymentStatus: z.string().optional(),
-      dateFrom: z.string().optional(),
-      dateTo: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        status: z.string().optional(),
+        paymentStatus: z.string().optional(),
+        dateFrom: z.string().optional(),
+        dateTo: z.string().optional(),
+      })
+    )
     .query(async ({ input }) => {
       return supabaseServices.getPastryOrdersSupabase({
         status: input.status,
@@ -3188,11 +4738,15 @@ const pastryOrdersRouter = router({
     }),
 
   updateStatus: scannerProcedure
-    .input(z.object({
-      orderId: z.number(),
-      orderStatus: z.enum(['reserved', 'paid', 'handed', 'cancelled']),
-      paymentStatus: z.enum(['pending', 'confirmed', 'paid', 'cancelled']).optional(),
-    }))
+    .input(
+      z.object({
+        orderId: z.number(),
+        orderStatus: z.enum(["reserved", "paid", "handed", "cancelled"]),
+        paymentStatus: z
+          .enum(["pending", "confirmed", "paid", "cancelled"])
+          .optional(),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       return supabaseServices.updatePastryOrderStatusSupabase(
         input.orderId,
@@ -3213,30 +4767,39 @@ const pastryOrdersRouter = router({
 
 const qrRouter = router({
   generate: adminBoutiqueProcedure
-    .input(z.object({
-      scope: z.string(),
-      entityId: z.number(),
-    }))
+    .input(
+      z.object({
+        scope: z.string(),
+        entityId: z.number(),
+      })
+    )
     .mutation(async ({ input }) => {
-      return supabaseServices.generateQRTokenSupabase(input.scope, input.entityId);
+      return supabaseServices.generateQRTokenSupabase(
+        input.scope,
+        input.entityId
+      );
     }),
 
   validate: publicProcedure
-    .input(z.object({
-      token: z.string(),
-      scope: z.string(),
-    }))
+    .input(
+      z.object({
+        token: z.string(),
+        scope: z.string(),
+      })
+    )
     .query(async ({ input }) => {
       return supabaseServices.validateQRTokenSupabase(input.token, input.scope);
     }),
 
   scan: scannerProcedure
-    .input(z.object({
-      token: z.string(),
-      scope: z.string(),
-      entityId: z.number(),
-      validationAction: z.string(),
-    }))
+    .input(
+      z.object({
+        token: z.string(),
+        scope: z.string(),
+        entityId: z.number(),
+        validationAction: z.string(),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       await supabaseServices.logQRScanSupabase(
         input.token,
@@ -3252,14 +4815,29 @@ const qrRouter = router({
   // --- Admin: Get QR codes for all catalog products ---
   catalogQRCodes: adminProcedure.query(async () => {
     const supabase = getSupabaseAdminClient();
-    if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+    if (!supabase)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Supabase non configuré",
+      });
 
-    const baseUrl = process.env.VITE_APP_URL || 'https://ftourbabrayan.ma';
+    const baseUrl = process.env.VITE_APP_URL || "https://ftourbabrayan.ma";
 
     const [goodiesRes, pastriesRes, terroirRes] = await Promise.all([
-      supabase.from('goodies').select('id, name, image_url, price, category, is_active').order('sort_order', { ascending: true }),
-      supabase.from('pastries').select('id, name, image_url, price, active').order('sort_order', { ascending: true }),
-      supabase.from('terroir_products').select('id, name, image_url, category, is_active, terroir_product_variants(price_unit)').order('sort_order', { ascending: true }),
+      supabase
+        .from("goodies")
+        .select("id, name, image_url, price, category, is_active")
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("pastries")
+        .select("id, name, image_url, price, active")
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("terroir_products")
+        .select(
+          "id, name, image_url, category, is_active, terroir_product_variants(price_unit)"
+        )
+        .order("sort_order", { ascending: true }),
     ]);
 
     const makeQrImageUrl = (url: string) =>
@@ -3282,7 +4860,7 @@ const qrRouter = router({
         name: g.name,
         imageUrl: g.image_url,
         price: g.price,
-        category: 'goodies',
+        category: "goodies",
         qrUrl: url,
         qrDataUrl: makeQrImageUrl(url),
       });
@@ -3295,7 +4873,7 @@ const qrRouter = router({
         name: p.name,
         imageUrl: p.image_url,
         price: p.price,
-        category: 'patisserie',
+        category: "patisserie",
         qrUrl: url,
         qrDataUrl: makeQrImageUrl(url),
       });
@@ -3309,7 +4887,7 @@ const qrRouter = router({
         name: t.name,
         imageUrl: t.image_url,
         price: firstVariant?.price_unit ?? null,
-        category: 'terroir',
+        category: "terroir",
         qrUrl: url,
         qrDataUrl: makeQrImageUrl(url),
       });
@@ -3318,10 +4896,10 @@ const qrRouter = router({
     const donsUrl = `${baseUrl}/fr/dons`;
     items.push({
       id: 0,
-      name: 'Page de dons',
+      name: "Page de dons",
       imageUrl: null,
       price: null,
-      category: 'dons',
+      category: "dons",
       qrUrl: donsUrl,
       qrDataUrl: makeQrImageUrl(donsUrl),
     });
@@ -3336,7 +4914,7 @@ export const appRouterUpdated = router({
   auth: router({
     me: publicProcedure.query(async ({ ctx }) => {
       const authHeader = ctx.req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
+      if (authHeader && authHeader.startsWith("Bearer ")) {
         const token = authHeader.substring(7);
         const user = await getUserFromToken(token);
         if (user) {
@@ -3345,35 +4923,39 @@ export const appRouterUpdated = router({
       }
       return ctx.user;
     }),
-    
+
     login: publicProcedure
-      .input(z.object({
-        email: z.string().email(),
-        password: z.string().min(6),
-      }))
+      .input(
+        z.object({
+          email: z.string().email(),
+          password: z.string().min(6),
+        })
+      )
       .mutation(async ({ input }) => {
         const result = await signInUser(input);
         if (result.error) {
-          throw new TRPCError({ code: 'UNAUTHORIZED', message: result.error });
+          throw new TRPCError({ code: "UNAUTHORIZED", message: result.error });
         }
         return { user: result.user, session: result.session };
       }),
-    
+
     signup: publicProcedure
-      .input(z.object({
-        email: z.string().email(),
-        password: z.string().min(6),
-        name: z.string().optional(),
-        phone: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          email: z.string().email(),
+          password: z.string().min(6),
+          name: z.string().optional(),
+          phone: z.string().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
         const result = await signUpUser(input);
         if (result.error) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: result.error });
+          throw new TRPCError({ code: "BAD_REQUEST", message: result.error });
         }
         return { user: result.user };
       }),
-    
+
     logout: publicProcedure.mutation(async ({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -3381,7 +4963,7 @@ export const appRouterUpdated = router({
       return { success: true } as const;
     }),
   }),
-  
+
   days: daysRouter,
   volunteers: volunteersRouter,
   checkin: checkinRouter,
@@ -3395,6 +4977,7 @@ export const appRouterUpdated = router({
   restaurants: restaurantsRouter,
   reservations: reservationsRouter,
   payments: paymentsRouter,
+  gallery: galleryRouter,
   pastries: pastriesRouter,
   pastryOrders: pastryOrdersRouter,
   qr: qrRouter,
