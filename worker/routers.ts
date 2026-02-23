@@ -732,7 +732,174 @@ const scannerRouter = router({
 
       // ---- PRODUCT (catalog QR - no validation needed) ----
       if (input.type === 'product_goodie' || input.type === 'product_pastry' || input.type === 'product_terroir') {
-        return { success: true, message: 'QR code produit catalogue — aucune validation nécessaire' };
+        const tokenParts = input.token.split('-');
+        const productId = Number(tokenParts[tokenParts.length - 1]);
+        if (!Number.isFinite(productId)) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'QR code produit invalide' });
+        }
+
+        // Product QR code scans represent on-site purchases and should create real orders.
+        if (input.type === 'product_goodie') {
+          const { data: goodie } = await supabase
+            .from('goodies')
+            .select('id, name, price, is_active')
+            .eq('id', productId)
+            .single();
+
+          if (!goodie || !goodie.is_active) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Produit goodies introuvable ou inactif' });
+          }
+
+          const orderReference = `FBR-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+          const unitPrice = parseFloat(goodie.price) || 0;
+
+          const { data: createdOrder, error: orderError } = await supabase
+            .from('orders')
+            .insert({
+              order_reference: orderReference,
+              customer_name: 'Achat Scanner',
+              customer_email: 'scanner@ftourbabrayan.ma',
+              customer_phone: 'N/A',
+              total_amount: unitPrice,
+              status: 'delivered',
+              payment_method: 'cash',
+              notes: `Achat sur place via scanner universel (${input.token})`,
+              processed_by: ctx.user?.id,
+              delivered_at: new Date().toISOString(),
+            })
+            .select('id')
+            .single();
+
+          if (orderError || !createdOrder) {
+            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: orderError?.message || 'Impossible de créer la commande goodies' });
+          }
+
+          const { error: orderItemError } = await supabase
+            .from('order_items')
+            .insert({
+              order_id: createdOrder.id,
+              goodie_id: goodie.id,
+              quantity: 1,
+              unit_price: unitPrice,
+              total_price: unitPrice,
+            });
+
+          if (orderItemError) {
+            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: orderItemError.message });
+          }
+
+          return {
+            success: true,
+            message: `Achat goodies enregistré : ${goodie.name} (commande ${orderReference})`,
+            state: 'confirmed' as const,
+          };
+        }
+
+        if (input.type === 'product_pastry') {
+          const { data: pastry } = await supabase
+            .from('pastries')
+            .select('id, name, price, active')
+            .eq('id', productId)
+            .single();
+
+          if (!pastry || !pastry.active) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Produit pâtisserie introuvable ou inactif' });
+          }
+
+          const reference = `PASTRY-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+          const unitPrice = parseFloat(pastry.price) || 0;
+
+          const { error: pastryOrderError } = await supabase
+            .from('pastry_orders')
+            .insert({
+              reference,
+              customer_name: 'Achat Scanner',
+              phone: 'N/A',
+              email: 'scanner@ftourbabrayan.ma',
+              items: [{ pastryId: pastry.id, quantity: 1, price: unitPrice, name: pastry.name }],
+              total_amount: unitPrice,
+              payment_method: 'cash',
+              payment_status: 'paid',
+              order_status: 'handed',
+              notes: `Achat sur place via scanner universel (${input.token})`,
+            });
+
+          if (pastryOrderError) {
+            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: pastryOrderError.message });
+          }
+
+          return {
+            success: true,
+            message: `Achat pâtisserie enregistré : ${pastry.name} (commande ${reference})`,
+            state: 'confirmed' as const,
+          };
+        }
+
+        const { data: variant } = await supabase
+          .from('terroir_product_variants')
+          .select('id, price_unit')
+          .eq('product_id', productId)
+          .eq('is_active', true)
+          .order('id', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        const { data: terroirProduct } = await supabase
+          .from('terroir_products')
+          .select('id, name, is_active')
+          .eq('id', productId)
+          .single();
+
+        if (!terroirProduct || !terroirProduct.is_active || !variant) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Produit terroir introuvable ou sans variante active' });
+        }
+
+        const reference = `TER-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+        const unitPrice = parseFloat(variant.price_unit) || 0;
+
+        const { data: terroirOrder, error: terroirOrderError } = await supabase
+          .from('terroir_orders')
+          .insert({
+            order_reference: reference,
+            customer_name: 'Achat Scanner',
+            customer_phone: 'N/A',
+            customer_email: 'scanner@ftourbabrayan.ma',
+            status: 'picked_up',
+            payment_status: 'paid',
+            total_amount: unitPrice,
+            payment_provider: 'cash',
+            qr_status: 'used',
+            processed_by: ctx.user?.id,
+            processed_at: new Date().toISOString(),
+            notes: `Achat sur place via scanner universel (${input.token})`,
+          })
+          .select('id')
+          .single();
+
+        if (terroirOrderError || !terroirOrder) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: terroirOrderError?.message || 'Impossible de créer la commande terroir' });
+        }
+
+        const { error: terroirItemError } = await supabase
+          .from('terroir_order_items')
+          .insert({
+            order_id: terroirOrder.id,
+            product_id: terroirProduct.id,
+            variant_id: variant.id,
+            quantity: 1,
+            unit_price: unitPrice,
+            total_price: unitPrice,
+          });
+
+        if (terroirItemError) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: terroirItemError.message });
+        }
+
+        return {
+          success: true,
+          message: `Achat terroir enregistré : ${terroirProduct.name} (commande ${reference})`,
+          state: 'confirmed' as const,
+        };
       }
 
       // ---- DONATION ----
