@@ -880,27 +880,43 @@ export const scannerRouter = router({
 
         const unitPrice = parseFloat(product.price as any) || 0;
 
-        const tryCreateGoodieOrder = async (referenceMaxLength: number) => {
-          return supabase
-            .from('orders')
-            .insert({
-              order_reference: buildCompactToken('FBR', referenceMaxLength),
-              customer_name: 'Scan goodies',
-              customer_email: 'scan@fbr.ma',
-              customer_phone: '0000000000',
-              total_amount: unitPrice,
+        const overflowMessage = 'value too long for type character varying(20)';
+        const buildInsertPayload = (variant: 'default' | 'minimal') => {
+          const base = {
+            order_reference: buildCompactToken('FBR', variant === 'default' ? 20 : 10),
+            customer_name: variant === 'default' ? 'Scan goodies' : 'Scan',
+            customer_email: 'scan@fbr.ma',
+            customer_phone: '0000000000',
+            total_amount: unitPrice,
+          };
+
+          if (variant === 'minimal') {
+            return {
+              ...base,
               status: 'paid',
-              payment_method: 'cash',
-              notes: 'scan_catalog',
-            })
-            .select('id, order_reference')
-            .single();
+            };
+          }
+
+          return {
+            ...base,
+            status: 'paid',
+            payment_method: 'cash',
+            notes: 'scan_catalog',
+          };
         };
 
-        let { data: createdOrder, error: orderError } = await tryCreateGoodieOrder(20);
+        let { data: createdOrder, error: orderError } = await supabase
+          .from('orders')
+          .insert(buildInsertPayload('default'))
+          .select('id, order_reference')
+          .single();
 
-        if ((orderError || !createdOrder) && String(orderError?.message || '').includes('value too long for type character varying(20)')) {
-          const retry = await tryCreateGoodieOrder(12);
+        if ((orderError || !createdOrder) && String(orderError?.message || '').includes(overflowMessage)) {
+          const retry = await supabase
+            .from('orders')
+            .insert(buildInsertPayload('minimal'))
+            .select('id, order_reference')
+            .single();
           createdOrder = retry.data;
           orderError = retry.error;
         }
