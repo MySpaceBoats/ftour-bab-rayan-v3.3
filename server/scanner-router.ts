@@ -120,6 +120,43 @@ function buildCompactToken(prefix: string, maxLength: number = 20): string {
   return `${safePrefix}-${body}`.slice(0, maxLength);
 }
 
+
+function toSafeValidatedBy(userId: unknown): number {
+  if (typeof userId === 'number' && Number.isFinite(userId)) return userId;
+  if (typeof userId === 'string' && /^\d+$/.test(userId)) return Number(userId);
+  return 0;
+}
+
+
+async function logQRScanSafely(params: {
+  token: string;
+  scope: string;
+  entityId: number;
+  validationAction: string;
+  validatedBy: number;
+  success?: boolean;
+  errorMessage?: string;
+}) {
+  try {
+    await supabaseServices.logQRScanSupabase(
+      params.token,
+      params.scope,
+      params.entityId,
+      params.validationAction,
+      params.validatedBy,
+      params.success ?? true,
+      params.errorMessage
+    );
+  } catch (error: any) {
+    const message = String(error?.message || error || '');
+    if (message.includes('value too long for type character varying(20)')) {
+      console.warn('[Scanner] Ignored legacy qr_scans overflow during catalog log:', message);
+      return;
+    }
+    throw error;
+  }
+}
+
 const QR_TYPE_LABELS: Record<QrType, string> = {
   volunteer: 'Bénévole',
   reservation_particulier: 'Réservation Particulier',
@@ -730,6 +767,7 @@ export const scannerRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const supabase = getSupabaseAdminClient();
+      const validatedBy = toSafeValidatedBy(ctx.user?.id);
 
       // ---- VOLUNTEER ----
       if (input.type === 'volunteer') {
@@ -841,23 +879,31 @@ export const scannerRouter = router({
         }
 
         const unitPrice = parseFloat(product.price as any) || 0;
-        const orderReference = buildCompactToken('FBR', 20);
 
-        const { data: createdOrder, error: orderError } = await supabase
-          .from('orders')
-          .insert({
-            order_reference: orderReference,
-            customer_name: 'Vente scanner goodies',
-            customer_email: 'scanner-goodies@ftourbabrayan.ma',
-            customer_phone: '0000000000',
-            total_amount: unitPrice,
-            status: 'paid',
-            payment_method: 'cash',
-            notes: `Commande créée via scanner catalogue par ${ctx.user?.name || ctx.user?.email || 'scanner'}`,
-            processed_by: ctx.user?.id,
-          })
-          .select('id, order_reference')
-          .single();
+        const tryCreateGoodieOrder = async (referenceMaxLength: number) => {
+          return supabase
+            .from('orders')
+            .insert({
+              order_reference: buildCompactToken('FBR', referenceMaxLength),
+              customer_name: 'Scan goodies',
+              customer_email: 'scan@fbr.ma',
+              customer_phone: '0000000000',
+              total_amount: unitPrice,
+              status: 'paid',
+              payment_method: 'cash',
+              notes: 'scan_catalog',
+            })
+            .select('id, order_reference')
+            .single();
+        };
+
+        let { data: createdOrder, error: orderError } = await tryCreateGoodieOrder(20);
+
+        if ((orderError || !createdOrder) && String(orderError?.message || '').includes('value too long for type character varying(20)')) {
+          const retry = await tryCreateGoodieOrder(12);
+          createdOrder = retry.data;
+          orderError = retry.error;
+        }
 
         if (orderError || !createdOrder) {
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: orderError?.message || 'Création commande impossible' });
@@ -878,14 +924,14 @@ export const scannerRouter = router({
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: itemError.message });
         }
 
-        await supabaseServices.logQRScanSupabase(
-          input.token,
-          input.type,
-          input.entityId,
-          'catalog_scan',
-          ctx.user?.id || 0,
-          true
-        );
+        await logQRScanSafely({
+          token: input.token,
+          scope: input.type,
+          entityId: input.entityId,
+          validationAction: 'catalog_scan',
+          validatedBy,
+          success: true,
+        });
 
         return {
           success: true,
@@ -919,16 +965,16 @@ export const scannerRouter = router({
           .from('pastry_orders')
           .insert({
             reference,
-            customer_name: 'Vente scanner pâtisserie',
+            customer_name: 'Scan pastry',
             phone: '0000000000',
-            email: 'scanner-pastry@ftourbabrayan.ma',
+            email: 'scan@fbr.ma',
             items: [{ pastryId: product.id, quantity: 1, price: unitPrice }],
             total_amount: unitPrice,
             payment_method: 'cash',
             payment_status: 'paid',
             order_status: 'paid',
             qr_token: qrToken,
-            notes: `Commande créée via scanner catalogue par ${ctx.user?.name || ctx.user?.email || 'scanner'}`,
+            notes: 'scan_catalog',
           })
           .select('id, reference')
           .single();
@@ -937,14 +983,14 @@ export const scannerRouter = router({
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: orderError?.message || 'Création commande pâtisserie impossible' });
         }
 
-        await supabaseServices.logQRScanSupabase(
-          input.token,
-          input.type,
-          input.entityId,
-          'catalog_scan',
-          ctx.user?.id || 0,
-          true
-        );
+        await logQRScanSafely({
+          token: input.token,
+          scope: input.type,
+          entityId: input.entityId,
+          validationAction: 'catalog_scan',
+          validatedBy,
+          success: true,
+        });
 
         return {
           success: true,
@@ -984,17 +1030,15 @@ export const scannerRouter = router({
           .from('terroir_orders')
           .insert({
             order_reference: orderReference,
-            customer_name: 'Vente scanner terroir',
+            customer_name: 'Scan terroir',
             customer_phone: '0000000000',
-            customer_email: 'scanner-terroir@ftourbabrayan.ma',
+            customer_email: 'scan@fbr.ma',
             total_amount: unitPrice,
             status: 'paid',
             payment_status: 'paid',
             qr_token: qrToken,
             qr_status: 'active',
-            processed_by: ctx.user?.id,
-            processed_at: new Date().toISOString(),
-            notes: `Commande créée via scanner catalogue par ${ctx.user?.name || ctx.user?.email || 'scanner'}`,
+            notes: 'scan_catalog',
           })
           .select('id, order_reference')
           .single();
@@ -1019,14 +1063,14 @@ export const scannerRouter = router({
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: itemError.message });
         }
 
-        await supabaseServices.logQRScanSupabase(
-          input.token,
-          input.type,
-          input.entityId,
-          'catalog_scan',
-          ctx.user?.id || 0,
-          true
-        );
+        await logQRScanSafely({
+          token: input.token,
+          scope: input.type,
+          entityId: input.entityId,
+          validationAction: 'catalog_scan',
+          validatedBy,
+          success: true,
+        });
 
         return {
           success: true,
@@ -1038,14 +1082,14 @@ export const scannerRouter = router({
 
       // ---- DONATION PAGE (catalog QR) ----
       if (input.type === 'catalog_donation') {
-        await supabaseServices.logQRScanSupabase(
-          input.token,
-          input.type,
-          0,
-          'catalog_scan',
-          ctx.user?.id || 0,
-          true
-        );
+        await logQRScanSafely({
+          token: input.token,
+          scope: input.type,
+          entityId: 0,
+          validationAction: 'catalog_scan',
+          validatedBy,
+          success: true,
+        });
         return { success: true, message: 'Scan don catalogue enregistré dans le système.' };
       }
 
