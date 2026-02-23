@@ -20,6 +20,9 @@ import Contact from "@/features/public/pages/Contact";
 import FAQ from "@/features/public/pages/FAQ";
 import MentionsLegales from "@/features/public/pages/MentionsLegales";
 import Galerie from "@/features/gallery/pages/Galerie";
+import AdminGalerie from "@/features/gallery/admin/AdminGalerie";
+import AdminGalerieNouveau from "@/features/gallery/admin/AdminGalerieNouveau";
+import AdminGalerieEdit from "@/features/gallery/admin/AdminGalerieEdit";
 
 // ============================================
 // AUTH — features/auth
