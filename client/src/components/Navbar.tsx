@@ -55,17 +55,17 @@ export default function Navbar() {
   const mainLinks = [
     { href: localizedHref("/"), label: t.nav.home, icon: Home },
     { href: localizedHref("/evenement"), label: t.nav.event, icon: Info },
-    { href: localizedHref("/benevole"), label: t.nav.volunteer, icon: Users },
     { href: localizedHref("/galerie"), label: "Galerie", icon: Info },
-    {
-      href: localizedHref("/boutique"),
-      label: t.nav.boutique,
-      icon: ShoppingBag,
-    },
+    { href: localizedHref("/benevole"), label: t.nav.volunteer, icon: Users },
     {
       href: localizedHref("/reservation"),
       label: t.nav.restaurant,
       icon: UtensilsCrossed,
+    },
+    {
+      href: localizedHref("/boutique"),
+      label: t.nav.boutique,
+      icon: ShoppingBag,
     },
     { href: localizedHref("/contact"), label: t.nav.contact, icon: Phone },
   ];
