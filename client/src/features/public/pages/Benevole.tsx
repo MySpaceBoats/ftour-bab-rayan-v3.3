@@ -3,6 +3,7 @@ import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,6 +31,7 @@ export default function Benevole() {
     email: "",
     phone: "",
     city: "",
+    comment: "",
     dayId: preselectedDay || "",
     slots: {
       preparation_ftour: false,  // Préparation ftour : 15h00 – 16h45
@@ -163,6 +165,7 @@ export default function Benevole() {
         email: formData.email,
         phone: formData.phone,
         city: formData.city || undefined,
+        comment: formData.comment || undefined,
         dayId: parseInt(formData.dayId),
         volunteerSlots: volunteerSlots as ("preparation_ftour" | "service_ftour")[],
         acceptedTerms: formData.acceptedTerms,
@@ -705,6 +708,17 @@ export default function Benevole() {
                               value={formData.city}
                               onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
                               placeholder={formTexts.cityPlaceholder}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="comment">Commentaire</Label>
+                            <Textarea
+                              id="comment"
+                              value={formData.comment}
+                              onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))}
+                              placeholder="Ajoutez un commentaire (optionnel)"
+                              rows={3}
                             />
                           </div>
                         </>

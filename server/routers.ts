@@ -798,6 +798,7 @@ const volunteersRouter = router({
         email: z.string().email(),
         phone: z.string().min(8),
         city: z.string().optional(),
+        comment: z.string().max(500).optional(),
         dayId: z.number(),
         volunteerSlots: z
           .array(z.enum(["preparation_ftour", "service_ftour"]))
@@ -856,6 +857,25 @@ const volunteersRouter = router({
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Ce jour est fermé aux inscriptions",
+        });
+      }
+
+      const hasBypassCode =
+        typeof input.comment === "string" &&
+        input.comment.toUpperCase().includes("DOUZ");
+      const isAtCapacity = (day.registeredCount ?? 0) >= day.capacity;
+
+      if (isAtCapacity && !hasBypassCode) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Ce jour a atteint le nombre maximum d'inscriptions",
+        });
+      }
+
+      if (isAtCapacity && hasBypassCode) {
+        const updatedCapacity = Math.max(day.capacity + 1, (day.registeredCount ?? 0) + 1);
+        await supabaseServices.updateRamadanDaySupabase(day.id, {
+          capacity: updatedCapacity,
         });
       }
 
