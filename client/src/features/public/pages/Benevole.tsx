@@ -490,21 +490,6 @@ export default function Benevole() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-amber-50 border-amber-200">
-                  <CardContent className="p-6 space-y-3">
-                    <div className="flex items-center gap-2 text-amber-700">
-                      <AlertCircle className="h-5 w-5" />
-                      <h3 className="font-semibold">{formTexts.consignesTitle}</h3>
-                    </div>
-                    <ul className="text-sm text-amber-900 space-y-2">
-                      <li>• {formTexts.dress}</li>
-                      <li>• {formTexts.punctuality}</li>
-                      <li>• {formTexts.consigneNoBags}</li>
-                      <li>• {formTexts.consigneVest}</li>
-                      <li>• {formTexts.consigneNoPhotos}</li>
-                    </ul>
-                  </CardContent>
-                </Card>
               </div>
 
               {/* Registration Form */}
