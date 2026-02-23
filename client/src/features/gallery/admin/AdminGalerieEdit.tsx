@@ -33,8 +33,6 @@ export default function AdminGalerieEdit() {
   useEffect(() => {
     if (!photo) return;
     setForm({
-      title: photo.title ?? "",
-      description: photo.description ?? "",
       eventDate: photo.event_date ?? "",
       tags: Array.isArray(photo.tags) ? photo.tags.join(", ") : "",
       albumId: photo.album_id ?? "none",
@@ -67,33 +65,13 @@ export default function AdminGalerieEdit() {
               alt={photo.title || "photo"}
               className="h-56 w-full rounded object-cover"
             />
-            <div className="grid md:grid-cols-2 gap-3">
-              <div>
-                <Label>Titre</Label>
-                <Input
-                  value={form.title}
-                  onChange={e =>
-                    setForm((f: any) => ({ ...f, title: e.target.value }))
-                  }
-                />
-              </div>
-              <div>
-                <Label>Date événement</Label>
-                <Input
-                  type="date"
-                  value={form.eventDate}
-                  onChange={e =>
-                    setForm((f: any) => ({ ...f, eventDate: e.target.value }))
-                  }
-                />
-              </div>
-            </div>
             <div>
-              <Label>Description</Label>
+              <Label>Année xxxx ou édition xxxx</Label>
               <Input
-                value={form.description}
+                placeholder="Ex: 2026 ou édition 12"
+                value={form.eventDate}
                 onChange={e =>
-                  setForm((f: any) => ({ ...f, description: e.target.value }))
+                  setForm((f: any) => ({ ...f, eventDate: e.target.value }))
                 }
               />
             </div>
@@ -159,8 +137,6 @@ export default function AdminGalerieEdit() {
               onClick={() =>
                 update.mutate({
                   id,
-                  title: form.title,
-                  description: form.description,
                   eventDate: form.eventDate || undefined,
                   tags: form.tags
                     ? form.tags
