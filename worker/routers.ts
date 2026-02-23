@@ -8,6 +8,7 @@ import superjson from 'superjson';
 import type { WorkerContext, WorkerUser } from './context';
 import { createSupabaseAdmin } from './supabase';
 import * as XLSX from 'xlsx';
+import { addDaysToDateString, DEFAULT_RAMADAN_TIMEZONE, getDateStringInTimeZone, getRamadanDay } from '../shared/ramadan';
 
 // Initialize tRPC
 const t = initTRPC.context<WorkerContext>().create({
@@ -27,7 +28,7 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
 
 // Admin procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_operations', 'admin_boutique', 'admin_dons'];
+  const allowedRoles = ['admin', 'super_admin', 'admin_operations', 'admin_ops', 'admin_boutique', 'admin_dons', 'admin_restaurant', 'admin_patisserie', 'admin_terroir'];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès administrateur requis' });
   }
@@ -44,7 +45,7 @@ const superAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
 
 // Scanner procedure
 const scannerProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_operations', 'scanner'];
+  const allowedRoles = ['admin', 'super_admin', 'admin_operations', 'admin_ops', 'scanner'];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès scanner requis' });
   }
@@ -4366,6 +4367,175 @@ const qrRouter = router({
   }),
 });
 
+
+
+const ramadanRouter = router({
+  publicSummary: publicProcedure.query(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+    const { data: config } = await supabase
+      .from('ramadan_config')
+      .select('*')
+      .eq('is_active', true)
+      .maybeSingle();
+
+    const fallbackDate = getDateStringInTimeZone(new Date(), DEFAULT_RAMADAN_TIMEZONE);
+    if (!config) {
+      return {
+        hijriYear: null,
+        todayRamadanDay: null,
+        totalsToDate: { meals: 0, beneficiaries: 0, volunteersPresence: 0 },
+        asOfGregorianDate: fallbackDate,
+        timezone: DEFAULT_RAMADAN_TIMEZONE,
+        isInRamadan: false,
+      };
+    }
+
+    const timezone = config.timezone || DEFAULT_RAMADAN_TIMEZONE;
+    const todayDate = getDateStringInTimeZone(new Date(), timezone);
+    const dayRaw = getRamadanDay(todayDate, config.gregorian_start_date);
+    const todayRamadanDay = dayRaw === null ? null : Math.min(dayRaw, 30);
+
+    let q = supabase
+      .from('ramadan_daily_stats')
+      .select('beneficiaries_served, meals_distributed, volunteers_present')
+      .eq('config_id', config.id);
+
+    if (todayRamadanDay !== null) q = q.lte('ramadan_day', todayRamadanDay);
+
+    const { data: rows } = await q;
+    const totals = (rows || []).reduce((acc, row: any) => {
+      acc.meals += row.meals_distributed || 0;
+      acc.beneficiaries += row.beneficiaries_served || 0;
+      acc.volunteersPresence += row.volunteers_present || 0;
+      return acc;
+    }, { meals: 0, beneficiaries: 0, volunteersPresence: 0 });
+
+    return {
+      hijriYear: config.hijri_year,
+      todayRamadanDay,
+      totalsToDate: totals,
+      asOfGregorianDate: todayDate,
+      timezone,
+      isInRamadan: todayRamadanDay !== null,
+      configId: config.id,
+    };
+  }),
+
+  publicDaily: publicProcedure
+    .input(z.object({ from: z.string().optional(), to: z.string().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data: config } = await supabase.from('ramadan_config').select('id').eq('is_active', true).maybeSingle();
+      if (!config) return [];
+      let q = supabase.from('ramadan_daily_stats').select('*').eq('config_id', config.id).order('ramadan_day', { ascending: true });
+      if (input?.from) q = q.gte('gregorian_date', input.from);
+      if (input?.to) q = q.lte('gregorian_date', input.to);
+      const { data, error } = await q;
+      if (error) throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      return data || [];
+    }),
+
+  getConfig: adminProcedure.query(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+    const { data, error } = await supabase.from('ramadan_config').select('*').order('created_at', { ascending: false });
+    if (error) throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+    const active = (data || []).find((c: any) => c.is_active) || null;
+    return { active, configs: data || [] };
+  }),
+
+  createConfig: adminProcedure
+    .input(z.object({ hijriYear: z.string().min(1), gregorianStartDate: z.string(), timezone: z.string().default('Africa/Casablanca'), isActive: z.boolean().default(true) }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      if (input.isActive) await supabase.from('ramadan_config').update({ is_active: false }).eq('is_active', true);
+      const { data, error } = await supabase.from('ramadan_config').insert({
+        hijri_year: input.hijriYear,
+        gregorian_start_date: input.gregorianStartDate,
+        timezone: input.timezone,
+        is_active: input.isActive,
+      }).select('*').single();
+      if (error) throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      return data;
+    }),
+
+  updateConfig: adminProcedure
+    .input(z.object({ id: z.number(), hijriYear: z.string().optional(), gregorianStartDate: z.string().optional(), timezone: z.string().optional(), isActive: z.boolean().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      if (input.isActive) await supabase.from('ramadan_config').update({ is_active: false }).eq('is_active', true).neq('id', input.id);
+      const updates: any = {};
+      if (input.hijriYear !== undefined) updates.hijri_year = input.hijriYear;
+      if (input.gregorianStartDate !== undefined) updates.gregorian_start_date = input.gregorianStartDate;
+      if (input.timezone !== undefined) updates.timezone = input.timezone;
+      if (input.isActive !== undefined) updates.is_active = input.isActive;
+      const { data, error } = await supabase.from('ramadan_config').update(updates).eq('id', input.id).select('*').single();
+      if (error) throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      return data;
+    }),
+
+  listStats: adminProcedure
+    .input(z.object({ configId: z.number(), from: z.string().optional(), to: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      let q = supabase.from('ramadan_daily_stats').select('*').eq('config_id', input.configId).order('ramadan_day', { ascending: true });
+      if (input.from) q = q.gte('gregorian_date', input.from);
+      if (input.to) q = q.lte('gregorian_date', input.to);
+      const { data, error } = await q;
+      if (error) throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      const rows = data || [];
+      const totals = rows.reduce((acc, row: any) => {
+        acc.meals += row.meals_distributed || 0;
+        acc.beneficiaries += row.beneficiaries_served || 0;
+        acc.volunteersPresence += row.volunteers_present || 0;
+        return acc;
+      }, { meals: 0, beneficiaries: 0, volunteersPresence: 0 });
+      return { rows, totals };
+    }),
+
+  upsertStat: adminProcedure
+    .input(z.object({ configId: z.number(), ramadanDay: z.number().min(1).max(30), beneficiariesServed: z.number().int().min(0), mealsDistributed: z.number().int().min(0), volunteersPresent: z.number().int().min(0), notes: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data: config } = await supabase.from('ramadan_config').select('gregorian_start_date').eq('id', input.configId).single();
+      if (!config) throw new TRPCError({ code: 'NOT_FOUND', message: 'Configuration introuvable' });
+      const gregorianDate = addDaysToDateString(config.gregorian_start_date, input.ramadanDay - 1);
+      const { data, error } = await supabase.from('ramadan_daily_stats').upsert({
+        config_id: input.configId,
+        ramadan_day: input.ramadanDay,
+        gregorian_date: gregorianDate,
+        beneficiaries_served: input.beneficiariesServed,
+        meals_distributed: input.mealsDistributed,
+        volunteers_present: input.volunteersPresent,
+        notes: input.notes ?? null,
+      }, { onConflict: 'config_id,ramadan_day' }).select('*').single();
+      if (error) throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      return data;
+    }),
+
+  updateStat: adminProcedure
+    .input(z.object({ id: z.number(), beneficiariesServed: z.number().int().min(0), mealsDistributed: z.number().int().min(0), volunteersPresent: z.number().int().min(0), notes: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase.from('ramadan_daily_stats').update({
+        beneficiaries_served: input.beneficiariesServed,
+        meals_distributed: input.mealsDistributed,
+        volunteers_present: input.volunteersPresent,
+        notes: input.notes ?? null,
+      }).eq('id', input.id).select('*').single();
+      if (error) throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      return data;
+    }),
+
+  deleteStat: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { error } = await supabase.from('ramadan_daily_stats').delete().eq('id', input.id);
+      if (error) throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      return { success: true };
+    }),
+});
+
 // ============================================
 // MAIN APP ROUTER
 // ============================================
@@ -4390,6 +4560,7 @@ export const appRouter = router({
   restaurantReservations: restaurantReservationsRouter,
   scanner: scannerRouter,
   qr: qrRouter,
+  ramadan: ramadanRouter,
 });
 
 export type AppRouter = typeof appRouter;

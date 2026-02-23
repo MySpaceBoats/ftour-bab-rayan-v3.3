@@ -36,7 +36,7 @@ type SectionDefinition = {
   borderClass?: string;
 };
 
-const ALL_ADMIN_ROLES = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'admin_patisserie', 'admin_terroir'];
+const ALL_ADMIN_ROLES = ['admin', 'super_admin', 'admin_ops', 'admin_operations', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'admin_patisserie', 'admin_terroir'];
 
 const sections: SectionDefinition[] = [
   {
@@ -102,7 +102,7 @@ const sections: SectionDefinition[] = [
         icon: QrCode,
         iconColor: "text-[#5d5a3c]",
         iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'scanner'],
+        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'admin_operations', 'scanner'],
         variant: 'primary',
         buttonClass: "bg-[#5d5a3c] hover:bg-[#5d5a3c]/90 text-white",
       },
@@ -218,7 +218,16 @@ const sections: SectionDefinition[] = [
         icon: Users,
         iconColor: "text-primary",
         iconBg: "bg-primary/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_ops'],
+        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'admin_operations'],
+      },
+      {
+        label: "Stats Ramadan",
+        description: "Saisie quotidienne et cumuls des indicateurs Ftour Ramadan",
+        route: "/admin/ramadan-stats",
+        icon: Calendar,
+        iconColor: "text-primary",
+        iconBg: "bg-primary/10",
+        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'admin_operations'],
       },
       {
         label: "Scanner QR",
@@ -227,7 +236,7 @@ const sections: SectionDefinition[] = [
         icon: QrCode,
         iconColor: "text-primary",
         iconBg: "bg-primary/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'scanner'],
+        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'admin_operations', 'scanner'],
         variant: 'primary',
       },
     ],
@@ -251,7 +260,7 @@ const sections: SectionDefinition[] = [
         icon: QrCode,
         iconColor: "text-orange-600",
         iconBg: "bg-orange-100",
-        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'scanner'],
+        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'admin_operations', 'scanner'],
       },
     ],
   },
@@ -308,10 +317,10 @@ export default function Admin() {
 
   const isAdmin = user?.role && ALL_ADMIN_ROLES.includes(user.role);
   const isSuperAdmin = user?.role === 'super_admin';
-  const canManageVolunteers = user?.role && ['admin', 'super_admin', 'admin_ops'].includes(user.role);
+  const canManageVolunteers = user?.role && ['admin', 'super_admin', 'admin_ops', 'admin_operations'].includes(user.role);
   const canManageOrders = user?.role && ['admin', 'super_admin', 'admin_boutique'].includes(user.role);
   const canManageDonations = user?.role && ['admin', 'super_admin', 'admin_dons'].includes(user.role);
-  const canManageRestaurant = user?.role && ['admin', 'super_admin', 'admin_restaurant', 'admin_ops'].includes(user.role);
+  const canManageRestaurant = user?.role && ['admin', 'super_admin', 'admin_restaurant', 'admin_ops', 'admin_operations'].includes(user.role);
 
   const { data: volunteerStats } = trpc.volunteers.stats.useQuery(undefined, {
     enabled: isAuthenticated && !!canManageVolunteers,

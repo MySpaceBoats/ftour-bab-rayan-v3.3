@@ -1,5 +1,6 @@
 import { getSupabaseAdminClient, getSupabasePublicClient, volunteerSlotsColumnExists } from './supabase';
 import { generateSecureToken } from './qrcode';
+import { addDaysToDateString, DEFAULT_RAMADAN_TIMEZONE, getDateStringInTimeZone, getRamadanDay } from '@shared/ramadan';
 
 // ============================================
 // USER SERVICES
@@ -268,6 +269,208 @@ export async function deleteRamadanDaySupabase(id: number) {
     .eq('id', id);
 
   if (error) throw error;
+}
+
+export interface RamadanConfigData {
+  id: number;
+  hijriYear: string;
+  gregorianStartDate: string;
+  timezone: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RamadanDailyStatData {
+  id: number;
+  configId: number;
+  ramadanDay: number;
+  gregorianDate: string;
+  beneficiariesServed: number;
+  mealsDistributed: number;
+  volunteersPresent: number;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getActiveRamadanConfigSupabase(): Promise<RamadanConfigData | null> {
+  const client = getSupabaseAdminClient();
+  if (!client) return null;
+
+  const { data, error } = await client
+    .from('ramadan_config')
+    .select('*')
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  return {
+    id: data.id,
+    hijriYear: data.hijri_year,
+    gregorianStartDate: data.gregorian_start_date,
+    timezone: data.timezone || DEFAULT_RAMADAN_TIMEZONE,
+    isActive: data.is_active,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+}
+
+export async function listRamadanConfigsSupabase(): Promise<RamadanConfigData[]> {
+  const client = getSupabaseAdminClient();
+  if (!client) return [];
+  const { data, error } = await client.from('ramadan_config').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map((item) => ({
+    id: item.id,
+    hijriYear: item.hijri_year,
+    gregorianStartDate: item.gregorian_start_date,
+    timezone: item.timezone || DEFAULT_RAMADAN_TIMEZONE,
+    isActive: item.is_active,
+    createdAt: item.created_at,
+    updatedAt: item.updated_at,
+  }));
+}
+
+export async function createRamadanConfigSupabase(input: { hijriYear: string; gregorianStartDate: string; timezone?: string; isActive?: boolean; }) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  if (input.isActive) {
+    await client.from('ramadan_config').update({ is_active: false }).eq('is_active', true);
+  }
+
+  const { data, error } = await client
+    .from('ramadan_config')
+    .insert({
+      hijri_year: input.hijriYear,
+      gregorian_start_date: input.gregorianStartDate,
+      timezone: input.timezone || DEFAULT_RAMADAN_TIMEZONE,
+      is_active: input.isActive ?? true,
+    })
+    .select('*')
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateRamadanConfigSupabase(id: number, input: { hijriYear?: string; gregorianStartDate?: string; timezone?: string; isActive?: boolean; }) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  if (input.isActive) {
+    await client.from('ramadan_config').update({ is_active: false }).eq('is_active', true).neq('id', id);
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (input.hijriYear !== undefined) updates.hijri_year = input.hijriYear;
+  if (input.gregorianStartDate !== undefined) updates.gregorian_start_date = input.gregorianStartDate;
+  if (input.timezone !== undefined) updates.timezone = input.timezone;
+  if (input.isActive !== undefined) updates.is_active = input.isActive;
+
+  const { data, error } = await client.from('ramadan_config').update(updates).eq('id', id).select('*').single();
+  if (error) throw error;
+  return data;
+}
+
+export async function upsertRamadanDailyStatSupabase(input: { configId: number; ramadanDay: number; beneficiariesServed: number; mealsDistributed: number; volunteersPresent: number; notes?: string; }) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const { data: config, error: configError } = await client
+    .from('ramadan_config')
+    .select('id, gregorian_start_date')
+    .eq('id', input.configId)
+    .single();
+  if (configError || !config) throw new Error('Configuration Ramadan introuvable');
+
+  const gregorianDate = addDaysToDateString(config.gregorian_start_date, input.ramadanDay - 1);
+
+  const { data, error } = await client
+    .from('ramadan_daily_stats')
+    .upsert({
+      config_id: input.configId,
+      ramadan_day: input.ramadanDay,
+      gregorian_date: gregorianDate,
+      beneficiaries_served: input.beneficiariesServed,
+      meals_distributed: input.mealsDistributed,
+      volunteers_present: input.volunteersPresent,
+      notes: input.notes ?? null,
+    }, { onConflict: 'config_id,ramadan_day' })
+    .select('*')
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function listRamadanDailyStatsSupabase(input: { configId: number; fromDate?: string; toDate?: string; }) {
+  const client = getSupabaseAdminClient();
+  if (!client) return [];
+
+  let query = client.from('ramadan_daily_stats').select('*').eq('config_id', input.configId).order('ramadan_day', { ascending: true });
+  if (input.fromDate) query = query.gte('gregorian_date', input.fromDate);
+  if (input.toDate) query = query.lte('gregorian_date', input.toDate);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
+export async function deleteRamadanDailyStatSupabase(id: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  const { error } = await client.from('ramadan_daily_stats').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function getRamadanSummarySupabase() {
+  const activeConfig = await getActiveRamadanConfigSupabase();
+  if (!activeConfig) {
+    return {
+      hijriYear: null,
+      todayRamadanDay: null,
+      totalsToDate: { meals: 0, beneficiaries: 0, volunteersPresence: 0 },
+      asOfGregorianDate: getDateStringInTimeZone(new Date(), DEFAULT_RAMADAN_TIMEZONE),
+      timezone: DEFAULT_RAMADAN_TIMEZONE,
+      isInRamadan: false,
+    };
+  }
+
+  const todayDate = getDateStringInTimeZone(new Date(), activeConfig.timezone);
+  const todayRamadanDayRaw = getRamadanDay(todayDate, activeConfig.gregorianStartDate);
+  const todayRamadanDay = todayRamadanDayRaw === null ? null : Math.min(todayRamadanDayRaw, 30);
+
+  let query = getSupabaseAdminClient()!
+    .from('ramadan_daily_stats')
+    .select('beneficiaries_served, meals_distributed, volunteers_present')
+    .eq('config_id', activeConfig.id);
+
+  if (todayRamadanDay !== null) {
+    query = query.lte('ramadan_day', todayRamadanDay);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const totals = (data || []).reduce((acc, row) => {
+    acc.meals += row.meals_distributed || 0;
+    acc.beneficiaries += row.beneficiaries_served || 0;
+    acc.volunteersPresence += row.volunteers_present || 0;
+    return acc;
+  }, { meals: 0, beneficiaries: 0, volunteersPresence: 0 });
+
+  return {
+    hijriYear: activeConfig.hijriYear,
+    todayRamadanDay,
+    totalsToDate: totals,
+    asOfGregorianDate: todayDate,
+    timezone: activeConfig.timezone,
+    isInRamadan: todayRamadanDay !== null,
+    configId: activeConfig.id,
+  };
 }
 
 // ============================================
