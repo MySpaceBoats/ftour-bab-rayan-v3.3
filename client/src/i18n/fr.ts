@@ -9,8 +9,8 @@ export const fr = {
   nav: {
     home: 'Accueil',
     event: "L'événement",
-    volunteer: 'Devenir bénévole',
-    restaurant: 'Restaurant Solidaire',
+    volunteer: 'Bénévolat',
+    restaurant: 'Restaurant',
     goodies: 'Goodies solidaires',
     association: 'Association',
     contact: 'Contact',
