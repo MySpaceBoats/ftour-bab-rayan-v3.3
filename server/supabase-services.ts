@@ -919,19 +919,49 @@ export async function getAllGoodiesSupabase(activeOnly = false) {
 
   let { data, error } = await query.order('sort_order', { ascending: true });
 
-  // If the variants join fails (FK not set up), fall back to goodies only
+  // If the variants join fails (FK not set up), fall back to two separate queries
   if (error) {
-    console.warn('[Goodies] Variants join failed, fetching goodies without variants:', error.message);
-    let fallbackQuery = client.from('goodies').select('*');
+    console.warn('[Goodies] Variants join failed, falling back to separate queries:', error.message);
+
+    let goodiesQuery = client.from('goodies').select('*');
     if (activeOnly) {
-      fallbackQuery = fallbackQuery.eq('is_active', true);
+      goodiesQuery = goodiesQuery.eq('is_active', true);
     }
-    const fallbackResult = await fallbackQuery.order('sort_order', { ascending: true });
-    if (fallbackResult.error) {
-      console.error('[Goodies] Failed to fetch goodies:', fallbackResult.error.message);
-      throw fallbackResult.error;
+
+    const goodiesResult = await goodiesQuery.order('sort_order', { ascending: true });
+    if (goodiesResult.error) {
+      console.error('[Goodies] Failed to fetch goodies:', goodiesResult.error.message);
+      throw goodiesResult.error;
     }
-    data = fallbackResult.data?.map((g: any) => ({ ...g, goodie_variants: [] })) ?? null;
+
+    const goodieIds = (goodiesResult.data || []).map((g: any) => g.id);
+    if (goodieIds.length === 0) {
+      data = [];
+    } else {
+      const variantsResult = await client
+        .from('goodie_variants')
+        .select('*')
+        .in('goodie_id', goodieIds)
+        .order('id', { ascending: true });
+
+      if (variantsResult.error) {
+        console.warn('[Goodies] Failed to fetch variants in fallback, returning products without variants:', variantsResult.error.message);
+        data = (goodiesResult.data || []).map((g: any) => ({ ...g, goodie_variants: [] }));
+      } else {
+        const variantsByGoodieId = (variantsResult.data || []).reduce((acc: Record<number, any[]>, v: any) => {
+          if (!acc[v.goodie_id]) {
+            acc[v.goodie_id] = [];
+          }
+          acc[v.goodie_id].push(v);
+          return acc;
+        }, {});
+
+        data = (goodiesResult.data || []).map((g: any) => ({
+          ...g,
+          goodie_variants: variantsByGoodieId[g.id] || [],
+        }));
+      }
+    }
   }
 
   return data?.map((g: any) => ({
@@ -1903,22 +1933,51 @@ export async function getPastriesSupabase() {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error('Supabase not configured');
 
-  const { data, error } = await client
+  const activeQuery = await client
     .from('pastries')
     .select('*')
     .eq('active', true)
     .order('sort_order', { ascending: true });
 
-  if (error) {
-    // If the pastries table doesn't exist yet, return empty array
-    // The table needs to be created by running: supabase/migrations/add_pastry_and_qr_tables.sql
-    if (error.code === '42P01' || error.message?.includes('does not exist') || error.message?.includes('not found')) {
-      console.warn('[Pastries] Table "pastries" not found in database. Run the migration: supabase/migrations/add_pastry_and_qr_tables.sql');
-      return [];
-    }
-    throw error;
+  if (!activeQuery.error) {
+    return activeQuery.data || [];
   }
-  return data || [];
+
+  const tableMissing =
+    activeQuery.error.code === '42P01' ||
+    activeQuery.error.message?.includes('does not exist') ||
+    activeQuery.error.message?.includes('not found');
+
+  if (tableMissing) {
+    console.warn('[Pastries] Table "pastries" not found in database. Run the migration: supabase/migrations/add_pastry_and_qr_tables.sql');
+    return [];
+  }
+
+  const missingActiveColumn =
+    activeQuery.error.code === '42703' ||
+    activeQuery.error.message?.toLowerCase().includes('column') &&
+    activeQuery.error.message?.toLowerCase().includes('active');
+
+  if (!missingActiveColumn) {
+    throw activeQuery.error;
+  }
+
+  console.warn('[Pastries] "active" column not available, falling back to relaxed query:', activeQuery.error.message);
+
+  const fallbackQuery = await client
+    .from('pastries')
+    .select('*')
+    .order('sort_order', { ascending: true });
+
+  if (fallbackQuery.error) {
+    throw fallbackQuery.error;
+  }
+
+  return (fallbackQuery.data || []).filter((p: any) => {
+    if (typeof p.active === 'boolean') return p.active;
+    if (typeof p.is_active === 'boolean') return p.is_active;
+    return true;
+  });
 }
 
 export async function createPastryOrderSupabase(orderData: {
