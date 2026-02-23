@@ -245,6 +245,9 @@ const parseGroupVolunteersFromSpreadsheet = (
   return Array.from(dedupedByEmail.values());
 };
 
+const volunteerNoShowBlockingMessage =
+  "Vous ne pouvez plus vous inscrire car vous n'êtes pas venu deux fois et une place prise est une place perdue pour un autre bénévole qui voudrait vraiment venir aider.";
+
 // ============================================
 // ROLE-BASED PROCEDURES
 // ============================================
@@ -830,7 +833,7 @@ const volunteersRouter = router({
       if (absenceCount >= 2) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: `Inscription impossible : vous avez été noté(e) absent(e) ${absenceCount} fois lors de précédentes inscriptions. Les réinscriptions ne sont plus autorisées.`,
+          message: volunteerNoShowBlockingMessage,
         });
       }
 
@@ -1059,7 +1062,7 @@ const volunteersRouter = router({
       if (groupAbsenceCount >= 2) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: `Inscription impossible : vous avez été noté(e) absent(e) ${groupAbsenceCount} fois lors de précédentes inscriptions. Les réinscriptions ne sont plus autorisées.`,
+          message: volunteerNoShowBlockingMessage,
         });
       }
 
