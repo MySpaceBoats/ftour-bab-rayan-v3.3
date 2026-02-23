@@ -4335,6 +4335,41 @@ const restaurantReservationsRouter = router({
 
       return { success: true, reservation: mapReservation(data) };
     }),
+
+  adminDelete: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
+      if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      }
+
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const { data: existing, error: findError } = await supabase
+        .from('restaurant_reservations')
+        .select('id')
+        .eq('id', input.id)
+        .single();
+
+      if (findError || !existing) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Réservation non trouvée' });
+      }
+
+      const { error: deleteError } = await supabase
+        .from('restaurant_reservations')
+        .delete()
+        .eq('id', input.id);
+
+      if (deleteError) {
+        console.error('[adminDelete] Error:', deleteError);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Erreur lors de la suppression de la réservation' });
+      }
+
+      return { success: true };
+    }),
 });
 
 // ============================================
