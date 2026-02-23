@@ -18,7 +18,6 @@ import {
   ShoppingBag,
   Home,
   Info,
-  Phone,
   LogOut,
   LayoutDashboard,
   Globe,
@@ -68,7 +67,6 @@ export default function Navbar() {
       label: t.nav.boutique,
       icon: ShoppingBag,
     },
-    { href: localizedHref("/contact"), label: t.nav.contact, icon: Phone },
   ];
 
   const handleLogout = async () => {
