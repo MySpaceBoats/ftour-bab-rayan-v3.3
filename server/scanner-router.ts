@@ -847,13 +847,13 @@ export const scannerRouter = router({
           .from('orders')
           .insert({
             order_reference: orderReference,
-            customer_name: 'Vente scanner goodies',
-            customer_email: 'scanner-goodies@ftourbabrayan.ma',
+            customer_name: 'Scan goodies',
+            customer_email: 'scan@fbr.ma',
             customer_phone: '0000000000',
             total_amount: unitPrice,
             status: 'paid',
             payment_method: 'cash',
-            notes: `Commande créée via scanner catalogue par ${ctx.user?.name || ctx.user?.email || 'scanner'}`,
+            notes: 'scan_catalog',
             processed_by: ctx.user?.id,
           })
           .select('id, order_reference')
@@ -919,16 +919,16 @@ export const scannerRouter = router({
           .from('pastry_orders')
           .insert({
             reference,
-            customer_name: 'Vente scanner pâtisserie',
+            customer_name: 'Scan pastry',
             phone: '0000000000',
-            email: 'scanner-pastry@ftourbabrayan.ma',
+            email: 'scan@fbr.ma',
             items: [{ pastryId: product.id, quantity: 1, price: unitPrice }],
             total_amount: unitPrice,
             payment_method: 'cash',
             payment_status: 'paid',
             order_status: 'paid',
             qr_token: qrToken,
-            notes: `Commande créée via scanner catalogue par ${ctx.user?.name || ctx.user?.email || 'scanner'}`,
+            notes: 'scan_catalog',
           })
           .select('id, reference')
           .single();
@@ -984,9 +984,9 @@ export const scannerRouter = router({
           .from('terroir_orders')
           .insert({
             order_reference: orderReference,
-            customer_name: 'Vente scanner terroir',
+            customer_name: 'Scan terroir',
             customer_phone: '0000000000',
-            customer_email: 'scanner-terroir@ftourbabrayan.ma',
+            customer_email: 'scan@fbr.ma',
             total_amount: unitPrice,
             status: 'paid',
             payment_status: 'paid',
@@ -994,7 +994,7 @@ export const scannerRouter = router({
             qr_status: 'active',
             processed_by: ctx.user?.id,
             processed_at: new Date().toISOString(),
-            notes: `Commande créée via scanner catalogue par ${ctx.user?.name || ctx.user?.email || 'scanner'}`,
+            notes: 'scan_catalog',
           })
           .select('id, order_reference')
           .single();

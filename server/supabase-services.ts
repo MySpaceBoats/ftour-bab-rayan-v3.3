@@ -2103,13 +2103,29 @@ export async function logQRScanSupabase(
   const client = getSupabaseAdminClient();
   if (!client) throw new Error('Supabase not configured');
 
+  const toLegacySafeValue = (value: string, maxLength: number = 20): string => {
+    const trimmed = value.trim();
+    if (trimmed.length <= maxLength) return trimmed;
+
+    const compact = trimmed.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    const prefix = compact.slice(0, Math.max(0, maxLength - 7));
+    const suffix = trimmed.split('')
+      .reduce((acc, ch) => (acc * 33 + ch.charCodeAt(0)) % 0xFFFFFF, 5381)
+      .toString(36)
+      .toUpperCase()
+      .padStart(6, '0')
+      .slice(0, 6);
+
+    return `${prefix}-${suffix}`.slice(0, maxLength);
+  };
+
   const { error } = await client
     .from('qr_scans')
     .insert({
-      token,
-      scope,
+      token: toLegacySafeValue(token, 20),
+      scope: toLegacySafeValue(scope, 20),
       entity_id: entityId,
-      validation_action: validationAction,
+      validation_action: toLegacySafeValue(validationAction, 20),
       validated_by: validatedBy,
       success,
       error_message: errorMessage,
