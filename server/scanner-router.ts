@@ -879,22 +879,31 @@ export const scannerRouter = router({
         }
 
         const unitPrice = parseFloat(product.price as any) || 0;
-        const orderReference = buildCompactToken('FBR', 20);
 
-        const { data: createdOrder, error: orderError } = await supabase
-          .from('orders')
-          .insert({
-            order_reference: orderReference,
-            customer_name: 'Scan goodies',
-            customer_email: 'scan@fbr.ma',
-            customer_phone: '0000000000',
-            total_amount: unitPrice,
-            status: 'paid',
-            payment_method: 'cash',
-            notes: 'scan_catalog',
-          })
-          .select('id, order_reference')
-          .single();
+        const tryCreateGoodieOrder = async (referenceMaxLength: number) => {
+          return supabase
+            .from('orders')
+            .insert({
+              order_reference: buildCompactToken('FBR', referenceMaxLength),
+              customer_name: 'Scan goodies',
+              customer_email: 'scan@fbr.ma',
+              customer_phone: '0000000000',
+              total_amount: unitPrice,
+              status: 'paid',
+              payment_method: 'cash',
+              notes: 'scan_catalog',
+            })
+            .select('id, order_reference')
+            .single();
+        };
+
+        let { data: createdOrder, error: orderError } = await tryCreateGoodieOrder(20);
+
+        if ((orderError || !createdOrder) && String(orderError?.message || '').includes('value too long for type character varying(20)')) {
+          const retry = await tryCreateGoodieOrder(12);
+          createdOrder = retry.data;
+          orderError = retry.error;
+        }
 
         if (orderError || !createdOrder) {
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: orderError?.message || 'Création commande impossible' });
