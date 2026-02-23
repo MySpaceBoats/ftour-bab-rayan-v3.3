@@ -19,7 +19,6 @@ import {
   Home,
   Info,
   Phone,
-  Building2,
   LogOut,
   LayoutDashboard,
   Globe,
@@ -67,11 +66,6 @@ export default function Navbar() {
       href: localizedHref("/reservation"),
       label: t.nav.restaurant,
       icon: UtensilsCrossed,
-    },
-    {
-      href: localizedHref("/association"),
-      label: t.association.title,
-      icon: Building2,
     },
     { href: localizedHref("/contact"), label: t.nav.contact, icon: Phone },
   ];
