@@ -15,7 +15,7 @@ export interface UserData {
   role?: 'user' | 'admin' | 'super_admin' | 'admin_ops' | 'admin_boutique' | 'admin_dons' | 'scanner' | 'admin_restaurant' | 'admin_patisserie' | 'admin_terroir' | 'admin_operations';
 }
 
-function normalizeUserRole(role?: UserData['role'] | string | null): string | undefined {
+export function normalizeUserRole(role?: UserData['role'] | string | null): string | undefined {
   if (!role) return undefined;
 
   // Legacy alias still present in old sessions / metadata.

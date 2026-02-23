@@ -106,10 +106,18 @@ function extractTokenFromUrl(rawInput: string): string {
   }
 }
 
-function buildCompactToken(prefix: string): string {
+function buildCompactToken(prefix: string, maxLength: number = 20): string {
+  const cleanPrefix = prefix.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
   const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).slice(2, 8).toUpperCase();
-  return `${prefix}-${timestamp}${random}`;
+  const random = Math.random().toString(36).slice(2).toUpperCase();
+
+  const prefixBudget = Math.max(0, maxLength - 1);
+  const safePrefix = cleanPrefix.slice(0, prefixBudget);
+  const bodyBudget = Math.max(4, maxLength - (safePrefix ? safePrefix.length + 1 : 0));
+  const body = `${timestamp}${random}`.slice(0, bodyBudget);
+
+  if (!safePrefix) return body.slice(0, maxLength);
+  return `${safePrefix}-${body}`.slice(0, maxLength);
 }
 
 const QR_TYPE_LABELS: Record<QrType, string> = {
@@ -833,7 +841,7 @@ export const scannerRouter = router({
         }
 
         const unitPrice = parseFloat(product.price as any) || 0;
-        const orderReference = `FBR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+        const orderReference = buildCompactToken('FBR', 20);
 
         const { data: createdOrder, error: orderError } = await supabase
           .from('orders')
@@ -904,8 +912,8 @@ export const scannerRouter = router({
         }
 
         const unitPrice = parseFloat(product.price as any) || 0;
-        const reference = buildCompactToken('PASTRY');
-        const qrToken = buildCompactToken('PSTRY');
+        const reference = buildCompactToken('PAS', 20);
+        const qrToken = buildCompactToken('PSQ', 20);
 
         const { data: createdOrder, error: orderError } = await supabase
           .from('pastry_orders')
@@ -969,8 +977,8 @@ export const scannerRouter = router({
 
         const variant = variants[0];
         const unitPrice = parseFloat(variant.price_unit as any) || 0;
-        const orderReference = buildCompactToken('TER');
-        const qrToken = buildCompactToken('TERQ');
+        const orderReference = buildCompactToken('TER', 20);
+        const qrToken = buildCompactToken('TRQ', 20);
 
         const { data: createdOrder, error: orderError } = await supabase
           .from('terroir_orders')

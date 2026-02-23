@@ -1,4 +1,5 @@
 import { getSupabaseAdminClient } from './supabase';
+import { normalizeUserRole } from './supabase-services';
 
 // Get the admin client
 const getAdminClient = () => {
@@ -13,7 +14,7 @@ const getAdminClient = () => {
 export interface AuthUser {
   id: string;
   email: string;
-  role: 'user' | 'admin' | 'super_admin' | 'scanner' | 'admin_operations' | 'admin_boutique' | 'admin_dons';
+  role: 'user' | 'admin' | 'super_admin' | 'scanner' | 'admin_ops' | 'admin_boutique' | 'admin_dons';
   name?: string;
   phone?: string;
   createdAt: Date;
@@ -279,7 +280,7 @@ export async function updateUserRole(userId: string, role: AuthUser['role']): Pr
     const supabaseAdmin = getAdminClient();
     const { error } = await supabaseAdmin
       .from('users')
-      .update({ role })
+      .update({ role: normalizeUserRole(role) ?? role })
       .eq('open_id', userId);
 
     if (error) {
