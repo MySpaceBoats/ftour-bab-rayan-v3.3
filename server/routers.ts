@@ -611,20 +611,6 @@ const volunteersRouter = router({
         });
       }
 
-      // Check for duplicate email on the same day
-      const emailExists =
-        await supabaseServices.checkVolunteerEmailExistsForDay(
-          normalizedEmail,
-          input.dayId
-        );
-      if (emailExists) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message:
-            "Cette adresse email est déjà inscrite pour ce jour. Si vous souhaitez modifier votre inscription, veuillez nous contacter.",
-        });
-      }
-
       // Check day availability
       const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
       if (!day) {
@@ -826,19 +812,6 @@ const volunteersRouter = router({
         throw new TRPCError({
           code: "FORBIDDEN",
           message: `Inscription impossible : vous avez été noté(e) absent(e) ${groupAbsenceCount} fois lors de précédentes inscriptions. Les réinscriptions ne sont plus autorisées.`,
-        });
-      }
-
-      const groupEmailExists =
-        await supabaseServices.checkVolunteerEmailExistsForDay(
-          normalizedGroupEmail,
-          input.dayId
-        );
-      if (groupEmailExists) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message:
-            "Cette adresse email est déjà inscrite pour ce jour. Si vous souhaitez modifier votre inscription, veuillez nous contacter.",
         });
       }
 
@@ -1049,24 +1022,16 @@ const volunteersRouter = router({
                   continue;
 
                 try {
-                  const exists =
-                    await supabaseServices.checkVolunteerEmailExistsForDay(
-                      email,
-                      input.dayId
-                    );
-                  if (exists) continue;
-
-                  const vol =
-                    await supabaseServices.createVolunteerShiftSupabase({
-                      firstName,
-                      lastName,
-                      email,
-                      phone,
-                      city,
-                      dayId: input.dayId,
-                      volunteerSlots: input.volunteerSlots,
-                      acceptedTerms: true,
-                    });
+                  const vol = await supabaseServices.createVolunteerShiftSupabase({
+                    firstName,
+                    lastName,
+                    email,
+                    phone,
+                    city,
+                    dayId: input.dayId,
+                    volunteerSlots: input.volunteerSlots,
+                    acceptedTerms: true,
+                  });
 
                   const volEmailData = generateVolunteerConfirmationEmail({
                     firstName,
