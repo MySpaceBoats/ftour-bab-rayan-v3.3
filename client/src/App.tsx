@@ -19,6 +19,7 @@ import Association from "@/features/public/pages/Association";
 import Contact from "@/features/public/pages/Contact";
 import FAQ from "@/features/public/pages/FAQ";
 import MentionsLegales from "@/features/public/pages/MentionsLegales";
+import Galerie from "@/features/gallery/pages/Galerie";
 
 // ============================================
 // AUTH — features/auth
@@ -92,6 +93,10 @@ import AdminPayments from "@/features/ops/admin/AdminPayments";
 import AdminUtilisateurs from "@/features/ops/admin/AdminUtilisateurs";
 import AdminUnifiedDashboard from "@/features/ops/admin/AdminUnifiedDashboard";
 import AdminQRCodes from "@/features/ops/admin/AdminQRCodes";
+import AdminRamadanStats from "@/features/ops/admin/AdminRamadanStats";
+import AdminGalerie from "@/features/gallery/admin/AdminGalerie";
+import AdminGalerieNouveau from "@/features/gallery/admin/AdminGalerieNouveau";
+import AdminGalerieEdit from "@/features/gallery/admin/AdminGalerieEdit";
 
 // ============================================
 // SCANNER — features/scanner
@@ -131,11 +136,15 @@ function LocalizedRoutes() {
 
   // Extract locale from URL path (only for non-admin routes)
   useEffect(() => {
-    if (location.startsWith('/admin') || location.startsWith('/scanner') || location.startsWith('/checkin')) {
+    if (
+      location.startsWith("/admin") ||
+      location.startsWith("/scanner") ||
+      location.startsWith("/checkin")
+    ) {
       return;
     }
 
-    const pathParts = location.split('/').filter(Boolean);
+    const pathParts = location.split("/").filter(Boolean);
     const urlLocale = pathParts[0] as Locale;
 
     if (SUPPORTED_LOCALES.includes(urlLocale)) {
@@ -146,21 +155,25 @@ function LocalizedRoutes() {
   }, [location, lang, setLang]);
 
   useEffect(() => {
-    const endpoint = import.meta.env.VITE_ANALYTICS_ENDPOINT as string | undefined;
-    const websiteId = import.meta.env.VITE_ANALYTICS_WEBSITE_ID as string | undefined;
+    const endpoint = import.meta.env.VITE_ANALYTICS_ENDPOINT as
+      | string
+      | undefined;
+    const websiteId = import.meta.env.VITE_ANALYTICS_WEBSITE_ID as
+      | string
+      | undefined;
 
     if (!endpoint || !websiteId) {
       return;
     }
 
-    if (document.querySelector('script[data-website-id]')) {
+    if (document.querySelector("script[data-website-id]")) {
       return;
     }
 
-    const script = document.createElement('script');
+    const script = document.createElement("script");
     script.defer = true;
-    script.src = `${endpoint.replace(/\/$/, '')}/umami`;
-    script.setAttribute('data-website-id', websiteId);
+    script.src = `${endpoint.replace(/\/$/, "")}/umami`;
+    script.setAttribute("data-website-id", websiteId);
     document.body.appendChild(script);
   }, []);
 
@@ -170,22 +183,43 @@ function LocalizedRoutes() {
           ADMIN ROUTES — sans :lang (section 4.2)
           ================================================ */}
       <Route path="/admin" component={AdminDashboard} />
-      <Route path="/admin/unified-dashboard" component={AdminUnifiedDashboard} />
+      <Route
+        path="/admin/unified-dashboard"
+        component={AdminUnifiedDashboard}
+      />
 
       {/* Admin Restaurant */}
-      <Route path="/admin/restaurant/groupes" component={AdminRestaurantGroupes} />
-      <Route path="/admin/restaurant/entreprises" component={AdminRestaurantEntreprises} />
+      <Route
+        path="/admin/restaurant/groupes"
+        component={AdminRestaurantGroupes}
+      />
+      <Route
+        path="/admin/restaurant/entreprises"
+        component={AdminRestaurantEntreprises}
+      />
       <Route path="/admin/restaurants" component={AdminRestaurants} />
-      <Route path="/admin/restaurant-reservations" component={AdminRestaurantReservations} />
-      <Route path="/admin/reservations" component={AdminRestaurantReservations} />
+      <Route
+        path="/admin/restaurant-reservations"
+        component={AdminRestaurantReservations}
+      />
+      <Route
+        path="/admin/reservations"
+        component={AdminRestaurantReservations}
+      />
       <Route path="/admin/company-bookings" component={AdminCompanyBookings} />
-      <Route path="/admin/reservations-calendar" component={AdminReservationsCalendar} />
+      <Route
+        path="/admin/reservations-calendar"
+        component={AdminReservationsCalendar}
+      />
       <Route path="/admin/scan-reservation" component={AdminScanReservation} />
 
       {/* Admin Pâtisserie */}
       <Route path="/admin/patisserie" component={AdminPastries} />
       <Route path="/admin/pastries" component={AdminPastries} />
-      <Route path="/admin/patisserie/catalogue" component={AdminPastryCatalog} />
+      <Route
+        path="/admin/patisserie/catalogue"
+        component={AdminPastryCatalog}
+      />
 
       {/* Admin Terroir */}
       <Route path="/admin/terroir/products" component={AdminTerroirProducts} />
@@ -201,12 +235,16 @@ function LocalizedRoutes() {
       {/* Admin Ops */}
       <Route path="/admin/benevoles" component={AdminBenevoles} />
       <Route path="/admin/jours" component={AdminJours} />
+      <Route path="/admin/ramadan-stats" component={AdminRamadanStats} />
       <Route path="/admin/scan-product" component={AdminScanProduct} />
       <Route path="/admin/payments" component={AdminPayments} />
       <Route path="/admin/utilisateurs" component={AdminUtilisateurs} />
 
       {/* Admin QR Codes Catalogue */}
       <Route path="/admin/qr-codes" component={AdminQRCodes} />
+      <Route path="/admin/galerie" component={AdminGalerie} />
+      <Route path="/admin/galerie/nouveau" component={AdminGalerieNouveau} />
+      <Route path="/admin/galerie/:id" component={AdminGalerieEdit} />
 
       {/* Admin Contenu */}
       <Route path="/admin/contenu" component={AdminContenu} />
@@ -228,14 +266,15 @@ function LocalizedRoutes() {
           PUBLIC CHECK-IN — sans :lang
           ================================================ */}
       <Route path="/checkin/:token" component={Checkin} />
-      <Route path="/checkin-reservation/:token" component={CheckinReservation} />
+      <Route
+        path="/checkin-reservation/:token"
+        component={CheckinReservation}
+      />
 
       {/* ================================================
           REDIRECT ROOT → default locale
           ================================================ */}
-      <Route path="/">
-        {() => <Redirect to={`/${lang}`} />}
-      </Route>
+      <Route path="/">{() => <Redirect to={`/${lang}`} />}</Route>
 
       {/* ================================================
           PUBLIC ROUTES — sous /:lang (section 4.1)
@@ -248,16 +287,26 @@ function LocalizedRoutes() {
       <Route path="/:lang/contact" component={Contact} />
       <Route path="/:lang/faq" component={FAQ} />
       <Route path="/:lang/mentions-legales" component={MentionsLegales} />
+      <Route path="/:lang/galerie" component={Galerie} />
       <Route path="/:lang/connexion" component={Login} />
       <Route path="/:lang/inscription" component={Signup} />
 
       {/* Restaurant public */}
-      <Route path="/:lang/restaurant/particuliers" component={RestaurantParticuliers} />
+      <Route
+        path="/:lang/restaurant/particuliers"
+        component={RestaurantParticuliers}
+      />
       <Route path="/:lang/restaurant/groupes" component={RestaurantGroupes} />
       <Route path="/:lang/reservation" component={Reservation} />
       <Route path="/:lang/company-booking" component={CompanyBooking} />
-      <Route path="/:lang/company-booking-confirmation/:reference" component={CompanyBookingConfirmation} />
-      <Route path="/:lang/company-booking-space/:token" component={CompanyBookingSpace} />
+      <Route
+        path="/:lang/company-booking-confirmation/:reference"
+        component={CompanyBookingConfirmation}
+      />
+      <Route
+        path="/:lang/company-booking-space/:token"
+        component={CompanyBookingSpace}
+      />
 
       {/* Boutique Solidaire (hub) */}
       <Route path="/:lang/boutique" component={BoutiqueSolidaire} />
@@ -289,9 +338,7 @@ function LocalizedRoutes() {
       <Route path="/pastries">
         {() => <Redirect to={`/${lang}/patisserie`} />}
       </Route>
-      <Route path="/dons">
-        {() => <Redirect to={`/${lang}/dons`} />}
-      </Route>
+      <Route path="/dons">{() => <Redirect to={`/${lang}/dons`} />}</Route>
       <Route path="/evenement">
         {() => <Redirect to={`/${lang}/evenement`} />}
       </Route>
@@ -301,11 +348,12 @@ function LocalizedRoutes() {
       <Route path="/contact">
         {() => <Redirect to={`/${lang}/contact`} />}
       </Route>
-      <Route path="/faq">
-        {() => <Redirect to={`/${lang}/faq`} />}
-      </Route>
+      <Route path="/faq">{() => <Redirect to={`/${lang}/faq`} />}</Route>
       <Route path="/mentions-legales">
         {() => <Redirect to={`/${lang}/mentions-legales`} />}
+      </Route>
+      <Route path="/galerie">
+        {() => <Redirect to={`/${lang}/galerie`} />}
       </Route>
       <Route path="/connexion">
         {() => <Redirect to={`/${lang}/connexion`} />}

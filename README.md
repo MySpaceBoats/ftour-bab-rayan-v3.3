@@ -41,11 +41,13 @@ This project is deployed to **Cloudflare Workers** with static assets.
 #### Build & Deploy Commands
 
 The deployment uses `wrangler versions upload` which requires:
+
 - **Build command:** `pnpm run build`
 - **Worker code:** `dist/worker.js` (API handler)
 - **Static assets:** `dist/public/` (frontend)
 
 The `wrangler.toml` is configured with:
+
 ```toml
 main = "dist/worker.js"         # Worker entry point
 [assets]
@@ -91,3 +93,58 @@ pnpm run deploy:cloudflare
 ## Troubleshooting
 
 See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions and troubleshooting.
+
+## Module Galerie photo
+
+### Migration DB
+
+- Exécuter `supabase/migrations/add_gallery_module.sql` dans Supabase SQL Editor.
+- Cette migration crée:
+  - `gallery_albums`
+  - `gallery_photos`
+  - index + trigger `updated_at`
+  - seed minimal de 2 albums.
+
+### Storage
+
+- Bucket utilisé: `images` (même bucket que les autres uploads).
+- Préfixes de fichiers galerie:
+  - originaux: `gallery/original/...`
+  - miniatures: `gallery/thumb/...`
+
+### Limites d'upload
+
+- Formats autorisés: `image/jpeg`, `image/png`, `image/webp`
+- SVG interdit
+- Taille max: 8 MB / fichier
+- Batch max: 20 fichiers
+
+### Endpoints/Procédures tRPC
+
+Admin (auth admin obligatoire):
+
+- `gallery.listPhotos`
+- `gallery.getPhoto`
+- `gallery.uploadPhotos`
+- `gallery.updatePhoto`
+- `gallery.deletePhoto`
+- `gallery.publish`
+- `gallery.unpublish`
+- `gallery.reorder`
+- `gallery.listAlbums`
+- `gallery.createAlbum`
+
+Public:
+
+- `public.galleryPhotos`
+- `public.galleryAlbums`
+
+### Routes Front
+
+- Admin:
+  - `/admin/galerie`
+  - `/admin/galerie/nouveau`
+  - `/admin/galerie/:id`
+- Public:
+  - `/:lang/galerie`
+  - `/galerie` (redirect)

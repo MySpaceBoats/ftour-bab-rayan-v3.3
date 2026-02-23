@@ -2,13 +2,30 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n";
 import { useCart } from "@/contexts/CartContext";
 import {
-  Menu, Heart, Users, ShoppingBag, Home, Info, Phone, Building2,
-  LogOut, LayoutDashboard, Globe, Lock, ShoppingCart, UtensilsCrossed
+  Menu,
+  Heart,
+  Users,
+  ShoppingBag,
+  Home,
+  Info,
+  Phone,
+  Building2,
+  LogOut,
+  LayoutDashboard,
+  Globe,
+  Lock,
+  ShoppingCart,
+  UtensilsCrossed,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -18,28 +35,50 @@ export default function Navbar() {
   const { t, lang, setLang, languages, dir } = useI18n();
   const { cartCount, setIsCartOpen } = useCart();
 
-  const isAdmin = user?.role && ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner'].includes(user.role);
+  const isAdmin =
+    user?.role &&
+    [
+      "admin",
+      "super_admin",
+      "admin_ops",
+      "admin_boutique",
+      "admin_dons",
+      "scanner",
+    ].includes(user.role);
 
   // Fonction pour générer les URLs localisées
   const localizedHref = (path: string) => {
-    if (path === '/') return `/${lang}`;
+    if (path === "/") return `/${lang}`;
     return `/${lang}${path}`;
   };
 
   // Nouveau menu principal selon le cahier des charges
   const mainLinks = [
-    { href: localizedHref('/'), label: t.nav.home, icon: Home },
-    { href: localizedHref('/evenement'), label: t.nav.event, icon: Info },
-    { href: localizedHref('/benevole'), label: t.nav.volunteer, icon: Users },
-    { href: localizedHref('/boutique'), label: t.nav.boutique, icon: ShoppingBag },
-    { href: localizedHref('/reservation'), label: t.nav.restaurant, icon: UtensilsCrossed },
-    { href: localizedHref('/association'), label: t.association.title, icon: Building2 },
-    { href: localizedHref('/contact'), label: t.nav.contact, icon: Phone },
+    { href: localizedHref("/"), label: t.nav.home, icon: Home },
+    { href: localizedHref("/evenement"), label: t.nav.event, icon: Info },
+    { href: localizedHref("/benevole"), label: t.nav.volunteer, icon: Users },
+    { href: localizedHref("/galerie"), label: "Galerie", icon: Info },
+    {
+      href: localizedHref("/boutique"),
+      label: t.nav.boutique,
+      icon: ShoppingBag,
+    },
+    {
+      href: localizedHref("/reservation"),
+      label: t.nav.restaurant,
+      icon: UtensilsCrossed,
+    },
+    {
+      href: localizedHref("/association"),
+      label: t.association.title,
+      icon: Building2,
+    },
+    { href: localizedHref("/contact"), label: t.nav.contact, icon: Phone },
   ];
 
   const handleLogout = async () => {
     await logout();
-    window.location.href = '/';
+    window.location.href = "/";
   };
 
   return (
@@ -52,9 +91,9 @@ export default function Navbar() {
             onClick={() => {
               if (cartCount > 0) {
                 setIsCartOpen(true);
-                setLocation(localizedHref('/goodies'));
+                setLocation(localizedHref("/goodies"));
               } else {
-                setLocation(localizedHref('/boutique'));
+                setLocation(localizedHref("/boutique"));
               }
             }}
             className="relative flex items-center gap-1 text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors"
@@ -69,13 +108,20 @@ export default function Navbar() {
           </button>
 
           {/* Admin Link - icône cadenas avec tooltip "Privé" */}
-          <Link href={localizedHref('/connexion')} className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors" title="Privé">
+          <Link
+            href={localizedHref("/connexion")}
+            className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors"
+            title="Privé"
+          >
             <Lock className="h-4 w-4" />
           </Link>
-          
+
           {/* Admin Link - visible uniquement pour les admins connectés */}
           {isAuthenticated && isAdmin && (
-            <Link href="/admin" className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors font-semibold">
+            <Link
+              href="/admin"
+              className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors font-semibold"
+            >
               <LayoutDashboard className="h-3 w-3 inline mr-1" />
               {t.nav.administration}
             </Link>
@@ -88,13 +134,16 @@ export default function Navbar() {
                 <Globe className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align={dir === 'rtl' ? 'start' : 'end'} className="bg-[#4A4829] border-[#F2E9D3]/20">
-              {languages.map((language) => (
+            <DropdownMenuContent
+              align={dir === "rtl" ? "start" : "end"}
+              className="bg-[#4A4829] border-[#F2E9D3]/20"
+            >
+              {languages.map(language => (
                 <DropdownMenuItem
                   key={language.code}
                   onClick={() => setLang(language.code)}
                   className={`text-[#F2E9D3] hover:bg-[#5E5B34] cursor-pointer ${
-                    lang === language.code ? 'bg-[#5E5B34]' : ''
+                    lang === language.code ? "bg-[#5E5B34]" : ""
                   }`}
                 >
                   {language.nativeName}
@@ -109,12 +158,21 @@ export default function Navbar() {
       <div className="bg-[#4A4829] border-b border-[#F2E9D3]/20">
         <div className="container flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link href={localizedHref('/')} className="flex items-center gap-3">
+          <Link href={localizedHref("/")} className="flex items-center gap-3">
             <div className="flex flex-col">
-              <span className="text-lg font-bold leading-none text-[#F2E9D3]" style={{ fontFamily: 'Caveat, cursive' }}>
+              <span
+                className="text-lg font-bold leading-none text-[#F2E9D3]"
+                style={{ fontFamily: "Caveat, cursive" }}
+              >
                 {t.home.heroTitle}
               </span>
-              <span className="text-xs text-[#CDBB8A]" style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic' }}>
+              <span
+                className="text-xs text-[#CDBB8A]"
+                style={{
+                  fontFamily: "Cormorant Garamond, serif",
+                  fontStyle: "italic",
+                }}
+              >
                 {t.home.heroSubtitle}
               </span>
             </div>
@@ -122,13 +180,13 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-1">
-            {mainLinks.map((link) => (
+            {mainLinks.map(link => (
               <Link key={link.href} href={link.href}>
                 <Button
                   variant="ghost"
                   size="sm"
                   className={`text-sm text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#5E5B34] ${
-                    location === link.href ? 'bg-[#5E5B34] text-[#CDBB8A]' : ''
+                    location === link.href ? "bg-[#5E5B34] text-[#CDBB8A]" : ""
                   }`}
                 >
                   {link.label}
@@ -140,9 +198,9 @@ export default function Navbar() {
           {/* Desktop CTA Buttons */}
           <div className="hidden lg:flex items-center gap-2">
             {isAuthenticated && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={handleLogout}
                 className="text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#5E5B34]"
               >
@@ -151,9 +209,9 @@ export default function Navbar() {
               </Button>
             )}
             {/* CTA Principal : Devenir bénévole */}
-            <Link href={localizedHref('/benevole')}>
-              <Button 
-                size="sm" 
+            <Link href={localizedHref("/benevole")}>
+              <Button
+                size="sm"
                 className="bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3] border-2 border-[#F2E9D3] font-semibold"
               >
                 <Users className="h-4 w-4 mr-2" />
@@ -161,9 +219,9 @@ export default function Navbar() {
               </Button>
             </Link>
             {/* CTA Secondaire : Faire un don */}
-            <Link href={localizedHref('/dons')}>
-              <Button 
-                size="sm" 
+            <Link href={localizedHref("/dons")}>
+              <Button
+                size="sm"
                 variant="outline"
                 className="border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829] font-semibold"
               >
@@ -176,13 +234,17 @@ export default function Navbar() {
           {/* Mobile Menu */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild className="lg:hidden">
-              <Button variant="ghost" size="icon" className="text-[#F2E9D3] hover:bg-[#5E5B34]">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-[#F2E9D3] hover:bg-[#5E5B34]"
+              >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent 
-              side={dir === 'rtl' ? 'left' : 'right'} 
+            <SheetContent
+              side={dir === "rtl" ? "left" : "right"}
               className="w-[300px] sm:w-[350px] bg-[#4A4829] border-l border-[#F2E9D3]/20"
             >
               <div className="flex flex-col gap-6 mt-6">
@@ -190,14 +252,14 @@ export default function Navbar() {
                 <div className="flex items-center gap-2 pb-4 border-b border-[#F2E9D3]/20">
                   <Globe className="h-4 w-4 text-[#CDBB8A]" />
                   <div className="flex gap-2">
-                    {languages.map((language) => (
+                    {languages.map(language => (
                       <button
                         key={language.code}
                         onClick={() => setLang(language.code)}
                         className={`px-2 py-1 rounded text-sm ${
-                          lang === language.code 
-                            ? 'bg-[#5E5B34] text-[#F2E9D3]' 
-                            : 'text-[#CDBB8A] hover:text-[#F2E9D3]'
+                          lang === language.code
+                            ? "bg-[#5E5B34] text-[#F2E9D3]"
+                            : "text-[#CDBB8A] hover:text-[#F2E9D3]"
                         }`}
                       >
                         {language.nativeName}
@@ -208,14 +270,20 @@ export default function Navbar() {
 
                 {/* Main Links */}
                 <nav className="flex flex-col gap-1">
-                  {mainLinks.map((link) => {
+                  {mainLinks.map(link => {
                     const Icon = link.icon;
                     return (
-                      <Link key={link.href} href={link.href} onClick={() => setIsOpen(false)}>
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setIsOpen(false)}
+                      >
                         <Button
                           variant="ghost"
                           className={`w-full justify-start text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#5E5B34] ${
-                            location === link.href ? 'bg-[#5E5B34] text-[#CDBB8A]' : ''
+                            location === link.href
+                              ? "bg-[#5E5B34] text-[#CDBB8A]"
+                              : ""
                           }`}
                         >
                           <Icon className="h-4 w-4 mr-3" />
@@ -234,8 +302,8 @@ export default function Navbar() {
                     <>
                       {isAdmin && (
                         <Link href="/admin" onClick={() => setIsOpen(false)}>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             className="w-full border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
                           >
                             <LayoutDashboard className="h-4 w-4 mr-2" />
@@ -243,9 +311,9 @@ export default function Navbar() {
                           </Button>
                         </Link>
                       )}
-                      <Button 
-                        variant="ghost" 
-                        className="w-full text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#5E5B34]" 
+                      <Button
+                        variant="ghost"
+                        className="w-full text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#5E5B34]"
                         onClick={handleLogout}
                       >
                         <LogOut className="h-4 w-4 mr-2" />
@@ -253,17 +321,23 @@ export default function Navbar() {
                       </Button>
                     </>
                   ) : null}
-                  
+
                   {/* CTA Buttons Mobile */}
-                  <Link href={localizedHref('/benevole')} onClick={() => setIsOpen(false)}>
+                  <Link
+                    href={localizedHref("/benevole")}
+                    onClick={() => setIsOpen(false)}
+                  >
                     <Button className="w-full bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3] border-2 border-[#F2E9D3] font-semibold">
                       <Users className="h-4 w-4 mr-2" />
                       {t.cta.volunteer}
                     </Button>
                   </Link>
-                  <Link href={localizedHref('/dons')} onClick={() => setIsOpen(false)}>
-                    <Button 
-                      variant="outline" 
+                  <Link
+                    href={localizedHref("/dons")}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <Button
+                      variant="outline"
                       className="w-full border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829] font-semibold"
                     >
                       <Heart className="h-4 w-4 mr-2" />

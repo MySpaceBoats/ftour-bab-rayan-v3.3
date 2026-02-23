@@ -6,10 +6,27 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import {
-  Users, ShoppingBag, Heart, Calendar, QrCode,
-  ArrowRight, Loader2, BarChart3, Package, MessageSquare,
-  UserCog, FileText, Home, LogOut, UtensilsCrossed, Store,
-  UsersRound, CakeSlice, CalendarDays, type LucideIcon
+  Users,
+  ShoppingBag,
+  Heart,
+  Calendar,
+  QrCode,
+  ArrowRight,
+  Loader2,
+  BarChart3,
+  Package,
+  MessageSquare,
+  UserCog,
+  FileText,
+  Home,
+  LogOut,
+  UtensilsCrossed,
+  Store,
+  UsersRound,
+  CakeSlice,
+  CalendarDays,
+  Images,
+  type LucideIcon,
 } from "lucide-react";
 
 // ============================================
@@ -24,7 +41,7 @@ type ModuleDefinition = {
   iconColor: string;
   iconBg: string;
   allowedRoles: string[];
-  variant?: 'default' | 'primary' | 'accent';
+  variant?: "default" | "primary" | "accent";
   buttonClass?: string;
 };
 
@@ -36,7 +53,17 @@ type SectionDefinition = {
   borderClass?: string;
 };
 
-const ALL_ADMIN_ROLES = ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'admin_patisserie', 'admin_terroir'];
+const ALL_ADMIN_ROLES = [
+  "admin",
+  "super_admin",
+  "admin_ops",
+  "admin_boutique",
+  "admin_dons",
+  "scanner",
+  "admin_restaurant",
+  "admin_patisserie",
+  "admin_terroir",
+];
 
 const sections: SectionDefinition[] = [
   {
@@ -47,32 +74,35 @@ const sections: SectionDefinition[] = [
     modules: [
       {
         label: "Réservations Groupes ou Entreprises",
-        description: "Réservations groupes ou entreprises (assos, familles, délégations, entreprises) soumises à confirmation",
+        description:
+          "Réservations groupes ou entreprises (assos, familles, délégations, entreprises) soumises à confirmation",
         route: "/admin/restaurant/groupes",
         icon: UsersRound,
         iconColor: "text-[#5d5a3c]",
         iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_restaurant'],
+        allowedRoles: ["admin", "super_admin", "admin_restaurant"],
         buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
       },
       {
         label: "Calendrier Réservations",
-        description: "Vue calendrier des réservations par jour avec places et groupes",
+        description:
+          "Vue calendrier des réservations par jour avec places et groupes",
         route: "/admin/reservations-calendar",
         icon: CalendarDays,
         iconColor: "text-[#5d5a3c]",
         iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_restaurant'],
+        allowedRoles: ["admin", "super_admin", "admin_restaurant"],
         buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
       },
       {
         label: "Réservations Entreprises",
-        description: "Réservations entreprises (10-120 places) soumises à confirmation",
+        description:
+          "Réservations entreprises (10-120 places) soumises à confirmation",
         route: "/admin/restaurant/entreprises",
         icon: Users,
         iconColor: "text-[#5d5a3c]",
         iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_restaurant'],
+        allowedRoles: ["admin", "super_admin", "admin_restaurant"],
         buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
       },
       {
@@ -82,7 +112,7 @@ const sections: SectionDefinition[] = [
         icon: UtensilsCrossed,
         iconColor: "text-[#5d5a3c]",
         iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_ops'],
+        allowedRoles: ["admin", "super_admin", "admin_ops"],
         buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
       },
       {
@@ -92,7 +122,7 @@ const sections: SectionDefinition[] = [
         icon: Store,
         iconColor: "text-[#5d5a3c]",
         iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ['super_admin'],
+        allowedRoles: ["super_admin"],
         buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
       },
       {
@@ -102,8 +132,8 @@ const sections: SectionDefinition[] = [
         icon: QrCode,
         iconColor: "text-[#5d5a3c]",
         iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'scanner'],
-        variant: 'primary',
+        allowedRoles: ["admin", "super_admin", "admin_ops", "scanner"],
+        variant: "primary",
         buttonClass: "bg-[#5d5a3c] hover:bg-[#5d5a3c]/90 text-white",
       },
     ],
@@ -118,7 +148,7 @@ const sections: SectionDefinition[] = [
         icon: Package,
         iconColor: "text-secondary-foreground",
         iconBg: "bg-secondary/20",
-        allowedRoles: ['admin', 'super_admin', 'admin_boutique'],
+        allowedRoles: ["admin", "super_admin", "admin_boutique"],
       },
       {
         label: "Catalogue Goodies",
@@ -127,7 +157,7 @@ const sections: SectionDefinition[] = [
         icon: ShoppingBag,
         iconColor: "text-secondary-foreground",
         iconBg: "bg-secondary/20",
-        allowedRoles: ['admin', 'super_admin', 'admin_boutique'],
+        allowedRoles: ["admin", "super_admin", "admin_boutique"],
       },
       {
         label: "Commandes Pâtisserie",
@@ -136,7 +166,12 @@ const sections: SectionDefinition[] = [
         icon: UtensilsCrossed,
         iconColor: "text-amber-600",
         iconBg: "bg-amber-100",
-        allowedRoles: ['admin', 'super_admin', 'admin_boutique', 'admin_patisserie'],
+        allowedRoles: [
+          "admin",
+          "super_admin",
+          "admin_boutique",
+          "admin_patisserie",
+        ],
       },
       {
         label: "Catalogue Pâtisserie",
@@ -145,7 +180,12 @@ const sections: SectionDefinition[] = [
         icon: CakeSlice,
         iconColor: "text-amber-600",
         iconBg: "bg-amber-100",
-        allowedRoles: ['admin', 'super_admin', 'admin_boutique', 'admin_patisserie'],
+        allowedRoles: [
+          "admin",
+          "super_admin",
+          "admin_boutique",
+          "admin_patisserie",
+        ],
       },
       {
         label: "Commandes Terroir",
@@ -154,7 +194,7 @@ const sections: SectionDefinition[] = [
         icon: Package,
         iconColor: "text-emerald-700",
         iconBg: "bg-emerald-100",
-        allowedRoles: ['admin', 'super_admin', 'admin_terroir'],
+        allowedRoles: ["admin", "super_admin", "admin_terroir"],
       },
       {
         label: "Catalogue Terroir",
@@ -163,7 +203,7 @@ const sections: SectionDefinition[] = [
         icon: ShoppingBag,
         iconColor: "text-emerald-700",
         iconBg: "bg-emerald-100",
-        allowedRoles: ['admin', 'super_admin', 'admin_terroir'],
+        allowedRoles: ["admin", "super_admin", "admin_terroir"],
       },
       {
         label: "Réservation Entreprise",
@@ -172,25 +212,49 @@ const sections: SectionDefinition[] = [
         icon: Users,
         iconColor: "text-purple-600",
         iconBg: "bg-purple-100",
-        allowedRoles: ['admin', 'super_admin', 'admin_boutique'],
+        allowedRoles: ["admin", "super_admin", "admin_boutique"],
       },
       {
         label: "Paiements",
-        description: "Suivi et gestion de tous les paiements avec filtres et export",
+        description:
+          "Suivi et gestion de tous les paiements avec filtres et export",
         route: "/admin/payments",
         icon: BarChart3,
         iconColor: "text-green-600",
         iconBg: "bg-green-100",
-        allowedRoles: ['admin', 'super_admin', 'admin_boutique', 'admin_dons', 'admin_terroir'],
+        allowedRoles: [
+          "admin",
+          "super_admin",
+          "admin_boutique",
+          "admin_dons",
+          "admin_terroir",
+        ],
       },
       {
         label: "QR Codes Catalogue",
-        description: "Tous les QR codes produits (goodies, pâtisserie, terroir, dons)",
+        description:
+          "Tous les QR codes produits (goodies, pâtisserie, terroir, dons)",
         route: "/admin/qr-codes",
         icon: QrCode,
         iconColor: "text-indigo-600",
         iconBg: "bg-indigo-100",
-        allowedRoles: ['admin', 'super_admin', 'admin_boutique', 'admin_patisserie', 'admin_terroir', 'admin_dons'],
+        allowedRoles: [
+          "admin",
+          "super_admin",
+          "admin_boutique",
+          "admin_patisserie",
+          "admin_terroir",
+          "admin_dons",
+        ],
+      },
+      {
+        label: "Galerie photo",
+        description: "Uploader, publier et organiser les photos du site public",
+        route: "/admin/galerie",
+        icon: Images,
+        iconColor: "text-sky-700",
+        iconBg: "bg-sky-100",
+        allowedRoles: ["admin", "super_admin", "admin_ops"],
       },
     ],
   },
@@ -199,12 +263,13 @@ const sections: SectionDefinition[] = [
     modules: [
       {
         label: "Dons",
-        description: "Suivre les promesses de dons et marquer les paiements reçus",
+        description:
+          "Suivre les promesses de dons et marquer les paiements reçus",
         route: "/admin/dons",
         icon: Heart,
         iconColor: "text-accent",
         iconBg: "bg-accent/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_dons'],
+        allowedRoles: ["admin", "super_admin", "admin_dons"],
       },
     ],
   },
@@ -218,17 +283,18 @@ const sections: SectionDefinition[] = [
         icon: Users,
         iconColor: "text-primary",
         iconBg: "bg-primary/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_ops'],
+        allowedRoles: ["admin", "super_admin", "admin_ops"],
       },
       {
         label: "Scanner QR",
-        description: "Scanner les QR codes des bénévoles pour valider leur présence",
+        description:
+          "Scanner les QR codes des bénévoles pour valider leur présence",
         route: "/scanner",
         icon: QrCode,
         iconColor: "text-primary",
         iconBg: "bg-primary/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'scanner'],
-        variant: 'primary',
+        allowedRoles: ["admin", "super_admin", "admin_ops", "scanner"],
+        variant: "primary",
       },
     ],
   },
@@ -242,7 +308,7 @@ const sections: SectionDefinition[] = [
         icon: Calendar,
         iconColor: "text-blue-600",
         iconBg: "bg-blue-100",
-        allowedRoles: ['super_admin'],
+        allowedRoles: ["super_admin"],
       },
       {
         label: "Scanner Produits",
@@ -251,7 +317,7 @@ const sections: SectionDefinition[] = [
         icon: QrCode,
         iconColor: "text-orange-600",
         iconBg: "bg-orange-100",
-        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'scanner'],
+        allowedRoles: ["admin", "super_admin", "admin_ops", "scanner"],
       },
     ],
   },
@@ -265,7 +331,7 @@ const sections: SectionDefinition[] = [
         icon: UserCog,
         iconColor: "text-purple-600",
         iconBg: "bg-purple-100",
-        allowedRoles: ['super_admin'],
+        allowedRoles: ["super_admin"],
       },
       {
         label: "Messages",
@@ -274,7 +340,7 @@ const sections: SectionDefinition[] = [
         icon: MessageSquare,
         iconColor: "text-green-600",
         iconBg: "bg-green-100",
-        allowedRoles: ['super_admin'],
+        allowedRoles: ["super_admin"],
       },
       {
         label: "Contenu",
@@ -283,7 +349,7 @@ const sections: SectionDefinition[] = [
         icon: FileText,
         iconColor: "text-orange-600",
         iconBg: "bg-orange-100",
-        allowedRoles: ['super_admin'],
+        allowedRoles: ["super_admin"],
       },
       {
         label: "Tableau de bord unifié",
@@ -292,7 +358,7 @@ const sections: SectionDefinition[] = [
         icon: BarChart3,
         iconColor: "text-blue-600",
         iconBg: "bg-blue-100",
-        allowedRoles: ['super_admin'],
+        allowedRoles: ["super_admin"],
       },
     ],
   },
@@ -307,11 +373,19 @@ export default function Admin() {
   const [, navigate] = useLocation();
 
   const isAdmin = user?.role && ALL_ADMIN_ROLES.includes(user.role);
-  const isSuperAdmin = user?.role === 'super_admin';
-  const canManageVolunteers = user?.role && ['admin', 'super_admin', 'admin_ops'].includes(user.role);
-  const canManageOrders = user?.role && ['admin', 'super_admin', 'admin_boutique'].includes(user.role);
-  const canManageDonations = user?.role && ['admin', 'super_admin', 'admin_dons'].includes(user.role);
-  const canManageRestaurant = user?.role && ['admin', 'super_admin', 'admin_restaurant', 'admin_ops'].includes(user.role);
+  const isSuperAdmin = user?.role === "super_admin";
+  const canManageVolunteers =
+    user?.role && ["admin", "super_admin", "admin_ops"].includes(user.role);
+  const canManageOrders =
+    user?.role &&
+    ["admin", "super_admin", "admin_boutique"].includes(user.role);
+  const canManageDonations =
+    user?.role && ["admin", "super_admin", "admin_dons"].includes(user.role);
+  const canManageRestaurant =
+    user?.role &&
+    ["admin", "super_admin", "admin_restaurant", "admin_ops"].includes(
+      user.role
+    );
 
   const { data: volunteerStats } = trpc.volunteers.stats.useQuery(undefined, {
     enabled: isAuthenticated && !!canManageVolunteers,
@@ -325,21 +399,40 @@ export default function Admin() {
     enabled: isAuthenticated && !!canManageDonations,
   });
 
-  const { data: restaurantParticuliers } = trpc.restaurantReservations.adminListParticuliers.useQuery(undefined, {
-    enabled: isAuthenticated && !!canManageRestaurant,
-  });
-  const { data: restaurantGroupes } = trpc.restaurantReservations.adminListGroupes.useQuery(undefined, {
-    enabled: isAuthenticated && !!canManageRestaurant,
-  });
-  const { data: restaurantEntreprises } = trpc.restaurantReservations.adminListEntreprises.useQuery(undefined, {
-    enabled: isAuthenticated && !!canManageRestaurant,
-  });
+  const { data: restaurantParticuliers } =
+    trpc.restaurantReservations.adminListParticuliers.useQuery(undefined, {
+      enabled: isAuthenticated && !!canManageRestaurant,
+    });
+  const { data: restaurantGroupes } =
+    trpc.restaurantReservations.adminListGroupes.useQuery(undefined, {
+      enabled: isAuthenticated && !!canManageRestaurant,
+    });
+  const { data: restaurantEntreprises } =
+    trpc.restaurantReservations.adminListEntreprises.useQuery(undefined, {
+      enabled: isAuthenticated && !!canManageRestaurant,
+    });
 
-  const restaurantStats = canManageRestaurant ? {
-    total: (restaurantParticuliers?.length || 0) + (restaurantGroupes?.length || 0) + (restaurantEntreprises?.length || 0),
-    pending: [...(restaurantParticuliers || []), ...(restaurantGroupes || []), ...(restaurantEntreprises || [])].filter((r: any) => r.status === 'pending_validation' || r.status === 'submitted').length,
-    totalSeats: [...(restaurantParticuliers || []), ...(restaurantGroupes || []), ...(restaurantEntreprises || [])].reduce((sum: number, r: any) => sum + (r.seatsTotal || 0), 0),
-  } : null;
+  const restaurantStats = canManageRestaurant
+    ? {
+        total:
+          (restaurantParticuliers?.length || 0) +
+          (restaurantGroupes?.length || 0) +
+          (restaurantEntreprises?.length || 0),
+        pending: [
+          ...(restaurantParticuliers || []),
+          ...(restaurantGroupes || []),
+          ...(restaurantEntreprises || []),
+        ].filter(
+          (r: any) =>
+            r.status === "pending_validation" || r.status === "submitted"
+        ).length,
+        totalSeats: [
+          ...(restaurantParticuliers || []),
+          ...(restaurantGroupes || []),
+          ...(restaurantEntreprises || []),
+        ].reduce((sum: number, r: any) => sum + (r.seatsTotal || 0), 0),
+      }
+    : null;
 
   const { data: days } = trpc.days.list.useQuery();
 
@@ -351,7 +444,7 @@ export default function Admin() {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/');
+    navigate("/");
   };
 
   if (authLoading) {
@@ -372,9 +465,10 @@ export default function Admin() {
             </div>
             <h1 className="text-xl font-bold">Accès non autorisé</h1>
             <p className="text-muted-foreground">
-              Vous n'avez pas les droits nécessaires pour accéder à l'administration.
+              Vous n'avez pas les droits nécessaires pour accéder à
+              l'administration.
             </p>
-            <Button onClick={() => navigate('/')} variant="outline">
+            <Button onClick={() => navigate("/")} variant="outline">
               Retour à l'accueil
             </Button>
           </CardContent>
@@ -383,7 +477,7 @@ export default function Admin() {
     );
   }
 
-  const userRole = user?.role || '';
+  const userRole = user?.role || "";
   const activeDays = days?.filter(d => d.isOpen).length || 0;
   const totalDays = days?.length || 0;
 
@@ -414,7 +508,9 @@ export default function Admin() {
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="text-sm font-medium">{user?.name || user?.email}</p>
-              <p className="text-xs text-muted-foreground capitalize">{user?.role?.replace(/_/g, ' ')}</p>
+              <p className="text-xs text-muted-foreground capitalize">
+                {user?.role?.replace(/_/g, " ")}
+              </p>
             </div>
             <Button variant="ghost" size="icon" onClick={handleLogout}>
               <LogOut className="h-5 w-5" />
@@ -432,7 +528,9 @@ export default function Admin() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Bénévoles</p>
-                    <p className="text-3xl font-bold">{volunteerStats?.total || 0}</p>
+                    <p className="text-3xl font-bold">
+                      {volunteerStats?.total || 0}
+                    </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {volunteerStats?.present || 0} présents
                     </p>
@@ -451,7 +549,9 @@ export default function Admin() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Commandes</p>
-                    <p className="text-3xl font-bold">{orderStats?.total || 0}</p>
+                    <p className="text-3xl font-bold">
+                      {orderStats?.total || 0}
+                    </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {(orderStats as any)?.totalAmount || 0} DH
                     </p>
@@ -470,7 +570,9 @@ export default function Admin() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Dons</p>
-                    <p className="text-3xl font-bold">{donationStats?.total || 0}</p>
+                    <p className="text-3xl font-bold">
+                      {donationStats?.total || 0}
+                    </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {donationStats?.receivedAmount || 0} DH reçus
                     </p>
@@ -488,10 +590,15 @@ export default function Admin() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Réservations</p>
-                    <p className="text-3xl font-bold">{restaurantStats.total}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Réservations
+                    </p>
+                    <p className="text-3xl font-bold">
+                      {restaurantStats.total}
+                    </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {restaurantStats.pending} en attente • {restaurantStats.totalSeats} places
+                      {restaurantStats.pending} en attente •{" "}
+                      {restaurantStats.totalSeats} places
                     </p>
                   </div>
                   <div className="w-12 h-12 rounded-full bg-[#5d5a3c]/10 flex items-center justify-center">
@@ -521,18 +628,27 @@ export default function Admin() {
         </div>
 
         {/* Module Sections */}
-        {visibleSections.map((section) => (
+        {visibleSections.map(section => (
           <div key={section.title} className="mb-8">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              {section.icon && <section.icon className={`h-5 w-5 ${section.iconColor || ''}`} />}
+              {section.icon && (
+                <section.icon
+                  className={`h-5 w-5 ${section.iconColor || ""}`}
+                />
+              )}
               {section.title}
             </h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {section.modules.map((mod) => (
-                <Card key={mod.route} className={`card-hover ${section.borderClass || ''}`}>
+              {section.modules.map(mod => (
+                <Card
+                  key={mod.route}
+                  className={`card-hover ${section.borderClass || ""}`}
+                >
                   <CardHeader>
                     <CardTitle className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg ${mod.iconBg} flex items-center justify-center`}>
+                      <div
+                        className={`w-10 h-10 rounded-lg ${mod.iconBg} flex items-center justify-center`}
+                      >
                         <mod.icon className={`h-5 w-5 ${mod.iconColor}`} />
                       </div>
                       {mod.label}
@@ -544,10 +660,12 @@ export default function Admin() {
                     </p>
                     <Link href={mod.route}>
                       <Button
-                        variant={mod.variant === 'primary' ? 'default' : 'outline'}
-                        className={`w-full ${mod.buttonClass || ''}`}
+                        variant={
+                          mod.variant === "primary" ? "default" : "outline"
+                        }
+                        className={`w-full ${mod.buttonClass || ""}`}
                       >
-                        {mod.variant === 'primary' ? 'Ouvrir' : 'Gérer'}
+                        {mod.variant === "primary" ? "Ouvrir" : "Gérer"}
                         <ArrowRight className="h-4 w-4 ml-2" />
                       </Button>
                     </Link>
