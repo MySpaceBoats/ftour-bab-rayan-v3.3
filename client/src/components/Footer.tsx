@@ -42,7 +42,7 @@ export default function Footer() {
               <a href="https://facebook.com/babrayan" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-[#F2E9D3]/10 hover:bg-[#F2E9D3]/20 transition-colors">
                 <Facebook className="h-4 w-4" />
               </a>
-              <a href="https://instagram.com/babrayan" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-[#F2E9D3]/10 hover:bg-[#F2E9D3]/20 transition-colors">
+              <a href="https://www.instagram.com/ftourbabrayan/?hl=fr" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-[#F2E9D3]/10 hover:bg-[#F2E9D3]/20 transition-colors">
                 <Instagram className="h-4 w-4" />
               </a>
               <a href="https://linkedin.com/company/babrayan" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-[#F2E9D3]/10 hover:bg-[#F2E9D3]/20 transition-colors">
