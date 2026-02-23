@@ -611,6 +611,20 @@ const volunteersRouter = router({
         });
       }
 
+      // Check for duplicate email on the same day
+      const emailExists =
+        await supabaseServices.checkVolunteerEmailExistsForDay(
+          normalizedEmail,
+          input.dayId
+        );
+      if (emailExists) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message:
+            "Cette adresse email est déjà inscrite pour ce jour. Si vous souhaitez modifier votre inscription, veuillez nous contacter.",
+        });
+      }
+
       // Check day availability
       const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
       if (!day) {
@@ -812,6 +826,19 @@ const volunteersRouter = router({
         throw new TRPCError({
           code: "FORBIDDEN",
           message: `Inscription impossible : vous avez été noté(e) absent(e) ${groupAbsenceCount} fois lors de précédentes inscriptions. Les réinscriptions ne sont plus autorisées.`,
+        });
+      }
+
+      const groupEmailExists =
+        await supabaseServices.checkVolunteerEmailExistsForDay(
+          normalizedGroupEmail,
+          input.dayId
+        );
+      if (groupEmailExists) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message:
+            "Cette adresse email est déjà inscrite pour ce jour. Si vous souhaitez modifier votre inscription, veuillez nous contacter.",
         });
       }
 
@@ -1022,16 +1049,24 @@ const volunteersRouter = router({
                   continue;
 
                 try {
-                  const vol = await supabaseServices.createVolunteerShiftSupabase({
-                    firstName,
-                    lastName,
-                    email,
-                    phone,
-                    city,
-                    dayId: input.dayId,
-                    volunteerSlots: input.volunteerSlots,
-                    acceptedTerms: true,
-                  });
+                  const exists =
+                    await supabaseServices.checkVolunteerEmailExistsForDay(
+                      email,
+                      input.dayId
+                    );
+                  if (exists) continue;
+
+                  const vol =
+                    await supabaseServices.createVolunteerShiftSupabase({
+                      firstName,
+                      lastName,
+                      email,
+                      phone,
+                      city,
+                      dayId: input.dayId,
+                      volunteerSlots: input.volunteerSlots,
+                      acceptedTerms: true,
+                    });
 
                   const volEmailData = generateVolunteerConfirmationEmail({
                     firstName,
@@ -1932,47 +1967,6 @@ const usersRouter = router({
         ]),
       })
     )
-    .mutation(async ({ input }) => {
-      await supabaseServices.updateUserRoleSupabase(input.userId, input.role);
-      return { success: true };
-    }),
-});
-
-
-
-const ramadanRouter = router({
-  publicSummary: publicProcedure.query(async () => {
-    return supabaseServices.getRamadanSummarySupabase();
-  }),
-
-  publicDaily: publicProcedure
-    .input(z.object({
-      from: z.string().optional(),
-      to: z.string().optional(),
-    }).optional())
-    .query(async ({ input }) => {
-      const config = await supabaseServices.getActiveRamadanConfigSupabase();
-      if (!config) return [];
-      return supabaseServices.listRamadanDailyStatsSupabase({
-        configId: config.id,
-        fromDate: input?.from,
-        toDate: input?.to,
-      });
-    }),
-
-  getConfig: adminOpsProcedure.query(async () => {
-    const configs = await supabaseServices.listRamadanConfigsSupabase();
-    const active = configs.find((c) => c.isActive) || null;
-    return { active, configs };
-  }),
-
-  createConfig: adminOpsProcedure
-    .input(z.object({
-      hijriYear: z.string().min(1),
-      gregorianStartDate: z.string(),
-      timezone: z.string().default('Africa/Casablanca'),
-      isActive: z.boolean().default(true),
-    }))
     .mutation(async ({ input }) => {
       return supabaseServices.createRamadanConfigSupabase(input);
     }),
