@@ -25,6 +25,8 @@ const roleLabels: Record<string, string> = {
   admin_restaurant: "Admin Restaurant",
   admin_patisserie: "Admin Pâtisserie",
   admin_terroir: "Admin Terroir",
+  admin_contenu: "Admin Contenu",
+  admin_messages: "Admin Messages",
 };
 
 const roleColors: Record<string, string> = {
@@ -38,6 +40,8 @@ const roleColors: Record<string, string> = {
   admin_restaurant: "bg-amber-100 text-amber-700",
   admin_patisserie: "bg-rose-100 text-rose-700",
   admin_terroir: "bg-emerald-100 text-emerald-700",
+  admin_contenu: "bg-indigo-100 text-indigo-700",
+  admin_messages: "bg-violet-100 text-violet-700",
 };
 
 export default function AdminUtilisateurs() {
@@ -196,6 +200,8 @@ export default function AdminUtilisateurs() {
                         <SelectItem value="admin_restaurant">Admin Restaurant</SelectItem>
                         <SelectItem value="admin_patisserie">Admin Pâtisserie</SelectItem>
                         <SelectItem value="admin_terroir">Admin Terroir</SelectItem>
+                        <SelectItem value="admin_contenu">Admin Contenu</SelectItem>
+                        <SelectItem value="admin_messages">Admin Messages</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
                         <SelectItem value="super_admin">Super Admin</SelectItem>
                       </SelectContent>
