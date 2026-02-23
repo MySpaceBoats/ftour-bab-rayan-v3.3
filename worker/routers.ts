@@ -988,11 +988,11 @@ const scannerRouter = router({
 // ============================================
 
 const gallerySchema = z.object({
-  title: z.string().min(2),
-  description: z.string().optional(),
+  title: z.string().max(200).optional(),
+  description: z.string().max(2000).optional(),
   eventDate: z.string().optional(),
-  tags: z.array(z.string()).default([]),
-  albumId: z.string().uuid().optional(),
+  tags: z.array(z.string().min(1).max(40)).max(20).optional(),
+  albumId: z.string().uuid().nullable().optional(),
   sortOrder: z.number().int().default(0),
   isFeatured: z.boolean().default(false),
   status: z.enum(['draft', 'published']).default('draft'),
