@@ -96,7 +96,7 @@ export default function Benevole() {
     }
 
     if (!formData.dayId) {
-      toast.error(lang === 'ar' ? 'يرجى اختيار يوم' : lang === 'en' ? 'Please select a day' : 'Veuillez sélectionner un jour');
+      toast.error(lang === 'ar' ? 'يرجى اختيار تاريخ' : lang === 'en' ? 'Please select a date' : 'Veuillez sélectionner une date');
       return;
     }
 
@@ -176,7 +176,7 @@ export default function Benevole() {
   // Success screen translations
   const successTexts = {
     title: lang === 'ar' ? 'تم التسجيل بنجاح!' : lang === 'en' ? 'Registration confirmed!' : 'Inscription confirmée !',
-    thankYou: lang === 'ar' ? 'شكرا لانضمامك إلى فريق المتطوعين لليوم' : lang === 'en' ? 'Thank you for joining our volunteer team for Day' : 'Merci de rejoindre notre équipe de bénévoles pour le Jour',
+    thankYou: lang === 'ar' ? 'شكرًا لانضمامك إلى فريق المتطوعين بتاريخ' : lang === 'en' ? 'Thank you for joining our volunteer team on' : 'Merci de rejoindre notre équipe de bénévoles le',
     qrCode: lang === 'ar' ? 'رمز QR الخاص بك:' : lang === 'en' ? 'Your unique QR code:' : 'Votre code QR unique :',
     scanQr: lang === 'ar' ? 'امسح هذا الرمز عند الدخول' : lang === 'en' ? 'Scan this QR code at the entrance' : 'Scannez ce QR code à l\'entrée',
     emailSent: lang === 'ar' ? 'تم إرسال بريد إلكتروني يحتوي على رمز QR والتعليمات.' : lang === 'en' ? 'An email with your QR code and instructions has been sent.' : 'Un email contenant votre QR code et les consignes vous a été envoyé.',
@@ -202,10 +202,10 @@ export default function Benevole() {
     noBags: lang === 'ar' ? 'الحقائب غير مسموحة' : lang === 'en' ? 'No bags allowed' : 'Sac non autorisé',
     formTitle: lang === 'ar' ? 'استمارة التسجيل' : lang === 'en' ? 'Registration form' : 'Formulaire d\'inscription',
     formDesc: lang === 'ar' ? 'املأ هذا النموذج للتسجيل كمتطوع' : lang === 'en' ? 'Fill out this form to register as a volunteer' : 'Remplissez ce formulaire pour vous inscrire comme bénévole',
-    dayLabel: lang === 'ar' ? 'يوم المشاركة *' : lang === 'en' ? 'Participation day *' : 'Jour de participation *',
-    selectDay: lang === 'ar' ? 'اختر يومًا' : lang === 'en' ? 'Select a day' : 'Sélectionnez un jour',
+    dayLabel: lang === 'ar' ? 'تاريخ المشاركة *' : lang === 'en' ? 'Participation date *' : 'Date de participation *',
+    selectDay: lang === 'ar' ? 'اختر تاريخًا' : lang === 'en' ? 'Select a date' : 'Sélectionnez une date',
     loading: lang === 'ar' ? 'جاري التحميل...' : lang === 'en' ? 'Loading...' : 'Chargement...',
-    noDay: lang === 'ar' ? 'لا يوجد يوم متاح' : lang === 'en' ? 'No day available' : 'Aucun jour disponible',
+    noDay: lang === 'ar' ? 'لا يوجد تاريخ متاح' : lang === 'en' ? 'No date available' : 'Aucune date disponible',
     places: lang === 'ar' ? 'أماكن' : lang === 'en' ? 'places' : 'places',
     day: lang === 'ar' ? 'اليوم' : lang === 'en' ? 'Day' : 'Jour',
     firstName: lang === 'ar' ? 'الاسم الأول *' : lang === 'en' ? 'First name *' : 'Prénom *',
@@ -306,7 +306,7 @@ export default function Benevole() {
                 <div className="space-y-2">
                   <h1 className="text-2xl font-bold text-foreground">{successTexts.title}</h1>
                   <p className="text-muted-foreground">
-                    {successTexts.thankYou} {registrationSuccess.dayInfo.dayNumber}
+                    {successTexts.thankYou} <span className="capitalize">{registrationSuccess.dayInfo.date}</span>
                   </p>
                 </div>
 
@@ -405,6 +405,16 @@ export default function Benevole() {
                   : 'Le nombre de participants est limité pour des raisons de logistique à l\'intérieur de l\'établissement.'}
               </p>
             </div>
+            <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+              <p className="text-sm text-blue-900 font-medium">
+                {lang === 'ar'
+                  ? 'إذا تغيب المشارك أكثر من مرة، لن يكون بإمكانه المشاركة كمتطوع لمدة 7 أيام.'
+                  : lang === 'en'
+                  ? 'If a participant is absent more than once, they will no longer be able to participate as a volunteer for 7 days.'
+                  : 'Si un participant s\'absente plus d\'une fois, il ne lui sera plus possible de participer en tant que Bénévole durant 7 jours.'}
+              </p>
+            </div>
           </div>
         </section>
 
@@ -480,21 +490,6 @@ export default function Benevole() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-amber-50 border-amber-200">
-                  <CardContent className="p-6 space-y-3">
-                    <div className="flex items-center gap-2 text-amber-700">
-                      <AlertCircle className="h-5 w-5" />
-                      <h3 className="font-semibold">{formTexts.consignesTitle}</h3>
-                    </div>
-                    <ul className="text-sm text-amber-900 space-y-2">
-                      <li>• {formTexts.dress}</li>
-                      <li>• {formTexts.punctuality}</li>
-                      <li>• {formTexts.consigneNoBags}</li>
-                      <li>• {formTexts.consigneVest}</li>
-                      <li>• {formTexts.consigneNoPhotos}</li>
-                    </ul>
-                  </CardContent>
-                </Card>
               </div>
 
               {/* Registration Form */}
@@ -524,7 +519,7 @@ export default function Benevole() {
                             ) : availableDays.length > 0 ? (
                               availableDays.map((day) => (
                                 <SelectItem key={day.id} value={day.id.toString()}>
-                                  {formTexts.day} {day.dayNumber} - {new Date(day.date).toLocaleDateString(dateLocale, { weekday: 'short', day: 'numeric', month: 'short' })}
+                                  {new Date(day.date).toLocaleDateString(dateLocale, { weekday: 'long', day: 'numeric', month: 'long' })}
                                 </SelectItem>
                               ))
                             ) : (
