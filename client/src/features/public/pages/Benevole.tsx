@@ -405,6 +405,16 @@ export default function Benevole() {
                   : 'Le nombre de participants est limité pour des raisons de logistique à l\'intérieur de l\'établissement.'}
               </p>
             </div>
+            <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+              <p className="text-sm text-blue-900 font-medium">
+                {lang === 'ar'
+                  ? 'إذا تغيب المشارك أكثر من مرة، لن يكون بإمكانه المشاركة كمتطوع لمدة 7 أيام.'
+                  : lang === 'en'
+                  ? 'If a participant is absent more than once, they will no longer be able to participate as a volunteer for 7 days.'
+                  : 'Si un participant s\'absente plus d\'une fois, il ne lui sera plus possible de participer en tant que Bénévole durant 7 jours.'}
+              </p>
+            </div>
           </div>
         </section>
 
