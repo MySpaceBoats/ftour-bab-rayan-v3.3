@@ -283,6 +283,14 @@ export default function RestaurantGroupes() {
                 <p className="text-sm text-[#5d5a3c]">
                   Après validation de votre demande, vous recevrez un email de confirmation avec les instructions de paiement et votre QR d'accès.
                 </p>
+                <div className="mt-3 border-t border-[#d4a574]/40 pt-3">
+                  <p className="text-sm font-semibold text-[#5d5a3c]">Conditions d'annulation :</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-[#5d5a3c]">
+                    <li>En cas d’annulation moins de 72h avant l’événement, l’acompte de 50% sera conservé.</li>
+                    <li>Le nombre de personnes confirmé sera facturé dans son intégralité, même en cas d’absence ou de modification le jour même.</li>
+                  </ul>
+                  <p className="mt-2 text-sm text-[#5d5a3c]">Merci pour votre compréhension.</p>
+                </div>
               </div>
 
               {/* Bouton */}

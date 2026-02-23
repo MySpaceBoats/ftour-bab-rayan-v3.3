@@ -3974,7 +3974,7 @@ const restaurantReservationsRouter = router({
           await sendEmail({
             to: input.email,
             subject: `Demande de reservation recue - ${reference}`,
-            html: `<h2 style="color:#5d5a3c;">Demande de réservation reçue</h2><p>Bonjour <strong>${input.firstName}</strong>,</p><p>Votre demande de réservation pour le ftour solidaire a bien été enregistrée.</p><p><strong>Date :</strong> ${input.date}</p><p><strong>Participants :</strong> ${input.participantsCount}</p><p><strong>Référence :</strong> ${reference}</p><p>Nous vous confirmerons les disponibilités sous 48 heures.</p><p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
+            html: `<h2 style="color:#5d5a3c;">Demande de réservation reçue</h2><p>Bonjour <strong>${input.firstName}</strong>,</p><p>Votre demande de réservation pour le ftour solidaire a bien été enregistrée.</p><p><strong>Date :</strong> ${input.date}</p><p><strong>Participants :</strong> ${input.participantsCount}</p><p><strong>Référence :</strong> ${reference}</p><p>Nous vous confirmerons les disponibilités sous 48 heures.</p><p><strong>Conditions d'annulation :</strong></p><ul><li>En cas d’annulation moins de 72h avant l’événement, l’acompte de 50% sera conservé.</li><li>Le nombre de personnes confirmé sera facturé dans son intégralité, même en cas d’absence ou de modification le jour même.</li></ul><p>Merci pour votre compréhension.</p><p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
             apiKey: ctx.env.RESEND_API_KEY,
             cc: ['heartfulness@myspace.boats'],
           });
@@ -4038,7 +4038,7 @@ const restaurantReservationsRouter = router({
           await sendEmail({
             to: input.email,
             subject: `Demande de reservation entreprise recue - ${reference}`,
-            html: `<h2 style="color:#5d5a3c;">Demande de réservation entreprise reçue</h2><p>Bonjour <strong>${input.contactName}</strong>,</p><p>Nous avons bien reçu la demande de réservation de <strong>${input.companyName}</strong> pour le ftour solidaire.</p><p><strong>Date souhaitée :</strong> ${input.date}</p><p><strong>Nombre de participants :</strong> ${input.participantsCount}</p><p>Notre équipe reviendra vers vous sous 48 heures.</p><p><strong>Référence :</strong> ${reference}</p><p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
+            html: `<h2 style="color:#5d5a3c;">Demande de réservation entreprise reçue</h2><p>Bonjour <strong>${input.contactName}</strong>,</p><p>Nous avons bien reçu la demande de réservation de <strong>${input.companyName}</strong> pour le ftour solidaire.</p><p><strong>Date souhaitée :</strong> ${input.date}</p><p><strong>Nombre de participants :</strong> ${input.participantsCount}</p><p>Notre équipe reviendra vers vous sous 48 heures.</p><p><strong>Référence :</strong> ${reference}</p><p><strong>Conditions d'annulation :</strong></p><ul><li>En cas d’annulation moins de 72h avant l’événement, l’acompte de 50% sera conservé.</li><li>Le nombre de personnes confirmé sera facturé dans son intégralité, même en cas d’absence ou de modification le jour même.</li></ul><p>Merci pour votre compréhension.</p><p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
             apiKey: ctx.env.RESEND_API_KEY,
             cc: ['heartfulness@myspace.boats'],
           });
@@ -4101,7 +4101,7 @@ const restaurantReservationsRouter = router({
           await sendEmail({
             to: input.email,
             subject: `Demande de reservation groupe recue - ${reference}`,
-            html: `<h2 style="color:#5d5a3c;">Demande de réservation groupe reçue</h2><p>Bonjour <strong>${input.contactName}</strong>,</p><p>Votre demande de réservation groupe pour le <strong>${input.date}</strong> a bien été enregistrée.</p><p><strong>Nombre estimé de participants :</strong> ${input.participantsCount}</p><p>Nous vous confirmerons les disponibilités sous 48 heures.</p><p><strong>Référence :</strong> ${reference}</p><p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
+            html: `<h2 style="color:#5d5a3c;">Demande de réservation groupe reçue</h2><p>Bonjour <strong>${input.contactName}</strong>,</p><p>Votre demande de réservation groupe pour le <strong>${input.date}</strong> a bien été enregistrée.</p><p><strong>Nombre estimé de participants :</strong> ${input.participantsCount}</p><p>Nous vous confirmerons les disponibilités sous 48 heures.</p><p><strong>Référence :</strong> ${reference}</p><p><strong>Conditions d'annulation :</strong></p><ul><li>En cas d’annulation moins de 72h avant l’événement, l’acompte de 50% sera conservé.</li><li>Le nombre de personnes confirmé sera facturé dans son intégralité, même en cas d’absence ou de modification le jour même.</li></ul><p>Merci pour votre compréhension.</p><p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
             apiKey: ctx.env.RESEND_API_KEY,
             cc: ['heartfulness@myspace.boats'],
           });
