@@ -96,7 +96,7 @@ export default function Benevole() {
     }
 
     if (!formData.dayId) {
-      toast.error(lang === 'ar' ? 'يرجى اختيار يوم' : lang === 'en' ? 'Please select a day' : 'Veuillez sélectionner un jour');
+      toast.error(lang === 'ar' ? 'يرجى اختيار تاريخ' : lang === 'en' ? 'Please select a date' : 'Veuillez sélectionner une date');
       return;
     }
 
@@ -202,10 +202,10 @@ export default function Benevole() {
     noBags: lang === 'ar' ? 'الحقائب غير مسموحة' : lang === 'en' ? 'No bags allowed' : 'Sac non autorisé',
     formTitle: lang === 'ar' ? 'استمارة التسجيل' : lang === 'en' ? 'Registration form' : 'Formulaire d\'inscription',
     formDesc: lang === 'ar' ? 'املأ هذا النموذج للتسجيل كمتطوع' : lang === 'en' ? 'Fill out this form to register as a volunteer' : 'Remplissez ce formulaire pour vous inscrire comme bénévole',
-    dayLabel: lang === 'ar' ? 'يوم المشاركة *' : lang === 'en' ? 'Participation day *' : 'Jour de participation *',
-    selectDay: lang === 'ar' ? 'اختر يومًا' : lang === 'en' ? 'Select a day' : 'Sélectionnez un jour',
+    dayLabel: lang === 'ar' ? 'تاريخ المشاركة *' : lang === 'en' ? 'Participation date *' : 'Date de participation *',
+    selectDay: lang === 'ar' ? 'اختر تاريخًا' : lang === 'en' ? 'Select a date' : 'Sélectionnez une date',
     loading: lang === 'ar' ? 'جاري التحميل...' : lang === 'en' ? 'Loading...' : 'Chargement...',
-    noDay: lang === 'ar' ? 'لا يوجد يوم متاح' : lang === 'en' ? 'No day available' : 'Aucun jour disponible',
+    noDay: lang === 'ar' ? 'لا يوجد تاريخ متاح' : lang === 'en' ? 'No date available' : 'Aucune date disponible',
     places: lang === 'ar' ? 'أماكن' : lang === 'en' ? 'places' : 'places',
     day: lang === 'ar' ? 'اليوم' : lang === 'en' ? 'Day' : 'Jour',
     firstName: lang === 'ar' ? 'الاسم الأول *' : lang === 'en' ? 'First name *' : 'Prénom *',
