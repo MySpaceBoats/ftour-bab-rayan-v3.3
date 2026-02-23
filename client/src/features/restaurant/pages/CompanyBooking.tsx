@@ -11,10 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { trpc } from '@/lib/trpc';
-import { isDateInInclusiveRange } from '@/features/restaurant/utils/dateRange';
 
-const RESTAURANT_BOOKING_MIN_DATE = '2026-02-20';
-const RESTAURANT_BOOKING_MAX_DATE = '2026-03-13';
 
 export default function CompanyBooking() {
   const { lang } = useI18n();
@@ -36,13 +33,6 @@ export default function CompanyBooking() {
     salle: '' as '' | 'jardin' | 'corpo',
   });
 
-  const isDateAllowed = (dateStr: string) => {
-    return isDateInInclusiveRange(
-      dateStr,
-      RESTAURANT_BOOKING_MIN_DATE,
-      RESTAURANT_BOOKING_MAX_DATE,
-    );
-  };
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -65,8 +55,8 @@ export default function CompanyBooking() {
 
     // Validation Étape 2 et envoi
     if (step === 2) {
-      if (!formData.date || !isDateAllowed(formData.date)) {
-        toast.error('Veuillez sélectionner une date valide');
+      if (!formData.date) {
+        toast.error('Veuillez sélectionner une date');
         return;
       }
 
@@ -258,13 +248,11 @@ export default function CompanyBooking() {
                   <Input
                     id="date"
                     type="date"
-                    min={RESTAURANT_BOOKING_MIN_DATE}
-                    max={RESTAURANT_BOOKING_MAX_DATE}
                     value={formData.date}
                     onChange={(e) => handleInputChange('date', e.target.value)}
                     required
                   />
-                  <p className="text-xs text-[#8b8b7a] mt-1">Entre le 20 février et le 13 mars</p>
+                  <p className="text-xs text-[#8b8b7a] mt-1">Disponible sur toutes les dates</p>
                 </div>
 
                 <div>
