@@ -221,6 +221,15 @@ const sections: SectionDefinition[] = [
         allowedRoles: ['admin', 'super_admin', 'admin_ops'],
       },
       {
+        label: "Stats Ramadan",
+        description: "Saisie quotidienne et cumuls des indicateurs Ftour Ramadan",
+        route: "/admin/ramadan-stats",
+        icon: Calendar,
+        iconColor: "text-primary",
+        iconBg: "bg-primary/10",
+        allowedRoles: ['admin', 'super_admin', 'admin_ops'],
+      },
+      {
         label: "Scanner QR",
         description: "Scanner les QR codes des bénévoles pour valider leur présence",
         route: "/scanner",

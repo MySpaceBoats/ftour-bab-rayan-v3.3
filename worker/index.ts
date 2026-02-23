@@ -6,6 +6,8 @@ import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import { appRouter } from './routers';
 import { createWorkerContext } from './context';
 import { handleCMSRequest } from './cms-handlers';
+import { createSupabaseAdmin } from './supabase';
+import { DEFAULT_RAMADAN_TIMEZONE, getDateStringInTimeZone, getRamadanDay } from '../shared/ramadan';
 
 export interface Env {
   SUPABASE_URL: string;
@@ -47,6 +49,58 @@ export default {
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: baseCorsHeaders });
+    }
+
+
+    if (url.pathname === '/api/public/ramadan/summary' && request.method === 'GET') {
+      const supabase = createSupabaseAdmin(env);
+      const { data: config } = await supabase
+        .from('ramadan_config')
+        .select('*')
+        .eq('is_active', true)
+        .maybeSingle();
+
+      const asOfGregorianDate = getDateStringInTimeZone(new Date(), config?.timezone || DEFAULT_RAMADAN_TIMEZONE);
+      let payload: any = {
+        hijri_year: null,
+        today_ramadan_day: null,
+        totals_to_date: { meals: 0, beneficiaries: 0, volunteers_presence: 0 },
+        as_of_gregorian_date: asOfGregorianDate,
+      };
+
+      if (config) {
+        const rawDay = getRamadanDay(asOfGregorianDate, config.gregorian_start_date);
+        const todayRamadanDay = rawDay === null ? null : Math.min(rawDay, 30);
+
+        let q = supabase
+          .from('ramadan_daily_stats')
+          .select('beneficiaries_served, meals_distributed, volunteers_present')
+          .eq('config_id', config.id);
+        if (todayRamadanDay !== null) q = q.lte('ramadan_day', todayRamadanDay);
+        const { data: rows } = await q;
+        const totals = (rows || []).reduce((acc: any, row: any) => {
+          acc.meals += row.meals_distributed || 0;
+          acc.beneficiaries += row.beneficiaries_served || 0;
+          acc.volunteers_presence += row.volunteers_present || 0;
+          return acc;
+        }, { meals: 0, beneficiaries: 0, volunteers_presence: 0 });
+
+        payload = {
+          hijri_year: config.hijri_year,
+          today_ramadan_day: todayRamadanDay,
+          totals_to_date: totals,
+          as_of_gregorian_date: asOfGregorianDate,
+        };
+      }
+
+      return new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: {
+          ...baseCorsHeaders,
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=300',
+        },
+      });
     }
 
     // Handle CMS API requests (must be before tRPC)
