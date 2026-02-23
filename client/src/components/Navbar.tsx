@@ -130,8 +130,9 @@ export default function Navbar() {
           {/* Sélecteur de langue */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors">
+              <button className="flex items-center gap-1 text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors">
                 <Globe className="h-4 w-4" />
+                <span className="text-sm font-semibold leading-none">ع</span>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
