@@ -25,19 +25,27 @@ export default function AdminRamadanStats() {
   const summaryQuery = trpc.ramadan.publicSummary.useQuery();
 
   const activeConfig = configQuery.data?.active;
+  const activeConfigId = activeConfig?.id;
+  const activeStartDate = (activeConfig as any)?.gregorianStartDate ?? (activeConfig as any)?.gregorian_start_date;
+
   const range = useMemo(() => {
-    if (!activeConfig) return { from: undefined, to: undefined };
+    if (!activeConfig || !activeStartDate) return { from: undefined, to: undefined };
     if (period === 'custom') return { from: customFrom || undefined, to: customTo || undefined };
+
     const fromDay = period === '7' ? 24 : period === '14' ? 17 : 1;
-    const start = new Date(`${activeConfig.gregorianStartDate}T00:00:00Z`);
+    const start = new Date(`${activeStartDate}T00:00:00Z`);
+
+    if (Number.isNaN(start.getTime())) {
+      return { from: undefined, to: undefined };
+    }
+
     start.setUTCDate(start.getUTCDate() + fromDay - 1);
-    const from = start.toISOString().slice(0, 10);
-    return { from, to: undefined };
-  }, [activeConfig, period, customFrom, customTo]);
+    return { from: start.toISOString().slice(0, 10), to: undefined };
+  }, [activeConfig, activeStartDate, period, customFrom, customTo]);
 
   const statsQuery = trpc.ramadan.listStats.useQuery(
-    activeConfig ? { configId: activeConfig.id, from: range.from, to: range.to } : undefined as any,
-    { enabled: Boolean(activeConfig) }
+    activeConfigId ? { configId: activeConfigId, from: range.from, to: range.to } : undefined as any,
+    { enabled: Boolean(activeConfigId) }
   );
 
   const utils = trpc.useUtils();
@@ -71,8 +79,8 @@ export default function AdminRamadanStats() {
   };
 
   const onSave = () => {
-    if (!activeConfig) return toast.error('Créer/activer une configuration Ramadan d’abord');
-    upsert.mutate({ configId: activeConfig.id, ...form });
+    if (!activeConfigId) return toast.error('Créer/activer une configuration Ramadan d’abord');
+    upsert.mutate({ configId: activeConfigId, ...form });
   };
 
   return (
