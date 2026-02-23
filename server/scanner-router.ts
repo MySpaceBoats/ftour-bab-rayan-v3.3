@@ -120,6 +120,13 @@ function buildCompactToken(prefix: string, maxLength: number = 20): string {
   return `${safePrefix}-${body}`.slice(0, maxLength);
 }
 
+
+function toSafeValidatedBy(userId: unknown): number {
+  if (typeof userId === 'number' && Number.isFinite(userId)) return userId;
+  if (typeof userId === 'string' && /^\d+$/.test(userId)) return Number(userId);
+  return 0;
+}
+
 const QR_TYPE_LABELS: Record<QrType, string> = {
   volunteer: 'Bénévole',
   reservation_particulier: 'Réservation Particulier',
@@ -730,6 +737,7 @@ export const scannerRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const supabase = getSupabaseAdminClient();
+      const validatedBy = toSafeValidatedBy(ctx.user?.id);
 
       // ---- VOLUNTEER ----
       if (input.type === 'volunteer') {
@@ -854,7 +862,6 @@ export const scannerRouter = router({
             status: 'paid',
             payment_method: 'cash',
             notes: 'scan_catalog',
-            processed_by: ctx.user?.id,
           })
           .select('id, order_reference')
           .single();
@@ -883,7 +890,7 @@ export const scannerRouter = router({
           input.type,
           input.entityId,
           'catalog_scan',
-          ctx.user?.id || 0,
+          validatedBy,
           true
         );
 
@@ -942,7 +949,7 @@ export const scannerRouter = router({
           input.type,
           input.entityId,
           'catalog_scan',
-          ctx.user?.id || 0,
+          validatedBy,
           true
         );
 
@@ -992,8 +999,6 @@ export const scannerRouter = router({
             payment_status: 'paid',
             qr_token: qrToken,
             qr_status: 'active',
-            processed_by: ctx.user?.id,
-            processed_at: new Date().toISOString(),
             notes: 'scan_catalog',
           })
           .select('id, order_reference')
@@ -1024,7 +1029,7 @@ export const scannerRouter = router({
           input.type,
           input.entityId,
           'catalog_scan',
-          ctx.user?.id || 0,
+          validatedBy,
           true
         );
 
@@ -1043,7 +1048,7 @@ export const scannerRouter = router({
           input.type,
           0,
           'catalog_scan',
-          ctx.user?.id || 0,
+          validatedBy,
           true
         );
         return { success: true, message: 'Scan don catalogue enregistré dans le système.' };
