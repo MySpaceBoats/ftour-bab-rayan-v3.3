@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useI18n } from "@/i18n";
-import { ShoppingBag, Utensils, Sparkles, ArrowRight, Heart } from "lucide-react";
+import { ShoppingBag, Utensils, ArrowRight, Heart } from "lucide-react";
 
 export default function BoutiqueSolidaire() {
   const { t, dir, lang } = useI18n();
@@ -26,15 +26,6 @@ export default function BoutiqueSolidaire() {
       title: t.boutique.pastriesTitle,
       description: t.boutique.pastriesDesc,
       cta: t.boutique.pastriesCta,
-    },
-    {
-      key: "terroir" as const,
-      href: `/${lang}/terroir`,
-      icon: Sparkles,
-      color: "#9B8B6F",
-      title: t.boutique.terroirTitle,
-      description: t.boutique.terroirDesc,
-      cta: t.boutique.terroirCta,
     },
   ];
 
@@ -65,7 +56,7 @@ export default function BoutiqueSolidaire() {
         {/* Categories Grid */}
         <section className="py-20 bg-[#5E5B34]">
           <div className="container">
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-2 gap-8">
               {categories.map((cat) => {
                 const Icon = cat.icon;
                 return (
