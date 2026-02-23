@@ -2096,7 +2096,7 @@ export async function logQRScanSupabase(
   scope: string,
   entityId: number,
   validationAction: string,
-  validatedBy: number,
+  validatedBy: number | string,
   success: boolean = true,
   errorMessage?: string
 ) {
@@ -2119,6 +2119,15 @@ export async function logQRScanSupabase(
     return `${prefix}-${suffix}`.slice(0, maxLength);
   };
 
+  const normalizedValidatedBy = (() => {
+    if (typeof validatedBy === 'number' && Number.isFinite(validatedBy)) return validatedBy;
+    if (typeof validatedBy === 'string') {
+      const trimmed = validatedBy.trim();
+      if (/^\d+$/.test(trimmed)) return Number(trimmed);
+    }
+    return 0;
+  })();
+
   const { error } = await client
     .from('qr_scans')
     .insert({
@@ -2126,7 +2135,7 @@ export async function logQRScanSupabase(
       scope: toLegacySafeValue(scope, 20),
       entity_id: entityId,
       validation_action: toLegacySafeValue(validationAction, 20),
-      validated_by: validatedBy,
+      validated_by: normalizedValidatedBy,
       success,
       error_message: errorMessage,
       scanned_at: new Date().toISOString(),
