@@ -894,6 +894,7 @@ export const scannerRouter = router({
             return {
               ...base,
               status: 'paid',
+              payment_method: 'cash',
             };
           }
 
