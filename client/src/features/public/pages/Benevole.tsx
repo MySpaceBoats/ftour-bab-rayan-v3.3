@@ -96,7 +96,7 @@ export default function Benevole() {
     }
 
     if (!formData.dayId) {
-      toast.error(lang === 'ar' ? 'يرجى اختيار يوم' : lang === 'en' ? 'Please select a day' : 'Veuillez sélectionner un jour');
+      toast.error(lang === 'ar' ? 'يرجى اختيار تاريخ' : lang === 'en' ? 'Please select a date' : 'Veuillez sélectionner une date');
       return;
     }
 
@@ -176,7 +176,7 @@ export default function Benevole() {
   // Success screen translations
   const successTexts = {
     title: lang === 'ar' ? 'تم التسجيل بنجاح!' : lang === 'en' ? 'Registration confirmed!' : 'Inscription confirmée !',
-    thankYou: lang === 'ar' ? 'شكرا لانضمامك إلى فريق المتطوعين لليوم' : lang === 'en' ? 'Thank you for joining our volunteer team for Day' : 'Merci de rejoindre notre équipe de bénévoles pour le Jour',
+    thankYou: lang === 'ar' ? 'شكرًا لانضمامك إلى فريق المتطوعين بتاريخ' : lang === 'en' ? 'Thank you for joining our volunteer team on' : 'Merci de rejoindre notre équipe de bénévoles le',
     qrCode: lang === 'ar' ? 'رمز QR الخاص بك:' : lang === 'en' ? 'Your unique QR code:' : 'Votre code QR unique :',
     scanQr: lang === 'ar' ? 'امسح هذا الرمز عند الدخول' : lang === 'en' ? 'Scan this QR code at the entrance' : 'Scannez ce QR code à l\'entrée',
     emailSent: lang === 'ar' ? 'تم إرسال بريد إلكتروني يحتوي على رمز QR والتعليمات.' : lang === 'en' ? 'An email with your QR code and instructions has been sent.' : 'Un email contenant votre QR code et les consignes vous a été envoyé.',
@@ -202,10 +202,10 @@ export default function Benevole() {
     noBags: lang === 'ar' ? 'الحقائب غير مسموحة' : lang === 'en' ? 'No bags allowed' : 'Sac non autorisé',
     formTitle: lang === 'ar' ? 'استمارة التسجيل' : lang === 'en' ? 'Registration form' : 'Formulaire d\'inscription',
     formDesc: lang === 'ar' ? 'املأ هذا النموذج للتسجيل كمتطوع' : lang === 'en' ? 'Fill out this form to register as a volunteer' : 'Remplissez ce formulaire pour vous inscrire comme bénévole',
-    dayLabel: lang === 'ar' ? 'يوم المشاركة *' : lang === 'en' ? 'Participation day *' : 'Jour de participation *',
-    selectDay: lang === 'ar' ? 'اختر يومًا' : lang === 'en' ? 'Select a day' : 'Sélectionnez un jour',
+    dayLabel: lang === 'ar' ? 'تاريخ المشاركة *' : lang === 'en' ? 'Participation date *' : 'Date de participation *',
+    selectDay: lang === 'ar' ? 'اختر تاريخًا' : lang === 'en' ? 'Select a date' : 'Sélectionnez une date',
     loading: lang === 'ar' ? 'جاري التحميل...' : lang === 'en' ? 'Loading...' : 'Chargement...',
-    noDay: lang === 'ar' ? 'لا يوجد يوم متاح' : lang === 'en' ? 'No day available' : 'Aucun jour disponible',
+    noDay: lang === 'ar' ? 'لا يوجد تاريخ متاح' : lang === 'en' ? 'No date available' : 'Aucune date disponible',
     places: lang === 'ar' ? 'أماكن' : lang === 'en' ? 'places' : 'places',
     day: lang === 'ar' ? 'اليوم' : lang === 'en' ? 'Day' : 'Jour',
     firstName: lang === 'ar' ? 'الاسم الأول *' : lang === 'en' ? 'First name *' : 'Prénom *',
@@ -306,7 +306,7 @@ export default function Benevole() {
                 <div className="space-y-2">
                   <h1 className="text-2xl font-bold text-foreground">{successTexts.title}</h1>
                   <p className="text-muted-foreground">
-                    {successTexts.thankYou} {registrationSuccess.dayInfo.dayNumber}
+                    {successTexts.thankYou} <span className="capitalize">{registrationSuccess.dayInfo.date}</span>
                   </p>
                 </div>
 
@@ -534,7 +534,7 @@ export default function Benevole() {
                             ) : availableDays.length > 0 ? (
                               availableDays.map((day) => (
                                 <SelectItem key={day.id} value={day.id.toString()}>
-                                  {formTexts.day} {day.dayNumber} - {new Date(day.date).toLocaleDateString(dateLocale, { weekday: 'short', day: 'numeric', month: 'short' })}
+                                  {new Date(day.date).toLocaleDateString(dateLocale, { weekday: 'long', day: 'numeric', month: 'long' })}
                                 </SelectItem>
                               ))
                             ) : (
