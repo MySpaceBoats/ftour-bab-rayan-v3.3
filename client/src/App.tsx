@@ -234,6 +234,7 @@ function LocalizedRoutes() {
       {/* Admin Ops */}
       <Route path="/admin/benevoles" component={AdminBenevoles} />
       <Route path="/admin/jours" component={AdminJours} />
+      <Route path="/admin/ramadan-stats" component={AdminRamadanStats} />
       <Route path="/admin/scan-product" component={AdminScanProduct} />
       <Route path="/admin/payments" component={AdminPayments} />
       <Route path="/admin/utilisateurs" component={AdminUtilisateurs} />

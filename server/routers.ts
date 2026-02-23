@@ -1973,6 +1973,122 @@ const usersRouter = router({
     }),
 });
 
+
+
+const ramadanRouter = router({
+  publicSummary: publicProcedure.query(async () => {
+    return supabaseServices.getRamadanSummarySupabase();
+  }),
+
+  publicDaily: publicProcedure
+    .input(z.object({
+      from: z.string().optional(),
+      to: z.string().optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      const config = await supabaseServices.getActiveRamadanConfigSupabase();
+      if (!config) return [];
+      return supabaseServices.listRamadanDailyStatsSupabase({
+        configId: config.id,
+        fromDate: input?.from,
+        toDate: input?.to,
+      });
+    }),
+
+  getConfig: adminOpsProcedure.query(async () => {
+    const configs = await supabaseServices.listRamadanConfigsSupabase();
+    const active = configs.find((c) => c.isActive) || null;
+    return { active, configs };
+  }),
+
+  createConfig: adminOpsProcedure
+    .input(z.object({
+      hijriYear: z.string().min(1),
+      gregorianStartDate: z.string(),
+      timezone: z.string().default('Africa/Casablanca'),
+      isActive: z.boolean().default(true),
+    }))
+    .mutation(async ({ input }) => {
+      return supabaseServices.createRamadanConfigSupabase(input);
+    }),
+
+  updateConfig: adminOpsProcedure
+    .input(z.object({
+      id: z.number(),
+      hijriYear: z.string().min(1).optional(),
+      gregorianStartDate: z.string().optional(),
+      timezone: z.string().optional(),
+      isActive: z.boolean().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { id, ...rest } = input;
+      return supabaseServices.updateRamadanConfigSupabase(id, rest);
+    }),
+
+  listStats: adminOpsProcedure
+    .input(z.object({
+      configId: z.number(),
+      from: z.string().optional(),
+      to: z.string().optional(),
+    }))
+    .query(async ({ input }) => {
+      const rows = await supabaseServices.listRamadanDailyStatsSupabase({
+        configId: input.configId,
+        fromDate: input.from,
+        toDate: input.to,
+      });
+      const totals = rows.reduce((acc: { meals: number; beneficiaries: number; volunteersPresence: number }, row: any) => {
+        acc.meals += row.meals_distributed || 0;
+        acc.beneficiaries += row.beneficiaries_served || 0;
+        acc.volunteersPresence += row.volunteers_present || 0;
+        return acc;
+      }, { meals: 0, beneficiaries: 0, volunteersPresence: 0 });
+      return { rows, totals };
+    }),
+
+  upsertStat: adminOpsProcedure
+    .input(z.object({
+      configId: z.number(),
+      ramadanDay: z.number().min(1).max(30),
+      beneficiariesServed: z.number().int().min(0),
+      mealsDistributed: z.number().int().min(0),
+      volunteersPresent: z.number().int().min(0),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      return supabaseServices.upsertRamadanDailyStatSupabase(input);
+    }),
+
+  updateStat: adminOpsProcedure
+    .input(z.object({
+      id: z.number(),
+      beneficiariesServed: z.number().int().min(0),
+      mealsDistributed: z.number().int().min(0),
+      volunteersPresent: z.number().int().min(0),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      const { id, ...rest } = input;
+      const { error, data } = await supabase.from('ramadan_daily_stats').update({
+        beneficiaries_served: rest.beneficiariesServed,
+        meals_distributed: rest.mealsDistributed,
+        volunteers_present: rest.volunteersPresent,
+        notes: rest.notes ?? null,
+      }).eq('id', id).select('*').single();
+      if (error) throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      return data;
+    }),
+
+  deleteStat: adminOpsProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      await supabaseServices.deleteRamadanDailyStatSupabase(input.id);
+      return { success: true };
+    }),
+});
+
 // ============================================
 // PUBLIC DATA ROUTER
 // ============================================
@@ -4871,6 +4987,7 @@ export const appRouterUpdated = router({
   terroirModule: terroirModuleRouter,
   content: contentRouter,
   scanner: scannerRouter,
+  ramadan: ramadanRouter,
 });
 
 export type AppRouter = typeof appRouterUpdated;

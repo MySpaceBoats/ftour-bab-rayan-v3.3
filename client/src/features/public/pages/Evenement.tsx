@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Heart, Users, Calendar, MapPin, Star, ArrowRight, Target, Sparkles, HandHeart, Utensils, Baby, GraduationCap } from "lucide-react";
 import { useI18n } from "@/i18n";
+import RamadanImpactLive from "@/components/RamadanImpactLive";
 
 export default function Evenement() {
   const { t, lang } = useI18n();
@@ -104,6 +105,8 @@ export default function Evenement() {
             </div>
           </div>
         </section>
+
+        <RamadanImpactLive className="bg-background" />
 
         {/* Values */}
         <section className="py-16 bg-muted/30">
