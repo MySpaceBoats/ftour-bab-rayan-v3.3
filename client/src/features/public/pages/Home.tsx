@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useI18n } from "@/i18n";
 import { Heart, Users, Calendar, ShoppingBag, ArrowRight, Star, Clock, MapPin, Utensils, GraduationCap, Home as HomeIcon, Baby } from "lucide-react";
+import RamadanImpactLive from "@/components/RamadanImpactLive";
 
 export default function Home() {
   const { t, dir, lang } = useI18n();
@@ -217,6 +218,8 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        <RamadanImpactLive className="bg-[#5E5B34] text-[#F2E9D3]" />
 
         {/* Missions Bab Rayan Section */}
         <section className="py-20 bg-[#6F6C3F]">
