@@ -33,6 +33,8 @@ export default function Evenement() {
           </div>
         </section>
 
+        <RamadanImpactLive className="bg-background" />
+
         {/* Mission */}
         <section className="py-16">
           <div className="container">
@@ -105,8 +107,6 @@ export default function Evenement() {
             </div>
           </div>
         </section>
-
-        <RamadanImpactLive className="bg-background" />
 
         {/* Values */}
         <section className="py-16 bg-muted/30">
