@@ -58,7 +58,7 @@ export default function AdminGalerieNouveau() {
         preview: URL.createObjectURL(file),
         progress: 0,
         sortOrder: 0,
-        status: "draft",
+        status: "published",
         isFeatured: false,
       });
     }
