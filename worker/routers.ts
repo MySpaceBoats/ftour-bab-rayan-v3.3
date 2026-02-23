@@ -4285,6 +4285,56 @@ const restaurantReservationsRouter = router({
       }
       return { success: true, reservation: data };
     }),
+
+  adminEdit: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().min(1).optional(),
+      email: z.string().email().optional(),
+      phone: z.string().min(1).optional(),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format date invalide').optional(),
+      seatsTotal: z.number().int().min(1).optional(),
+      notes: z.string().optional(),
+      companyName: z.string().optional(),
+      groupName: z.string().optional(),
+      displayChoice: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
+      if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      }
+
+      const { id, ...rest } = input;
+      const updatePayload: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      };
+
+      if (rest.name !== undefined) updatePayload.name = rest.name;
+      if (rest.email !== undefined) updatePayload.email = rest.email;
+      if (rest.phone !== undefined) updatePayload.phone = rest.phone;
+      if (rest.date !== undefined) updatePayload.date = rest.date;
+      if (rest.seatsTotal !== undefined) updatePayload.seats_total = rest.seatsTotal;
+      if (rest.notes !== undefined) updatePayload.notes = rest.notes;
+      if (rest.companyName !== undefined) updatePayload.company_name = rest.companyName;
+      if (rest.groupName !== undefined) updatePayload.group_name = rest.groupName;
+      if (rest.displayChoice !== undefined) updatePayload.display_choice = rest.displayChoice;
+
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('restaurant_reservations')
+        .update(updatePayload)
+        .eq('id', id)
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error('[adminEdit] Error:', error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Erreur lors de la modification de la réservation' });
+      }
+
+      return { success: true, reservation: mapReservation(data) };
+    }),
 });
 
 // ============================================
