@@ -218,15 +218,6 @@ const volunteersRouter = router({
         });
       }
 
-      // Check for duplicate email on the same day
-      const emailExists = await supabaseServices.checkVolunteerEmailExistsForDay(normalizedEmail, input.dayId);
-      if (emailExists) {
-        throw new TRPCError({
-          code: 'CONFLICT',
-          message: 'Cette adresse email est déjà inscrite pour ce jour. Si vous souhaitez modifier votre inscription, veuillez nous contacter.',
-        });
-      }
-
       // Check day availability
       const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
       if (!day) {
@@ -387,14 +378,6 @@ const volunteersRouter = router({
         });
       }
 
-      const groupEmailExists = await supabaseServices.checkVolunteerEmailExistsForDay(normalizedGroupEmail, input.dayId);
-      if (groupEmailExists) {
-        throw new TRPCError({
-          code: 'CONFLICT',
-          message: 'Cette adresse email est déjà inscrite pour ce jour. Si vous souhaitez modifier votre inscription, veuillez nous contacter.',
-        });
-      }
-
       // Get day info for the email
       const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
 
@@ -525,9 +508,6 @@ const volunteersRouter = router({
                 if (!firstName || !lastName || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) continue;
 
                 try {
-                  const exists = await supabaseServices.checkVolunteerEmailExistsForDay(email, input.dayId);
-                  if (exists) continue;
-
                   const vol = await supabaseServices.createVolunteerShiftSupabase({
                     firstName,
                     lastName,
