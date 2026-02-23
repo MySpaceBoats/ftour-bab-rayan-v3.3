@@ -984,6 +984,187 @@ const scannerRouter = router({
 });
 
 // ============================================
+// GALLERY ROUTER
+// ============================================
+
+const gallerySchema = z.object({
+  title: z.string().min(2),
+  description: z.string().optional(),
+  eventDate: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+  albumId: z.string().uuid().optional(),
+  sortOrder: z.number().int().default(0),
+  isFeatured: z.boolean().default(false),
+  status: z.enum(['draft', 'published']).default('draft'),
+});
+
+const GALLERY_ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'] as const;
+const GALLERY_MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024;
+const GALLERY_MAX_BATCH = 10;
+
+const galleryRouter = router({
+  listAlbums: adminProcedure.query(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+    const { data, error } = await supabase
+      .from('gallery_albums')
+      .select('*')
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: false });
+    if (error) throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+    return (data || []).map((a: any) => ({
+      id: a.id,
+      name: a.name,
+      slug: a.slug,
+      description: a.description,
+      coverImageUrl: a.cover_image_url,
+      isActive: a.is_active,
+      sortOrder: a.sort_order,
+      createdAt: a.created_at,
+      updatedAt: a.updated_at,
+    }));
+  }),
+
+  listPhotos: adminProcedure
+    .input(
+      z
+        .object({
+          page: z.number().int().min(1).default(1),
+          pageSize: z.number().int().min(1).max(50).default(12),
+          search: z.string().optional(),
+          albumId: z.string().uuid().optional(),
+          tag: z.string().optional(),
+          featured: z.boolean().optional(),
+          status: z.enum(['draft', 'published']).optional(),
+        })
+        .optional()
+    )
+    .query(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const page = input?.page ?? 1;
+      const pageSize = input?.pageSize ?? 12;
+      const start = (page - 1) * pageSize;
+      const end = start + pageSize - 1;
+
+      let query = supabase
+        .from('gallery_photos')
+        .select('*, gallery_albums(name, slug)', { count: 'exact' });
+      if (input?.search) {
+        query = query.or(`title.ilike.%${input.search}%,description.ilike.%${input.search}%`);
+      }
+      if (input?.albumId) query = query.eq('album_id', input.albumId);
+      if (input?.tag) query = query.contains('tags', [input.tag]);
+      if (typeof input?.featured === 'boolean') query = query.eq('is_featured', input.featured);
+      if (input?.status) query = query.eq('status', input.status);
+
+      const { data, error, count } = await query
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: false })
+        .range(start, end);
+      if (error) throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      return { items: data || [], total: count || 0, page, pageSize };
+    }),
+
+  getPhoto: adminProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('gallery_photos')
+        .select('*')
+        .eq('id', input.id)
+        .single();
+      if (error) throw new TRPCError({ code: 'NOT_FOUND', message: error.message });
+      return data;
+    }),
+
+  uploadPhotos: adminProcedure
+    .input(
+      z.object({
+        photos: z
+          .array(
+            z.object({
+              fileName: z.string().min(1),
+              fileType: z.string(),
+              fileData: z.string(),
+              width: z.number().optional(),
+              height: z.number().optional(),
+              ...gallerySchema.shape,
+            })
+          )
+          .min(1)
+          .max(GALLERY_MAX_BATCH),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const results = [];
+
+      for (const photo of input.photos) {
+        if (!GALLERY_ALLOWED_MIME_TYPES.includes(photo.fileType as any)) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Format non supporté. PNG, JPEG, WebP uniquement.' });
+        }
+
+        const base64Data = photo.fileData.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '');
+        const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+        if (buffer.length > GALLERY_MAX_FILE_SIZE_BYTES) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Fichier trop volumineux (max 8MB).' });
+        }
+
+        const ext = photo.fileName.split('.').pop() || 'jpg';
+        const uid = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const originalPath = `gallery/original/${uid}.${ext}`;
+        const thumbPath = `gallery/thumb/${uid}.${ext}`;
+
+        const originalUpload = await supabase.storage
+          .from('images')
+          .upload(originalPath, buffer, { contentType: photo.fileType, upsert: false });
+        if (originalUpload.error) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: originalUpload.error.message });
+        }
+
+        const thumbUpload = await supabase.storage
+          .from('images')
+          .upload(thumbPath, buffer, { contentType: photo.fileType, upsert: false });
+        if (thumbUpload.error) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: thumbUpload.error.message });
+        }
+
+        const originalUrl = supabase.storage.from('images').getPublicUrl(originalPath).data.publicUrl;
+        const thumbUrl = supabase.storage.from('images').getPublicUrl(thumbPath).data.publicUrl;
+
+        const { data, error } = await supabase
+          .from('gallery_photos')
+          .insert({
+            title: photo.title,
+            description: photo.description,
+            event_date: photo.eventDate,
+            tags: photo.tags,
+            album_id: photo.albumId,
+            sort_order: photo.sortOrder,
+            is_featured: photo.isFeatured,
+            status: photo.status,
+            image_original_url: originalUrl,
+            image_thumb_url: thumbUrl,
+            storage_path: originalPath,
+            thumb_storage_path: thumbPath,
+            width: photo.width,
+            height: photo.height,
+            size_bytes: buffer.length,
+            mime_type: photo.fileType,
+            uploaded_by: ctx.user?.email,
+          })
+          .select('*')
+          .single();
+
+        if (error) throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+        results.push(data);
+      }
+
+      return results;
+    }),
+});
+
+// ============================================
 // AUTH ROUTER
 // ============================================
 
@@ -4639,6 +4820,7 @@ export const appRouter = router({
   contact: contactRouter,
   users: usersRouter,
   public: publicRouter,
+  gallery: galleryRouter,
   upload: uploadRouter,
   restaurants: restaurantsRouter,
   reservations: reservationsRouter,

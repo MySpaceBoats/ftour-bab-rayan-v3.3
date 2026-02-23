@@ -12,10 +12,6 @@ import { toast } from 'sonner';
 import { MapPin } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { trpc } from '@/lib/trpc';
-import { isDateInInclusiveRange } from '@/features/restaurant/utils/dateRange';
-
-const RESTAURANT_BOOKING_MIN_DATE = '2026-02-20';
-const RESTAURANT_BOOKING_MAX_DATE = '2026-03-13';
 
 export default function RestaurantGroupes() {
   const { lang } = useI18n();
@@ -35,14 +31,6 @@ export default function RestaurantGroupes() {
     notes: '',
   });
 
-  const isDateAllowed = (dateStr: string) => {
-    return isDateInInclusiveRange(
-      dateStr,
-      RESTAURANT_BOOKING_MIN_DATE,
-      RESTAURANT_BOOKING_MAX_DATE,
-    );
-  };
-
   const handleInputChange = (field: string, value: any) => {
     if (field === 'groupSize') {
       // Autoriser l'édition libre du champ (string)
@@ -60,11 +48,6 @@ export default function RestaurantGroupes() {
     // Validation
     if (!formData.date || !formData.salle || !formData.contactName || !formData.phone || !formData.email) {
       toast.error('Veuillez remplir tous les champs obligatoires');
-      return;
-    }
-
-    if (!isDateAllowed(formData.date)) {
-      toast.error('Veuillez sélectionner une date valide (20 février - 13 mars)');
       return;
     }
 
@@ -159,7 +142,7 @@ export default function RestaurantGroupes() {
           <h1 className="text-3xl font-bold text-[#5d5a3c] italic">Réservation Ftour – Groupes</h1>
           <p className="text-[#8b8b7a] mt-2">Demande de réservation pour le ftour solidaire (réservation en ligne à partir de 5 couverts). Confirmation sous 48 heures.</p>
           <p className="text-[#8b8b7a] text-sm mt-1">Service unique à partir de 18h45.</p>
-          <p className="text-[#8b8b7a] text-sm mt-1">Les demandes sont ouvertes du 20 février au 13 mars.</p>
+          <p className="text-[#8b8b7a] text-sm mt-1">Les demandes sont ouvertes pour toutes les dates.</p>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -176,11 +159,9 @@ export default function RestaurantGroupes() {
                   type="date"
                   value={formData.date}
                   onChange={(e) => handleInputChange('date', e.target.value)}
-                  min={RESTAURANT_BOOKING_MIN_DATE}
-                  max={RESTAURANT_BOOKING_MAX_DATE}
                   required
                 />
-                <p className="text-xs text-[#8b8b7a] mt-1">Entre le 20 février et le 13 mars</p>
+                <p className="text-xs text-[#8b8b7a] mt-1">Disponible sur toutes les dates</p>
               </div>
 
               {/* Taille du groupe */}

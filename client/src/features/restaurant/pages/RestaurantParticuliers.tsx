@@ -11,10 +11,7 @@ import { toast } from 'sonner';
 import { MapPin } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { trpc } from '@/lib/trpc';
-import { isDateInInclusiveRange } from '@/features/restaurant/utils/dateRange';
 
-const RESTAURANT_BOOKING_MIN_DATE = '2026-02-20';
-const RESTAURANT_BOOKING_MAX_DATE = '2026-03-13';
 
 export default function RestaurantParticuliers() {
   const { lang } = useI18n();
@@ -29,13 +26,6 @@ export default function RestaurantParticuliers() {
     email: '',
   });
 
-  const isDateAllowed = (dateStr: string) => {
-    return isDateInInclusiveRange(
-      dateStr,
-      RESTAURANT_BOOKING_MIN_DATE,
-      RESTAURANT_BOOKING_MAX_DATE,
-    );
-  };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reference, setReference] = useState<string | null>(null);
@@ -49,10 +39,6 @@ export default function RestaurantParticuliers() {
       return;
     }
 
-    if (!isDateAllowed(formData.date)) {
-      toast.error('Veuillez sélectionner une date entre le 20 février et le 13 mars');
-      return;
-    }
 
     if (formData.seats < 5 || formData.seats > 12) {
       toast.error('Le nombre de couverts doit être entre 5 et 12');
@@ -144,7 +130,7 @@ export default function RestaurantParticuliers() {
           </p>
           <p className="text-sm text-[#8b8b7a] mt-3">
             Service unique à partir de 18h45.<br />
-            Les demandes sont ouvertes du 20 février au 13 mars.
+            Les demandes sont ouvertes pour toutes les dates.
           </p>
         </div>
 
@@ -160,13 +146,11 @@ export default function RestaurantParticuliers() {
                 <Input
                   id="date"
                   type="date"
-                  min={RESTAURANT_BOOKING_MIN_DATE}
-                  max={RESTAURANT_BOOKING_MAX_DATE}
                   value={formData.date}
                   onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
                   required
                 />
-                <p className="text-xs text-[#8b8b7a] mt-1">Entre le 20 février et le 13 mars</p>
+                <p className="text-xs text-[#8b8b7a] mt-1">Disponible sur toutes les dates</p>
               </div>
 
               {/* Nombre de places */}
