@@ -127,6 +127,36 @@ function toSafeValidatedBy(userId: unknown): number {
   return 0;
 }
 
+
+async function logQRScanSafely(params: {
+  token: string;
+  scope: string;
+  entityId: number;
+  validationAction: string;
+  validatedBy: number;
+  success?: boolean;
+  errorMessage?: string;
+}) {
+  try {
+    await supabaseServices.logQRScanSupabase(
+      params.token,
+      params.scope,
+      params.entityId,
+      params.validationAction,
+      params.validatedBy,
+      params.success ?? true,
+      params.errorMessage
+    );
+  } catch (error: any) {
+    const message = String(error?.message || error || '');
+    if (message.includes('value too long for type character varying(20)')) {
+      console.warn('[Scanner] Ignored legacy qr_scans overflow during catalog log:', message);
+      return;
+    }
+    throw error;
+  }
+}
+
 const QR_TYPE_LABELS: Record<QrType, string> = {
   volunteer: 'Bénévole',
   reservation_particulier: 'Réservation Particulier',
@@ -885,14 +915,14 @@ export const scannerRouter = router({
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: itemError.message });
         }
 
-        await supabaseServices.logQRScanSupabase(
-          input.token,
-          input.type,
-          input.entityId,
-          'catalog_scan',
+        await logQRScanSafely({
+          token: input.token,
+          scope: input.type,
+          entityId: input.entityId,
+          validationAction: 'catalog_scan',
           validatedBy,
-          true
-        );
+          success: true,
+        });
 
         return {
           success: true,
@@ -944,14 +974,14 @@ export const scannerRouter = router({
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: orderError?.message || 'Création commande pâtisserie impossible' });
         }
 
-        await supabaseServices.logQRScanSupabase(
-          input.token,
-          input.type,
-          input.entityId,
-          'catalog_scan',
+        await logQRScanSafely({
+          token: input.token,
+          scope: input.type,
+          entityId: input.entityId,
+          validationAction: 'catalog_scan',
           validatedBy,
-          true
-        );
+          success: true,
+        });
 
         return {
           success: true,
@@ -1024,14 +1054,14 @@ export const scannerRouter = router({
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: itemError.message });
         }
 
-        await supabaseServices.logQRScanSupabase(
-          input.token,
-          input.type,
-          input.entityId,
-          'catalog_scan',
+        await logQRScanSafely({
+          token: input.token,
+          scope: input.type,
+          entityId: input.entityId,
+          validationAction: 'catalog_scan',
           validatedBy,
-          true
-        );
+          success: true,
+        });
 
         return {
           success: true,
@@ -1043,14 +1073,14 @@ export const scannerRouter = router({
 
       // ---- DONATION PAGE (catalog QR) ----
       if (input.type === 'catalog_donation') {
-        await supabaseServices.logQRScanSupabase(
-          input.token,
-          input.type,
-          0,
-          'catalog_scan',
+        await logQRScanSafely({
+          token: input.token,
+          scope: input.type,
+          entityId: 0,
+          validationAction: 'catalog_scan',
           validatedBy,
-          true
-        );
+          success: true,
+        });
         return { success: true, message: 'Scan don catalogue enregistré dans le système.' };
       }
 
