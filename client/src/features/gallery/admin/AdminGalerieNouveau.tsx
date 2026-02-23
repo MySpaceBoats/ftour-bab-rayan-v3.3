@@ -21,10 +21,8 @@ type Item = {
   file: File;
   preview: string;
   progress: number;
-  title?: string;
-  description?: string;
   tags?: string;
-  eventDate?: string;
+  yearOrEdition?: string;
   sortOrder: number;
   status: "draft" | "published";
   isFeatured: boolean;
@@ -92,9 +90,7 @@ export default function AdminGalerieNouveau() {
         fileName: item.file.name,
         fileType: item.file.type,
         fileData: dataUrl,
-        title: item.title,
-        description: item.description,
-        eventDate: item.eventDate,
+        eventDate: item.yearOrEdition,
         tags: item.tags
           ? item.tags
               .split(",")
@@ -182,28 +178,6 @@ export default function AdminGalerieNouveau() {
                 </div>
                 <Progress value={item.progress} />
                 <Input
-                  placeholder="Titre"
-                  value={item.title ?? ""}
-                  onChange={e =>
-                    setItems(prev =>
-                      prev.map((it, i) =>
-                        i === idx ? { ...it, title: e.target.value } : it
-                      )
-                    )
-                  }
-                />
-                <Input
-                  placeholder="Description"
-                  value={item.description ?? ""}
-                  onChange={e =>
-                    setItems(prev =>
-                      prev.map((it, i) =>
-                        i === idx ? { ...it, description: e.target.value } : it
-                      )
-                    )
-                  }
-                />
-                <Input
                   placeholder="Tags (virgule)"
                   value={item.tags ?? ""}
                   onChange={e =>
@@ -215,12 +189,12 @@ export default function AdminGalerieNouveau() {
                   }
                 />
                 <Input
-                  type="date"
-                  value={item.eventDate ?? ""}
+                  placeholder="Année xxxx ou édition xxxx"
+                  value={item.yearOrEdition ?? ""}
                   onChange={e =>
                     setItems(prev =>
                       prev.map((it, i) =>
-                        i === idx ? { ...it, eventDate: e.target.value } : it
+                        i === idx ? { ...it, yearOrEdition: e.target.value } : it
                       )
                     )
                   }
