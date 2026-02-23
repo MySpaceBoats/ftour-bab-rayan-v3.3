@@ -3585,17 +3585,67 @@ const terroirModuleRouter = router({
         code: "INTERNAL_SERVER_ERROR",
         message: "Supabase non configuré",
       });
-    const { data, error } = await supabase
+
+    const joinQuery = await supabase
       .from("terroir_products")
       .select("*, terroir_product_variants(*)")
       .eq("is_active", true)
       .order("sort_order", { ascending: true });
-    if (error)
+
+    if (!joinQuery.error) {
+      return joinQuery.data || [];
+    }
+
+    console.warn(
+      "[Terroir] Variants join failed, falling back to separate queries:",
+      joinQuery.error.message
+    );
+
+    const { data: products, error: productsError } = await supabase
+      .from("terroir_products")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+
+    if (productsError)
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: error.message,
+        message: productsError.message,
       });
-    return data || [];
+
+    const productIds = (products || []).map((product) => product.id);
+    if (productIds.length === 0) {
+      return [];
+    }
+
+    const { data: variants, error: variantsError } = await supabase
+      .from("terroir_product_variants")
+      .select("*")
+      .in("product_id", productIds)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+
+    if (variantsError)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: variantsError.message,
+      });
+
+    const variantsByProductId = (variants || []).reduce(
+      (acc, variant) => {
+        if (!acc[variant.product_id]) {
+          acc[variant.product_id] = [];
+        }
+        acc[variant.product_id].push(variant);
+        return acc;
+      },
+      {} as Record<number, typeof variants>
+    );
+
+    return (products || []).map((product) => ({
+      ...product,
+      terroir_product_variants: variantsByProductId[product.id] || [],
+    }));
   }),
 
   // --- Public: list pickup slots ---
