@@ -245,6 +245,9 @@ const parseGroupVolunteersFromSpreadsheet = (
   return Array.from(dedupedByEmail.values());
 };
 
+const volunteerNoShowBlockingMessage =
+  "Vous ne pouvez plus vous inscrire car vous n'êtes pas venu deux fois et une place prise est une place perdue pour un autre bénévole qui voudrait vraiment venir aider.";
+
 // ============================================
 // ROLE-BASED PROCEDURES
 // ============================================
@@ -830,7 +833,7 @@ const volunteersRouter = router({
       if (absenceCount >= 2) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: `Inscription impossible : vous avez été noté(e) absent(e) ${absenceCount} fois lors de précédentes inscriptions. Les réinscriptions ne sont plus autorisées.`,
+          message: volunteerNoShowBlockingMessage,
         });
       }
 
@@ -866,6 +869,8 @@ const volunteersRouter = router({
       const isAtCapacity = (day.registeredCount ?? 0) >= day.capacity;
 
       if (isAtCapacity && !hasBypassCode) {
+
+      if ((day.registeredCount ?? 0) >= day.capacity && !hasBypassCode) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Ce jour a atteint le nombre maximum d'inscriptions",
@@ -1067,7 +1072,7 @@ const volunteersRouter = router({
       if (groupAbsenceCount >= 2) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: `Inscription impossible : vous avez été noté(e) absent(e) ${groupAbsenceCount} fois lors de précédentes inscriptions. Les réinscriptions ne sont plus autorisées.`,
+          message: volunteerNoShowBlockingMessage,
         });
       }
 
@@ -1856,6 +1861,8 @@ const usersRouter = router({
             "admin_restaurant",
             "admin_patisserie",
             "admin_terroir",
+            "admin_contenu",
+            "admin_messages",
           ])
           .default("user"),
       })
@@ -3590,17 +3597,67 @@ const terroirModuleRouter = router({
         code: "INTERNAL_SERVER_ERROR",
         message: "Supabase non configuré",
       });
-    const { data, error } = await supabase
+
+    const joinQuery = await supabase
       .from("terroir_products")
       .select("*, terroir_product_variants(*)")
       .eq("is_active", true)
       .order("sort_order", { ascending: true });
-    if (error)
+
+    if (!joinQuery.error) {
+      return joinQuery.data || [];
+    }
+
+    console.warn(
+      "[Terroir] Variants join failed, falling back to separate queries:",
+      joinQuery.error.message
+    );
+
+    const { data: products, error: productsError } = await supabase
+      .from("terroir_products")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+
+    if (productsError)
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: error.message,
+        message: productsError.message,
       });
-    return data || [];
+
+    const productIds = (products || []).map((product) => product.id);
+    if (productIds.length === 0) {
+      return [];
+    }
+
+    const { data: variants, error: variantsError } = await supabase
+      .from("terroir_product_variants")
+      .select("*")
+      .in("product_id", productIds)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+
+    if (variantsError)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: variantsError.message,
+      });
+
+    const variantsByProductId = (variants || []).reduce(
+      (acc, variant) => {
+        if (!acc[variant.product_id]) {
+          acc[variant.product_id] = [];
+        }
+        acc[variant.product_id].push(variant);
+        return acc;
+      },
+      {} as Record<number, typeof variants>
+    );
+
+    return (products || []).map((product) => ({
+      ...product,
+      terroir_product_variants: variantsByProductId[product.id] || [],
+    }));
   }),
 
   // --- Public: list pickup slots ---

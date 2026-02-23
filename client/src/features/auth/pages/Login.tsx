@@ -22,7 +22,7 @@ export default function Login() {
         // Stocker le token dans localStorage
         localStorage.setItem('supabase_token', data.session);
         // Rediriger vers /admin si l'utilisateur est admin, sinon vers l'accueil
-        const isAdmin = data.user?.role && ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner'].includes(data.user.role);
+        const isAdmin = data.user?.role && ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'admin_patisserie', 'admin_terroir', 'admin_contenu', 'admin_messages'].includes(data.user.role);
         window.location.href = isAdmin ? '/admin' : '/';
       }
     },

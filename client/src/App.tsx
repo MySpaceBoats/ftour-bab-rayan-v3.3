@@ -44,7 +44,6 @@ import AdminRestaurantGroupes from "@/features/restaurant/admin/AdminRestaurantG
 import AdminRestaurantEntreprises from "@/features/restaurant/admin/AdminRestaurantEntreprises";
 import AdminRestaurants from "@/features/restaurant/admin/AdminRestaurants";
 import AdminRestaurantReservations from "@/features/restaurant/admin/AdminRestaurantReservations";
-import AdminCompanyBookings from "@/features/restaurant/admin/AdminCompanyBookings";
 import AdminScanReservation from "@/features/restaurant/admin/AdminScanReservation";
 import AdminReservationsCalendar from "@/features/restaurant/admin/AdminReservationsCalendar";
 
@@ -206,7 +205,6 @@ function LocalizedRoutes() {
         path="/admin/reservations"
         component={AdminRestaurantReservations}
       />
-      <Route path="/admin/company-bookings" component={AdminCompanyBookings} />
       <Route
         path="/admin/reservations-calendar"
         component={AdminReservationsCalendar}

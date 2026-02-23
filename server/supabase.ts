@@ -210,7 +210,7 @@ export interface Database {
           email: string | null;
           phone: string | null;
           login_method: string | null;
-          role: 'user' | 'admin' | 'super_admin' | 'admin_ops' | 'admin_boutique' | 'admin_dons' | 'scanner';
+          role: 'user' | 'admin' | 'super_admin' | 'admin_ops' | 'admin_boutique' | 'admin_dons' | 'scanner' | 'admin_restaurant' | 'admin_patisserie' | 'admin_terroir' | 'admin_contenu' | 'admin_messages';
           created_at: string;
           updated_at: string;
           last_signed_in: string;

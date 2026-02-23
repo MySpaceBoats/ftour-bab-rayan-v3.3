@@ -196,15 +196,6 @@ const sections: SectionDefinition[] = [
         allowedRoles: ["admin", "super_admin", "admin_terroir"],
       },
       {
-        label: "Réservation Entreprise",
-        description: "Gérer les réservations groupe avec QR codes individuels",
-        route: "/admin/company-bookings",
-        icon: Users,
-        iconColor: "text-purple-600",
-        iconBg: "bg-purple-100",
-        allowedRoles: ["admin", "super_admin", "admin_boutique"],
-      },
-      {
         label: "Paiements",
         description:
           "Suivi et gestion de tous les paiements avec filtres et export",
