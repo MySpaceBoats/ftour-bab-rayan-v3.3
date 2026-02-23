@@ -106,6 +106,20 @@ function extractTokenFromUrl(rawInput: string): string {
   }
 }
 
+function buildCompactToken(prefix: string, maxLength: number = 20): string {
+  const cleanPrefix = prefix.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).slice(2).toUpperCase();
+
+  const prefixBudget = Math.max(0, maxLength - 1);
+  const safePrefix = cleanPrefix.slice(0, prefixBudget);
+  const bodyBudget = Math.max(4, maxLength - (safePrefix ? safePrefix.length + 1 : 0));
+  const body = `${timestamp}${random}`.slice(0, bodyBudget);
+
+  if (!safePrefix) return body.slice(0, maxLength);
+  return `${safePrefix}-${body}`.slice(0, maxLength);
+}
+
 const QR_TYPE_LABELS: Record<QrType, string> = {
   volunteer: 'Bénévole',
   reservation_particulier: 'Réservation Particulier',
@@ -827,7 +841,7 @@ export const scannerRouter = router({
         }
 
         const unitPrice = parseFloat(product.price as any) || 0;
-        const orderReference = `FBR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+        const orderReference = buildCompactToken('FBR', 20);
 
         const { data: createdOrder, error: orderError } = await supabase
           .from('orders')
@@ -881,24 +895,6 @@ export const scannerRouter = router({
         };
       }
 
-      if (input.type === 'product_pastry' || input.type === 'product_terroir') {
-        await supabaseServices.logQRScanSupabase(
-          input.token,
-          input.type,
-          input.entityId,
-          'catalog_scan',
-          ctx.user?.id || 0,
-          true
-        );
-
-        return {
-          success: true,
-          message: `Produit ajouté au board commandes (${createdOrder.order_reference}).`,
-          orderId: createdOrder.id,
-          orderReference: createdOrder.order_reference,
-        };
-      }
-
       if (input.type === 'product_pastry') {
         if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
 
@@ -916,8 +912,8 @@ export const scannerRouter = router({
         }
 
         const unitPrice = parseFloat(product.price as any) || 0;
-        const reference = `PASTRY-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-        const qrToken = `PASTRY-${Date.now()}-${Math.random().toString(36).substring(2, 14).toUpperCase()}`;
+        const reference = buildCompactToken('PAS', 20);
+        const qrToken = buildCompactToken('PSQ', 20);
 
         const { data: createdOrder, error: orderError } = await supabase
           .from('pastry_orders')
@@ -981,8 +977,8 @@ export const scannerRouter = router({
 
         const variant = variants[0];
         const unitPrice = parseFloat(variant.price_unit as any) || 0;
-        const orderReference = `TER-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-        const qrToken = `ter-${Date.now()}-${Math.random().toString(36).substring(2, 14)}`;
+        const orderReference = buildCompactToken('TER', 20);
+        const qrToken = buildCompactToken('TRQ', 20);
 
         const { data: createdOrder, error: orderError } = await supabase
           .from('terroir_orders')
