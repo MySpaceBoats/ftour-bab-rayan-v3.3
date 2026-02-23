@@ -44,6 +44,16 @@ type ReservationStatus =
   | "completed"
   | "no_show";
 
+const getDisplayChoiceOptions = (type: string) => {
+  const baseOptions = [{ value: 'jardin', label: 'Pavillon du Jardin' }];
+
+  if (type === 'entreprise') {
+    return [...baseOptions, { value: 'corpo', label: 'Salon Palmier' }];
+  }
+
+  return [...baseOptions, { value: 'brasserie', label: 'Salon Palmier' }];
+};
+
 export default function AdminRestaurantReservations() {
   const [typeFilter, setTypeFilter] = useState<ReservationType>("all");
   const [statusFilter, setStatusFilter] = useState<ReservationStatus>("all");
@@ -130,8 +140,8 @@ export default function AdminRestaurantReservations() {
     });
   }, [allReservations, typeFilter, statusFilter, searchQuery]);
 
-  const selectedReservation =
-    filteredReservations.find((res: any) => res.id === selectedId) || null;
+  const selectedReservation = filteredReservations.find((res: any) => res.id === selectedId) || null;
+  const displayChoiceOptions = editForm ? getDisplayChoiceOptions(editForm.type) : [];
 
   // Validate reservation
   const validateMutation = trpc.restaurantReservations.validate.useMutation({
@@ -873,9 +883,9 @@ export default function AdminRestaurantReservations() {
                     <SelectValue placeholder="Choisir une salle" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="jardin">Jardin</SelectItem>
-                    <SelectItem value="brasserie">Brasserie</SelectItem>
-                    <SelectItem value="corpo">Corpo</SelectItem>
+                    {displayChoiceOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
