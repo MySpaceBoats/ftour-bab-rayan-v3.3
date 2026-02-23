@@ -120,6 +120,13 @@ function buildCompactToken(prefix: string, maxLength: number = 20): string {
   return `${safePrefix}-${body}`.slice(0, maxLength);
 }
 
+
+function toSafeValidatedBy(userId: unknown): number {
+  if (typeof userId === 'number' && Number.isFinite(userId)) return userId;
+  if (typeof userId === 'string' && /^\d+$/.test(userId)) return Number(userId);
+  return 0;
+}
+
 const QR_TYPE_LABELS: Record<QrType, string> = {
   volunteer: 'Bénévole',
   reservation_particulier: 'Réservation Particulier',
@@ -730,6 +737,7 @@ export const scannerRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const supabase = getSupabaseAdminClient();
+      const validatedBy = toSafeValidatedBy(ctx.user?.id);
 
       // ---- VOLUNTEER ----
       if (input.type === 'volunteer') {
@@ -847,14 +855,13 @@ export const scannerRouter = router({
           .from('orders')
           .insert({
             order_reference: orderReference,
-            customer_name: 'Vente scanner goodies',
-            customer_email: 'scanner-goodies@ftourbabrayan.ma',
+            customer_name: 'Scan goodies',
+            customer_email: 'scan@fbr.ma',
             customer_phone: '0000000000',
             total_amount: unitPrice,
             status: 'paid',
             payment_method: 'cash',
-            notes: `Commande créée via scanner catalogue par ${ctx.user?.name || ctx.user?.email || 'scanner'}`,
-            processed_by: ctx.user?.id,
+            notes: 'scan_catalog',
           })
           .select('id, order_reference')
           .single();
@@ -883,7 +890,7 @@ export const scannerRouter = router({
           input.type,
           input.entityId,
           'catalog_scan',
-          ctx.user?.id || 0,
+          validatedBy,
           true
         );
 
@@ -919,16 +926,16 @@ export const scannerRouter = router({
           .from('pastry_orders')
           .insert({
             reference,
-            customer_name: 'Vente scanner pâtisserie',
+            customer_name: 'Scan pastry',
             phone: '0000000000',
-            email: 'scanner-pastry@ftourbabrayan.ma',
+            email: 'scan@fbr.ma',
             items: [{ pastryId: product.id, quantity: 1, price: unitPrice }],
             total_amount: unitPrice,
             payment_method: 'cash',
             payment_status: 'paid',
             order_status: 'paid',
             qr_token: qrToken,
-            notes: `Commande créée via scanner catalogue par ${ctx.user?.name || ctx.user?.email || 'scanner'}`,
+            notes: 'scan_catalog',
           })
           .select('id, reference')
           .single();
@@ -942,7 +949,7 @@ export const scannerRouter = router({
           input.type,
           input.entityId,
           'catalog_scan',
-          ctx.user?.id || 0,
+          validatedBy,
           true
         );
 
@@ -984,17 +991,15 @@ export const scannerRouter = router({
           .from('terroir_orders')
           .insert({
             order_reference: orderReference,
-            customer_name: 'Vente scanner terroir',
+            customer_name: 'Scan terroir',
             customer_phone: '0000000000',
-            customer_email: 'scanner-terroir@ftourbabrayan.ma',
+            customer_email: 'scan@fbr.ma',
             total_amount: unitPrice,
             status: 'paid',
             payment_status: 'paid',
             qr_token: qrToken,
             qr_status: 'active',
-            processed_by: ctx.user?.id,
-            processed_at: new Date().toISOString(),
-            notes: `Commande créée via scanner catalogue par ${ctx.user?.name || ctx.user?.email || 'scanner'}`,
+            notes: 'scan_catalog',
           })
           .select('id, order_reference')
           .single();
@@ -1024,7 +1029,7 @@ export const scannerRouter = router({
           input.type,
           input.entityId,
           'catalog_scan',
-          ctx.user?.id || 0,
+          validatedBy,
           true
         );
 
@@ -1043,7 +1048,7 @@ export const scannerRouter = router({
           input.type,
           0,
           'catalog_scan',
-          ctx.user?.id || 0,
+          validatedBy,
           true
         );
         return { success: true, message: 'Scan don catalogue enregistré dans le système.' };
