@@ -11,7 +11,16 @@ export interface UserData {
   email?: string | null;
   phone?: string | null;
   loginMethod?: string | null;
-  role?: 'user' | 'admin' | 'super_admin' | 'admin_operations' | 'admin_boutique' | 'admin_dons' | 'scanner';
+  role?: 'user' | 'admin' | 'super_admin' | 'admin_ops' | 'admin_boutique' | 'admin_dons' | 'scanner' | 'admin_restaurant' | 'admin_patisserie' | 'admin_terroir' | 'admin_operations';
+}
+
+function normalizeUserRole(role?: UserData['role'] | string | null): string | undefined {
+  if (!role) return undefined;
+
+  // Legacy alias still present in old sessions / metadata.
+  if (role === 'admin_operations') return 'admin_ops';
+
+  return role;
 }
 
 export async function upsertUserSupabase(user: UserData) {
@@ -24,6 +33,8 @@ export async function upsertUserSupabase(user: UserData) {
     .eq('open_id', user.openId)
     .single();
 
+  const normalizedRole = normalizeUserRole(user.role);
+
   if (existing) {
     const { error } = await client
       .from('users')
@@ -32,7 +43,7 @@ export async function upsertUserSupabase(user: UserData) {
         email: user.email,
         phone: user.phone,
         login_method: user.loginMethod,
-        role: user.role || existing.role,
+        role: normalizedRole || existing.role,
         last_signed_in: new Date().toISOString(),
       })
       .eq('open_id', user.openId);
@@ -48,7 +59,7 @@ export async function upsertUserSupabase(user: UserData) {
         email: user.email,
         phone: user.phone,
         login_method: user.loginMethod,
-        role: user.role || 'user',
+        role: normalizedRole || 'user',
         last_signed_in: new Date().toISOString(),
       })
       .select()
@@ -116,7 +127,7 @@ export async function updateUserRoleSupabase(userId: number, role: string) {
 
   const { error } = await client
     .from('users')
-    .update({ role })
+    .update({ role: normalizeUserRole(role) ?? role })
     .eq('id', userId);
 
   if (error) throw error;
@@ -128,7 +139,7 @@ export async function updateUserRoleByOpenIdSupabase(openId: string, role: strin
 
   const { error } = await client
     .from('users')
-    .update({ role })
+    .update({ role: normalizeUserRole(role) ?? role })
     .eq('open_id', openId);
 
   if (error) throw error;
