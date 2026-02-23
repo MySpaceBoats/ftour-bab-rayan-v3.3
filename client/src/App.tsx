@@ -94,9 +94,6 @@ import AdminUtilisateurs from "@/features/ops/admin/AdminUtilisateurs";
 import AdminUnifiedDashboard from "@/features/ops/admin/AdminUnifiedDashboard";
 import AdminQRCodes from "@/features/ops/admin/AdminQRCodes";
 import AdminRamadanStats from "@/features/ops/admin/AdminRamadanStats";
-import AdminGalerie from "@/features/gallery/admin/AdminGalerie";
-import AdminGalerieNouveau from "@/features/gallery/admin/AdminGalerieNouveau";
-import AdminGalerieEdit from "@/features/gallery/admin/AdminGalerieEdit";
 
 // ============================================
 // SCANNER — features/scanner
