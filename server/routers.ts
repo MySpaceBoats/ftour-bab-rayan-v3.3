@@ -28,6 +28,223 @@ import { scannerRouter } from "./scanner-router";
 import * as galleryServices from "./gallery-services";
 import * as XLSX from "xlsx";
 
+type ParsedGroupVolunteerRow = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  city?: string;
+};
+
+const normalizeSpreadsheetValue = (value: unknown): string =>
+  String(value ?? "")
+    .toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+const decodeBase64Payload = (payload: string): Buffer => {
+  const cleanPayload = payload.includes(",")
+    ? payload.split(",").pop() || ""
+    : payload;
+  return Buffer.from(cleanPayload, "base64");
+};
+
+const parseGroupVolunteersFromSheet = (
+  sheet: XLSX.WorkSheet
+): ParsedGroupVolunteerRow[] => {
+  const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, {
+    header: 1,
+    defval: "",
+    blankrows: false,
+  });
+
+  // Le template groupe commence à la 7e ligne (index 6)
+  const templateHeaderRowIndex = 6;
+  let headerRowIndex =
+    rawRows.length > templateHeaderRowIndex ? templateHeaderRowIndex : 0;
+  let bestScore = -1;
+
+  for (let i = 0; i < Math.min(rawRows.length, 30); i++) {
+    const row = rawRows[i] || [];
+    let hasEmailCol = false;
+    let hasNameCol = false;
+    let score = 0;
+
+    for (const cell of row) {
+      const normalized = normalizeSpreadsheetValue(cell);
+      if (!normalized) continue;
+      if (
+        normalized.includes("email") ||
+        normalized.includes("mail") ||
+        normalized.includes("courriel")
+      ) {
+        hasEmailCol = true;
+        score += 3;
+      }
+      if (
+        normalized.includes("nom") ||
+        normalized.includes("name") ||
+        normalized.includes("prenom") ||
+        normalized.includes("first") ||
+        normalized.includes("last")
+      ) {
+        hasNameCol = true;
+        score += 2;
+      }
+      if (
+        normalized.includes("tel") ||
+        normalized.includes("phone") ||
+        normalized.includes("ville") ||
+        normalized.includes("city")
+      ) {
+        score += 1;
+      }
+    }
+
+    if (hasEmailCol && hasNameCol) {
+      // Priorité à la 7e ligne pour coller au template fourni
+      if (i === templateHeaderRowIndex) {
+        headerRowIndex = i;
+        bestScore = score;
+        break;
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        headerRowIndex = i;
+      }
+    }
+  }
+
+  const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, {
+    defval: "",
+    range: headerRowIndex,
+    blankrows: false,
+  });
+
+  if (!rows.length) return [];
+
+  const findColumn = (
+    candidateRows: Record<string, any>[],
+    candidates: string[],
+    exclude: string[] = []
+  ): string => {
+    for (const row of candidateRows) {
+      for (const key of Object.keys(row)) {
+        if (!key || exclude.includes(key)) continue;
+        const normalizedKey = normalizeSpreadsheetValue(key);
+        if (candidates.some(candidate => normalizedKey.includes(candidate))) {
+          return key;
+        }
+      }
+    }
+    return "";
+  };
+
+  const sampleRows = rows.slice(0, 5);
+  const colEmail = findColumn(sampleRows, ["email", "mail", "courriel"]);
+  const colFirstName = findColumn(
+    sampleRows,
+    ["prenom", "first", "firstname"],
+    [colEmail]
+  );
+  const colLastName = findColumn(
+    sampleRows,
+    ["nom", "last", "lastname", "family"],
+    [colEmail, colFirstName].filter(Boolean)
+  );
+  const colFullName =
+    !colFirstName || !colLastName
+      ? findColumn(
+          sampleRows,
+          ["nom", "name", "prenom"],
+          [colEmail].filter(Boolean)
+        )
+      : "";
+  const usedCols = [colEmail, colFirstName, colLastName, colFullName].filter(
+    Boolean
+  );
+  const colPhone = findColumn(
+    sampleRows,
+    ["telephone", "tel", "phone", "mobile", "gsm"],
+    usedCols
+  );
+  const colCity = findColumn(
+    sampleRows,
+    ["ville", "city"],
+    [...usedCols, colPhone].filter(Boolean)
+  );
+
+  const hasNames = (colFirstName && colLastName) || colFullName;
+  if (!hasNames || !colEmail) return [];
+
+  return rows
+    .map((row): ParsedGroupVolunteerRow | null => {
+      let firstName: string;
+      let lastName: string;
+
+      if (colFullName) {
+        const fullName = String(row[colFullName] || "").trim();
+        const parts = fullName.split(/\s+/).filter(Boolean);
+        if (parts.length >= 2) {
+          lastName = parts[0];
+          firstName = parts.slice(1).join(" ");
+        } else {
+          firstName = fullName;
+          lastName = fullName;
+        }
+      } else {
+        firstName = String(row[colFirstName] || "").trim();
+        lastName = String(row[colLastName] || "").trim();
+      }
+
+      const email = String(row[colEmail] || "")
+        .toLowerCase()
+        .trim();
+      const phone = colPhone ? String(row[colPhone] || "").trim() : "";
+      const city = colCity ? String(row[colCity] || "").trim() : undefined;
+
+      if (
+        !firstName ||
+        !lastName ||
+        !email ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+      ) {
+        return null;
+      }
+
+      return { firstName, lastName, email, phone, city };
+    })
+    .filter((row): row is ParsedGroupVolunteerRow => !!row);
+};
+
+const parseGroupVolunteersFromSpreadsheet = (
+  fileBase64: string
+): ParsedGroupVolunteerRow[] => {
+  const workbook = XLSX.read(decodeBase64Payload(fileBase64), {
+    type: "buffer",
+    raw: false,
+    FS: ";",
+  });
+
+  const allRows = workbook.SheetNames.flatMap(sheetName => {
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) return [];
+    return parseGroupVolunteersFromSheet(sheet);
+  });
+
+  // Deux onglets possibles: on fusionne et on déduplique par email
+  const dedupedByEmail = new Map<string, ParsedGroupVolunteerRow>();
+  for (const row of allRows) {
+    if (!dedupedByEmail.has(row.email)) {
+      dedupedByEmail.set(row.email, row);
+    }
+  }
+
+  return Array.from(dedupedByEmail.values());
+};
+
 // ============================================
 // ROLE-BASED PROCEDURES
 // ============================================
@@ -71,7 +288,12 @@ const scannerProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 const adminOpsProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_ops', 'admin_operations'];
+  const allowedRoles = [
+    "admin",
+    "super_admin",
+    "admin_ops",
+    "admin_operations",
+  ];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -900,220 +1122,70 @@ const volunteersRouter = router({
           : "http://localhost:3000";
 
       try {
-        const fileBuffer = Buffer.from(input.fileBase64, "base64");
-        const workbook = XLSX.read(fileBuffer, { type: "buffer" });
-        const sheetName = workbook.SheetNames[0];
+        const parsedRows = parseGroupVolunteersFromSpreadsheet(
+          input.fileBase64
+        );
+        let registeredCount = 0;
 
-        if (sheetName) {
-          const sheet = workbook.Sheets[sheetName];
-
-          // Find the actual header row (template has title/info rows before column headers)
-          // Headers can be: "NOM PRENOM" + "EMAIL ADRESS" or "Prénom" + "Nom" + "Email"
-          const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, {
-            header: 1,
-            defval: "",
-          });
-          let headerRowIndex = 0;
-          for (let i = 0; i < Math.min(rawRows.length, 20); i++) {
-            const row = rawRows[i] || [];
-            let hasNameCol = false,
-              hasEmailCol = false;
-            for (const cell of row) {
-              const val = String(cell || "").trim();
-              if (val.length === 0 || val.length > 30) continue;
-              const n = val
-                .toLowerCase()
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "");
-              if (
-                n.includes("email") ||
-                n.includes("mail") ||
-                n.includes("courriel")
-              )
-                hasEmailCol = true;
-              if (
-                n.includes("nom") ||
-                n.includes("name") ||
-                n.includes("prenom") ||
-                n.includes("first") ||
-                n.includes("last")
-              )
-                hasNameCol = true;
-            }
-            if (hasNameCol && hasEmailCol) {
-              headerRowIndex = i;
-              break;
-            }
-          }
-
-          const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, {
-            defval: "",
-            range: headerRowIndex,
-          });
-
-          if (rows.length > 0) {
-            // Detect columns (exclude already-matched keys to avoid collisions)
-            const findCol = (
-              row: Record<string, any>,
-              candidates: string[],
-              exclude: string[] = []
-            ): string => {
-              for (const key of Object.keys(row)) {
-                if (exclude.includes(key)) continue;
-                const n = key
-                  .toLowerCase()
-                  .trim()
-                  .normalize("NFD")
-                  .replace(/[\u0300-\u036f]/g, "");
-                for (const c of candidates) {
-                  if (n.includes(c)) return key;
-                }
-              }
-              return "";
-            };
-
-            const sample = rows[0];
-            const colEmail = findCol(sample, ["email", "mail", "courriel"]);
-
-            // Try separate Prénom/Nom columns first
-            const colFirst = findCol(
-              sample,
-              ["prenom", "first", "firstname"],
-              [colEmail]
-            );
-            const colLast = findCol(
-              sample,
-              ["nom", "last", "lastname", "family"],
-              [colEmail, colFirst].filter(Boolean)
-            );
-
-            // Fall back to combined name column (e.g., "NOM PRENOM", "NOM ET PRENOM")
-            const colFullName =
-              !colFirst || !colLast
-                ? findCol(
-                    sample,
-                    ["nom", "name", "prenom"],
-                    [colEmail].filter(Boolean)
-                  )
-                : "";
-
-            const usedCols = [colEmail, colFirst, colLast, colFullName].filter(
-              Boolean
-            );
-            const colPhone = findCol(
-              sample,
-              ["telephone", "tel", "phone", "mobile", "gsm"],
-              usedCols
-            );
-            const colCity = findCol(
-              sample,
-              ["ville", "city"],
-              [...usedCols, colPhone].filter(Boolean)
-            );
-
-            const hasNames = (colFirst && colLast) || colFullName;
-            if (hasNames && colEmail) {
-              let registeredCount = 0;
-              for (const row of rows) {
-                let firstName: string, lastName: string;
-                if (colFullName) {
-                  const fullName = String(row[colFullName] || "").trim();
-                  const parts = fullName.split(/\s+/);
-                  if (parts.length >= 2) {
-                    lastName = parts[0];
-                    firstName = parts.slice(1).join(" ");
-                  } else {
-                    lastName = fullName;
-                    firstName = fullName;
-                  }
-                } else {
-                  firstName = String(row[colFirst] || "").trim();
-                  lastName = String(row[colLast] || "").trim();
-                }
-                const email = String(row[colEmail] || "")
-                  .toLowerCase()
-                  .trim();
-                const phone = colPhone
-                  ? String(row[colPhone] || "").trim()
-                  : "";
-                const city = colCity
-                  ? String(row[colCity] || "").trim()
-                  : undefined;
-
-                if (
-                  !firstName ||
-                  !lastName ||
-                  !email ||
-                  !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-                )
-                  continue;
-
-                try {
-                  const exists =
-                    await supabaseServices.checkVolunteerEmailExistsForDay(
-                      email,
-                      input.dayId
-                    );
-                  if (exists) continue;
-
-                  const vol =
-                    await supabaseServices.createVolunteerShiftSupabase({
-                      firstName,
-                      lastName,
-                      email,
-                      phone,
-                      city,
-                      dayId: input.dayId,
-                      volunteerSlots: input.volunteerSlots,
-                      acceptedTerms: true,
-                    });
-
-                  const volEmailData = generateVolunteerConfirmationEmail({
-                    firstName,
-                    lastName,
-                    email,
-                    dayNumber: day?.dayNumber || 1,
-                    dayDate: day?.date
-                      ? new Date(day.date).toLocaleDateString("fr-FR", {
-                          weekday: "long",
-                          month: "long",
-                          day: "numeric",
-                        })
-                      : "",
-                    location:
-                      day?.location || "Association Bab Rayan, Casablanca",
-                    startTime: day?.iftarTime || "18h00",
-                    volunteerSlots: input.volunteerSlots,
-                    qrToken: vol.qrToken,
-                    baseUrl,
-                  });
-
-                  await sendEmail({
-                    to: email,
-                    subject: volEmailData.subject,
-                    html: volEmailData.html,
-                  });
-                  registeredCount++;
-                  console.log(
-                    `[Group Registration] Individual email sent to ${email}`
-                  );
-                } catch (err) {
-                  console.error(
-                    `[Group Registration] Failed to register ${email}:`,
-                    err
-                  );
-                }
-              }
-              console.log(
-                `[Group Registration] ${registeredCount} individual volunteers registered from Excel`
+        for (const row of parsedRows) {
+          try {
+            const exists =
+              await supabaseServices.checkVolunteerEmailExistsForDay(
+                row.email,
+                input.dayId
               );
-            } else {
-              console.warn(
-                "[Group Registration] Could not detect required columns (Prénom, Nom, Email) in Excel file"
-              );
-            }
+            if (exists) continue;
+
+            const vol = await supabaseServices.createVolunteerShiftSupabase({
+              firstName: row.firstName,
+              lastName: row.lastName,
+              email: row.email,
+              phone: row.phone,
+              city: row.city,
+              dayId: input.dayId,
+              volunteerSlots: input.volunteerSlots,
+              acceptedTerms: true,
+            });
+
+            const volEmailData = generateVolunteerConfirmationEmail({
+              firstName: row.firstName,
+              lastName: row.lastName,
+              email: row.email,
+              dayNumber: day?.dayNumber || 1,
+              dayDate: day?.date
+                ? new Date(day.date).toLocaleDateString("fr-FR", {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                  })
+                : "",
+              location: day?.location || "Association Bab Rayan, Casablanca",
+              startTime: day?.iftarTime || "18h00",
+              volunteerSlots: input.volunteerSlots,
+              qrToken: vol.qrToken,
+              baseUrl,
+            });
+
+            await sendEmail({
+              to: row.email,
+              subject: volEmailData.subject,
+              html: volEmailData.html,
+            });
+            registeredCount++;
+            console.log(
+              `[Group Registration] Individual email sent to ${row.email}`
+            );
+          } catch (err) {
+            console.error(
+              `[Group Registration] Failed to register ${row.email}:`,
+              err
+            );
           }
         }
+
+        console.log(
+          `[Group Registration] ${registeredCount} individual volunteers registered from Excel`
+        );
       } catch (excelError) {
         console.error("[Group Registration] Excel parsing failed:", excelError);
       }
@@ -1141,11 +1213,10 @@ const volunteersRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
       }
 
-      // Parse the Excel file from base64
-      const fileBuffer = Buffer.from(input.fileBase64, "base64");
-      let workbook: XLSX.WorkBook;
+      // Parse and normalize the uploaded spreadsheet
+      let parsedRows: ParsedGroupVolunteerRow[];
       try {
-        workbook = XLSX.read(fileBuffer, { type: "buffer" });
+        parsedRows = parseGroupVolunteersFromSpreadsheet(input.fileBase64);
       } catch {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -1153,136 +1224,11 @@ const volunteersRouter = router({
         });
       }
 
-      const sheetName = workbook.SheetNames[0];
-      if (!sheetName) {
+      if (parsedRows.length === 0) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Le fichier Excel est vide.",
-        });
-      }
-
-      const sheet = workbook.Sheets[sheetName];
-
-      // Find the actual header row (template has title/info rows before column headers)
-      // Headers can be: "NOM PRENOM" + "EMAIL ADRESS" or "Prénom" + "Nom" + "Email"
-      const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, {
-        header: 1,
-        defval: "",
-      });
-      let headerRowIndex = 0;
-      for (let i = 0; i < Math.min(rawRows.length, 20); i++) {
-        const row = rawRows[i] || [];
-        let hasNameCol = false,
-          hasEmailCol = false;
-        for (const cell of row) {
-          const val = String(cell || "").trim();
-          if (val.length === 0 || val.length > 30) continue;
-          const n = val
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "");
-          if (
-            n.includes("email") ||
-            n.includes("mail") ||
-            n.includes("courriel")
-          )
-            hasEmailCol = true;
-          if (
-            n.includes("nom") ||
-            n.includes("name") ||
-            n.includes("prenom") ||
-            n.includes("first") ||
-            n.includes("last")
-          )
-            hasNameCol = true;
-        }
-        if (hasNameCol && hasEmailCol) {
-          headerRowIndex = i;
-          break;
-        }
-      }
-
-      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, {
-        defval: "",
-        range: headerRowIndex,
-      });
-
-      if (rows.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Aucune ligne trouvée dans le fichier Excel.",
-        });
-      }
-
-      // Normalize column names (exclude already-matched keys to avoid collisions)
-      function findColumn(
-        row: Record<string, any>,
-        candidates: string[],
-        exclude: string[] = []
-      ): string {
-        for (const key of Object.keys(row)) {
-          if (exclude.includes(key)) continue;
-          const normalized = key
-            .toLowerCase()
-            .trim()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "");
-          for (const candidate of candidates) {
-            if (normalized.includes(candidate)) return key;
-          }
-        }
-        return "";
-      }
-
-      // Detect column mapping from first row
-      const sampleRow = rows[0];
-      const colEmail = findColumn(sampleRow, ["email", "mail", "courriel"]);
-
-      // Try separate Prénom/Nom columns first
-      const colFirstName = findColumn(
-        sampleRow,
-        ["prenom", "first", "firstname"],
-        [colEmail]
-      );
-      const colLastName = findColumn(
-        sampleRow,
-        ["nom", "last", "lastname", "family"],
-        [colEmail, colFirstName].filter(Boolean)
-      );
-
-      // Fall back to combined name column (e.g., "NOM PRENOM", "NOM ET PRENOM")
-      const colFullName =
-        !colFirstName || !colLastName
-          ? findColumn(
-              sampleRow,
-              ["nom", "name", "prenom"],
-              [colEmail].filter(Boolean)
-            )
-          : "";
-
-      const usedCols = [
-        colEmail,
-        colFirstName,
-        colLastName,
-        colFullName,
-      ].filter(Boolean);
-      const colPhone = findColumn(
-        sampleRow,
-        ["telephone", "tel", "phone", "mobile", "gsm"],
-        usedCols
-      );
-      const colCity = findColumn(
-        sampleRow,
-        ["ville", "city"],
-        [...usedCols, colPhone].filter(Boolean)
-      );
-
-      const hasNames = (colFirstName && colLastName) || colFullName;
-      if (!hasNames || !colEmail) {
-        const detectedCols = Object.keys(sampleRow).join(", ");
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Colonnes requises introuvables (Nom/Prénom, Email). Colonnes détectées : ${detectedCols}`,
+          message:
+            "Colonnes requises introuvables (Nom/Prénom, Email) ou aucune ligne valide dans le fichier.",
         });
       }
 
@@ -1293,43 +1239,8 @@ const volunteersRouter = router({
 
       const results: { email: string; success: boolean; error?: string }[] = [];
 
-      for (const row of rows) {
-        let firstName: string, lastName: string;
-        if (colFullName) {
-          const fullName = String(row[colFullName] || "").trim();
-          const parts = fullName.split(/\s+/);
-          if (parts.length >= 2) {
-            lastName = parts[0];
-            firstName = parts.slice(1).join(" ");
-          } else {
-            lastName = fullName;
-            firstName = fullName;
-          }
-        } else {
-          firstName = String(row[colFirstName] || "").trim();
-          lastName = String(row[colLastName] || "").trim();
-        }
-        const email = String(row[colEmail] || "")
-          .toLowerCase()
-          .trim();
-        const phone = colPhone ? String(row[colPhone] || "").trim() : "";
-        const city = colCity ? String(row[colCity] || "").trim() : undefined;
-
-        // Skip empty rows
-        if (!firstName || !lastName || !email) {
-          results.push({
-            email: email || "(vide)",
-            success: false,
-            error: "Données incomplètes (prénom, nom ou email manquant)",
-          });
-          continue;
-        }
-
-        // Basic email validation
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          results.push({ email, success: false, error: "Email invalide" });
-          continue;
-        }
+      for (const row of parsedRows) {
+        const email = row.email;
 
         try {
           // Check if already registered for this day
@@ -1350,11 +1261,11 @@ const volunteersRouter = router({
           // Create volunteer entry
           const volunteer = await supabaseServices.createVolunteerShiftSupabase(
             {
-              firstName,
-              lastName,
+              firstName: row.firstName,
+              lastName: row.lastName,
               email,
-              phone,
-              city,
+              phone: row.phone,
+              city: row.city,
               dayId: input.dayId,
               volunteerSlots: input.volunteerSlots,
               acceptedTerms: true,
@@ -1363,8 +1274,8 @@ const volunteersRouter = router({
 
           // Send confirmation email with QR code
           const emailData = generateVolunteerConfirmationEmail({
-            firstName,
-            lastName,
+            firstName: row.firstName,
+            lastName: row.lastName,
             email,
             dayNumber: day.dayNumber,
             dayDate: new Date(day.date).toLocaleDateString("fr-FR", {
@@ -1410,10 +1321,10 @@ const volunteersRouter = router({
       const failCount = results.filter(r => !r.success).length;
 
       console.log(
-        `[ProcessGroupExcel] Completed: ${successCount} success, ${failCount} failures out of ${rows.length} rows`
+        `[ProcessGroupExcel] Completed: ${successCount} success, ${failCount} failures out of ${parsedRows.length} rows`
       );
 
-      return { results, successCount, failCount, totalRows: rows.length };
+      return { results, successCount, failCount, totalRows: parsedRows.length };
     }),
 });
 
@@ -1972,71 +1883,99 @@ const usersRouter = router({
     }),
 
   updateConfig: adminOpsProcedure
-    .input(z.object({
-      id: z.number(),
-      hijriYear: z.string().min(1).optional(),
-      gregorianStartDate: z.string().optional(),
-      timezone: z.string().optional(),
-      isActive: z.boolean().optional(),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        hijriYear: z.string().min(1).optional(),
+        gregorianStartDate: z.string().optional(),
+        timezone: z.string().optional(),
+        isActive: z.boolean().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const { id, ...rest } = input;
       return supabaseServices.updateRamadanConfigSupabase(id, rest);
     }),
 
   listStats: adminOpsProcedure
-    .input(z.object({
-      configId: z.number(),
-      from: z.string().optional(),
-      to: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        configId: z.number(),
+        from: z.string().optional(),
+        to: z.string().optional(),
+      })
+    )
     .query(async ({ input }) => {
       const rows = await supabaseServices.listRamadanDailyStatsSupabase({
         configId: input.configId,
         fromDate: input.from,
         toDate: input.to,
       });
-      const totals = rows.reduce((acc: { meals: number; beneficiaries: number; volunteersPresence: number }, row: any) => {
-        acc.meals += row.meals_distributed || 0;
-        acc.beneficiaries += row.beneficiaries_served || 0;
-        acc.volunteersPresence += row.volunteers_present || 0;
-        return acc;
-      }, { meals: 0, beneficiaries: 0, volunteersPresence: 0 });
+      const totals = rows.reduce(
+        (
+          acc: {
+            meals: number;
+            beneficiaries: number;
+            volunteersPresence: number;
+          },
+          row: any
+        ) => {
+          acc.meals += row.meals_distributed || 0;
+          acc.beneficiaries += row.beneficiaries_served || 0;
+          acc.volunteersPresence += row.volunteers_present || 0;
+          return acc;
+        },
+        { meals: 0, beneficiaries: 0, volunteersPresence: 0 }
+      );
       return { rows, totals };
     }),
 
   upsertStat: adminOpsProcedure
-    .input(z.object({
-      configId: z.number(),
-      ramadanDay: z.number().min(1).max(30),
-      beneficiariesServed: z.number().int().min(0),
-      mealsDistributed: z.number().int().min(0),
-      volunteersPresent: z.number().int().min(0),
-      notes: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        configId: z.number(),
+        ramadanDay: z.number().min(1).max(30),
+        beneficiariesServed: z.number().int().min(0),
+        mealsDistributed: z.number().int().min(0),
+        volunteersPresent: z.number().int().min(0),
+        notes: z.string().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       return supabaseServices.upsertRamadanDailyStatSupabase(input);
     }),
 
   updateStat: adminOpsProcedure
-    .input(z.object({
-      id: z.number(),
-      beneficiariesServed: z.number().int().min(0),
-      mealsDistributed: z.number().int().min(0),
-      volunteersPresent: z.number().int().min(0),
-      notes: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        beneficiariesServed: z.number().int().min(0),
+        mealsDistributed: z.number().int().min(0),
+        volunteersPresent: z.number().int().min(0),
+        notes: z.string().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
       const { id, ...rest } = input;
-      const { error, data } = await supabase.from('ramadan_daily_stats').update({
-        beneficiaries_served: rest.beneficiariesServed,
-        meals_distributed: rest.mealsDistributed,
-        volunteers_present: rest.volunteersPresent,
-        notes: rest.notes ?? null,
-      }).eq('id', id).select('*').single();
-      if (error) throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      const { error, data } = await supabase
+        .from("ramadan_daily_stats")
+        .update({
+          beneficiaries_served: rest.beneficiariesServed,
+          meals_distributed: rest.mealsDistributed,
+          volunteers_present: rest.volunteersPresent,
+          notes: rest.notes ?? null,
+        })
+        .eq("id", id)
+        .select("*")
+        .single();
+      if (error)
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
       return data;
     }),
 
@@ -2048,18 +1987,20 @@ const usersRouter = router({
     }),
 });
 
-
-
 const ramadanRouter = router({
   publicSummary: publicProcedure.query(async () => {
     return supabaseServices.getRamadanSummarySupabase();
   }),
 
   publicDaily: publicProcedure
-    .input(z.object({
-      from: z.string().optional(),
-      to: z.string().optional(),
-    }).optional())
+    .input(
+      z
+        .object({
+          from: z.string().optional(),
+          to: z.string().optional(),
+        })
+        .optional()
+    )
     .query(async ({ input }) => {
       const config = await supabaseServices.getActiveRamadanConfigSupabase();
       if (!config) return [];
@@ -2072,87 +2013,117 @@ const ramadanRouter = router({
 
   getConfig: adminOpsProcedure.query(async () => {
     const configs = await supabaseServices.listRamadanConfigsSupabase();
-    const active = configs.find((c) => c.isActive) || null;
+    const active = configs.find(c => c.isActive) || null;
     return { active, configs };
   }),
 
   createConfig: adminOpsProcedure
-    .input(z.object({
-      hijriYear: z.string().min(1),
-      gregorianStartDate: z.string(),
-      timezone: z.string().default('Africa/Casablanca'),
-      isActive: z.boolean().default(true),
-    }))
+    .input(
+      z.object({
+        hijriYear: z.string().min(1),
+        gregorianStartDate: z.string(),
+        timezone: z.string().default("Africa/Casablanca"),
+        isActive: z.boolean().default(true),
+      })
+    )
     .mutation(async ({ input }) => {
       return supabaseServices.createRamadanConfigSupabase(input);
     }),
 
   updateConfig: adminOpsProcedure
-    .input(z.object({
-      id: z.number(),
-      hijriYear: z.string().min(1).optional(),
-      gregorianStartDate: z.string().optional(),
-      timezone: z.string().optional(),
-      isActive: z.boolean().optional(),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        hijriYear: z.string().min(1).optional(),
+        gregorianStartDate: z.string().optional(),
+        timezone: z.string().optional(),
+        isActive: z.boolean().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const { id, ...rest } = input;
       return supabaseServices.updateRamadanConfigSupabase(id, rest);
     }),
 
   listStats: adminOpsProcedure
-    .input(z.object({
-      configId: z.number(),
-      from: z.string().optional(),
-      to: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        configId: z.number(),
+        from: z.string().optional(),
+        to: z.string().optional(),
+      })
+    )
     .query(async ({ input }) => {
       const rows = await supabaseServices.listRamadanDailyStatsSupabase({
         configId: input.configId,
         fromDate: input.from,
         toDate: input.to,
       });
-      const totals = rows.reduce((acc: { meals: number; beneficiaries: number; volunteersPresence: number }, row: any) => {
-        acc.meals += row.meals_distributed || 0;
-        acc.beneficiaries += row.beneficiaries_served || 0;
-        acc.volunteersPresence += row.volunteers_present || 0;
-        return acc;
-      }, { meals: 0, beneficiaries: 0, volunteersPresence: 0 });
+      const totals = rows.reduce(
+        (
+          acc: {
+            meals: number;
+            beneficiaries: number;
+            volunteersPresence: number;
+          },
+          row: any
+        ) => {
+          acc.meals += row.meals_distributed || 0;
+          acc.beneficiaries += row.beneficiaries_served || 0;
+          acc.volunteersPresence += row.volunteers_present || 0;
+          return acc;
+        },
+        { meals: 0, beneficiaries: 0, volunteersPresence: 0 }
+      );
       return { rows, totals };
     }),
 
   upsertStat: adminOpsProcedure
-    .input(z.object({
-      configId: z.number(),
-      ramadanDay: z.number().min(1).max(30),
-      beneficiariesServed: z.number().int().min(0),
-      mealsDistributed: z.number().int().min(0),
-      volunteersPresent: z.number().int().min(0),
-      notes: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        configId: z.number(),
+        ramadanDay: z.number().min(1).max(30),
+        beneficiariesServed: z.number().int().min(0),
+        mealsDistributed: z.number().int().min(0),
+        volunteersPresent: z.number().int().min(0),
+        notes: z.string().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       return supabaseServices.upsertRamadanDailyStatSupabase(input);
     }),
 
   updateStat: adminOpsProcedure
-    .input(z.object({
-      id: z.number(),
-      beneficiariesServed: z.number().int().min(0),
-      mealsDistributed: z.number().int().min(0),
-      volunteersPresent: z.number().int().min(0),
-      notes: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        beneficiariesServed: z.number().int().min(0),
+        mealsDistributed: z.number().int().min(0),
+        volunteersPresent: z.number().int().min(0),
+        notes: z.string().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const supabase = getSupabaseAdminClient();
-      if (!supabase) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
       const { id, ...rest } = input;
-      const { error, data } = await supabase.from('ramadan_daily_stats').update({
-        beneficiaries_served: rest.beneficiariesServed,
-        meals_distributed: rest.mealsDistributed,
-        volunteers_present: rest.volunteersPresent,
-        notes: rest.notes ?? null,
-      }).eq('id', id).select('*').single();
-      if (error) throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+      const { error, data } = await supabase
+        .from("ramadan_daily_stats")
+        .update({
+          beneficiaries_served: rest.beneficiariesServed,
+          meals_distributed: rest.mealsDistributed,
+          volunteers_present: rest.volunteersPresent,
+          notes: rest.notes ?? null,
+        })
+        .eq("id", id)
+        .select("*")
+        .single();
+      if (error)
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
       return data;
     }),
 
