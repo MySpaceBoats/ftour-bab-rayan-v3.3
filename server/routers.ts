@@ -1851,6 +1851,8 @@ const usersRouter = router({
             "admin_restaurant",
             "admin_patisserie",
             "admin_terroir",
+            "admin_contenu",
+            "admin_messages",
           ])
           .default("user"),
       })
