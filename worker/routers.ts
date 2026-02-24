@@ -1220,7 +1220,40 @@ const authRouter = router({
         createdAt: new Date(),
       };
 
-      return { user, session: authData.session.access_token };
+      return {
+        user,
+        session: {
+          accessToken: authData.session.access_token,
+          refreshToken: authData.session.refresh_token,
+          expiresAt: authData.session.expires_at ?? null,
+        },
+      };
+    }),
+
+  refreshSession: publicProcedure
+    .input(z.object({
+      refreshToken: z.string().min(1),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase.auth.refreshSession({
+        refresh_token: input.refreshToken,
+      });
+
+      if (error || !data.session) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: error?.message || 'Session expirée',
+        });
+      }
+
+      return {
+        session: {
+          accessToken: data.session.access_token,
+          refreshToken: data.session.refresh_token,
+          expiresAt: data.session.expires_at ?? null,
+        },
+      };
     }),
 
   signup: publicProcedure
