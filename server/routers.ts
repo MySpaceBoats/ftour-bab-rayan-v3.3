@@ -1082,17 +1082,6 @@ const volunteersRouter = router({
       // Get day info for the email
       const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
 
-      // Also create a volunteer entry for the group responsible (so it appears in the dashboard)
-      const volunteer = await supabaseServices.createVolunteerShiftSupabase({
-        firstName: `[Groupe] ${input.groupName}`,
-        lastName: input.responsibleName,
-        email: normalizedGroupEmail,
-        phone: input.responsiblePhone,
-        dayId: input.dayId,
-        volunteerSlots: input.volunteerSlots,
-        acceptedTerms: input.acceptedTerms,
-      });
-
       // Build and send email with attachment to admin
       const adminEmailData = generateGroupRegistrationEmail({
         groupName: input.groupName,
@@ -1130,82 +1119,9 @@ const volunteersRouter = router({
         console.error("[Group Registration] Admin email failed:", error);
       }
 
-      // Parse the Excel file and register each volunteer individually
-      const baseUrl =
-        process.env.NODE_ENV === "production"
-          ? "https://ftourbabrayan.ma"
-          : "http://localhost:3000";
-
-      try {
-        const parsedRows = parseGroupVolunteersFromSpreadsheet(
-          input.fileBase64
-        );
-        let registeredCount = 0;
-
-        for (const row of parsedRows) {
-          try {
-            const exists =
-              await supabaseServices.checkVolunteerEmailExistsForDay(
-                row.email,
-                input.dayId
-              );
-            if (exists) continue;
-
-            const vol = await supabaseServices.createVolunteerShiftSupabase({
-              firstName: row.firstName,
-              lastName: row.lastName,
-              email: row.email,
-              phone: row.phone,
-              city: row.city,
-              dayId: input.dayId,
-              volunteerSlots: input.volunteerSlots,
-              acceptedTerms: true,
-            });
-
-            const volEmailData = generateVolunteerConfirmationEmail({
-              firstName: row.firstName,
-              lastName: row.lastName,
-              email: row.email,
-              dayNumber: day?.dayNumber || 1,
-              dayDate: day?.date
-                ? new Date(day.date).toLocaleDateString("fr-FR", {
-                    weekday: "long",
-                    month: "long",
-                    day: "numeric",
-                  })
-                : "",
-              location: day?.location || "Association Bab Rayan, Casablanca",
-              startTime: day?.iftarTime || "18h00",
-              volunteerSlots: input.volunteerSlots,
-              qrToken: vol.qrToken,
-              baseUrl,
-            });
-
-            await sendEmail({
-              to: row.email,
-              subject: volEmailData.subject,
-              html: volEmailData.html,
-            });
-            registeredCount++;
-            console.log(
-              `[Group Registration] Individual email sent to ${row.email}`
-            );
-          } catch (err) {
-            console.error(
-              `[Group Registration] Failed to register ${row.email}:`,
-              err
-            );
-          }
-        }
-
-        console.log(
-          `[Group Registration] ${registeredCount} individual volunteers registered from Excel`
-        );
-      } catch (excelError) {
-        console.error("[Group Registration] Excel parsing failed:", excelError);
-      }
-
-      return { success: true, volunteerId: volunteer.id };
+      // IMPORTANT: group uploads must stay independent from daily volunteer capacity.
+      // We therefore do not auto-create individual volunteer registrations here.
+      return { success: true };
     }),
 
   processGroupExcel: adminOpsProcedure
