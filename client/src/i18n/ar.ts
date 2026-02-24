@@ -22,6 +22,7 @@ export const ar: Translations = {
     search: 'بحث...',
     searchPlaceholder: 'البحث في الموقع...',
     boutique: 'المتجر',
+    gallery: 'المعرض',
   },
 
   // CTA Buttons
