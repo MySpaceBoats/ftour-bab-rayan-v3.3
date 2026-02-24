@@ -20,6 +20,7 @@ export const fr = {
     search: 'Rechercher...',
     searchPlaceholder: 'Rechercher sur le site...',
     boutique: 'Boutique',
+    gallery: 'Galerie',
   },
 
   // CTA Buttons

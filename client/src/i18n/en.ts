@@ -22,6 +22,7 @@ export const en: Translations = {
     search: 'Search...',
     searchPlaceholder: 'Search the site...',
     boutique: 'Shop',
+    gallery: 'Gallery',
   },
 
   // CTA Buttons
