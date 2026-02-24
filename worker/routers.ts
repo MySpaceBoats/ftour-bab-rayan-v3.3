@@ -4178,7 +4178,6 @@ const restaurantReservationsRouter = router({
             subject: `Demande de réservation reçue - ${reference}`,
             html: buildRestaurantReservationRequestEmailHtml(),
             apiKey: ctx.env.RESEND_API_KEY,
-            cc: ['heartfulness@myspace.boats'],
           });
           await sendEmail({
             to: 'digital@myspace.boats',
@@ -4242,7 +4241,6 @@ const restaurantReservationsRouter = router({
             subject: `Demande de réservation reçue - ${reference}`,
             html: buildRestaurantReservationRequestEmailHtml(),
             apiKey: ctx.env.RESEND_API_KEY,
-            cc: ['heartfulness@myspace.boats'],
           });
           await sendEmail({
             to: 'digital@myspace.boats',
@@ -4305,7 +4303,6 @@ const restaurantReservationsRouter = router({
             subject: `Demande de réservation reçue - ${reference}`,
             html: buildRestaurantReservationRequestEmailHtml(),
             apiKey: ctx.env.RESEND_API_KEY,
-            cc: ['heartfulness@myspace.boats'],
           });
           await sendEmail({
             to: 'digital@myspace.boats',
@@ -4348,7 +4345,6 @@ const restaurantReservationsRouter = router({
           subject: `Réservation confirmée - ${reservation.reference}`,
           html: buildRestaurantReservationValidatedEmailHtml(),
           apiKey: ctx.env.RESEND_API_KEY,
-          cc: ['heartfulness@myspace.boats'],
         });
       } catch (emailErr) {
         console.error('[RestaurantReservations] Validate email error:', emailErr);
@@ -4376,7 +4372,6 @@ const restaurantReservationsRouter = router({
           subject: `Reservation refusee - ${reservation.reference}`,
           html: `<h2 style="color:#dc2626;">Réservation refusée</h2><p>Bonjour <strong>${reservation.name}</strong>,</p><p>Nous sommes désolés, votre réservation <strong>${reservation.reference}</strong> n'a pas pu être acceptée.</p><p>N'hésitez pas à nous contacter pour plus d'informations.</p><p>Cordialement,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
           apiKey: ctx.env.RESEND_API_KEY,
-          cc: ['heartfulness@myspace.boats'],
         });
       } catch (emailErr) {
         console.error('[RestaurantReservations] Refuse email error:', emailErr);
