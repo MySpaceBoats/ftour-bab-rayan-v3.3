@@ -40,7 +40,7 @@ export const ar: Translations = {
 
   // Top Menu
   topMenu: {
-    phone: '+212 664-887978',
+    phone: '+212 (0) 666-690534',
     language: 'اللغة',
   },
 
@@ -741,7 +741,7 @@ export const ar: Translations = {
     chequeInstructions: 'يرجى إرسال شيكك إلى: جمعية باب ريان، 4 شارع بيت لحم، الدار البيضاء',
     cashDetails: 'الدفع النقدي',
     preferredPickupDate: 'تاريخ الاستلام المفضل',
-    cashInstructions: 'يرجى إحضار النقود إلى مكتبنا في: 4 شارع بيت لحم، الدار البيضاء. اتصل بنا على +212 664-887978',
+    cashInstructions: 'يرجى إحضار النقود إلى مكتبنا في: 4 شارع بيت لحم، الدار البيضاء. اتصل بنا على +212 (0) 666-690534',
     paypalDetails: 'تفاصيل PayPal',
     paypalEmail: 'بريد PayPal الإلكتروني',
     paypalEmailRequired: 'بريد PayPal الإلكتروني مطلوب',

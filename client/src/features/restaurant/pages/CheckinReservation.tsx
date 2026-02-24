@@ -233,7 +233,7 @@ export default function CheckinReservation() {
       <div className="bg-[#5d5a3c] text-[#d4d4aa] p-4 text-center text-sm mt-8">
         <p>Association Bab Rayan</p>
         <p>4 rue Bayt Lahm, quartier Palmier, Casablanca</p>
-        <p>+212 664-887978</p>
+        <p>+212 (0) 666-690534</p>
       </div>
     </div>
   );

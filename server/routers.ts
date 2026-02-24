@@ -2865,7 +2865,7 @@ function generateReservationConfirmationEmail(reservation: any) {
     <div style="background-color: #5d5a3c; padding: 20px; text-align: center;">
       <p style="color: #d4d4aa; margin: 0; font-size: 14px;">
         Association Bab Rayan<br/>
-        📞 +212 664-887978 | ✉️ contact@ftourbabrayan.ma
+        📞 +212 (0) 666-690534 | ✉️ contact@ftourbabrayan.ma
       </p>
     </div>
   </div>
@@ -3550,7 +3550,7 @@ const restaurantModuleRouter = router({
         </td></tr>
         <tr><td style="background-color:#f8f9fa;padding:20px 30px;text-align:center;border-radius:0 0 8px 8px;border-top:1px solid #e5e7eb;">
           <p style="margin:0 0 10px 0;font-size:14px;color:#6b7280;">Association Bab Rayan</p>
-          <p style="margin:0;font-size:12px;color:#9ca3af;">4 rue Bayt Lahm, quartier Palmier, Casablanca<br>Tél: +212 610 023 555 | contact@ftourbabrayan.ma</p>
+          <p style="margin:0;font-size:12px;color:#9ca3af;">4 rue Bayt Lahm, quartier Palmier, Casablanca<br>Tél: +212 (0) 666-690534 | contact@ftourbabrayan.ma</p>
         </td></tr>
       </table>
     </td></tr>
@@ -3976,7 +3976,7 @@ const terroirModuleRouter = router({
         </td></tr>
         <tr><td style="background-color:#f8f9fa;padding:20px 30px;text-align:center;border-radius:0 0 8px 8px;border-top:1px solid #e5e7eb;">
           <p style="margin:0 0 10px 0;font-size:14px;color:#6b7280;">Association Bab Rayan</p>
-          <p style="margin:0;font-size:12px;color:#9ca3af;">4 rue Bayt Lahm, quartier Palmier, Casablanca<br>Tél: +212 610 023 555 | contact@ftourbabrayan.ma</p>
+          <p style="margin:0;font-size:12px;color:#9ca3af;">4 rue Bayt Lahm, quartier Palmier, Casablanca<br>Tél: +212 (0) 666-690534 | contact@ftourbabrayan.ma</p>
         </td></tr>
       </table>
     </td></tr>
@@ -4943,7 +4943,7 @@ const pastryOrdersRouter = router({
         </td></tr>
         <tr><td style="background-color:#f8f9fa;padding:20px 30px;text-align:center;border-radius:0 0 8px 8px;border-top:1px solid #e5e7eb;">
           <p style="margin:0 0 10px 0;font-size:14px;color:#6b7280;">Association Bab Rayan</p>
-          <p style="margin:0;font-size:12px;color:#9ca3af;">4 rue Bayt Lahm, quartier Palmier, Casablanca<br>Tél: +212 610 023 555 | contact@ftourbabrayan.ma</p>
+          <p style="margin:0;font-size:12px;color:#9ca3af;">4 rue Bayt Lahm, quartier Palmier, Casablanca<br>Tél: +212 (0) 666-690534 | contact@ftourbabrayan.ma</p>
         </td></tr>
       </table>
     </td></tr>

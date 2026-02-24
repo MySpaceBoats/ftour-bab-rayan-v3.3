@@ -431,7 +431,7 @@ export function Checkout() {
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
                     {t.checkout?.cashInstructions ||
-                      'Please bring cash to our office at: 4 rue Bayt Lahm, Casablanca. Contact us at +212 664-887978'}
+                      'Please bring cash to our office at: 4 rue Bayt Lahm, Casablanca. Contact us at +212 (0) 666-690534'}
                   </AlertDescription>
                 </Alert>
               </CardContent>
