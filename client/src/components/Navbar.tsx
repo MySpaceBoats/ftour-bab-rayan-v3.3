@@ -60,7 +60,6 @@ export default function Navbar() {
       icon: UtensilsCrossed,
     },
     { href: localizedHref("/benevole"), label: t.nav.volunteer, icon: Users },
-    { href: localizedHref("/galerie"), label: "Galerie", icon: Info },
     {
       href: localizedHref("/boutique"),
       label: t.nav.boutique,
