@@ -392,10 +392,10 @@ export default function Benevole() {
               <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
               <p className="text-sm text-blue-900 font-medium">
                 {lang === 'ar'
-                  ? 'تُغلق التسجيلات في الساعة 15:30 لنفس اليوم.'
+                  ? 'تُغلق التسجيلات في الساعة 16:30 لنفس اليوم.'
                   : lang === 'en'
-                  ? 'Registrations are closed at 3:30 PM for the same day.'
-                  : 'Les inscriptions sont fermées à 15h30 pour le jour même.'}
+                  ? 'Registrations are closed at 4:30 PM for the same day.'
+                  : 'Les inscriptions sont fermées à 16h30 pour le jour même.'}
               </p>
             </div>
             <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
