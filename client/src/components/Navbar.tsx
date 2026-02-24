@@ -24,7 +24,6 @@ import {
   Lock,
   ShoppingCart,
   UtensilsCrossed,
-  Images,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -61,7 +60,6 @@ export default function Navbar() {
       icon: UtensilsCrossed,
     },
     { href: localizedHref("/benevole"), label: t.nav.volunteer, icon: Users },
-    { href: localizedHref("/galerie"), label: t.nav.gallery, icon: Images },
     {
       href: localizedHref("/boutique"),
       label: t.nav.boutique,
