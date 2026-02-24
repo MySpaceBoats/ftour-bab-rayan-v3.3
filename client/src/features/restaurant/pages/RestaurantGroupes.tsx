@@ -53,8 +53,8 @@ export default function RestaurantGroupes() {
 
     // Normaliser groupSize
     const groupSizeNum = parseInt(formData.groupSize, 10);
-    if (isNaN(groupSizeNum) || groupSizeNum < 5 || groupSizeNum > 130) {
-      toast.error('Le nombre de couverts doit être entre 5 et 130');
+    if (isNaN(groupSizeNum) || groupSizeNum < 2 || groupSizeNum > 130) {
+      toast.error('Le nombre de couverts doit être entre 2 et 130');
       return;
     }
 
@@ -140,7 +140,7 @@ export default function RestaurantGroupes() {
         
         <div className="mb-8 mt-6">
           <h1 className="text-3xl font-bold text-[#5d5a3c] italic">Réservation Ftour – Groupes</h1>
-          <p className="text-[#8b8b7a] mt-2">Demande de réservation pour le ftour solidaire (réservation en ligne à partir de 5 couverts). Confirmation sous 48 heures.</p>
+          <p className="text-[#8b8b7a] mt-2">Demande de réservation pour le ftour solidaire (réservation en ligne à partir de 2 couverts). Confirmation sous 48 heures.</p>
           <p className="text-[#8b8b7a] text-sm mt-1">Service unique à partir de 18h45.</p>
           <p className="text-[#8b8b7a] text-sm mt-1">Les demandes sont ouvertes pour toutes les dates.</p>
         </div>
@@ -166,11 +166,11 @@ export default function RestaurantGroupes() {
 
               {/* Taille du groupe */}
               <div>
-                <Label htmlFor="groupSize">Nombre de couverts * (5-120)</Label>
+                <Label htmlFor="groupSize">Nombre de couverts * (2-120)</Label>
                 <Input
                   id="groupSize"
                   type="number"
-                  min="5"
+                  min="2"
                   max="130"
                   value={formData.groupSize}
                   onChange={(e) => handleInputChange('groupSize', e.target.value)}

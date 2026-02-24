@@ -41,7 +41,7 @@ export const restaurantReservationsRouter = router({
           email: z.string().email("Email invalide"),
           phone: z.string().min(1, "Téléphone requis"),
           date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide"),
-          participantsCount: z.number().int().min(5).max(12),
+          participantsCount: z.number().int().min(2).max(12),
           displayChoice: z.enum(["jardin", "brasserie"]),
         })
       )
@@ -278,7 +278,7 @@ export const restaurantReservationsRouter = router({
           phone: z.string().min(1, "Téléphone requis"),
           groupType: z.string().optional(),
           date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide"),
-          participantsCount: z.number().int().min(5),
+          participantsCount: z.number().int().min(2),
           displayChoice: z.enum(["jardin", "brasserie"]),
         })
       )
