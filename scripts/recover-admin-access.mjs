@@ -8,6 +8,8 @@ function parseArgs(argv) {
     name: null,
     resetPasswords: false,
     createMissing: false,
+    allUsers: false,
+    forceRole: false,
     dryRun: false,
   };
 
@@ -46,6 +48,16 @@ function parseArgs(argv) {
       continue;
     }
 
+    if (current === '--all-users') {
+      args.allUsers = true;
+      continue;
+    }
+
+    if (current === '--force-role') {
+      args.forceRole = true;
+      continue;
+    }
+
     if (current === '--dry-run') {
       args.dryRun = true;
       continue;
@@ -56,7 +68,7 @@ function parseArgs(argv) {
 }
 
 function printUsage() {
-  console.log(`\nUsage:\n  node scripts/recover-admin-access.mjs --emails "rsebbani@myspace.boats,user2@myspace.boats" [options]\n\nOptions:\n  --role <role>            Role to apply in public.users (default: super_admin)\n  --name <name>            Name to set when creating missing user rows\n  --reset-passwords        Generate and set temporary passwords in Supabase Auth\n  --create-missing         Create Auth + users rows when account is missing\n  --dry-run                Print planned actions only\n\nRequired env vars:\n  SUPABASE_URL\n  SUPABASE_SERVICE_ROLE_KEY\n`);
+  console.log(`\nUsage:\n  node scripts/recover-admin-access.mjs --emails "rsebbani@myspace.boats,user2@myspace.boats" [options]\n  node scripts/recover-admin-access.mjs --all-users [options]\n\nOptions:\n  --role <role>            Role used for newly-created users rows (default: super_admin)\n  --force-role             Also update role for existing rows to --role\n  --name <name>            Name to set when creating missing user rows\n  --reset-passwords        Generate and set temporary passwords in Supabase Auth\n  --create-missing         Create Auth + users rows when account is missing\n  --all-users              Run reconciliation for all Supabase Auth users\n  --dry-run                Print planned actions only\n\nRequired env vars:\n  SUPABASE_URL\n  SUPABASE_SERVICE_ROLE_KEY\n`);
 }
 
 async function getAllAuthUsers(supabase) {
@@ -82,7 +94,7 @@ function buildTemporaryPassword() {
   return `Tmp-${crypto.randomBytes(9).toString('base64url')}!`;
 }
 
-async function ensureUserRow({ supabase, authUser, email, role, name, dryRun }) {
+async function ensureUserRow({ supabase, authUser, email, role, name, dryRun, forceRole }) {
   const { data: existingUserRow, error: selectError } = await supabase
     .from('users')
     .select('id, open_id, role, email, name')
@@ -92,7 +104,11 @@ async function ensureUserRow({ supabase, authUser, email, role, name, dryRun }) 
   if (selectError) throw selectError;
 
   if (existingUserRow) {
-    const payload = { role, email };
+    const payload = { email };
+
+    if (forceRole) {
+      payload.role = role;
+    }
 
     if (name) payload.name = name;
 
@@ -139,7 +155,7 @@ async function run() {
 
   const args = parseArgs(process.argv.slice(2));
 
-  if (args.emails.length === 0) {
+  if (args.emails.length === 0 && !args.allUsers) {
     printUsage();
     process.exit(1);
   }
@@ -156,8 +172,11 @@ async function run() {
   );
 
   const generatedPasswords = [];
+  const emailsToProcess = args.allUsers
+    ? Array.from(new Set(authUsers.map((u) => (u.email || '').toLowerCase()).filter(Boolean)))
+    : args.emails;
 
-  for (const email of args.emails) {
+  for (const email of emailsToProcess) {
     let authUser = authUsersByEmail.get(email);
 
     if (!authUser && args.createMissing) {
@@ -207,6 +226,7 @@ async function run() {
       role: args.role,
       name: args.name,
       dryRun: args.dryRun,
+      forceRole: args.forceRole,
     });
   }
 
