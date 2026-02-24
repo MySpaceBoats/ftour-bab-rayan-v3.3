@@ -23,7 +23,10 @@ type UploadItem = {
 
 export default function BenevoleGalerieUpload() {
   const { lang } = useI18n();
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth({
+    redirectOnUnauthenticated: true,
+    redirectPath: `/${lang}/connexion`,
+  });
   const [items, setItems] = useState<UploadItem[]>([]);
 
   const upload = trpc.gallery.uploadPhotos.useMutation({
@@ -62,6 +65,10 @@ export default function BenevoleGalerieUpload() {
   };
 
   const submit = async () => {
+    if (!isAuthenticated) {
+      toast.error("Vous devez être connecté pour uploader des photos.");
+      return;
+    }
     if (items.length === 0) return;
     const photos: any[] = [];
 

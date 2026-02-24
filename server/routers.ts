@@ -535,6 +535,13 @@ const galleryRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Authentification requise",
+        });
+      }
+
       const canManageGallery = Boolean(
         ctx.user &&
           [
