@@ -109,7 +109,7 @@ export default function Contact() {
                       </div>
                       <div>
                         <h3 className="font-semibold text-[#F2E9D3]">{t.contact.phoneLabel}</h3>
-                        <a href="tel:+21266690534" className="text-[#CDBB8A] hover:text-[#F2E9D3]">
+                        <a href="tel:+212666690534" className="text-[#CDBB8A] hover:text-[#F2E9D3]">
                           {t.topMenu.phone}
                         </a>
                       </div>

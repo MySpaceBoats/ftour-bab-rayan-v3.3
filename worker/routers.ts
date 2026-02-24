@@ -1220,7 +1220,40 @@ const authRouter = router({
         createdAt: new Date(),
       };
 
-      return { user, session: authData.session.access_token };
+      return {
+        user,
+        session: {
+          accessToken: authData.session.access_token,
+          refreshToken: authData.session.refresh_token,
+          expiresAt: authData.session.expires_at ?? null,
+        },
+      };
+    }),
+
+  refreshSession: publicProcedure
+    .input(z.object({
+      refreshToken: z.string().min(1),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase.auth.refreshSession({
+        refresh_token: input.refreshToken,
+      });
+
+      if (error || !data.session) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: error?.message || 'Session expirée',
+        });
+      }
+
+      return {
+        session: {
+          accessToken: data.session.access_token,
+          refreshToken: data.session.refresh_token,
+          expiresAt: data.session.expires_at ?? null,
+        },
+      };
     }),
 
   signup: publicProcedure
@@ -4111,7 +4144,7 @@ Nombre estimé de participants : ${params.participantsCount}</p>
 function buildRestaurantReservationValidatedEmailHtml(customerName: string): string {
   return `<p>Bonjour ${customerName},</p>
 <p>Votre réservation à La Table du Jardin est confirmée.</p>
-<p>Nous nous réjouissons de vous accueillir prochainement.</p>
+<p>Nous sommes heureux de vous accueillir prochainement.</p>
 <p>Nous vous remercions d'avance pour votre confiance.</p>
 <p><strong>Politique d’annulation :</strong><br/>
 Annulation à moins de 72h : acompte de 50% conservé.<br/>
@@ -4198,7 +4231,6 @@ const restaurantReservationsRouter = router({
               reference,
             }),
             apiKey: ctx.env.RESEND_API_KEY,
-            cc: ['heartfulness@myspace.boats'],
           });
           await sendEmail({
             to: 'digital@myspace.boats',
@@ -4268,7 +4300,6 @@ const restaurantReservationsRouter = router({
               reference,
             }),
             apiKey: ctx.env.RESEND_API_KEY,
-            cc: ['heartfulness@myspace.boats'],
           });
           await sendEmail({
             to: 'digital@myspace.boats',
@@ -4337,7 +4368,6 @@ const restaurantReservationsRouter = router({
               reference,
             }),
             apiKey: ctx.env.RESEND_API_KEY,
-            cc: ['heartfulness@myspace.boats'],
           });
           await sendEmail({
             to: 'digital@myspace.boats',
@@ -4380,7 +4410,6 @@ const restaurantReservationsRouter = router({
           subject: `Réservation confirmée - ${reservation.reference}`,
           html: buildRestaurantReservationValidatedEmailHtml(reservation.name),
           apiKey: ctx.env.RESEND_API_KEY,
-          cc: ['heartfulness@myspace.boats'],
         });
       } catch (emailErr) {
         console.error('[RestaurantReservations] Validate email error:', emailErr);
@@ -4408,7 +4437,6 @@ const restaurantReservationsRouter = router({
           subject: `Reservation refusee - ${reservation.reference}`,
           html: `<h2 style="color:#dc2626;">Réservation refusée</h2><p>Bonjour <strong>${reservation.name}</strong>,</p><p>Nous sommes désolés, votre réservation <strong>${reservation.reference}</strong> n'a pas pu être acceptée.</p><p>N'hésitez pas à nous contacter pour plus d'informations.</p><p>Cordialement,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
           apiKey: ctx.env.RESEND_API_KEY,
-          cc: ['heartfulness@myspace.boats'],
         });
       } catch (emailErr) {
         console.error('[RestaurantReservations] Refuse email error:', emailErr);

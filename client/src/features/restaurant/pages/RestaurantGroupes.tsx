@@ -22,7 +22,7 @@ export default function RestaurantGroupes() {
 
   const [formData, setFormData] = useState({
     date: '',
-    groupSize: '',
+    groupSize: '2',
     salle: '' as '' | 'jardin' | 'brasserie',
     organizationName: '',
     contactName: '',
@@ -46,7 +46,7 @@ export default function RestaurantGroupes() {
     e.preventDefault();
 
     // Validation
-    if (!formData.date || !formData.salle || !formData.contactName || !formData.phone || !formData.email) {
+    if (!formData.date || !formData.salle || !formData.organizationName || !formData.contactName || !formData.phone || !formData.email) {
       toast.error('Veuillez remplir tous les champs obligatoires');
       return;
     }
@@ -174,7 +174,7 @@ export default function RestaurantGroupes() {
                   max="130"
                   value={formData.groupSize}
                   onChange={(e) => handleInputChange('groupSize', e.target.value)}
-                  placeholder="Ex: 45"
+                  placeholder="Minimum 2"
                   required
                 />
               </div>
@@ -196,15 +196,16 @@ export default function RestaurantGroupes() {
                 </Select>
               </div>
 
-              {/* Nom du groupe (optionnel) */}
+              {/* Nom du groupe */}
               <div>
-                <Label htmlFor="organizationName">Nom du groupe / organisation (optionnel)</Label>
+                <Label htmlFor="organizationName">Nom du groupe / association *</Label>
                 <Input
                   id="organizationName"
                   type="text"
                   value={formData.organizationName}
                   onChange={(e) => handleInputChange('organizationName', e.target.value)}
                   placeholder="Ex: Association Culturelle"
+                  required
                 />
               </div>
 

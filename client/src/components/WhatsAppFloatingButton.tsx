@@ -3,7 +3,7 @@
  * Visible sur toutes les pages, position bas-droite
  */
 
-const WHATSAPP_NUMBER = "212664216938"; // +212 664-216938 (sans +)
+const WHATSAPP_NUMBER = "212666690534"; // +212 (0) 666-690534 (sans +)
 const MAPS_ITINERARY_URL = "https://share.google/VNwpwHz3v0g9kCpuz";
 
 const BUTTON_BASE =
@@ -43,7 +43,7 @@ export default function WhatsAppFloatingButton() {
       {/* Appeler */}
       <a
         href={telUrl}
-        aria-label="Appeler +212 664-216938"
+        aria-label="Appeler +212 (0) 666-690534"
         className={`${BUTTON_BASE} bg-[#EA4335] focus:ring-[#EA4335]`}
       >
         <svg
