@@ -22,7 +22,7 @@ export default function RestaurantGroupes() {
 
   const [formData, setFormData] = useState({
     date: '',
-    groupSize: '',
+    groupSize: '2',
     salle: '' as '' | 'jardin' | 'brasserie',
     organizationName: '',
     contactName: '',
@@ -174,7 +174,7 @@ export default function RestaurantGroupes() {
                   max="130"
                   value={formData.groupSize}
                   onChange={(e) => handleInputChange('groupSize', e.target.value)}
-                  placeholder="Ex: 45"
+                  placeholder="Minimum 2"
                   required
                 />
               </div>
