@@ -866,11 +866,21 @@ const volunteersRouter = router({
       const hasBypassCode =
         typeof input.comment === "string" &&
         input.comment.toUpperCase().includes("DOUZ");
+      const isAtCapacity = (day.registeredCount ?? 0) >= day.capacity;
+
+      if (isAtCapacity && !hasBypassCode) {
 
       if ((day.registeredCount ?? 0) >= day.capacity && !hasBypassCode) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Ce jour a atteint le nombre maximum d'inscriptions",
+        });
+      }
+
+      if (isAtCapacity && hasBypassCode) {
+        const updatedCapacity = Math.max(day.capacity + 1, (day.registeredCount ?? 0) + 1);
+        await supabaseServices.updateRamadanDaySupabase(day.id, {
+          capacity: updatedCapacity,
         });
       }
 
