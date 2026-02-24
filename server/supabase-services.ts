@@ -616,6 +616,70 @@ export async function createVolunteerShiftSupabase(data: VolunteerData) {
   };
 }
 
+export async function getExistingVolunteerEmailsForDay(dayId: number, emails: string[]): Promise<Set<string>> {
+  const client = getSupabaseAdminClient();
+  if (!client || emails.length === 0) return new Set();
+
+  const normalizedEmails = Array.from(new Set(emails.map(email => email.toLowerCase().trim())));
+  const { data, error } = await client
+    .from('volunteers')
+    .select('email')
+    .eq('day_id', dayId)
+    .in('email', normalizedEmails);
+
+  if (error) {
+    console.error('[Volunteer] Bulk duplicate check error:', error);
+    return new Set();
+  }
+
+  return new Set((data ?? []).map((row: any) => String(row.email).toLowerCase().trim()));
+}
+
+export async function createVolunteerShiftsBulkSupabase(data: VolunteerData[]) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  if (data.length === 0) return [];
+
+  const payload = data.map((row) => ({
+    first_name: row.firstName,
+    last_name: row.lastName,
+    email: row.email.toLowerCase().trim(),
+    phone: row.phone,
+    city: row.city,
+    day_id: row.dayId,
+    qr_token: generateSecureToken(),
+    qr_status: 'generated',
+    status: 'registered',
+    accepted_terms: row.acceptedTerms,
+    email_sent: false,
+    volunteer_slots: row.volunteerSlots || [],
+  }));
+
+  const { data: volunteers, error } = await client
+    .from('volunteers')
+    .insert(payload)
+    .select();
+
+  if (error) throw error;
+
+  return (volunteers ?? []).map((volunteer: any) => ({
+    id: volunteer.id,
+    firstName: volunteer.first_name ?? volunteer.firstName,
+    lastName: volunteer.last_name ?? volunteer.lastName,
+    email: volunteer.email,
+    phone: volunteer.phone,
+    city: volunteer.city,
+    dayId: volunteer.day_id ?? volunteer.dayId,
+    volunteerSlots: extractSlots(volunteer),
+    qrToken: volunteer.qr_token ?? volunteer.qrToken,
+    qrStatus: volunteer.qr_status ?? volunteer.qrStatus,
+    status: volunteer.status,
+    acceptedTerms: volunteer.accepted_terms ?? volunteer.acceptedTerms,
+    emailSent: volunteer.email_sent ?? volunteer.emailSent,
+    createdAt: new Date(volunteer.created_at ?? volunteer.createdAt),
+  }));
+}
+
 export async function getVolunteerByTokenSupabase(token: string) {
   const client = getSupabaseAdminClient();
   if (!client) return null;
