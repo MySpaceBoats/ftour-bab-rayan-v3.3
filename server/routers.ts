@@ -245,6 +245,37 @@ const parseGroupVolunteersFromSpreadsheet = (
   return Array.from(dedupedByEmail.values());
 };
 
+const chunkArray = <T>(items: T[], size: number): T[][] => {
+  if (size <= 0) return [items];
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+};
+
+const runWithConcurrencyLimit = async <T>(
+  tasks: Array<() => Promise<T>>,
+  concurrency: number
+): Promise<T[]> => {
+  if (tasks.length === 0) return [];
+  const limit = Math.max(1, concurrency);
+  const results: T[] = new Array(tasks.length);
+  let cursor = 0;
+
+  const workers = Array.from({ length: Math.min(limit, tasks.length) }, async () => {
+    while (true) {
+      const taskIndex = cursor;
+      cursor += 1;
+      if (taskIndex >= tasks.length) break;
+      results[taskIndex] = await tasks[taskIndex]();
+    }
+  });
+
+  await Promise.all(workers);
+  return results;
+};
+
 const volunteerNoShowBlockingMessage =
   "Vous ne pouvez plus vous inscrire car vous n'êtes pas venu deux fois et une place prise est une place perdue pour un autre bénévole qui voudrait vraiment venir aider.";
 
@@ -1033,7 +1064,7 @@ const volunteersRouter = router({
         acceptedTerms: z.boolean(),
       })
     )
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async ({ input }) => {
       if (!input.acceptedTerms) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -1119,9 +1150,84 @@ const volunteersRouter = router({
         console.error("[Group Registration] Admin email failed:", error);
       }
 
-      // IMPORTANT: group uploads must stay independent from daily volunteer capacity.
-      // We therefore do not auto-create individual volunteer registrations here.
-      return { success: true };
+      let importedCount = 0;
+      let skippedCount = 0;
+
+      try {
+        const parsedRows = parseGroupVolunteersFromSpreadsheet(input.fileBase64);
+        if (parsedRows.length === 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Le fichier ne contient aucune ligne valide (Nom/Prénom + Email).",
+          });
+        }
+
+        const normalizedRows = parsedRows.map(row => ({
+          ...row,
+          email: row.email.toLowerCase().trim(),
+        }));
+
+        const existingEmails = new Set<string>();
+        const duplicateCheckChunks = chunkArray(
+          normalizedRows.map(row => row.email),
+          400
+        );
+
+        for (const emailChunk of duplicateCheckChunks) {
+          const chunkExisting =
+            await supabaseServices.getExistingVolunteerEmailsForDay(
+              input.dayId,
+              emailChunk
+            );
+          chunkExisting.forEach(existingEmail => {
+            existingEmails.add(existingEmail);
+          });
+        }
+
+        const uniqueRows: typeof normalizedRows = [];
+        const seenInFile = new Set<string>();
+
+        for (const row of normalizedRows) {
+          if (existingEmails.has(row.email) || seenInFile.has(row.email)) {
+            skippedCount += 1;
+            continue;
+          }
+          seenInFile.add(row.email);
+          uniqueRows.push(row);
+        }
+
+        const insertChunks = chunkArray(uniqueRows, 200);
+        for (const rowsChunk of insertChunks) {
+          const created = await supabaseServices.createVolunteerShiftsBulkSupabase(
+            rowsChunk.map(row => ({
+              firstName: row.firstName,
+              lastName: row.lastName,
+              email: row.email,
+              phone: row.phone,
+              city: row.city,
+              dayId: input.dayId,
+              volunteerSlots: input.volunteerSlots,
+              acceptedTerms: true,
+            }))
+          );
+
+          importedCount += created.length;
+          skippedCount += Math.max(0, rowsChunk.length - created.length);
+        }
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Le fichier a bien été reçu, mais son import a échoué. Vérifiez son format (.xlsx/.xls/.csv).",
+        });
+      }
+
+      return { success: true, importedCount, skippedCount };
     }),
 
   processGroupExcel: adminOpsProcedure
@@ -1173,11 +1279,19 @@ const volunteersRouter = router({
         ...row,
         email: row.email.toLowerCase().trim(),
       }));
-      const existingEmails =
-        await supabaseServices.getExistingVolunteerEmailsForDay(
-          input.dayId,
-          normalizedRows.map(row => row.email)
-        );
+
+      const existingEmails = new Set<string>();
+      const duplicateCheckChunks = chunkArray(normalizedRows.map(row => row.email), 400);
+      for (const emailChunk of duplicateCheckChunks) {
+        const chunkExisting =
+          await supabaseServices.getExistingVolunteerEmailsForDay(
+            input.dayId,
+            emailChunk
+          );
+        chunkExisting.forEach(existingEmail => {
+          existingEmails.add(existingEmail);
+        });
+      }
 
       const uniqueRows: typeof normalizedRows = [];
       const seenInFile = new Set<string>();
@@ -1205,77 +1319,105 @@ const volunteersRouter = router({
         uniqueRows.push(row);
       }
 
+      const createdRows: Array<(typeof uniqueRows)[number]> = [];
+
       if (uniqueRows.length > 0) {
-        try {
-          const createdVolunteers = await supabaseServices.createVolunteerShiftsBulkSupabase(
-            uniqueRows.map((row) => ({
-              firstName: row.firstName,
-              lastName: row.lastName,
-              email: row.email,
-              phone: row.phone,
-              city: row.city,
-              dayId: input.dayId,
-              volunteerSlots: input.volunteerSlots,
-              acceptedTerms: true,
-            }))
-          );
+        const insertChunks = chunkArray(uniqueRows, 200);
 
-          const createdByEmail = new Map(
-            createdVolunteers.map(vol => [vol.email.toLowerCase().trim(), vol])
-          );
-
-          for (const row of uniqueRows) {
-            const volunteer = createdByEmail.get(row.email);
-            if (!volunteer) {
-              results.push({
+        for (const rowsChunk of insertChunks) {
+          try {
+            const createdVolunteers = await supabaseServices.createVolunteerShiftsBulkSupabase(
+              rowsChunk.map((row) => ({
+                firstName: row.firstName,
+                lastName: row.lastName,
                 email: row.email,
-                success: false,
-                error: "Inscription créée de façon incomplète",
-              });
-              continue;
+                phone: row.phone,
+                city: row.city,
+                dayId: input.dayId,
+                volunteerSlots: input.volunteerSlots,
+                acceptedTerms: true,
+              }))
+            );
+
+            const createdByEmail = new Map(
+              createdVolunteers.map(vol => [vol.email.toLowerCase().trim(), vol])
+            );
+
+            for (const row of rowsChunk) {
+              const volunteer = createdByEmail.get(row.email);
+              if (!volunteer) {
+                results.push({
+                  email: row.email,
+                  success: false,
+                  error: "Inscription créée de façon incomplète",
+                });
+                continue;
+              }
+
+              createdRows.push(row);
             }
-
-            const emailData = generateVolunteerConfirmationEmail({
-              firstName: row.firstName,
-              lastName: row.lastName,
-              email: row.email,
-              dayNumber: day.dayNumber,
-              dayDate: new Date(day.date).toLocaleDateString("fr-FR", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              }),
-              location: day.location || "Association Bab Rayan, Casablanca",
-              startTime: day.iftarTime || "18h00",
-              volunteerSlots: input.volunteerSlots,
-              qrToken: volunteer.qrToken,
-              baseUrl,
-            });
-
-            const emailResult = await sendEmail({
-              to: row.email,
-              subject: emailData.subject,
-              html: emailData.html,
-            });
-
-            if (emailResult.success) {
-              results.push({ email: row.email, success: true });
-            } else {
-              results.push({
-                email: row.email,
-                success: true,
-                error: `Inscrit mais email non envoyé: ${emailResult.error}`,
-              });
+          } catch (error) {
+            const errMsg =
+              error instanceof Error ? error.message : "Erreur inconnue";
+            for (const row of rowsChunk) {
+              results.push({ email: row.email, success: false, error: errMsg });
             }
+            console.error("[ProcessGroupExcel] Bulk creation error:", error);
           }
-        } catch (error) {
-          const errMsg =
-            error instanceof Error ? error.message : "Erreur inconnue";
-          for (const row of uniqueRows) {
-            results.push({ email: row.email, success: false, error: errMsg });
-          }
-          console.error("[ProcessGroupExcel] Bulk creation error:", error);
         }
+      }
+
+      const emailTasks = createdRows.map((row) => async () => {
+        const volunteer = await supabaseServices.getVolunteerByEmailForDay(
+          row.email,
+          input.dayId
+        );
+
+        if (!volunteer?.qrToken) {
+          return {
+            email: row.email,
+            success: true,
+            error: "Inscrit mais QR introuvable pour l'envoi de confirmation",
+          };
+        }
+
+        const emailData = generateVolunteerConfirmationEmail({
+          firstName: row.firstName,
+          lastName: row.lastName,
+          email: row.email,
+          dayNumber: day.dayNumber,
+          dayDate: new Date(day.date).toLocaleDateString("fr-FR", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          }),
+          location: day.location || "Association Bab Rayan, Casablanca",
+          startTime: day.iftarTime || "18h00",
+          volunteerSlots: input.volunteerSlots,
+          qrToken: volunteer.qrToken,
+          baseUrl,
+        });
+
+        const emailResult = await sendEmail({
+          to: row.email,
+          subject: emailData.subject,
+          html: emailData.html,
+        });
+
+        if (emailResult.success) {
+          return { email: row.email, success: true };
+        }
+
+        return {
+          email: row.email,
+          success: true,
+          error: `Inscrit mais email non envoyé: ${emailResult.error}`,
+        };
+      });
+
+      if (emailTasks.length > 0) {
+        const emailResults = await runWithConcurrencyLimit(emailTasks, 8);
+        results.push(...emailResults);
       }
 
       const successCount = results.filter(r => r.success).length;
@@ -4650,7 +4792,7 @@ const pastryOrdersRouter = router({
           .default("online"),
       })
     )
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async ({ input }) => {
       // Générer référence unique
       const reference = `PASTRY-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 

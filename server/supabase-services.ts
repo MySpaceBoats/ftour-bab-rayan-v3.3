@@ -680,6 +680,41 @@ export async function createVolunteerShiftsBulkSupabase(data: VolunteerData[]) {
   }));
 }
 
+
+export async function getVolunteerByEmailForDay(email: string, dayId: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) return null;
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const { data, error } = await client
+    .from('volunteers')
+    .select('*')
+    .eq('day_id', dayId)
+    .eq('email', normalizedEmail)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  return {
+    id: data.id,
+    firstName: data.first_name ?? data.firstName,
+    lastName: data.last_name ?? data.lastName,
+    email: data.email,
+    phone: data.phone,
+    city: data.city,
+    dayId: data.day_id ?? data.dayId,
+    volunteerSlots: extractSlots(data),
+    qrToken: data.qr_token ?? data.qrToken,
+    qrStatus: data.qr_status ?? data.qrStatus,
+    status: data.status,
+    acceptedTerms: data.accepted_terms ?? data.acceptedTerms,
+    emailSent: data.email_sent ?? data.emailSent,
+    createdAt: new Date(data.created_at ?? data.createdAt),
+  };
+}
+
 export async function getVolunteerByTokenSupabase(token: string) {
   const client = getSupabaseAdminClient();
   if (!client) return null;
