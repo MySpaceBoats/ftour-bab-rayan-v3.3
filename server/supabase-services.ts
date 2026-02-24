@@ -1,6 +1,89 @@
 import { getSupabaseAdminClient, getSupabasePublicClient, volunteerSlotsColumnExists } from './supabase';
 import { generateSecureToken } from './qrcode';
 import { addDaysToDateString, DEFAULT_RAMADAN_TIMEZONE, getDateStringInTimeZone, getRamadanDay } from '@shared/ramadan';
+import { sendEmail } from './email';
+
+const MANAGER_RECOMMENDATION_STREAK = 6;
+const ADMIN_MANAGER_RECOMMENDATION_EMAIL = 'admin@myspace.boats';
+const RSE_MANAGER_RECOMMENDATION_EMAIL = 'rsebbani@myspace.boats';
+
+export function computeMaxConsecutiveDays(dayNumbers: number[]): number {
+  if (dayNumbers.length === 0) return 0;
+
+  const uniqueSortedDays = [...new Set(dayNumbers)]
+    .filter((dayNumber) => Number.isInteger(dayNumber))
+    .sort((a, b) => a - b);
+
+  if (uniqueSortedDays.length === 0) return 0;
+
+  let maxStreak = 1;
+  let currentStreak = 1;
+
+  for (let i = 1; i < uniqueSortedDays.length; i++) {
+    if (uniqueSortedDays[i] === uniqueSortedDays[i - 1] + 1) {
+      currentStreak += 1;
+      maxStreak = Math.max(maxStreak, currentStreak);
+    } else {
+      currentStreak = 1;
+    }
+  }
+
+  return maxStreak;
+}
+
+function buildManagerRecommendationEmailHtml(volunteer: {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+}, streak: number): string {
+  return `
+    <h2>Recommandation manager</h2>
+    <p>Bonjour,</p>
+    <p>Le participant ci-dessous a été détecté présent pendant <strong>${streak} jours d'affilée</strong> et est recommandé pour un rôle de manager.</p>
+    <ul>
+      <li><strong>ID:</strong> ${volunteer.id}</li>
+      <li><strong>Nom:</strong> ${volunteer.firstName} ${volunteer.lastName}</li>
+      <li><strong>Email:</strong> ${volunteer.email}</li>
+      <li><strong>Téléphone:</strong> ${volunteer.phone}</li>
+    </ul>
+    <p>Merci de procéder à l'évaluation.</p>
+  `.trim();
+}
+
+async function notifyManagerRecommendation(volunteer: {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+}, streak: number): Promise<void> {
+  const subject = `Recommandation manager - ${volunteer.firstName} ${volunteer.lastName}`;
+  const html = buildManagerRecommendationEmailHtml(volunteer, streak);
+
+  const [adminSendResult, rseSendResult] = await Promise.all([
+    sendEmail({
+      to: ADMIN_MANAGER_RECOMMENDATION_EMAIL,
+      subject,
+      html,
+    }),
+    sendEmail({
+      to: RSE_MANAGER_RECOMMENDATION_EMAIL,
+      subject,
+      html,
+      bcc: [],
+    }),
+  ]);
+
+  if (!adminSendResult.success || !rseSendResult.success) {
+    console.warn('[Volunteer] Manager recommendation email failed', {
+      volunteerId: volunteer.id,
+      adminSendResult,
+      rseSendResult,
+    });
+  }
+}
 
 // ============================================
 // USER SERVICES
@@ -873,6 +956,41 @@ export async function scanAndValidateTokenSupabase(token: string, validatedBy?: 
     user_agent: userAgent,
   });
 
+  try {
+    const { data: presentHistory, error: presentHistoryError } = await client
+      .from('volunteers')
+      .select('day_id, ramadan_days(day_number)')
+      .eq('email', volunteer.email)
+      .eq('status', 'present');
+
+    if (presentHistoryError) {
+      console.warn('[Volunteer] Unable to fetch present history for manager recommendation', {
+        volunteerId: volunteer.id,
+        error: presentHistoryError.message,
+      });
+    } else {
+      const dayNumbers = (presentHistory || [])
+        .map((row: any) => row.ramadan_days?.day_number)
+        .filter((dayNumber: unknown): dayNumber is number => typeof dayNumber === 'number');
+
+      const maxStreak = computeMaxConsecutiveDays(dayNumbers);
+      if (maxStreak >= MANAGER_RECOMMENDATION_STREAK) {
+        await notifyManagerRecommendation({
+          id: volunteer.id,
+          firstName: volunteer.firstName,
+          lastName: volunteer.lastName,
+          email: volunteer.email,
+          phone: volunteer.phone,
+        }, maxStreak);
+      }
+    }
+  } catch (error) {
+    console.warn('[Volunteer] Manager recommendation workflow failed', {
+      volunteerId: volunteer.id,
+      error,
+    });
+  }
+
   console.log(JSON.stringify({ event: 'volunteer_confirm', volunteerId: volunteer.id, state: 'confirmed' }));
 
   return {
@@ -922,12 +1040,59 @@ export async function updateVolunteerStatusSupabase(volunteerId: number, status:
   const client = getSupabaseAdminClient();
   if (!client) throw new Error('Supabase not configured');
 
+  const { data: volunteerBeforeUpdate, error: volunteerBeforeUpdateError } = await client
+    .from('volunteers')
+    .select('id, first_name, last_name, email, phone')
+    .eq('id', volunteerId)
+    .single();
+
+  if (volunteerBeforeUpdateError || !volunteerBeforeUpdate) {
+    throw volunteerBeforeUpdateError || new Error('Volunteer not found');
+  }
+
   const { error } = await client
     .from('volunteers')
     .update({ status })
     .eq('id', volunteerId);
 
   if (error) throw error;
+
+  if (status === 'present') {
+    try {
+      const { data: presentHistory, error: presentHistoryError } = await client
+        .from('volunteers')
+        .select('ramadan_days(day_number)')
+        .eq('email', volunteerBeforeUpdate.email)
+        .eq('status', 'present');
+
+      if (presentHistoryError) {
+        console.warn('[Volunteer] Unable to fetch present history for manager recommendation', {
+          volunteerId,
+          error: presentHistoryError.message,
+        });
+      } else {
+        const dayNumbers = (presentHistory || [])
+          .map((row: any) => row.ramadan_days?.day_number)
+          .filter((dayNumber: unknown): dayNumber is number => typeof dayNumber === 'number');
+
+        const maxStreak = computeMaxConsecutiveDays(dayNumbers);
+        if (maxStreak >= MANAGER_RECOMMENDATION_STREAK) {
+          await notifyManagerRecommendation({
+            id: volunteerBeforeUpdate.id,
+            firstName: volunteerBeforeUpdate.first_name ?? '',
+            lastName: volunteerBeforeUpdate.last_name ?? '',
+            email: volunteerBeforeUpdate.email,
+            phone: volunteerBeforeUpdate.phone ?? '',
+          }, maxStreak);
+        }
+      }
+    } catch (recommendationError) {
+      console.warn('[Volunteer] Manager recommendation workflow failed', {
+        volunteerId,
+        error: recommendationError,
+      });
+    }
+  }
 }
 
 export async function getVolunteerStatsSupabase() {

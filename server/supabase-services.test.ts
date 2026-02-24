@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateSecureToken } from "./qrcode";
+import { computeMaxConsecutiveDays } from "./supabase-services";
 
 describe("Supabase Services", () => {
   describe("Token Generation", () => {
@@ -58,6 +59,20 @@ describe("Supabase Services", () => {
       const currentStatus = 'validated';
       const canRevalidate = currentStatus !== 'validated';
       expect(canRevalidate).toBe(false);
+    });
+  });
+
+  describe("Consecutive presence streak", () => {
+    it("returns 0 for empty days", () => {
+      expect(computeMaxConsecutiveDays([])).toBe(0);
+    });
+
+    it("detects a 6-day streak", () => {
+      expect(computeMaxConsecutiveDays([1, 2, 3, 4, 5, 6])).toBe(6);
+    });
+
+    it("handles duplicates and unordered day numbers", () => {
+      expect(computeMaxConsecutiveDays([7, 3, 5, 4, 4, 6, 10])).toBe(5);
     });
   });
 
