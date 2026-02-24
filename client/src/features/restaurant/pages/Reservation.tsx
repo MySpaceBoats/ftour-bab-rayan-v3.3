@@ -15,7 +15,7 @@ export default function Reservation() {
       <main className="container py-12">
         <div className="max-w-3xl mx-auto text-center mb-8">
           <h1 className="text-4xl font-bold text-[#5d5a3c] mb-3">Ftour solidaire</h1>
-          <p className="text-muted-foreground">Demande de réservation pour le ftour solidaire (réservation en ligne à partir de 5 couverts). Confirmation sous 48 heures.</p>
+          <p className="text-muted-foreground">Demande de réservation pour le ftour solidaire (réservation en ligne à partir de 2 couverts). Confirmation sous 48 heures.</p>
         </div>
 
         <div className="max-w-md mx-auto">
@@ -25,7 +25,7 @@ export default function Reservation() {
                 <UtensilsCrossed className="h-5 w-5" />
               </div>
               <CardTitle>Réservation Groupe ou Entreprise</CardTitle>
-              <CardDescription>Demande de réservation groupe ou entreprise pour le ftour solidaire (à partir de 5 couverts). Confirmation sous 48 heures.</CardDescription>
+              <CardDescription>Demande de réservation groupe ou entreprise pour le ftour solidaire (à partir de 2 couverts). Confirmation sous 48 heures.</CardDescription>
             </CardHeader>
             <CardContent className="mt-auto">
               <Link href={`/${lang}/restaurant/groupes`}>
