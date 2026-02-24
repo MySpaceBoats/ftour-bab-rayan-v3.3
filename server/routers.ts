@@ -17,6 +17,7 @@ import {
   signUpUser,
   getUserFromToken,
   signOutUser,
+  refreshUserSession,
 } from "./supabase-auth";
 import * as supabaseServices from "./supabase-services";
 import * as reservationServices from "./reservation-services";
@@ -4601,6 +4602,24 @@ export const appRouter = router({
         return { user: result.user };
       }),
 
+    refreshSession: publicProcedure
+      .input(
+        z.object({
+          refreshToken: z.string().min(1),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const result = await refreshUserSession(input.refreshToken);
+        if (result.error || !result.session) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: result.error || "Session expirée",
+          });
+        }
+
+        return { session: result.session };
+      }),
+
     logout: publicProcedure.mutation(async ({ ctx }) => {
       // Nettoyer le cookie Manus OAuth si présent
       const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -5188,6 +5207,24 @@ export const appRouterUpdated = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: result.error });
         }
         return { user: result.user };
+      }),
+
+    refreshSession: publicProcedure
+      .input(
+        z.object({
+          refreshToken: z.string().min(1),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const result = await refreshUserSession(input.refreshToken);
+        if (result.error || !result.session) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: result.error || "Session expirée",
+          });
+        }
+
+        return { session: result.session };
       }),
 
     logout: publicProcedure.mutation(async ({ ctx }) => {
