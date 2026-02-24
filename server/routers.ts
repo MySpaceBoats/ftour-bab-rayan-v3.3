@@ -263,14 +263,17 @@ const runWithConcurrencyLimit = async <T>(
   const results: T[] = new Array(tasks.length);
   let cursor = 0;
 
-  const workers = Array.from({ length: Math.min(limit, tasks.length) }, async () => {
-    while (true) {
-      const taskIndex = cursor;
-      cursor += 1;
-      if (taskIndex >= tasks.length) break;
-      results[taskIndex] = await tasks[taskIndex]();
+  const workers = Array.from(
+    { length: Math.min(limit, tasks.length) },
+    async () => {
+      while (true) {
+        const taskIndex = cursor;
+        cursor += 1;
+        if (taskIndex >= tasks.length) break;
+        results[taskIndex] = await tasks[taskIndex]();
+      }
     }
-  });
+  );
 
   await Promise.all(workers);
   return results;
@@ -513,7 +516,7 @@ const galleryRouter = router({
       return data;
     }),
 
-  uploadPhotos: adminProcedure
+  uploadPhotos: protectedProcedure
     .input(
       z.object({
         photos: z
@@ -532,6 +535,19 @@ const galleryRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      const canManageGallery = Boolean(
+        ctx.user &&
+          [
+            "admin",
+            "super_admin",
+            "admin_ops",
+            "admin_boutique",
+            "admin_dons",
+            "admin_restaurant",
+            "admin_patisserie",
+            "admin_terroir",
+          ].includes(ctx.user.role)
+      );
       const results = [];
       for (const photo of input.photos) {
         if (
@@ -579,8 +595,8 @@ const galleryRouter = router({
           tags: photo.tags,
           albumId: photo.albumId,
           sortOrder: photo.sortOrder,
-          isFeatured: photo.isFeatured,
-          status: photo.status,
+          isFeatured: canManageGallery ? photo.isFeatured : false,
+          status: canManageGallery ? photo.status : "draft",
           imageOriginalUrl: originalUrl,
           imageThumbUrl: thumbUrl,
           storagePath: originalPath,
@@ -1154,7 +1170,9 @@ const volunteersRouter = router({
       let skippedCount = 0;
 
       try {
-        const parsedRows = parseGroupVolunteersFromSpreadsheet(input.fileBase64);
+        const parsedRows = parseGroupVolunteersFromSpreadsheet(
+          input.fileBase64
+        );
         if (parsedRows.length === 0) {
           throw new TRPCError({
             code: "BAD_REQUEST",
@@ -1199,18 +1217,19 @@ const volunteersRouter = router({
 
         const insertChunks = chunkArray(uniqueRows, 200);
         for (const rowsChunk of insertChunks) {
-          const created = await supabaseServices.createVolunteerShiftsBulkSupabase(
-            rowsChunk.map(row => ({
-              firstName: row.firstName,
-              lastName: row.lastName,
-              email: row.email,
-              phone: row.phone,
-              city: row.city,
-              dayId: input.dayId,
-              volunteerSlots: input.volunteerSlots,
-              acceptedTerms: true,
-            }))
-          );
+          const created =
+            await supabaseServices.createVolunteerShiftsBulkSupabase(
+              rowsChunk.map(row => ({
+                firstName: row.firstName,
+                lastName: row.lastName,
+                email: row.email,
+                phone: row.phone,
+                city: row.city,
+                dayId: input.dayId,
+                volunteerSlots: input.volunteerSlots,
+                acceptedTerms: true,
+              }))
+            );
 
           importedCount += created.length;
           skippedCount += Math.max(0, rowsChunk.length - created.length);
@@ -1281,7 +1300,10 @@ const volunteersRouter = router({
       }));
 
       const existingEmails = new Set<string>();
-      const duplicateCheckChunks = chunkArray(normalizedRows.map(row => row.email), 400);
+      const duplicateCheckChunks = chunkArray(
+        normalizedRows.map(row => row.email),
+        400
+      );
       for (const emailChunk of duplicateCheckChunks) {
         const chunkExisting =
           await supabaseServices.getExistingVolunteerEmailsForDay(
@@ -1326,21 +1348,25 @@ const volunteersRouter = router({
 
         for (const rowsChunk of insertChunks) {
           try {
-            const createdVolunteers = await supabaseServices.createVolunteerShiftsBulkSupabase(
-              rowsChunk.map((row) => ({
-                firstName: row.firstName,
-                lastName: row.lastName,
-                email: row.email,
-                phone: row.phone,
-                city: row.city,
-                dayId: input.dayId,
-                volunteerSlots: input.volunteerSlots,
-                acceptedTerms: true,
-              }))
-            );
+            const createdVolunteers =
+              await supabaseServices.createVolunteerShiftsBulkSupabase(
+                rowsChunk.map(row => ({
+                  firstName: row.firstName,
+                  lastName: row.lastName,
+                  email: row.email,
+                  phone: row.phone,
+                  city: row.city,
+                  dayId: input.dayId,
+                  volunteerSlots: input.volunteerSlots,
+                  acceptedTerms: true,
+                }))
+              );
 
             const createdByEmail = new Map(
-              createdVolunteers.map(vol => [vol.email.toLowerCase().trim(), vol])
+              createdVolunteers.map(vol => [
+                vol.email.toLowerCase().trim(),
+                vol,
+              ])
             );
 
             for (const row of rowsChunk) {
@@ -1367,7 +1393,7 @@ const volunteersRouter = router({
         }
       }
 
-      const emailTasks = createdRows.map((row) => async () => {
+      const emailTasks = createdRows.map(row => async () => {
         const volunteer = await supabaseServices.getVolunteerByEmailForDay(
           row.email,
           input.dayId
@@ -3703,7 +3729,7 @@ const terroirModuleRouter = router({
         message: productsError.message,
       });
 
-    const productIds = (products || []).map((product) => product.id);
+    const productIds = (products || []).map(product => product.id);
     if (productIds.length === 0) {
       return [];
     }
@@ -3732,7 +3758,7 @@ const terroirModuleRouter = router({
       {} as Record<number, typeof variants>
     );
 
-    return (products || []).map((product) => ({
+    return (products || []).map(product => ({
       ...product,
       terroir_product_variants: variantsByProductId[product.id] || [],
     }));

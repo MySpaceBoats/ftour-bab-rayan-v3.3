@@ -20,6 +20,7 @@ import Contact from "@/features/public/pages/Contact";
 import FAQ from "@/features/public/pages/FAQ";
 import MentionsLegales from "@/features/public/pages/MentionsLegales";
 import Galerie from "@/features/gallery/pages/Galerie";
+import BenevoleGalerieUpload from "@/features/gallery/pages/BenevoleGalerieUpload";
 import AdminGalerie from "@/features/gallery/admin/AdminGalerie";
 import AdminGalerieNouveau from "@/features/gallery/admin/AdminGalerieNouveau";
 import AdminGalerieEdit from "@/features/gallery/admin/AdminGalerieEdit";
@@ -280,6 +281,7 @@ function LocalizedRoutes() {
       <Route path="/:lang" component={Home} />
       <Route path="/:lang/programme" component={Programme} />
       <Route path="/:lang/benevole" component={Benevole} />
+      <Route path="/:lang/benevole/photos" component={BenevoleGalerieUpload} />
       <Route path="/:lang/evenement" component={Evenement} />
       <Route path="/:lang/association" component={Association} />
       <Route path="/:lang/contact" component={Contact} />
