@@ -4118,24 +4118,38 @@ function generateQrToken(): string {
   return Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-const RESTAURANT_RIB_PDF_URL = 'https://jgnzhrlumlydmseusnbo.supabase.co/storage/v1/object/public/RIB/RIBBABRAYAN%20(1).pdf';
+function buildRestaurantReservationRequestEmailHtml(params: {
+  customerName: string;
+  reservationType: 'particulier' | 'entreprise' | 'groupe';
+  reservationDate: string;
+  participantsCount: number;
+  reference: string;
+}): string {
+  const restaurantRibDownloadUrl = 'https://www.ftourbabrayan.ma/fr/RIB';
+  const reservationTypeLabel = params.reservationType === 'groupe'
+    ? 'groupe'
+    : params.reservationType === 'entreprise'
+      ? 'entreprise'
+      : 'particulier';
 
-function buildRestaurantReservationRequestEmailHtml(): string {
-  return `<p>Bonjour 🌿</p>
-<p>Afin de confirmer votre réservation à Table du Jardin, nous vous remercions de bien vouloir verser 50 % du montant à l’avance.</p>
-<p>Vous trouverez nos coordonnées bancaires en pièce jointe.</p>
-<p><strong>Pièce jointe :</strong> <a href="${RESTAURANT_RIB_PDF_URL}" target="_blank" rel="noopener noreferrer">RIB Table du Jardin (PDF)</a></p>
-<p>Merci pour votre soutien à notre restaurant solidaire 💚<br/>À très bientôt.</p>`;
+  return `<p>Bonjour ${params.customerName},</p>
+<p>Votre demande de réservation ${reservationTypeLabel} pour le ${params.reservationDate} a bien été enregistrée.<br/>
+Nombre estimé de participants : ${params.participantsCount}</p>
+<p>Référence : ${params.reference}</p>
+<p>Afin de confirmer votre réservation à La Table du Jardin, nous vous remercions de bien vouloir verser 50 % du montant à l’avance.</p>
+<p>Vous trouverez nos coordonnées bancaires en téléchargeant notre RIB : <a href="${restaurantRibDownloadUrl}" target="_blank" rel="noopener noreferrer">Télécharger le RIB</a></p>
+<p>Merci pour votre soutien à notre restaurant solidaire ! 💚<br/>À très bientôt.<br/>L’équipe de La Table du Jardin</p>`;
 }
 
-function buildRestaurantReservationValidatedEmailHtml(): string {
-  return `<p>Bonjour,</p>
-<p>Votre réservation à La Table du Jardin est confirmée.<br/>Nous nous réjouissons de vous accueillir prochainement.</p>
-<p>Merci pour votre confiance.</p>
+function buildRestaurantReservationValidatedEmailHtml(customerName: string): string {
+  return `<p>Bonjour ${customerName},</p>
+<p>Votre réservation à La Table du Jardin est confirmée.</p>
+<p>Nous sommes heureux de vous accueillir prochainement.</p>
+<p>Nous vous remercions d'avance pour votre confiance.</p>
 <p><strong>Politique d’annulation :</strong><br/>
 Annulation à moins de 72h : acompte de 50% conservé.<br/>
-Le nombre de personnes confirmé sera facturé en totalité, même en cas d’absence ou de modification le jour même.<br/>
-Merci pour votre comprehension.</p>
+Le nombre de personnes confirmé sera facturé en totalité, même en cas d’absence ou de modification le jour même.</p>
+<p>Merci pour votre comprehension.</p>
 <p>Cordialement,<br/>L’équipe de La Table du Jardin</p>`;
 }
 
@@ -4209,7 +4223,13 @@ const restaurantReservationsRouter = router({
           await sendEmail({
             to: input.email,
             subject: `Demande de réservation reçue - ${reference}`,
-            html: buildRestaurantReservationRequestEmailHtml(),
+            html: buildRestaurantReservationRequestEmailHtml({
+              customerName: input.firstName,
+              reservationType: 'particulier',
+              reservationDate: input.date,
+              participantsCount: input.participantsCount,
+              reference,
+            }),
             apiKey: ctx.env.RESEND_API_KEY,
           });
           await sendEmail({
@@ -4272,7 +4292,13 @@ const restaurantReservationsRouter = router({
           await sendEmail({
             to: input.email,
             subject: `Demande de réservation reçue - ${reference}`,
-            html: buildRestaurantReservationRequestEmailHtml(),
+            html: buildRestaurantReservationRequestEmailHtml({
+              customerName: input.contactName,
+              reservationType: 'entreprise',
+              reservationDate: input.date,
+              participantsCount: input.participantsCount,
+              reference,
+            }),
             apiKey: ctx.env.RESEND_API_KEY,
           });
           await sendEmail({
@@ -4334,7 +4360,13 @@ const restaurantReservationsRouter = router({
           await sendEmail({
             to: input.email,
             subject: `Demande de réservation reçue - ${reference}`,
-            html: buildRestaurantReservationRequestEmailHtml(),
+            html: buildRestaurantReservationRequestEmailHtml({
+              customerName: input.contactName,
+              reservationType: 'groupe',
+              reservationDate: input.date,
+              participantsCount: input.participantsCount,
+              reference,
+            }),
             apiKey: ctx.env.RESEND_API_KEY,
           });
           await sendEmail({
@@ -4376,7 +4408,7 @@ const restaurantReservationsRouter = router({
         await sendEmail({
           to: reservation.email,
           subject: `Réservation confirmée - ${reservation.reference}`,
-          html: buildRestaurantReservationValidatedEmailHtml(),
+          html: buildRestaurantReservationValidatedEmailHtml(reservation.name),
           apiKey: ctx.env.RESEND_API_KEY,
         });
       } catch (emailErr) {
