@@ -265,7 +265,7 @@ export default function AdminRestaurants() {
                   id="phone"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="+212 664-887978"
+                  placeholder="+212 (0) 666-690534"
                   className="mt-1 border-[#d4d4aa]"
                 />
               </div>

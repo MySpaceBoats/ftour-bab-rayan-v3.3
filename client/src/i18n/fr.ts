@@ -20,6 +20,7 @@ export const fr = {
     search: 'Rechercher...',
     searchPlaceholder: 'Rechercher sur le site...',
     boutique: 'Boutique',
+    gallery: 'Galerie',
   },
 
   // CTA Buttons
@@ -37,7 +38,7 @@ export const fr = {
 
   // Top Menu
   topMenu: {
-    phone: '+212 664-887978',
+    phone: '+212 (0) 666-690534',
     language: 'Langue',
   },
 
@@ -712,7 +713,7 @@ export const fr = {
     chequeInstructions: 'Veuillez envoyer votre chèque à : Association Bab Rayan, 4 rue Bayt Lahm, Casablanca',
     cashDetails: 'Paiement en espèces',
     preferredPickupDate: 'Date de retrait préférée',
-    cashInstructions: 'Veuillez apporter les espèces à notre bureau : 4 rue Bayt Lahm, Casablanca. Contactez-nous au +212 664-887978',
+    cashInstructions: 'Veuillez apporter les espèces à notre bureau : 4 rue Bayt Lahm, Casablanca. Contactez-nous au +212 (0) 666-690534',
     paypalDetails: 'Détails PayPal',
     paypalEmail: 'Email PayPal',
     paypalEmailRequired: 'L\'email PayPal est requis',

@@ -4085,13 +4085,13 @@ function generateQrToken(): string {
   return Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function buildRestaurantReservationRequestEmailHtml(): string {
-  const restaurantRibDownloadUrl = 'https://www.ftourbabrayan.ma/fr/RIB';
+const RESTAURANT_RIB_PDF_URL = 'https://jgnzhrlumlydmseusnbo.supabase.co/storage/v1/object/public/RIB/RIBBABRAYAN%20(1).pdf';
 
+function buildRestaurantReservationRequestEmailHtml(): string {
   return `<p>Bonjour 🌿</p>
 <p>Afin de confirmer votre réservation à Table du Jardin, nous vous remercions de bien vouloir verser 50 % du montant à l’avance.</p>
-<p>Vous trouverez nos coordonnées bancaires ci-dessous.</p>
-<p><strong>Télécharger le RIB :</strong> <a href="${restaurantRibDownloadUrl}" target="_blank" rel="noopener noreferrer">RIB Table du Jardin (PDF)</a></p>
+<p>Vous trouverez nos coordonnées bancaires en pièce jointe.</p>
+<p><strong>Pièce jointe :</strong> <a href="${RESTAURANT_RIB_PDF_URL}" target="_blank" rel="noopener noreferrer">RIB Table du Jardin (PDF)</a></p>
 <p>Merci pour votre soutien à notre restaurant solidaire 💚<br/>À très bientôt.</p>`;
 }
 

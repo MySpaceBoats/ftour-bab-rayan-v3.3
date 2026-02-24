@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
+import { clearStoredSession, getStoredSession, isSessionExpiringSoon, setStoredSession } from "./_core/authToken";
 import { I18nProvider } from "./i18n";
 import "./index.css";
 
@@ -46,13 +47,34 @@ const trpcClient = trpc.createClient({
     httpBatchLink({
       url: API_URL,
       transformer: superjson,
-      headers() {
-        // Ajouter le token Supabase si disponible
-        const token = localStorage.getItem('supabase_token');
-        if (token) {
-          return { Authorization: `Bearer ${token}` };
+      async headers() {
+        const session = getStoredSession();
+
+        if (!session) {
+          return {};
         }
-        return {};
+
+        let accessToken = session.accessToken;
+
+        if (isSessionExpiringSoon(session.expiresAt)) {
+          try {
+            const refreshed = await trpcClient.auth.refreshSession.mutate({
+              refreshToken: session.refreshToken,
+            });
+            setStoredSession(refreshed.session);
+            localStorage.setItem('supabase_token', refreshed.session.accessToken);
+            accessToken = refreshed.session.accessToken;
+          } catch (error) {
+            clearStoredSession();
+            accessToken = '';
+          }
+        }
+
+        if (!accessToken) {
+          return {};
+        }
+
+        return { Authorization: `Bearer ${accessToken}` };
       },
       fetch(input, init) {
         return globalThis.fetch(input, {
