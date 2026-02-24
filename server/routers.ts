@@ -1253,82 +1253,112 @@ const volunteersRouter = router({
           : "http://localhost:3000";
 
       const results: { email: string; success: boolean; error?: string }[] = [];
+      const normalizedRows = parsedRows.map(row => ({
+        ...row,
+        email: row.email.toLowerCase().trim(),
+      }));
+      const existingEmails =
+        await supabaseServices.getExistingVolunteerEmailsForDay(
+          input.dayId,
+          normalizedRows.map(row => row.email)
+        );
 
-      for (const row of parsedRows) {
-        const email = row.email;
+      const uniqueRows: typeof normalizedRows = [];
+      const seenInFile = new Set<string>();
 
+      for (const row of normalizedRows) {
+        if (existingEmails.has(row.email)) {
+          results.push({
+            email: row.email,
+            success: false,
+            error: "Déjà inscrit pour ce jour",
+          });
+          continue;
+        }
+
+        if (seenInFile.has(row.email)) {
+          results.push({
+            email: row.email,
+            success: false,
+            error: "Email en doublon dans le fichier",
+          });
+          continue;
+        }
+
+        seenInFile.add(row.email);
+        uniqueRows.push(row);
+      }
+
+      if (uniqueRows.length > 0) {
         try {
-          // Check if already registered for this day
-          const emailExists =
-            await supabaseServices.checkVolunteerEmailExistsForDay(
-              email,
-              input.dayId
-            );
-          if (emailExists) {
-            results.push({
-              email,
-              success: false,
-              error: "Déjà inscrit pour ce jour",
-            });
-            continue;
-          }
-
-          // Create volunteer entry
-          const volunteer = await supabaseServices.createVolunteerShiftSupabase(
-            {
+          const createdVolunteers = await supabaseServices.createVolunteerShiftsBulkSupabase(
+            uniqueRows.map((row) => ({
               firstName: row.firstName,
               lastName: row.lastName,
-              email,
+              email: row.email,
               phone: row.phone,
               city: row.city,
               dayId: input.dayId,
               volunteerSlots: input.volunteerSlots,
               acceptedTerms: true,
-            }
+            }))
           );
 
-          // Send confirmation email with QR code
-          const emailData = generateVolunteerConfirmationEmail({
-            firstName: row.firstName,
-            lastName: row.lastName,
-            email,
-            dayNumber: day.dayNumber,
-            dayDate: new Date(day.date).toLocaleDateString("fr-FR", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-            }),
-            location: day.location || "Association Bab Rayan, Casablanca",
-            startTime: day.iftarTime || "18h00",
-            volunteerSlots: input.volunteerSlots,
-            qrToken: volunteer.qrToken,
-            baseUrl,
-          });
+          const createdByEmail = new Map(
+            createdVolunteers.map(vol => [vol.email.toLowerCase().trim(), vol])
+          );
 
-          const emailResult = await sendEmail({
-            to: email,
-            subject: emailData.subject,
-            html: emailData.html,
-          });
+          for (const row of uniqueRows) {
+            const volunteer = createdByEmail.get(row.email);
+            if (!volunteer) {
+              results.push({
+                email: row.email,
+                success: false,
+                error: "Inscription créée de façon incomplète",
+              });
+              continue;
+            }
 
-          if (emailResult.success) {
-            results.push({ email, success: true });
-            console.log(`[ProcessGroupExcel] Email sent to ${email}`);
-          } else {
-            results.push({
-              email,
-              success: true,
-              error: `Inscrit mais email non envoyé: ${emailResult.error}`,
+            const emailData = generateVolunteerConfirmationEmail({
+              firstName: row.firstName,
+              lastName: row.lastName,
+              email: row.email,
+              dayNumber: day.dayNumber,
+              dayDate: new Date(day.date).toLocaleDateString("fr-FR", {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+              }),
+              location: day.location || "Association Bab Rayan, Casablanca",
+              startTime: day.iftarTime || "18h00",
+              volunteerSlots: input.volunteerSlots,
+              qrToken: volunteer.qrToken,
+              baseUrl,
             });
-            console.warn(
-              `[ProcessGroupExcel] Volunteer created but email failed for ${email}: ${emailResult.error}`
-            );
+
+            const emailResult = await sendEmail({
+              to: row.email,
+              subject: emailData.subject,
+              html: emailData.html,
+            });
+
+            if (emailResult.success) {
+              results.push({ email: row.email, success: true });
+            } else {
+              results.push({
+                email: row.email,
+                success: true,
+                error: `Inscrit mais email non envoyé: ${emailResult.error}`,
+              });
+            }
           }
         } catch (error) {
           const errMsg =
             error instanceof Error ? error.message : "Erreur inconnue";
-          results.push({ email, success: false, error: errMsg });
-          console.error(`[ProcessGroupExcel] Error for ${email}:`, error);
+          for (const row of uniqueRows) {
+            results.push({ email: row.email, success: false, error: errMsg });
+          }
+          console.error("[ProcessGroupExcel] Bulk creation error:", error);
         }
       }
 
