@@ -81,7 +81,6 @@ export const restaurantReservationsRouter = router({
               reference,
               displayChoice: input.displayChoice,
             }).html,
-            cc: ["heartfulness@myspace.boats"],
           });
 
           await sendEmail({
@@ -203,7 +202,6 @@ export const restaurantReservationsRouter = router({
               </div>
               <p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>
             `,
-            cc: ["heartfulness@myspace.boats"],
           });
 
           const internalEmailResult = await sendEmail({
@@ -327,7 +325,6 @@ export const restaurantReservationsRouter = router({
               </div>
               <p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>
             `,
-            cc: ["heartfulness@myspace.boats"],
           });
 
           await sendEmail({
@@ -428,7 +425,6 @@ export const restaurantReservationsRouter = router({
             qrToken: reservation.qrToken,
             baseUrl: input.baseUrl,
           }).html,
-          cc: ["heartfulness@myspace.boats"],
         });
 
         return {
@@ -485,7 +481,6 @@ export const restaurantReservationsRouter = router({
             email: reservation.email,
             date: reservation.date.toISOString().split("T")[0],
           }).html,
-          cc: ["heartfulness@myspace.boats"],
         });
 
         return {
