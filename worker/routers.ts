@@ -4085,6 +4085,27 @@ function generateQrToken(): string {
   return Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+const RESTAURANT_RIB_PDF_URL = 'https://jgnzhrlumlydmseusnbo.supabase.co/storage/v1/object/public/RIB/RIBBABRAYAN%20(1).pdf';
+
+function buildRestaurantReservationRequestEmailHtml(): string {
+  return `<p>Bonjour 🌿</p>
+<p>Afin de confirmer votre réservation à Table du Jardin, nous vous remercions de bien vouloir verser 50 % du montant à l’avance.</p>
+<p>Vous trouverez nos coordonnées bancaires en pièce jointe.</p>
+<p><strong>Pièce jointe :</strong> <a href="${RESTAURANT_RIB_PDF_URL}" target="_blank" rel="noopener noreferrer">RIB Table du Jardin (PDF)</a></p>
+<p>Merci pour votre soutien à notre restaurant solidaire 💚<br/>À très bientôt.</p>`;
+}
+
+function buildRestaurantReservationValidatedEmailHtml(): string {
+  return `<p>Bonjour,</p>
+<p>Votre réservation à La Table du Jardin est confirmée.<br/>Nous nous réjouissons de vous accueillir prochainement.</p>
+<p>Merci pour votre confiance.</p>
+<p><strong>Politique d’annulation :</strong><br/>
+Annulation à moins de 72h : acompte de 50% conservé.<br/>
+Le nombre de personnes confirmé sera facturé en totalité, même en cas d’absence ou de modification le jour même.<br/>
+Merci pour votre comprehension.</p>
+<p>Cordialement,<br/>L’équipe de La Table du Jardin</p>`;
+}
+
 /**
  * Map DB row (snake_case) to camelCase object expected by frontend.
  */
@@ -4154,8 +4175,8 @@ const restaurantReservationsRouter = router({
           const { sendEmail } = await import('./email');
           await sendEmail({
             to: input.email,
-            subject: `Demande de reservation recue - ${reference}`,
-            html: `<h2 style="color:#5d5a3c;">Demande de réservation reçue</h2><p>Bonjour <strong>${input.firstName}</strong>,</p><p>Votre demande de réservation pour le ftour solidaire a bien été enregistrée.</p><p><strong>Date :</strong> ${input.date}</p><p><strong>Participants :</strong> ${input.participantsCount}</p><p><strong>Référence :</strong> ${reference}</p><p>Nous vous confirmerons les disponibilités sous 48 heures.</p><p><strong>Conditions d'annulation :</strong></p><ul><li>En cas d’annulation moins de 72h avant l’événement, l’acompte de 50% sera conservé.</li><li>Le nombre de personnes confirmé sera facturé dans son intégralité, même en cas d’absence ou de modification le jour même.</li></ul><p>Merci pour votre compréhension.</p><p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
+            subject: `Demande de réservation reçue - ${reference}`,
+            html: buildRestaurantReservationRequestEmailHtml(),
             apiKey: ctx.env.RESEND_API_KEY,
             cc: ['heartfulness@myspace.boats'],
           });
@@ -4218,8 +4239,8 @@ const restaurantReservationsRouter = router({
           const { sendEmail } = await import('./email');
           await sendEmail({
             to: input.email,
-            subject: `Demande de reservation entreprise recue - ${reference}`,
-            html: `<h2 style="color:#5d5a3c;">Demande de réservation entreprise reçue</h2><p>Bonjour <strong>${input.contactName}</strong>,</p><p>Nous avons bien reçu la demande de réservation de <strong>${input.companyName}</strong> pour le ftour solidaire.</p><p><strong>Date souhaitée :</strong> ${input.date}</p><p><strong>Nombre de participants :</strong> ${input.participantsCount}</p><p>Notre équipe reviendra vers vous sous 48 heures.</p><p><strong>Référence :</strong> ${reference}</p><p><strong>Conditions d'annulation :</strong></p><ul><li>En cas d’annulation moins de 72h avant l’événement, l’acompte de 50% sera conservé.</li><li>Le nombre de personnes confirmé sera facturé dans son intégralité, même en cas d’absence ou de modification le jour même.</li></ul><p>Merci pour votre compréhension.</p><p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
+            subject: `Demande de réservation reçue - ${reference}`,
+            html: buildRestaurantReservationRequestEmailHtml(),
             apiKey: ctx.env.RESEND_API_KEY,
             cc: ['heartfulness@myspace.boats'],
           });
@@ -4281,8 +4302,8 @@ const restaurantReservationsRouter = router({
           const { sendEmail } = await import('./email');
           await sendEmail({
             to: input.email,
-            subject: `Demande de reservation groupe recue - ${reference}`,
-            html: `<h2 style="color:#5d5a3c;">Demande de réservation groupe reçue</h2><p>Bonjour <strong>${input.contactName}</strong>,</p><p>Votre demande de réservation groupe pour le <strong>${input.date}</strong> a bien été enregistrée.</p><p><strong>Nombre estimé de participants :</strong> ${input.participantsCount}</p><p>Nous vous confirmerons les disponibilités sous 48 heures.</p><p><strong>Référence :</strong> ${reference}</p><p><strong>Conditions d'annulation :</strong></p><ul><li>En cas d’annulation moins de 72h avant l’événement, l’acompte de 50% sera conservé.</li><li>Le nombre de personnes confirmé sera facturé dans son intégralité, même en cas d’absence ou de modification le jour même.</li></ul><p>Merci pour votre compréhension.</p><p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
+            subject: `Demande de réservation reçue - ${reference}`,
+            html: buildRestaurantReservationRequestEmailHtml(),
             apiKey: ctx.env.RESEND_API_KEY,
             cc: ['heartfulness@myspace.boats'],
           });
@@ -4322,11 +4343,10 @@ const restaurantReservationsRouter = router({
       }).eq('id', reservation.id);
       try {
         const { sendEmail } = await import('./email');
-        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(input.baseUrl + '/checkin-reservation/' + reservation.qr_token)}`;
         await sendEmail({
           to: reservation.email,
-          subject: `Reservation validee - ${reservation.reference}`,
-          html: `<h2 style="color:#166534;">Réservation validée !</h2><p>Bonjour <strong>${reservation.name}</strong>,</p><p>Votre réservation <strong>${reservation.reference}</strong> a été validée.</p><p>Veuillez procéder au paiement pour confirmer définitivement votre place.</p><p><img src="${qrCodeUrl}" alt="QR Code" style="width:200px;height:200px;"/></p><p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
+          subject: `Réservation confirmée - ${reservation.reference}`,
+          html: buildRestaurantReservationValidatedEmailHtml(),
           apiKey: ctx.env.RESEND_API_KEY,
           cc: ['heartfulness@myspace.boats'],
         });
