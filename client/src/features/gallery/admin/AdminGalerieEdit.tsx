@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useRoute } from "wouter";
+import { Link, useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,11 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminGalerieEdit() {
   const [, params] = useRoute("/admin/galerie/:id");
+  const [, navigate] = useLocation();
   const id = params?.id as string;
   const { data: photo } = trpc.gallery.getPhoto.useQuery(
     { id },
@@ -26,6 +27,13 @@ export default function AdminGalerieEdit() {
   const { data: albums } = trpc.gallery.listAlbums.useQuery();
   const update = trpc.gallery.updatePhoto.useMutation({
     onSuccess: () => toast.success("Photo mise à jour"),
+    onError: e => toast.error(e.message),
+  });
+  const del = trpc.gallery.deletePhoto.useMutation({
+    onSuccess: () => {
+      toast.success("Photo supprimée");
+      navigate("/admin/galerie");
+    },
     onError: e => toast.error(e.message),
   });
 
@@ -133,26 +141,36 @@ export default function AdminGalerieEdit() {
                 }
               />
             </div>
-            <Button
-              onClick={() =>
-                update.mutate({
-                  id,
-                  eventDate: form.eventDate || undefined,
-                  tags: form.tags
-                    ? form.tags
-                        .split(",")
-                        .map((t: string) => t.trim())
-                        .filter(Boolean)
-                    : [],
-                  albumId: form.albumId === "none" ? null : form.albumId,
-                  sortOrder: Number(form.sortOrder || 0),
-                  status: form.status,
-                  isFeatured: form.isFeatured,
-                })
-              }
-            >
-              Enregistrer
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={() =>
+                  update.mutate({
+                    id,
+                    eventDate: form.eventDate || undefined,
+                    tags: form.tags
+                      ? form.tags
+                          .split(",")
+                          .map((t: string) => t.trim())
+                          .filter(Boolean)
+                      : [],
+                    albumId: form.albumId === "none" ? null : form.albumId,
+                    sortOrder: Number(form.sortOrder || 0),
+                    status: form.status,
+                    isFeatured: form.isFeatured,
+                  })
+                }
+              >
+                Enregistrer
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => del.mutate({ id })}
+                disabled={del.isPending}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Supprimer
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
