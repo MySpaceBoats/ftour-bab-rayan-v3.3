@@ -3,10 +3,11 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import {
   sendEmail,
-  generateParticulierReservationRequestEmail,
-  generateParticulierReservationConfirmedEmail,
   generateParticulierReservationRefusedEmail,
   generateNewBookingNotificationEmail,
+  generateRestaurantReservationDepositRequiredEmail,
+  generateRestaurantReservationConfirmedEmail,
+  formatReservationDateLong,
 } from "./email";
 import * as reservationServices from "./restaurant-reservation-services";
 import crypto from "crypto";
@@ -63,24 +64,18 @@ export const restaurantReservationsRouter = router({
               displayChoice: input.displayChoice,
             });
 
+          const requestEmail = generateRestaurantReservationDepositRequiredEmail({
+            firstName: input.firstName,
+            reference,
+            reservationDateLong: formatReservationDateLong(input.date),
+            partySize: input.participantsCount,
+          });
+
           await sendEmail({
             to: input.email,
-            subject: generateParticulierReservationRequestEmail({
-              firstName: input.firstName,
-              email: input.email,
-              date: input.date,
-              participantsCount: input.participantsCount,
-              reference,
-              displayChoice: input.displayChoice,
-            }).subject,
-            html: generateParticulierReservationRequestEmail({
-              firstName: input.firstName,
-              email: input.email,
-              date: input.date,
-              participantsCount: input.participantsCount,
-              reference,
-              displayChoice: input.displayChoice,
-            }).html,
+            subject: requestEmail.subject,
+            html: requestEmail.html,
+            text: requestEmail.text,
           });
 
           await sendEmail({
@@ -176,32 +171,18 @@ export const restaurantReservationsRouter = router({
               displayChoice: input.displayChoice,
             });
 
+          const customerRequestEmail = generateRestaurantReservationDepositRequiredEmail({
+            firstName: input.contactName,
+            reference,
+            reservationDateLong: formatReservationDateLong(input.date),
+            partySize: input.participantsCount,
+          });
+
           const customerEmailResult = await sendEmail({
             to: input.email,
-            subject: `📬 Demande de réservation entreprise reçue`,
-            html: `
-              <h2 style="color: #5d5a3c;">Demande de réservation entreprise reçue</h2>
-              <p>Bonjour <strong>${input.contactName}</strong>,</p>
-              <p>Nous avons bien reçu la demande de réservation de <strong>${input.companyName}</strong> pour le ftour solidaire.</p>
-              <p><strong>Date souhaitée :</strong> ${input.date}</p>
-              <p><strong>Nombre de participants :</strong> ${input.participantsCount}</p>
-              <p><strong>Salle :</strong> ${input.displayChoice}</p>
-              <p>Notre équipe reviendra vers vous sous 48 heures avec une proposition de confirmation et les modalités d'organisation.</p>
-              <p><strong>Référence :</strong> ${reference}</p>
-              <div style="background-color: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 20px; margin: 20px 0;">
-                <h3 style="color: #9a3412; margin: 0 0 15px 0; font-size: 18px;">⚠️ Conditions de réservation</h3>
-                <p style="margin: 0 0 12px 0; color: #374151; font-size: 15px; line-height: 1.6;">
-                  <strong>Le nombre de personnes réservées sera facturé dans sa totalité, même en cas d'absence ou de modification le jour même.</strong>
-                </p>
-                <p style="margin: 0; color: #374151; font-size: 15px; line-height: 1.6;">
-                  Afin de confirmer votre réservation à Table du Jardin, nous vous remercions de bien vouloir verser <strong>50 % du montant</strong> à l'avance.
-                </p>
-              </div>
-              <div style="text-align: center; margin: 20px 0;">
-                <p style="margin: 0; color: #374151; font-size: 14px;"><strong>RIB :</strong> 007 780 0003 401 000 100 238 97<br/><strong>IBAN :</strong> MA64 007 780 0003 401 000 100 238 97</p>
-              </div>
-              <p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>
-            `,
+            subject: customerRequestEmail.subject,
+            html: customerRequestEmail.html,
+            text: customerRequestEmail.text,
           });
 
           const internalEmailResult = await sendEmail({
@@ -300,31 +281,18 @@ export const restaurantReservationsRouter = router({
               displayChoice: input.displayChoice,
             });
 
+          const customerRequestEmail = generateRestaurantReservationDepositRequiredEmail({
+            firstName: input.contactName,
+            reference,
+            reservationDateLong: formatReservationDateLong(input.date),
+            partySize: input.participantsCount,
+          });
+
           await sendEmail({
             to: input.email,
-            subject: `📬 Demande de réservation groupe reçue`,
-            html: `
-              <h2 style="color: #5d5a3c;">Demande de réservation groupe reçue</h2>
-              <p>Bonjour <strong>${input.contactName}</strong>,</p>
-              <p>Votre demande de réservation groupe pour le <strong>${input.date}</strong> a bien été enregistrée.</p>
-              <p><strong>Nombre estimé de participants :</strong> ${input.participantsCount}</p>
-              <p><strong>Salle :</strong> ${input.displayChoice}</p>
-              <p>Nous vous confirmerons les disponibilités sous 48 heures.</p>
-              <p><strong>Référence :</strong> ${reference}</p>
-              <div style="background-color: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 20px; margin: 20px 0;">
-                <h3 style="color: #9a3412; margin: 0 0 15px 0; font-size: 18px;">⚠️ Conditions de réservation</h3>
-                <p style="margin: 0 0 12px 0; color: #374151; font-size: 15px; line-height: 1.6;">
-                  <strong>Le nombre de personnes réservées sera facturé dans sa totalité, même en cas d'absence ou de modification le jour même.</strong>
-                </p>
-                <p style="margin: 0; color: #374151; font-size: 15px; line-height: 1.6;">
-                  Afin de confirmer votre réservation à Table du Jardin, nous vous remercions de bien vouloir verser <strong>50 % du montant</strong> à l'avance.
-                </p>
-              </div>
-              <div style="text-align: center; margin: 20px 0;">
-                <p style="margin: 0; color: #374151; font-size: 14px;"><strong>RIB :</strong> 007 780 0003 401 000 100 238 97<br/><strong>IBAN :</strong> MA64 007 780 0003 401 000 100 238 97</p>
-              </div>
-              <p>À très bientôt,<br><strong>L'équipe Ftour Bab Rayan</strong></p>
-            `,
+            subject: customerRequestEmail.subject,
+            html: customerRequestEmail.html,
+            text: customerRequestEmail.text,
           });
 
           await sendEmail({
@@ -405,26 +373,22 @@ export const restaurantReservationsRouter = router({
           "pending_payment"
         );
 
+        const reservationDateIso = reservation.date
+          ? reservation.date.toISOString().split("T")[0]
+          : "";
+        const confirmedEmail = generateRestaurantReservationConfirmedEmail({
+          firstName: reservation.name,
+          reference: reservation.reference,
+          reservationDateLong: formatReservationDateLong(reservationDateIso),
+          partySize: reservation.seatsTotal,
+          partySizeConfirmed: reservation.seatsTotal,
+        });
+
         await sendEmail({
           to: reservation.email,
-          subject: generateParticulierReservationConfirmedEmail({
-            firstName: reservation.name,
-            email: reservation.email,
-            date: reservation.date.toISOString().split("T")[0],
-            participantsCount: reservation.seatsTotal,
-            reference: reservation.reference,
-            qrToken: reservation.qrToken,
-            baseUrl: input.baseUrl,
-          }).subject,
-          html: generateParticulierReservationConfirmedEmail({
-            firstName: reservation.name,
-            email: reservation.email,
-            date: reservation.date.toISOString().split("T")[0],
-            participantsCount: reservation.seatsTotal,
-            reference: reservation.reference,
-            qrToken: reservation.qrToken,
-            baseUrl: input.baseUrl,
-          }).html,
+          subject: confirmedEmail.subject,
+          html: confirmedEmail.html,
+          text: confirmedEmail.text,
         });
 
         return {
@@ -469,18 +433,19 @@ export const restaurantReservationsRouter = router({
           "refused"
         );
 
+        const reservationDateIso = reservation.date
+          ? reservation.date.toISOString().split("T")[0]
+          : "";
+        const refusedEmail = generateParticulierReservationRefusedEmail({
+          firstName: reservation.name,
+          email: reservation.email,
+          date: reservationDateIso,
+        });
+
         await sendEmail({
           to: reservation.email,
-          subject: generateParticulierReservationRefusedEmail({
-            firstName: reservation.name,
-            email: reservation.email,
-            date: reservation.date.toISOString().split("T")[0],
-          }).subject,
-          html: generateParticulierReservationRefusedEmail({
-            firstName: reservation.name,
-            email: reservation.email,
-            date: reservation.date.toISOString().split("T")[0],
-          }).html,
+          subject: refusedEmail.subject,
+          html: refusedEmail.html,
         });
 
         return {

@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
-    "recover-admin-access": "node scripts/recover-admin-access.mjs"
+    "recover-admin-access": "node scripts/recover-admin-access.mjs",
+    "preview:restaurant-emails": "tsx scripts/preview-restaurant-emails.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
