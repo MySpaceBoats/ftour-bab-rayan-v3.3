@@ -5,8 +5,7 @@ import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
-import { getLoginUrl } from "./const";
-import { clearStoredSession, getStoredSession, isSessionExpiringSoon, setStoredSession } from "./_core/authToken";
+import { clearStoredSession, getStoredSession, isSessionExpiringSoon, scrubStaleSession, setStoredSession } from "./_core/authToken";
 import { I18nProvider } from "./i18n";
 import "./index.css";
 
@@ -20,6 +19,7 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
 
   if (!isUnauthorized) return;
 
+  clearStoredSession();
   window.location.href = '/connexion';
 };
 
@@ -41,6 +41,10 @@ queryClient.getMutationCache().subscribe(event => {
 
 // Utiliser l'API externe en production, locale en développement
 const API_URL = import.meta.env.VITE_API_URL || '/api/trpc';
+
+if (typeof window !== 'undefined') {
+  scrubStaleSession();
+}
 
 const trpcClient = trpc.createClient({
   links: [
@@ -64,7 +68,7 @@ const trpcClient = trpc.createClient({
             setStoredSession(refreshed.session);
             localStorage.setItem('supabase_token', refreshed.session.accessToken);
             accessToken = refreshed.session.accessToken;
-          } catch (error) {
+          } catch {
             clearStoredSession();
             accessToken = '';
           }
@@ -77,9 +81,15 @@ const trpcClient = trpc.createClient({
         return { Authorization: `Bearer ${accessToken}` };
       },
       fetch(input, init) {
+        const headers = new Headers(init?.headers);
+        headers.set('Cache-Control', 'no-store');
+        headers.set('Pragma', 'no-cache');
+
         return globalThis.fetch(input, {
           ...(init ?? {}),
+          headers,
           credentials: "include",
+          cache: 'no-store',
         });
       },
     }),

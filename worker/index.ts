@@ -140,6 +140,10 @@ export default {
       Object.entries(baseCorsHeaders).forEach(([key, value]) => {
         newHeaders.set(key, value);
       });
+      // Auth/admin data should never be edge/browser cached.
+      newHeaders.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+      newHeaders.set('Pragma', 'no-cache');
+      newHeaders.set('Expires', '0');
 
       return new Response(response.body, {
         status: response.status,
