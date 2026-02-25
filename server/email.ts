@@ -43,6 +43,7 @@ interface EmailOptions {
   to: string;
   subject: string;
   html: string;
+  text?: string;
   cc?: string[];
   bcc?: string[];
   attachments?: Array<{
@@ -78,6 +79,7 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
     to: options.to,
     subject: options.subject,
     html: options.html,
+    text: options.text,
     reply_to: REPLY_TO,
     cc: options.cc,
     bcc: options.bcc || ['rsebbani@myspace.boats'],
@@ -575,6 +577,377 @@ export function generateContactNotificationEmail(data: ContactEmailData): { subj
   };
 }
 
+
+
+// ============================================
+// RESTAURANT RESERVATION EMAIL LAYOUT + TEMPLATES
+// ============================================
+
+interface RestaurantEmailSectionItem {
+  label: string;
+  value: string;
+}
+
+interface RestaurantEmailSection {
+  title?: string;
+  kind?: "info" | "callout" | "warning";
+  text?: string[];
+  items?: RestaurantEmailSectionItem[];
+}
+
+interface RestaurantEmailLayoutData {
+  preheader: string;
+  brandName: string;
+  headerColor?: string;
+  title: string;
+  introText?: string[];
+  sections: RestaurantEmailSection[];
+  ctaLabel?: string;
+  ctaUrl?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  signatureLines?: string[];
+  footerLines: string[];
+}
+
+interface RestaurantEmailBranding {
+  brandName: string;
+  headerColor: string;
+  ribUrl: string;
+  contactEmail: string;
+  contactPhone: string;
+  footerLines: string[];
+  addressLines: string[];
+}
+
+const RESTAURANT_DEFAULT_BRANDING: RestaurantEmailBranding = {
+  brandName: "La Table du Jardin",
+  headerColor: "#556B2F",
+  ribUrl: "https://ftourbabrayan.ma/rib",
+  contactEmail: "contact@ftourbabrayan.ma",
+  contactPhone: "+212 (0) 666-690534",
+  addressLines: ["4 rue Bayt Lahm, quartier Palmier", "Casablanca"],
+  footerLines: [
+    "La Table du Jardin",
+    "4 rue Bayt Lahm, quartier Palmier, Casablanca",
+    "Tél: +212 (0) 666-690534 | contact@ftourbabrayan.ma",
+  ],
+};
+
+function toFrenchLongDate(dateInput: string): string {
+  const d = new Date(dateInput);
+  if (Number.isNaN(d.getTime())) {
+    return dateInput;
+  }
+  return new Intl.DateTimeFormat("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(d);
+}
+
+function restaurantSectionColors(kind: RestaurantEmailSection["kind"], headerColor: string) {
+  if (kind === "warning") {
+    return { bg: "#FEF3C7", border: "#FCD34D", title: "#92400E" };
+  }
+  if (kind === "callout") {
+    return { bg: "#F6F8EF", border: headerColor, title: headerColor };
+  }
+  return { bg: "#F6F8EF", border: "#DDE5CC", title: headerColor };
+}
+
+function renderRestaurantSection(section: RestaurantEmailSection, headerColor: string): string {
+  const colors = restaurantSectionColors(section.kind, headerColor);
+  const title = section.title
+    ? `<h3 style="margin: 0 0 12px 0; color: ${colors.title}; font-size: 18px;">${section.title}</h3>`
+    : "";
+
+  const items = (section.items || [])
+    .map(
+      (item) => `
+        <tr>
+          <td style="padding: 4px 0; width: 180px; color: #475569; font-size: 15px;"><strong>${item.label} :</strong></td>
+          <td style="padding: 4px 0; color: #1f2937; font-size: 15px;">${item.value}</td>
+        </tr>
+      `
+    )
+    .join("");
+
+  const text = (section.text || [])
+    .map((line) => `<p style="margin: 0 0 10px 0; color: #374151; font-size: 15px; line-height: 1.6;">${line}</p>`)
+    .join("");
+
+  return `
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: ${colors.bg}; border: 1px solid ${colors.border}; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          ${title}
+          ${text}
+          ${items ? `<table role="presentation" style="width: 100%; border-collapse: collapse;">${items}</table>` : ""}
+        </td>
+      </tr>
+    </table>
+  `;
+}
+
+function renderRestaurantEmailLayout(data: RestaurantEmailLayoutData): string {
+  const headerColor = data.headerColor || RESTAURANT_DEFAULT_BRANDING.headerColor;
+  const intro = (data.introText || [])
+    .map((line) => `<p style="margin: 0 0 14px 0; color: #374151; font-size: 16px; line-height: 1.65;">${line}</p>`)
+    .join("");
+
+  const signature = (data.signatureLines || [])
+    .map((line) => `<p style="margin: 0 0 6px 0; color: #374151; font-size: 16px; line-height: 1.5;">${line}</p>`)
+    .join("");
+
+  const footer = data.footerLines
+    .map((line) => `<p style="margin: 0 0 4px 0; color: #6b7280; font-size: 12px;">${line}</p>`)
+    .join("");
+
+  return `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${data.title}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
+  <div style="display:none; font-size:1px; color:#f5f5f5; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;">${data.preheader}</div>
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 30px 12px;">
+        <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);">
+          <tr>
+            <td style="background-color: ${headerColor}; padding: 26px 24px; text-align: center; border-radius: 8px 8px 0 0;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">${data.brandName}</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 30px;">
+              <h2 style="margin: 0 0 18px 0; color: ${headerColor}; font-size: 24px;">${data.title}</h2>
+              ${intro}
+              ${(data.sections || []).map((section) => renderRestaurantSection(section, headerColor)).join("")}
+              ${data.ctaLabel && data.ctaUrl ? `
+                <table role="presentation" style="border-collapse: collapse; margin: 26px auto 20px auto;">
+                  <tr>
+                    <td style="border-radius: 6px; background-color: ${headerColor}; text-align: center;">
+                      <a href="${data.ctaUrl}" style="display: inline-block; padding: 12px 22px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px;">${data.ctaLabel}</a>
+                    </td>
+                  </tr>
+                </table>
+              ` : ""}
+              ${data.contactEmail || data.contactPhone ? `<p style="margin: 0 0 20px 0; color: #6b7280; font-size: 14px;">Une question ? Contactez-nous : ${data.contactEmail || ""}${data.contactEmail && data.contactPhone ? " / " : ""}${data.contactPhone || ""}</p>` : ""}
+              ${signature}
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f8f9fa; border-top: 1px solid #e5e7eb; padding: 18px 24px; text-align: center; border-radius: 0 0 8px 8px;">
+              ${footer}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+function renderRestaurantEmailText(data: {
+  preheader: string;
+  title: string;
+  introText?: string[];
+  sections: RestaurantEmailSection[];
+  ctaLabel?: string;
+  ctaUrl?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  signatureLines?: string[];
+  footerLines: string[];
+}): string {
+  const sections = data.sections
+    .map((section) => {
+      const lines: string[] = [];
+      if (section.title) lines.push(section.title);
+      (section.text || []).forEach((line) => lines.push(line));
+      (section.items || []).forEach((item) => lines.push(`- ${item.label}: ${item.value}`));
+      return lines.join("\n");
+    })
+    .join("\n\n");
+
+  const chunks = [
+    data.preheader,
+    "",
+    data.title,
+    "",
+    ...(data.introText || []),
+    "",
+    sections,
+    data.ctaLabel && data.ctaUrl ? `${data.ctaLabel}: ${data.ctaUrl}` : "",
+    data.contactEmail || data.contactPhone
+      ? `Une question ? Contactez-nous: ${data.contactEmail || ""}${data.contactEmail && data.contactPhone ? " / " : ""}${data.contactPhone || ""}`
+      : "",
+    "",
+    ...(data.signatureLines || []),
+    "",
+    ...data.footerLines,
+  ];
+
+  return chunks.filter(Boolean).join("\n").trim();
+}
+
+interface RestaurantReservationEmailData {
+  firstName: string;
+  reference: string;
+  reservationDateLong: string;
+  reservationTime?: string;
+  partySize: number;
+  partySizeConfirmed?: number;
+  depositPercent?: number;
+  depositAmount?: number;
+  estimatedTotal?: number;
+  ribUrl?: string;
+  brandName?: string;
+  headerColor?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  addressLines?: string[];
+}
+
+function normalizeRestaurantBranding(data: RestaurantReservationEmailData): RestaurantEmailBranding {
+  const addressLines = data.addressLines?.length
+    ? data.addressLines
+    : RESTAURANT_DEFAULT_BRANDING.addressLines;
+
+  return {
+    ...RESTAURANT_DEFAULT_BRANDING,
+    brandName: data.brandName || RESTAURANT_DEFAULT_BRANDING.brandName,
+    headerColor: data.headerColor || RESTAURANT_DEFAULT_BRANDING.headerColor,
+    ribUrl: data.ribUrl || RESTAURANT_DEFAULT_BRANDING.ribUrl,
+    contactEmail: data.contactEmail || RESTAURANT_DEFAULT_BRANDING.contactEmail,
+    contactPhone: data.contactPhone || RESTAURANT_DEFAULT_BRANDING.contactPhone,
+    addressLines,
+    footerLines: [
+      data.brandName || RESTAURANT_DEFAULT_BRANDING.brandName,
+      ...addressLines,
+      `Tél: ${data.contactPhone || RESTAURANT_DEFAULT_BRANDING.contactPhone} | ${data.contactEmail || RESTAURANT_DEFAULT_BRANDING.contactEmail}`,
+    ],
+  };
+}
+
+export function generateRestaurantReservationDepositRequiredEmail(data: RestaurantReservationEmailData): { subject: string; html: string; text: string } {
+  const branding = normalizeRestaurantBranding(data);
+  const depositPercent = data.depositPercent ?? 50;
+  const sections: RestaurantEmailSection[] = [
+    {
+      title: "Détails de la réservation",
+      kind: "info",
+      items: [
+        { label: "Date", value: data.reservationDateLong },
+        ...(data.reservationTime ? [{ label: "Heure", value: data.reservationTime }] : []),
+        { label: "Nombre estimé", value: String(data.partySize) },
+        { label: "Référence", value: data.reference },
+      ],
+    },
+    {
+      title: "Confirmation & acompte",
+      kind: "callout",
+      text: [
+        `Pour confirmer votre réservation à ${branding.brandName}, merci de verser un acompte de ${depositPercent}% à l’avance.`,
+      ],
+      items: [
+        ...(typeof data.depositAmount === "number" ? [{ label: "Montant de l’acompte", value: `${data.depositAmount} MAD` }] : []),
+        ...(typeof data.estimatedTotal === "number" ? [{ label: "Montant total estimé", value: `${data.estimatedTotal} MAD` }] : []),
+      ],
+    },
+  ];
+
+  const layout: RestaurantEmailLayoutData = {
+    preheader: "Votre demande est bien enregistrée. Acompte requis pour confirmation.",
+    brandName: branding.brandName,
+    headerColor: branding.headerColor,
+    title: "Demande enregistrée / Acompte requis",
+    introText: [
+      `Bonjour ${data.firstName},`,
+      "Votre demande de réservation groupe a bien été enregistrée.",
+    ],
+    sections,
+    ctaLabel: "Télécharger le RIB",
+    ctaUrl: branding.ribUrl,
+    contactEmail: branding.contactEmail,
+    contactPhone: branding.contactPhone,
+    signatureLines: [
+      "Merci pour votre soutien à notre restaurant solidaire 💚",
+      "À très bientôt,",
+      `L’équipe de ${branding.brandName}`,
+    ],
+    footerLines: branding.footerLines,
+  };
+
+  return {
+    subject: `Demande de réservation enregistrée — ${branding.brandName} (Réf. ${data.reference})`,
+    html: renderRestaurantEmailLayout(layout),
+    text: renderRestaurantEmailText(layout),
+  };
+}
+
+export function generateRestaurantReservationConfirmedEmail(data: RestaurantReservationEmailData): { subject: string; html: string; text: string } {
+  const branding = normalizeRestaurantBranding(data);
+  const confirmedSize = data.partySizeConfirmed ?? data.partySize;
+
+  const layout: RestaurantEmailLayoutData = {
+    preheader:
+      "Votre réservation est confirmée. Voici les informations et la politique d’annulation.",
+    brandName: branding.brandName,
+    headerColor: branding.headerColor,
+    title: "Réservation confirmée",
+    introText: [
+      `Bonjour ${data.firstName},`,
+      `Votre réservation à ${branding.brandName} est confirmée. Nous sommes heureux de vous accueillir prochainement.`,
+    ],
+    sections: [
+      {
+        title: "Récapitulatif",
+        kind: "info",
+        items: [
+          { label: "Date", value: data.reservationDateLong },
+          ...(data.reservationTime ? [{ label: "Heure", value: data.reservationTime }] : []),
+          { label: "Nombre de personnes", value: String(confirmedSize) },
+          { label: "Référence", value: data.reference },
+          { label: "Statut", value: "Confirmée" },
+        ],
+      },
+      {
+        title: "Politique d’annulation",
+        kind: "warning",
+        text: [
+          "Annulation à moins de 72h : acompte de 50% conservé.",
+          "Le nombre de personnes confirmé sera facturé en totalité, même en cas d’absence ou de modification le jour même.",
+        ],
+      },
+    ],
+    signatureLines: [
+      "Merci pour votre confiance.",
+      "Cordialement,",
+      `L’équipe de ${branding.brandName}`,
+    ],
+    footerLines: branding.footerLines,
+  };
+
+  return {
+    subject: `Réservation confirmée — ${branding.brandName} (Réf. ${data.reference})`,
+    html: renderRestaurantEmailLayout(layout),
+    text: renderRestaurantEmailText(layout),
+  };
+}
+
+export function formatReservationDateLong(dateIso: string): string {
+  return toFrenchLongDate(dateIso);
+}
 
 // ============================================
 // EMAILS POUR RÉSERVATIONS RESTAURANT
