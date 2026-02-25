@@ -406,7 +406,13 @@ export const restaurantReservationsRouter = router({
     }),
 
   refuse: protectedProcedure
-    .input(z.object({ reference: z.string() }))
+    .input(
+      z.object({
+        reference: z.string(),
+        rejectionReason: z.string().optional(),
+        rescheduleUrl: z.string().url().optional(),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
       if (!allowedRoles.includes(ctx.user?.role || "")) {
@@ -687,6 +693,15 @@ export const restaurantReservationsRouter = router({
       }
 
       try {
+        const existingReservation =
+          await reservationServices.getRestaurantReservationById(input.id);
+        if (!existingReservation) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Réservation non trouvée",
+          });
+        }
+
         const updated =
           await reservationServices.updateRestaurantReservationStatus(
             input.id,
@@ -696,6 +711,38 @@ export const restaurantReservationsRouter = router({
         // Activate QR when confirmed
         if (input.status === "paid_confirmed") {
           await reservationServices.activateQrCode(input.id);
+        }
+
+        if (input.status === "refused") {
+          const rejectedEmail = generateRestaurantReservationRejectedEmail({
+            firstName: existingReservation.name,
+            brandName: "La Table du Jardin",
+            reference: existingReservation.reference,
+            reservationDateLong: (existingReservation.date || new Date()).toLocaleDateString(
+              "fr-FR",
+              {
+                weekday: "long",
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              },
+            ),
+            partySize: existingReservation.seatsTotal,
+            contactEmail: "contact@ftourbabrayan.ma",
+            contactPhone: "+212 (0) 666-690534",
+            footerLines: [
+              "Association Bab Rayan",
+              "4 rue Bayt Lahm, quartier Palmier, Casablanca",
+              "Tél: +212 (0) 666-690534 | contact@ftourbabrayan.ma",
+            ],
+          });
+
+          await sendEmail({
+            to: existingReservation.email,
+            subject: rejectedEmail.subject,
+            html: rejectedEmail.html,
+            text: rejectedEmail.text,
+          });
         }
 
         return { success: true, reservation: updated };

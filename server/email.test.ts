@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { verifyResendApiKey, generateVolunteerConfirmationEmail, generateOrderConfirmationEmail, generateDonationConfirmationEmail, sendEmail } from "./email";
+import { verifyResendApiKey, generateVolunteerConfirmationEmail, generateOrderConfirmationEmail, generateDonationConfirmationEmail, generateRestaurantReservationRejectedEmail, sendEmail } from "./email";
 
 describe("Resend API Key Validation", () => {
   it("should have a valid Resend API key configured", async () => {
@@ -122,4 +122,45 @@ describe("Email Templates", () => {
     expect(email.html).toContain("Don sur place");
     expect(email.html).not.toContain("RIB");
   });
+
+  it("generates restaurant rejected email with reason and reschedule URL", () => {
+    const email = generateRestaurantReservationRejectedEmail({
+      firstName: "Nadia",
+      brandName: "La Table du Jardin",
+      reference: "RES-P-ABCDE1",
+      reservationDateLong: "mardi 18 mars 2026",
+      reservationTime: "20:00",
+      partySize: 5,
+      rejectionReason: "capacité atteinte",
+      rescheduleUrl: "https://ftourbabrayan.ma/restaurant/reservation",
+      contactEmail: "contact@ftourbabrayan.ma",
+      contactPhone: "+212 (0) 666-690534",
+    });
+
+    expect(email.subject).toContain("Réservation non disponible — La Table du Jardin (Réf. RES-P-ABCDE1)");
+    expect(email.html).toContain("#556B2F");
+    expect(email.html).toContain("Pourquoi ?");
+    expect(email.html).toContain("capacité atteinte");
+    expect(email.html).toContain("Choisir un autre créneau");
+    expect(email.html).toContain("20:00");
+    expect(email.text).toContain("Choisir un autre créneau : https://ftourbabrayan.ma/restaurant/reservation");
+  });
+
+  it("generates restaurant rejected email without optional fields", () => {
+    const email = generateRestaurantReservationRejectedEmail({
+      firstName: "Nadia",
+      reservationDateLong: "mardi 18 mars 2026",
+      partySize: 3,
+      contactEmail: "contact@ftourbabrayan.ma",
+      contactPhone: "+212 (0) 666-690534",
+    });
+
+    expect(email.subject).toBe("Réservation non disponible — La Table du Jardin");
+    expect(email.html).not.toContain("Pourquoi ?");
+    expect(email.html).not.toContain("Choisir un autre créneau");
+    expect(email.html).not.toContain("<strong>Heure :</strong>");
+    expect(email.html).not.toContain("<strong>Référence :</strong>");
+    expect(email.text).not.toContain("Choisir un autre créneau :");
+  });
+
 });

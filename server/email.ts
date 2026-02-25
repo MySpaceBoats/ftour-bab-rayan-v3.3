@@ -127,6 +127,15 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
   }
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 /**
  * Vérifie que la clé API Resend est valide
  * Note: Les clés restreintes (send-only) ne peuvent pas accéder à /domains
@@ -1396,6 +1405,141 @@ export function generateParticulierReservationRefusedEmail(data: ParticulierRese
   return {
     subject: `❌ Demande de réservation - Créneau indisponible`,
     html: baseTemplate(content),
+  };
+}
+
+export interface RestaurantReservationRejectedEmailData {
+  firstName: string;
+  brandName?: string;
+  reference?: string;
+  reservationDateLong: string;
+  reservationTime?: string;
+  partySize: number;
+  rejectionReason?: string;
+  rescheduleUrl?: string;
+  contactEmail: string;
+  contactPhone: string;
+  footerLines?: string[];
+}
+
+export function generateRestaurantReservationRejectedEmail(
+  data: RestaurantReservationRejectedEmailData,
+): { subject: string; html: string; text: string } {
+  const brandName = data.brandName || "La Table du Jardin";
+  const subject = data.reference
+    ? `Réservation non disponible — ${brandName} (Réf. ${data.reference})`
+    : `Réservation non disponible — ${brandName}`;
+
+  const reasonHtml = data.rejectionReason
+    ? `
+      <table role="presentation" style="width:100%;border-collapse:collapse;background-color:#fff7ed;border:1px solid #fed7aa;border-radius:8px;margin:18px 0;">
+        <tr>
+          <td style="padding:18px;">
+            <h3 style="margin:0 0 8px 0;color:#7c2d12;font-size:17px;">Pourquoi ?</h3>
+            <p style="margin:0;color:#374151;font-size:15px;line-height:1.5;">${escapeHtml(data.rejectionReason)}</p>
+          </td>
+        </tr>
+      </table>
+    `
+    : "";
+
+  const actionButtonHtml = data.rescheduleUrl
+    ? `
+      <table role="presentation" style="width:100%;border-collapse:collapse;margin:20px 0;">
+        <tr>
+          <td align="center">
+            <a href="${data.rescheduleUrl}" style="display:inline-block;background-color:#556B2F;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:12px 22px;border-radius:6px;">Choisir un autre créneau</a>
+          </td>
+        </tr>
+      </table>
+    `
+    : "";
+
+  const content = `
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">Nous n’avons pas pu confirmer votre réservation pour ce créneau.</div>
+    <h2 style="color:#5d5a3c;margin:0 0 18px 0;font-size:24px;">Réservation non disponible</h2>
+    <p style="margin:0 0 16px 0;color:#374151;font-size:16px;line-height:1.6;">Bonjour <strong>${escapeHtml(data.firstName)}</strong>,</p>
+    <p style="margin:0 0 16px 0;color:#374151;font-size:16px;line-height:1.6;">
+      Merci pour votre demande de réservation à <strong>${escapeHtml(brandName)}</strong>.<br>
+      Malheureusement, nous ne pouvons pas confirmer votre réservation pour le créneau demandé.
+    </p>
+
+    <table role="presentation" style="width:100%;border-collapse:collapse;background-color:#f5f5f0;border-radius:8px;margin:20px 0;">
+      <tr>
+        <td style="padding:20px;">
+          <h3 style="margin:0 0 12px 0;color:#5d5a3c;font-size:18px;">📋 Votre demande</h3>
+          <p style="margin:5px 0;color:#374151;"><strong>Date :</strong> ${escapeHtml(data.reservationDateLong)}</p>
+          ${data.reservationTime ? `<p style="margin:5px 0;color:#374151;"><strong>Heure :</strong> ${escapeHtml(data.reservationTime)}</p>` : ""}
+          <p style="margin:5px 0;color:#374151;"><strong>Nombre de personnes :</strong> ${data.partySize}</p>
+          ${data.reference ? `<p style="margin:5px 0;color:#374151;"><strong>Référence :</strong> ${escapeHtml(data.reference)}</p>` : ""}
+          <p style="margin:5px 0;color:#374151;"><strong>Statut :</strong> Non disponible</p>
+        </td>
+      </tr>
+    </table>
+
+    ${reasonHtml}
+
+    <table role="presentation" style="width:100%;border-collapse:collapse;background-color:#f0f4e8;border:1px solid #d5ddc8;border-radius:8px;margin:18px 0;">
+      <tr>
+        <td style="padding:18px;">
+          <h3 style="margin:0 0 8px 0;color:#3f5320;font-size:17px;">Solutions proposées</h3>
+          <p style="margin:0;color:#374151;font-size:15px;line-height:1.6;">
+            Si vous le souhaitez, vous pouvez :<br>
+            • choisir une autre date/créneau,<br>
+            • ajuster le nombre de personnes,<br>
+            • ou nous contacter pour une proposition alternative.
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    ${actionButtonHtml}
+
+    <p style="margin:16px 0 0 0;color:#374151;font-size:15px;line-height:1.6;">Contact : ${escapeHtml(data.contactEmail)} · ${escapeHtml(data.contactPhone)}</p>
+    <p style="margin:16px 0 0 0;color:#374151;font-size:16px;line-height:1.6;">Merci pour votre compréhension,<br><strong>L’équipe de ${escapeHtml(brandName)}</strong></p>
+  `;
+
+  const footerText = (data.footerLines && data.footerLines.length > 0)
+    ? data.footerLines.join("\n")
+    : "Association Bab Rayan\n4 rue Bayt Lahm, quartier Palmier, Casablanca\nTél: +212 (0) 666-690534 | contact@ftourbabrayan.ma";
+
+  const text = [
+    "Nous n’avons pas pu confirmer votre réservation pour ce créneau.",
+    "",
+    `Bonjour ${data.firstName},`,
+    `Merci pour votre demande de réservation à ${brandName}.`,
+    "Malheureusement, nous ne pouvons pas confirmer votre réservation pour le créneau demandé.",
+    "",
+    "Votre demande",
+    `- Date : ${data.reservationDateLong}`,
+    ...(data.reservationTime ? [`- Heure : ${data.reservationTime}`] : []),
+    `- Nombre de personnes : ${data.partySize}`,
+    ...(data.reference ? [`- Référence : ${data.reference}`] : []),
+    "- Statut : Non disponible",
+    "",
+    ...(data.rejectionReason ? ["Pourquoi ?", `${data.rejectionReason}`, ""] : []),
+    "Solutions proposées",
+    "Si vous le souhaitez, vous pouvez :",
+    "- choisir une autre date/créneau,",
+    "- ajuster le nombre de personnes,",
+    "- ou nous contacter pour une proposition alternative.",
+    "",
+    ...(data.rescheduleUrl ? [`Choisir un autre créneau : ${data.rescheduleUrl}`, ""] : []),
+    `Contact : ${data.contactEmail} · ${data.contactPhone}`,
+    "",
+    "Merci pour votre compréhension,",
+    `L’équipe de ${brandName}`,
+    "",
+    footerText,
+  ].join("\n");
+
+  return {
+    subject,
+    html: baseTemplate(content).replace(
+      "linear-gradient(135deg, #166534 0%, #15803d 100%)",
+      "#556B2F",
+    ),
+    text,
   };
 }
 
