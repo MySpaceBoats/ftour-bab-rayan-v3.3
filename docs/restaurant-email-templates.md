@@ -37,3 +37,16 @@ Fichiers générés:
 
 - **Création de demande** (`particulier.create`, `groupe.create`, `entreprise.create`) → email **Demande enregistrée / Acompte requis**.
 - **Passage au statut `paid_confirmed`** (`adminUpdateStatus`) → email **Réservation confirmée**.
+## Variables acompte (Email #1)
+
+Le template `generateRestaurantReservationDepositRequiredEmail` expose désormais:
+
+- `depositPercent`
+- `depositAmount`
+- `estimatedTotal`
+- `depositDeadlineFormatted` (date limite de paiement formatée côté backend, timezone `Africa/Casablanca`)
+
+Texte ajouté dans la version HTML et TXT:
+
+- délai de 48h pour verser l'acompte
+- annulation automatique en absence de versement

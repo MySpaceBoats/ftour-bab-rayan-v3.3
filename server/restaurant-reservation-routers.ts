@@ -8,6 +8,9 @@ import {
   generateRestaurantReservationDepositRequiredEmail,
   generateRestaurantReservationConfirmedEmail,
   formatReservationDateLong,
+  generateRestaurantReservationAutoCancelledEmail,
+  formatReservationDateLong,
+  formatCasablancaDateTimeLong,
 } from "./email";
 import * as reservationServices from "./restaurant-reservation-services";
 import crypto from "crypto";
@@ -27,6 +30,41 @@ function generateReservationReference(
 
 function generateQrToken(): string {
   return crypto.randomBytes(16).toString("hex");
+}
+
+
+async function runAutoCancellationAndNotify() {
+  const cancelledReservations = await reservationServices.autoCancelExpiredPendingDeposits();
+
+  for (const reservation of cancelledReservations) {
+    try {
+      const reservationDateIso = reservation.date
+        ? reservation.date.toISOString().split("T")[0]
+        : "";
+      const cancellationEmail = generateRestaurantReservationAutoCancelledEmail({
+        firstName: reservation.name,
+        reference: reservation.reference,
+        reservationDateLong: formatReservationDateLong(reservationDateIso),
+        partySize: reservation.seatsTotal,
+        depositDeadlineFormatted: reservation.depositDeadline
+          ? formatCasablancaDateTimeLong(reservation.depositDeadline.toISOString())
+          : undefined,
+      });
+
+      await sendEmail({
+        to: reservation.email,
+        subject: cancellationEmail.subject,
+        html: cancellationEmail.html,
+        text: cancellationEmail.text,
+      });
+    } catch (error) {
+      console.error("[runAutoCancellationAndNotify] Unable to send cancellation email", {
+        reservationId: reservation.id,
+        reference: reservation.reference,
+        error,
+      });
+    }
+  }
 }
 
 // ============================================
@@ -69,6 +107,9 @@ export const restaurantReservationsRouter = router({
             reference,
             reservationDateLong: formatReservationDateLong(input.date),
             partySize: input.participantsCount,
+            depositDeadlineFormatted: reservation.depositDeadline
+              ? formatCasablancaDateTimeLong(reservation.depositDeadline.toISOString())
+              : undefined,
           });
 
           await sendEmail({
@@ -176,6 +217,9 @@ export const restaurantReservationsRouter = router({
             reference,
             reservationDateLong: formatReservationDateLong(input.date),
             partySize: input.participantsCount,
+            depositDeadlineFormatted: reservation.depositDeadline
+              ? formatCasablancaDateTimeLong(reservation.depositDeadline.toISOString())
+              : undefined,
           });
 
           const customerEmailResult = await sendEmail({
@@ -286,6 +330,9 @@ export const restaurantReservationsRouter = router({
             reference,
             reservationDateLong: formatReservationDateLong(input.date),
             partySize: input.participantsCount,
+            depositDeadlineFormatted: reservation.depositDeadline
+              ? formatCasablancaDateTimeLong(reservation.depositDeadline.toISOString())
+              : undefined,
           });
 
           await sendEmail({
@@ -373,6 +420,24 @@ export const restaurantReservationsRouter = router({
           "pending_payment"
         );
 
+        const reservationDateIso = reservation.date
+          ? reservation.date.toISOString().split("T")[0]
+          : "";
+        const confirmedEmail = generateRestaurantReservationConfirmedEmail({
+          firstName: reservation.name,
+          reference: reservation.reference,
+          reservationDateLong: formatReservationDateLong(reservationDateIso),
+          partySize: reservation.seatsTotal,
+          partySizeConfirmed: reservation.seatsTotal,
+        });
+
+        await sendEmail({
+          to: reservation.email,
+          subject: confirmedEmail.subject,
+          html: confirmedEmail.html,
+          text: confirmedEmail.text,
+        });
+
         return {
           success: true,
           message:
@@ -388,7 +453,13 @@ export const restaurantReservationsRouter = router({
     }),
 
   refuse: protectedProcedure
-    .input(z.object({ reference: z.string() }))
+    .input(
+      z.object({
+        reference: z.string(),
+        rejectionReason: z.string().optional(),
+        rescheduleUrl: z.string().url().optional(),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
       if (!allowedRoles.includes(ctx.user?.role || "")) {
@@ -473,6 +544,7 @@ export const restaurantReservationsRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
     }
     try {
+      await runAutoCancellationAndNotify();
       return await reservationServices.listRestaurantReservations({
         type: "particulier",
       });
@@ -494,6 +566,7 @@ export const restaurantReservationsRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
     }
     try {
+      await runAutoCancellationAndNotify();
       return await reservationServices.listRestaurantReservations({
         type: "groupe",
       });
@@ -515,6 +588,7 @@ export const restaurantReservationsRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
     }
     try {
+      await runAutoCancellationAndNotify();
       return await reservationServices.listRestaurantReservations({
         type: "entreprise",
       });
@@ -654,6 +728,7 @@ export const restaurantReservationsRouter = router({
           "paid_confirmed",
           "refused",
           "cancelled",
+          "cancelled_auto",
           "completed",
           "no_show",
         ]),
@@ -671,6 +746,14 @@ export const restaurantReservationsRouter = router({
       try {
         const beforeUpdate =
           await reservationServices.getRestaurantReservationById(input.id);
+        const existingReservation =
+          await reservationServices.getRestaurantReservationById(input.id);
+        if (!existingReservation) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Réservation non trouvée",
+          });
+        }
 
         const updated =
           await reservationServices.updateRestaurantReservationStatus(
@@ -706,6 +789,38 @@ export const restaurantReservationsRouter = router({
               text: confirmedEmail.text,
             });
           }
+        }
+
+        if (input.status === "refused") {
+          const rejectedEmail = generateRestaurantReservationRejectedEmail({
+            firstName: existingReservation.name,
+            brandName: "La Table du Jardin",
+            reference: existingReservation.reference,
+            reservationDateLong: (existingReservation.date || new Date()).toLocaleDateString(
+              "fr-FR",
+              {
+                weekday: "long",
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              },
+            ),
+            partySize: existingReservation.seatsTotal,
+            contactEmail: "contact@ftourbabrayan.ma",
+            contactPhone: "+212 (0) 666-690534",
+            footerLines: [
+              "Association Bab Rayan",
+              "4 rue Bayt Lahm, quartier Palmier, Casablanca",
+              "Tél: +212 (0) 666-690534 | contact@ftourbabrayan.ma",
+            ],
+          });
+
+          await sendEmail({
+            to: existingReservation.email,
+            subject: rejectedEmail.subject,
+            html: rejectedEmail.html,
+            text: rejectedEmail.text,
+          });
         }
 
         return { success: true, reservation: updated };
