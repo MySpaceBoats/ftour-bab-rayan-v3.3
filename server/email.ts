@@ -870,6 +870,7 @@ export function generateRestaurantReservationDepositRequiredEmail(data: Restaura
       title: "Confirmation & acompte",
       kind: "callout",
       text: [
+        `Pour confirmer votre réservation à ${branding.brandName}, merci de verser un acompte de ${depositPercent}% à l’avance.`,
         `Pour confirmer votre réservation à ${branding.brandName}, un acompte de ${depositPercent}% est requis.`,
         "⏳ Vous disposez de 48 heures à compter de la réception de cet email pour effectuer le versement.",
         "Passé ce délai, et sans réception de l’acompte, votre réservation sera automatiquement annulée.",

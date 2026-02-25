@@ -7,6 +7,7 @@ import {
   generateNewBookingNotificationEmail,
   generateRestaurantReservationDepositRequiredEmail,
   generateRestaurantReservationConfirmedEmail,
+  formatReservationDateLong,
   generateRestaurantReservationAutoCancelledEmail,
   formatReservationDateLong,
   formatCasablancaDateTimeLong,
@@ -440,7 +441,7 @@ export const restaurantReservationsRouter = router({
         return {
           success: true,
           message:
-            "Réservation validée. Email de confirmation avec QR code envoyé.",
+            "Réservation validée et marquée en attente de paiement.",
         };
       } catch (error) {
         console.error("[Validate Reservation] Error:", error);
@@ -743,6 +744,8 @@ export const restaurantReservationsRouter = router({
       }
 
       try {
+        const beforeUpdate =
+          await reservationServices.getRestaurantReservationById(input.id);
         const existingReservation =
           await reservationServices.getRestaurantReservationById(input.id);
         if (!existingReservation) {
@@ -761,6 +764,31 @@ export const restaurantReservationsRouter = router({
         // Activate QR when confirmed
         if (input.status === "paid_confirmed") {
           await reservationServices.activateQrCode(input.id);
+
+          if (
+            updated &&
+            updated.email &&
+            beforeUpdate?.status !== "paid_confirmed"
+          ) {
+            const reservationDateIso = updated.date
+              ? updated.date.toISOString().split("T")[0]
+              : "";
+            const confirmedEmail = generateRestaurantReservationConfirmedEmail({
+              firstName: updated.name,
+              reference: updated.reference,
+              reservationDateLong: formatReservationDateLong(reservationDateIso),
+              partySize: updated.seatsTotal,
+              partySizeConfirmed: updated.seatsTotal,
+              depositPercent: updated.depositPercentage || 50,
+            });
+
+            await sendEmail({
+              to: updated.email,
+              subject: confirmedEmail.subject,
+              html: confirmedEmail.html,
+              text: confirmedEmail.text,
+            });
+          }
         }
 
         if (input.status === "refused") {

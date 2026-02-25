@@ -33,6 +33,10 @@ Fichiers générés:
 - `tmp/email-previews/reservation-confirmed.txt`
 
 
+## Déclencheurs workflow
+
+- **Création de demande** (`particulier.create`, `groupe.create`, `entreprise.create`) → email **Demande enregistrée / Acompte requis**.
+- **Passage au statut `paid_confirmed`** (`adminUpdateStatus`) → email **Réservation confirmée**.
 ## Variables acompte (Email #1)
 
 Le template `generateRestaurantReservationDepositRequiredEmail` expose désormais:
