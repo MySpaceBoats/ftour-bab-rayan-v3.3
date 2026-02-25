@@ -37,6 +37,10 @@ type ParsedGroupVolunteerRow = {
   city?: string;
 };
 
+type GroupVolunteerForEmail = ParsedGroupVolunteerRow & {
+  qrToken?: string;
+};
+
 const normalizeSpreadsheetValue = (value: unknown): string =>
   String(value ?? "")
     .toLowerCase()
@@ -278,6 +282,78 @@ const runWithConcurrencyLimit = async <T>(
 
   await Promise.all(workers);
   return results;
+};
+
+const sendGroupVolunteerConfirmationEmails = async ({
+  volunteers,
+  day,
+  volunteerSlots,
+}: {
+  volunteers: GroupVolunteerForEmail[];
+  day: { dayNumber: number; date: string; location?: string | null; iftarTime?: string | null };
+  volunteerSlots: Array<"preparation_ftour" | "service_ftour">;
+}) => {
+  if (volunteers.length === 0) {
+    return {
+      sent: 0,
+      failed: 0,
+      details: [] as { email: string; success: boolean; error?: string }[],
+    };
+  }
+
+  const baseUrl =
+    process.env.NODE_ENV === "production"
+      ? "https://ftourbabrayan.ma"
+      : "http://localhost:3000";
+
+  const emailTasks = volunteers.map(volunteer => async () => {
+    if (!volunteer.qrToken) {
+      return {
+        email: volunteer.email,
+        success: false,
+        error: "QR token introuvable",
+      };
+    }
+
+    const emailData = generateVolunteerConfirmationEmail({
+      firstName: volunteer.firstName,
+      lastName: volunteer.lastName,
+      email: volunteer.email,
+      dayNumber: day.dayNumber,
+      dayDate: new Date(day.date).toLocaleDateString("fr-FR", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+      }),
+      location: day.location || "Association Bab Rayan, Casablanca",
+      startTime: day.iftarTime || "18h00",
+      volunteerSlots,
+      qrToken: volunteer.qrToken,
+      baseUrl,
+    });
+
+    const emailResult = await sendEmail({
+      to: volunteer.email,
+      subject: emailData.subject,
+      html: emailData.html,
+    });
+
+    if (emailResult.success) {
+      return { email: volunteer.email, success: true };
+    }
+
+    return {
+      email: volunteer.email,
+      success: false,
+      error: emailResult.error || "Envoi email échoué",
+    };
+  });
+
+  const details = await runWithConcurrencyLimit(emailTasks, 3);
+  const sent = details.filter(result => result.success).length;
+  const failed = details.length - sent;
+
+  return { sent, failed, details };
 };
 
 const volunteerNoShowBlockingMessage =
@@ -1176,6 +1252,7 @@ const volunteersRouter = router({
 
       let importedCount = 0;
       let skippedCount = 0;
+      const createdVolunteersForEmail: GroupVolunteerForEmail[] = [];
 
       try {
         const parsedRows = parseGroupVolunteersFromSpreadsheet(
@@ -1239,6 +1316,17 @@ const volunteersRouter = router({
               }))
             );
 
+          for (const volunteer of created) {
+            createdVolunteersForEmail.push({
+              firstName: volunteer.firstName,
+              lastName: volunteer.lastName,
+              email: volunteer.email,
+              phone: volunteer.phone,
+              city: volunteer.city,
+              qrToken: volunteer.qrToken,
+            });
+          }
+
           importedCount += created.length;
           skippedCount += Math.max(0, rowsChunk.length - created.length);
         }
@@ -1252,6 +1340,25 @@ const volunteersRouter = router({
           message:
             "Le fichier a bien été reçu, mais son import a échoué. Vérifiez son format (.xlsx/.xls/.csv).",
         });
+      }
+
+      if (createdVolunteersForEmail.length > 0 && day) {
+        try {
+          const emailSummary = await sendGroupVolunteerConfirmationEmails({
+            volunteers: createdVolunteersForEmail,
+            day,
+            volunteerSlots: input.volunteerSlots,
+          });
+
+          console.log(
+            `[Group Registration] Confirmation emails: ${emailSummary.sent} sent, ${emailSummary.failed} failed`
+          );
+        } catch (error) {
+          console.error(
+            "[Group Registration] Error while sending confirmation emails:",
+            error
+          );
+        }
       }
 
       return { success: true, importedCount, skippedCount };
@@ -1295,11 +1402,6 @@ const volunteersRouter = router({
             "Colonnes requises introuvables (Nom/Prénom, Email) ou aucune ligne valide dans le fichier.",
         });
       }
-
-      const baseUrl =
-        process.env.NODE_ENV === "production"
-          ? "https://ftourbabrayan.ma"
-          : "http://localhost:3000";
 
       const results: { email: string; success: boolean; error?: string }[] = [];
       const normalizedRows = parsedRows.map(row => ({
@@ -1349,7 +1451,7 @@ const volunteersRouter = router({
         uniqueRows.push(row);
       }
 
-      const createdRows: Array<(typeof uniqueRows)[number]> = [];
+      const createdVolunteersForEmail: GroupVolunteerForEmail[] = [];
 
       if (uniqueRows.length > 0) {
         const insertChunks = chunkArray(uniqueRows, 200);
@@ -1388,7 +1490,14 @@ const volunteersRouter = router({
                 continue;
               }
 
-              createdRows.push(row);
+              createdVolunteersForEmail.push({
+                firstName: row.firstName,
+                lastName: row.lastName,
+                email: row.email,
+                phone: row.phone,
+                city: row.city,
+                qrToken: volunteer.qrToken,
+              });
             }
           } catch (error) {
             const errMsg =
@@ -1401,56 +1510,20 @@ const volunteersRouter = router({
         }
       }
 
-      const emailTasks = createdRows.map(row => async () => {
-        const volunteer = await supabaseServices.getVolunteerByEmailForDay(
-          row.email,
-          input.dayId
-        );
-
-        if (!volunteer?.qrToken) {
-          return {
-            email: row.email,
-            success: true,
-            error: "Inscrit mais QR introuvable pour l'envoi de confirmation",
-          };
-        }
-
-        const emailData = generateVolunteerConfirmationEmail({
-          firstName: row.firstName,
-          lastName: row.lastName,
-          email: row.email,
-          dayNumber: day.dayNumber,
-          dayDate: new Date(day.date).toLocaleDateString("fr-FR", {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-          }),
-          location: day.location || "Association Bab Rayan, Casablanca",
-          startTime: day.iftarTime || "18h00",
+      if (createdVolunteersForEmail.length > 0) {
+        const emailSummary = await sendGroupVolunteerConfirmationEmails({
+          volunteers: createdVolunteersForEmail,
+          day,
           volunteerSlots: input.volunteerSlots,
-          qrToken: volunteer.qrToken,
-          baseUrl,
         });
-
-        const emailResult = await sendEmail({
-          to: row.email,
-          subject: emailData.subject,
-          html: emailData.html,
-        });
-
-        if (emailResult.success) {
-          return { email: row.email, success: true };
-        }
-
-        return {
-          email: row.email,
-          success: true,
-          error: `Inscrit mais email non envoyé: ${emailResult.error}`,
-        };
-      });
-
-      if (emailTasks.length > 0) {
-        const emailResults = await runWithConcurrencyLimit(emailTasks, 8);
+        const emailResults = emailSummary.details.map(result =>
+          result.success
+            ? result
+            : {
+                ...result,
+                error: `Inscrit mais email non envoyé: ${result.error}`,
+              }
+        );
         results.push(...emailResults);
       }
 
