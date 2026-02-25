@@ -810,6 +810,7 @@ interface RestaurantReservationEmailData {
   depositPercent?: number;
   depositAmount?: number;
   estimatedTotal?: number;
+  depositDeadlineFormatted?: string;
   ribUrl?: string;
   brandName?: string;
   headerColor?: string;
@@ -851,17 +852,25 @@ export function generateRestaurantReservationDepositRequiredEmail(data: Restaura
         ...(data.reservationTime ? [{ label: "Heure", value: data.reservationTime }] : []),
         { label: "Nombre estimé", value: String(data.partySize) },
         { label: "Référence", value: data.reference },
+        ...(data.depositDeadlineFormatted
+          ? [{ label: "Date limite de paiement", value: data.depositDeadlineFormatted }]
+          : []),
       ],
     },
     {
       title: "Confirmation & acompte",
       kind: "callout",
       text: [
-        `Pour confirmer votre réservation à ${branding.brandName}, merci de verser un acompte de ${depositPercent}% à l’avance.`,
+        `Pour confirmer votre réservation à ${branding.brandName}, un acompte de ${depositPercent}% est requis.`,
+        "⏳ Vous disposez de 48 heures à compter de la réception de cet email pour effectuer le versement.",
+        "Passé ce délai, et sans réception de l’acompte, votre réservation sera automatiquement annulée.",
       ],
       items: [
         ...(typeof data.depositAmount === "number" ? [{ label: "Montant de l’acompte", value: `${data.depositAmount} MAD` }] : []),
         ...(typeof data.estimatedTotal === "number" ? [{ label: "Montant total estimé", value: `${data.estimatedTotal} MAD` }] : []),
+        ...(data.depositDeadlineFormatted
+          ? [{ label: "Date limite de paiement", value: data.depositDeadlineFormatted }]
+          : []),
       ],
     },
   ];
@@ -945,8 +954,73 @@ export function generateRestaurantReservationConfirmedEmail(data: RestaurantRese
   };
 }
 
+
+export function generateRestaurantReservationAutoCancelledEmail(data: RestaurantReservationEmailData): { subject: string; html: string; text: string } {
+  const branding = normalizeRestaurantBranding(data);
+
+  const layout: RestaurantEmailLayoutData = {
+    preheader: "Votre réservation a été annulée automatiquement faute de versement d’acompte dans les délais.",
+    brandName: branding.brandName,
+    headerColor: branding.headerColor,
+    title: "Réservation annulée automatiquement",
+    introText: [
+      `Bonjour ${data.firstName},`,
+      "Nous n’avons pas reçu l’acompte demandé dans le délai de 48h.",
+    ],
+    sections: [
+      {
+        title: "Détails de la réservation",
+        kind: "info",
+        items: [
+          { label: "Date", value: data.reservationDateLong },
+          ...(data.reservationTime ? [{ label: "Heure", value: data.reservationTime }] : []),
+          { label: "Référence", value: data.reference },
+          ...(data.depositDeadlineFormatted
+            ? [{ label: "Date limite de paiement", value: data.depositDeadlineFormatted }]
+            : []),
+        ],
+      },
+      {
+        title: "Annulation automatique",
+        kind: "warning",
+        text: [
+          "Conformément à nos conditions, la réservation a été annulée automatiquement pour non-paiement de l’acompte dans les 48h.",
+          `Pour toute nouvelle demande, contactez l’équipe de ${branding.brandName}.`,
+        ],
+      },
+    ],
+    contactEmail: branding.contactEmail,
+    contactPhone: branding.contactPhone,
+    signatureLines: [
+      "Merci de votre compréhension.",
+      "Cordialement,",
+      `L’équipe de ${branding.brandName}`,
+    ],
+    footerLines: branding.footerLines,
+  };
+
+  return {
+    subject: `Réservation annulée automatiquement — ${branding.brandName} (Réf. ${data.reference})`,
+    html: renderRestaurantEmailLayout(layout),
+    text: renderRestaurantEmailText(layout),
+  };
+}
+
 export function formatReservationDateLong(dateIso: string): string {
   return toFrenchLongDate(dateIso);
+}
+
+export function formatCasablancaDateTimeLong(dateIso: string): string {
+  const d = new Date(dateIso);
+  if (Number.isNaN(d.getTime())) {
+    return dateIso;
+  }
+
+  return new Intl.DateTimeFormat("fr-MA", {
+    dateStyle: "full",
+    timeStyle: "short",
+    timeZone: "Africa/Casablanca",
+  }).format(d);
 }
 
 // ============================================
