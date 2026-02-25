@@ -5,7 +5,7 @@ import {
   sendEmail,
   generateParticulierReservationRequestEmail,
   generateParticulierReservationConfirmedEmail,
-  generateParticulierReservationRefusedEmail,
+  generateRestaurantReservationRejectedEmail,
   generateNewBookingNotificationEmail,
 } from "./email";
 import * as reservationServices from "./restaurant-reservation-services";
@@ -405,12 +405,16 @@ export const restaurantReservationsRouter = router({
           "pending_payment"
         );
 
+        const reservationDateIso = reservation.date
+          ? reservation.date.toISOString().split("T")[0]
+          : "";
+
         await sendEmail({
           to: reservation.email,
           subject: generateParticulierReservationConfirmedEmail({
             firstName: reservation.name,
             email: reservation.email,
-            date: reservation.date.toISOString().split("T")[0],
+            date: reservationDateIso,
             participantsCount: reservation.seatsTotal,
             reference: reservation.reference,
             qrToken: reservation.qrToken,
@@ -419,7 +423,7 @@ export const restaurantReservationsRouter = router({
           html: generateParticulierReservationConfirmedEmail({
             firstName: reservation.name,
             email: reservation.email,
-            date: reservation.date.toISOString().split("T")[0],
+            date: reservationDateIso,
             participantsCount: reservation.seatsTotal,
             reference: reservation.reference,
             qrToken: reservation.qrToken,
@@ -442,7 +446,13 @@ export const restaurantReservationsRouter = router({
     }),
 
   refuse: protectedProcedure
-    .input(z.object({ reference: z.string() }))
+    .input(
+      z.object({
+        reference: z.string(),
+        rejectionReason: z.string().optional(),
+        rescheduleUrl: z.string().url().optional(),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
       if (!allowedRoles.includes(ctx.user?.role || "")) {
@@ -469,18 +479,33 @@ export const restaurantReservationsRouter = router({
           "refused"
         );
 
+        const rejectedEmail = generateRestaurantReservationRejectedEmail({
+          firstName: reservation.name,
+          brandName: "La Table du Jardin",
+          reference: reservation.reference,
+          reservationDateLong: (reservation.date || new Date()).toLocaleDateString("fr-FR", {
+            weekday: "long",
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+          }),
+          partySize: reservation.seatsTotal,
+          rejectionReason: input.rejectionReason,
+          rescheduleUrl: input.rescheduleUrl,
+          contactEmail: "contact@ftourbabrayan.ma",
+          contactPhone: "+212 (0) 666-690534",
+          footerLines: [
+            "Association Bab Rayan",
+            "4 rue Bayt Lahm, quartier Palmier, Casablanca",
+            "Tél: +212 (0) 666-690534 | contact@ftourbabrayan.ma",
+          ],
+        });
+
         await sendEmail({
           to: reservation.email,
-          subject: generateParticulierReservationRefusedEmail({
-            firstName: reservation.name,
-            email: reservation.email,
-            date: reservation.date.toISOString().split("T")[0],
-          }).subject,
-          html: generateParticulierReservationRefusedEmail({
-            firstName: reservation.name,
-            email: reservation.email,
-            date: reservation.date.toISOString().split("T")[0],
-          }).html,
+          subject: rejectedEmail.subject,
+          html: rejectedEmail.html,
+          text: rejectedEmail.text,
         });
 
         return {
@@ -722,6 +747,15 @@ export const restaurantReservationsRouter = router({
       }
 
       try {
+        const existingReservation =
+          await reservationServices.getRestaurantReservationById(input.id);
+        if (!existingReservation) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Réservation non trouvée",
+          });
+        }
+
         const updated =
           await reservationServices.updateRestaurantReservationStatus(
             input.id,
@@ -731,6 +765,38 @@ export const restaurantReservationsRouter = router({
         // Activate QR when confirmed
         if (input.status === "paid_confirmed") {
           await reservationServices.activateQrCode(input.id);
+        }
+
+        if (input.status === "refused") {
+          const rejectedEmail = generateRestaurantReservationRejectedEmail({
+            firstName: existingReservation.name,
+            brandName: "La Table du Jardin",
+            reference: existingReservation.reference,
+            reservationDateLong: (existingReservation.date || new Date()).toLocaleDateString(
+              "fr-FR",
+              {
+                weekday: "long",
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              },
+            ),
+            partySize: existingReservation.seatsTotal,
+            contactEmail: "contact@ftourbabrayan.ma",
+            contactPhone: "+212 (0) 666-690534",
+            footerLines: [
+              "Association Bab Rayan",
+              "4 rue Bayt Lahm, quartier Palmier, Casablanca",
+              "Tél: +212 (0) 666-690534 | contact@ftourbabrayan.ma",
+            ],
+          });
+
+          await sendEmail({
+            to: existingReservation.email,
+            subject: rejectedEmail.subject,
+            html: rejectedEmail.html,
+            text: rejectedEmail.text,
+          });
         }
 
         return { success: true, reservation: updated };
