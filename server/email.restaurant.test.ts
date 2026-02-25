@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   generateRestaurantReservationDepositRequiredEmail,
   generateRestaurantReservationConfirmedEmail,
+  formatCasablancaDateTimeLong,
 } from "./email";
 
 describe("Restaurant reservation transactional emails", () => {
@@ -15,6 +16,7 @@ describe("Restaurant reservation transactional emails", () => {
       depositPercent: 50,
       depositAmount: 1500,
       estimatedTotal: 3000,
+      depositDeadlineFormatted: "jeudi 27 février 2026 à 18:00",
       ribUrl: "https://example.com/rib.pdf",
     });
 
@@ -24,6 +26,9 @@ describe("Restaurant reservation transactional emails", () => {
     expect(email.html).toContain("Télécharger le RIB");
     expect(email.html).toContain("display:none"); // preheader
     expect(email.text).toContain("Acompte requis");
+    expect(email.text).toContain("Vous disposez de 48 heures");
+    expect(email.html).toContain("votre réservation sera automatiquement annulée");
+    expect(email.text).toContain("Date limite de paiement");
     expect(email.text).toContain("https://example.com/rib.pdf");
   });
 
@@ -39,5 +44,10 @@ describe("Restaurant reservation transactional emails", () => {
     expect(email.html).not.toContain("<strong>Heure");
     expect(email.text).not.toContain("Heure:");
     expect(email.html).toContain("Politique d’annulation");
+  });
+
+  it("formats casablanca date in french locale", () => {
+    const formatted = formatCasablancaDateTimeLong("2026-02-25T18:00:00.000Z");
+    expect(formatted.toLowerCase()).toContain("2026");
   });
 });

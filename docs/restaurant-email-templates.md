@@ -31,3 +31,18 @@ Fichiers générés:
 - `tmp/email-previews/reservation-deposit-required.txt`
 - `tmp/email-previews/reservation-confirmed.html`
 - `tmp/email-previews/reservation-confirmed.txt`
+
+
+## Variables acompte (Email #1)
+
+Le template `generateRestaurantReservationDepositRequiredEmail` expose désormais:
+
+- `depositPercent`
+- `depositAmount`
+- `estimatedTotal`
+- `depositDeadlineFormatted` (date limite de paiement formatée côté backend, timezone `Africa/Casablanca`)
+
+Texte ajouté dans la version HTML et TXT:
+
+- délai de 48h pour verser l'acompte
+- annulation automatique en absence de versement

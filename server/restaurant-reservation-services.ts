@@ -12,6 +12,12 @@ function getClient() {
   return client;
 }
 
+function computeDepositDeadline(now = new Date()): Date {
+  const deadline = new Date(now);
+  deadline.setHours(deadline.getHours() + 48);
+  return deadline;
+}
+
 /**
  * Map DB row to camelCase object expected by frontend.
  * Handles both snake_case (Supabase/PostgreSQL) and camelCase (Drizzle/MySQL) column names.
@@ -22,6 +28,7 @@ function mapReservation(r: any) {
   const rawUpdatedAt = r.updated_at ?? r.updatedAt;
   const rawExpiresAt = r.expires_at ?? r.expiresAt;
   const rawProcessedAt = r.processed_at ?? r.processedAt;
+  const rawDepositDeadline = r.deposit_deadline ?? r.depositDeadline;
 
   return {
     id: r.id,
@@ -42,6 +49,8 @@ function mapReservation(r: any) {
     paymentProvider: r.payment_provider ?? r.paymentProvider ?? null,
     paymentReference: r.payment_reference ?? r.paymentReference ?? null,
     depositPercentage: r.deposit_percentage ?? r.depositPercentage ?? 0,
+    depositDeadline: rawDepositDeadline ? new Date(rawDepositDeadline) : null,
+    depositStatus: r.deposit_status ?? r.depositStatus ?? "pending",
     qrToken: r.qr_token ?? r.qrToken ?? null,
     qrStatus: r.qr_status ?? r.qrStatus ?? "inactive",
     expiresAt: rawExpiresAt ? new Date(rawExpiresAt) : null,
@@ -77,6 +86,7 @@ export async function createRestaurantReservation(data: {
 }) {
   try {
     const client = getClient();
+    const depositDeadline = computeDepositDeadline();
     const { data: row, error } = await client
       .from("restaurant_reservations")
       .insert({
@@ -96,6 +106,8 @@ export async function createRestaurantReservation(data: {
         status: "pending_validation",
         payment_status: "not_requested",
         qr_status: "inactive",
+        deposit_deadline: depositDeadline.toISOString(),
+        deposit_status: "pending",
       })
       .select()
       .single();
@@ -228,6 +240,7 @@ export async function updateRestaurantReservationStatus(
     | "paid_confirmed"
     | "refused"
     | "cancelled"
+    | "cancelled_auto"
     | "completed"
     | "no_show"
 ) {
@@ -263,12 +276,18 @@ export async function updateRestaurantReservationPaymentStatus(
 ) {
   try {
     const client = getClient();
+    const updateData: Record<string, any> = {
+      payment_status: paymentStatus,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (paymentStatus === "paid") {
+      updateData.deposit_status = "paid";
+    }
+
     const { error } = await client
       .from("restaurant_reservations")
-      .update({
-        payment_status: paymentStatus,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq("id", id);
 
     if (error) throw error;
@@ -291,6 +310,7 @@ export async function activateQrCode(id: number) {
         qr_status: "active",
         status: "paid_confirmed",
         payment_status: "paid",
+        deposit_status: "paid",
         updated_at: new Date().toISOString(),
       })
       .eq("id", id);
@@ -457,19 +477,23 @@ export async function updateDepositPercentage(id: number, percentage: number) {
     // Determine new status based on percentage
     let newStatus: string;
     let newPaymentStatus: string;
+    let newDepositStatus: string;
     let newQrStatus: string | undefined;
 
     if (percentage >= 100) {
       newStatus = "paid_confirmed";
       newPaymentStatus = "paid";
+      newDepositStatus = "paid";
       newQrStatus = "active";
     } else if (percentage > 0) {
       newStatus = "validated_pending_payment";
       newPaymentStatus = "pending_payment";
+      newDepositStatus = "paid";
       newQrStatus = undefined; // don't change
     } else {
       newStatus = "validated_pending_payment";
       newPaymentStatus = "pending_payment";
+      newDepositStatus = "pending";
       newQrStatus = undefined;
     }
 
@@ -477,6 +501,7 @@ export async function updateDepositPercentage(id: number, percentage: number) {
       deposit_percentage: percentage,
       status: newStatus,
       payment_status: newPaymentStatus,
+      deposit_status: newDepositStatus,
       updated_at: new Date().toISOString(),
     };
 
@@ -493,6 +518,59 @@ export async function updateDepositPercentage(id: number, percentage: number) {
     return await getRestaurantReservationById(id);
   } catch (error) {
     console.error("[updateDepositPercentage] Error:", error);
+    throw error;
+  }
+}
+
+
+/**
+ * Annule automatiquement les réservations dont l'acompte est en attente au-delà de 48h.
+ */
+export async function autoCancelExpiredPendingDeposits() {
+  try {
+    const client = getClient();
+    const nowIso = new Date().toISOString();
+
+    const { data, error } = await client
+      .from("restaurant_reservations")
+      .select("*")
+      .eq("deposit_status", "pending")
+      .lt("deposit_deadline", nowIso)
+      .in("status", ["pending_validation", "pending_confirmation", "validated_pending_payment"]);
+
+    if (error) throw error;
+
+    const expiredReservations = (data || []).map(mapReservation);
+    if (!expiredReservations.length) {
+      return [];
+    }
+
+    for (const reservation of expiredReservations) {
+      const { error: updateError } = await client
+        .from("restaurant_reservations")
+        .update({
+          status: "cancelled_auto",
+          deposit_status: "expired",
+          updated_at: new Date().toISOString(),
+          notes: reservation.notes
+            ? `${reservation.notes}
+[AutoCancel] Annulée automatiquement le ${nowIso} (acompte non reçu sous 48h).`
+            : `[AutoCancel] Annulée automatiquement le ${nowIso} (acompte non reçu sous 48h).`,
+        })
+        .eq("id", reservation.id);
+
+      if (updateError) throw updateError;
+
+      console.info("[AutoCancelDeposit] Reservation auto-cancelled", {
+        id: reservation.id,
+        reference: reservation.reference,
+        depositDeadline: reservation.depositDeadline?.toISOString?.() || null,
+      });
+    }
+
+    return expiredReservations;
+  } catch (error) {
+    console.error("[autoCancelExpiredPendingDeposits] Error:", error);
     throw error;
   }
 }

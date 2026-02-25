@@ -7,7 +7,9 @@ import {
   generateNewBookingNotificationEmail,
   generateRestaurantReservationDepositRequiredEmail,
   generateRestaurantReservationConfirmedEmail,
+  generateRestaurantReservationAutoCancelledEmail,
   formatReservationDateLong,
+  formatCasablancaDateTimeLong,
 } from "./email";
 import * as reservationServices from "./restaurant-reservation-services";
 import crypto from "crypto";
@@ -27,6 +29,41 @@ function generateReservationReference(
 
 function generateQrToken(): string {
   return crypto.randomBytes(16).toString("hex");
+}
+
+
+async function runAutoCancellationAndNotify() {
+  const cancelledReservations = await reservationServices.autoCancelExpiredPendingDeposits();
+
+  for (const reservation of cancelledReservations) {
+    try {
+      const reservationDateIso = reservation.date
+        ? reservation.date.toISOString().split("T")[0]
+        : "";
+      const cancellationEmail = generateRestaurantReservationAutoCancelledEmail({
+        firstName: reservation.name,
+        reference: reservation.reference,
+        reservationDateLong: formatReservationDateLong(reservationDateIso),
+        partySize: reservation.seatsTotal,
+        depositDeadlineFormatted: reservation.depositDeadline
+          ? formatCasablancaDateTimeLong(reservation.depositDeadline.toISOString())
+          : undefined,
+      });
+
+      await sendEmail({
+        to: reservation.email,
+        subject: cancellationEmail.subject,
+        html: cancellationEmail.html,
+        text: cancellationEmail.text,
+      });
+    } catch (error) {
+      console.error("[runAutoCancellationAndNotify] Unable to send cancellation email", {
+        reservationId: reservation.id,
+        reference: reservation.reference,
+        error,
+      });
+    }
+  }
 }
 
 // ============================================
@@ -69,6 +106,9 @@ export const restaurantReservationsRouter = router({
             reference,
             reservationDateLong: formatReservationDateLong(input.date),
             partySize: input.participantsCount,
+            depositDeadlineFormatted: reservation.depositDeadline
+              ? formatCasablancaDateTimeLong(reservation.depositDeadline.toISOString())
+              : undefined,
           });
 
           await sendEmail({
@@ -176,6 +216,9 @@ export const restaurantReservationsRouter = router({
             reference,
             reservationDateLong: formatReservationDateLong(input.date),
             partySize: input.participantsCount,
+            depositDeadlineFormatted: reservation.depositDeadline
+              ? formatCasablancaDateTimeLong(reservation.depositDeadline.toISOString())
+              : undefined,
           });
 
           const customerEmailResult = await sendEmail({
@@ -286,6 +329,9 @@ export const restaurantReservationsRouter = router({
             reference,
             reservationDateLong: formatReservationDateLong(input.date),
             partySize: input.participantsCount,
+            depositDeadlineFormatted: reservation.depositDeadline
+              ? formatCasablancaDateTimeLong(reservation.depositDeadline.toISOString())
+              : undefined,
           });
 
           await sendEmail({
@@ -497,6 +543,7 @@ export const restaurantReservationsRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
     }
     try {
+      await runAutoCancellationAndNotify();
       return await reservationServices.listRestaurantReservations({
         type: "particulier",
       });
@@ -518,6 +565,7 @@ export const restaurantReservationsRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
     }
     try {
+      await runAutoCancellationAndNotify();
       return await reservationServices.listRestaurantReservations({
         type: "groupe",
       });
@@ -539,6 +587,7 @@ export const restaurantReservationsRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
     }
     try {
+      await runAutoCancellationAndNotify();
       return await reservationServices.listRestaurantReservations({
         type: "entreprise",
       });
@@ -678,6 +727,7 @@ export const restaurantReservationsRouter = router({
           "paid_confirmed",
           "refused",
           "cancelled",
+          "cancelled_auto",
           "completed",
           "no_show",
         ]),

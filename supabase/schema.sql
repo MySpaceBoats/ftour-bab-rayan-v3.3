@@ -387,11 +387,13 @@ CREATE TABLE IF NOT EXISTS restaurant_reservations (
   -- Room choice
   display_choice VARCHAR(20),
   -- Status
-  status VARCHAR(30) NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted', 'pending_confirmation', 'pending_validation', 'validated_pending_payment', 'confirmed', 'paid_confirmed', 'rejected', 'refused', 'cancelled', 'completed', 'no_show', 'checked_in')),
+  status VARCHAR(30) NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted', 'pending_confirmation', 'pending_validation', 'validated_pending_payment', 'confirmed', 'paid_confirmed', 'rejected', 'refused', 'cancelled', 'cancelled_auto', 'completed', 'no_show', 'checked_in')),
   payment_status VARCHAR(20) NOT NULL DEFAULT 'not_applicable' CHECK (payment_status IN ('not_applicable', 'not_requested', 'pending', 'pending_payment', 'paid', 'failed', 'refunded')),
   payment_amount DECIMAL(10,2),
   payment_provider VARCHAR(50),
   payment_reference VARCHAR(100),
+  deposit_deadline TIMESTAMPTZ,
+  deposit_status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (deposit_status IN ('pending', 'paid', 'expired', 'waived')),
   -- QR
   qr_token VARCHAR(64) UNIQUE,
   qr_status VARCHAR(20) DEFAULT 'inactive' CHECK (qr_status IN ('inactive', 'active', 'used', 'revoked')),
@@ -409,6 +411,7 @@ CREATE INDEX idx_restaurant_reservations_reference ON restaurant_reservations(re
 CREATE INDEX idx_restaurant_reservations_type ON restaurant_reservations(type);
 CREATE INDEX idx_restaurant_reservations_status ON restaurant_reservations(status);
 CREATE INDEX idx_restaurant_reservations_date ON restaurant_reservations(date);
+CREATE INDEX idx_restaurant_reservations_deposit_deadline ON restaurant_reservations(deposit_deadline);
 
 -- ============================================
 -- RESTAURANT RESERVATION ALLOCATIONS TABLE
@@ -509,6 +512,8 @@ CREATE TABLE IF NOT EXISTS terroir_orders (
   total_amount DECIMAL(10,2) NOT NULL,
   payment_provider VARCHAR(50),
   payment_reference VARCHAR(100),
+  deposit_deadline TIMESTAMPTZ,
+  deposit_status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (deposit_status IN ('pending', 'paid', 'expired', 'waived')),
   qr_token VARCHAR(64) UNIQUE,
   qr_status VARCHAR(20) DEFAULT 'inactive' CHECK (qr_status IN ('inactive', 'active', 'used', 'revoked')),
   processed_by INTEGER REFERENCES users(id),
