@@ -855,7 +855,7 @@ export const fr = {
     title: 'Boutique Solidaire',
     subtitle: 'Goodies, pâtisseries artisanales et produits du terroir marocain. Tous les bénéfices financent nos actions pour les enfants en difficulté.',
     goodiesTitle: 'Goodies solidaires',
-    goodiesDesc: 'T-shirts, tote bags et accessoires exclusifs édition Ramadan.',
+    goodiesDesc: 'T-shirts, tote bags et accessoires exclusifs éditions CAN et Ramadan.',
     goodiesCta: 'Voir les goodies',
     pastriesTitle: 'Pâtisserie solidaire',
     pastriesDesc: 'Pâtisseries artisanales marocaines préparées avec soin.',
