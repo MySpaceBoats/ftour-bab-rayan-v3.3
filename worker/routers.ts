@@ -4713,6 +4713,287 @@ const qrRouter = router({
   }),
 });
 
+// ============================================
+// TERROIR MODULE ROUTER
+// ============================================
+
+const terroirModuleRouter = router({
+  listProducts: publicProcedure.query(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+
+    const joinQuery = await supabase
+      .from('terroir_products')
+      .select('*, terroir_product_variants(*)')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+
+    if (!joinQuery.error) return joinQuery.data || [];
+
+    const { data: products, error: productsError } = await supabase
+      .from('terroir_products')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+
+    if (productsError) {
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: productsError.message });
+    }
+
+    const productIds = (products || []).map((p: any) => p.id);
+    if (productIds.length === 0) return [];
+
+    const { data: variants, error: variantsError } = await supabase
+      .from('terroir_product_variants')
+      .select('*')
+      .in('product_id', productIds)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+
+    if (variantsError) {
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: variantsError.message });
+    }
+
+    const variantsByProduct = (variants || []).reduce((acc: Record<number, any[]>, variant: any) => {
+      if (!acc[variant.product_id]) acc[variant.product_id] = [];
+      acc[variant.product_id].push(variant);
+      return acc;
+    }, {});
+
+    return (products || []).map((p: any) => ({ ...p, terroir_product_variants: variantsByProduct[p.id] || [] }));
+  }),
+
+  createOrder: publicProcedure
+    .input(z.object({
+      customerName: z.string().min(2),
+      customerPhone: z.string().min(8),
+      customerEmail: z.string().email().optional(),
+      pickupSlotId: z.number().optional(),
+      notes: z.string().optional(),
+      items: z.array(z.object({
+        productId: z.number(),
+        variantId: z.number().optional(),
+        quantity: z.number().min(1),
+        unitPrice: z.number().min(0),
+      })).min(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      for (const item of input.items) {
+        if (!item.variantId) continue;
+        const { data: variant } = await supabase
+          .from('terroir_product_variants')
+          .select('stock_total, stock_reserved')
+          .eq('id', item.variantId)
+          .single();
+
+        if (!variant) throw new TRPCError({ code: 'NOT_FOUND', message: `Variante ${item.variantId} introuvable` });
+        const available = (variant.stock_total || 0) - (variant.stock_reserved || 0);
+        if (available < item.quantity) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: `Stock insuffisant pour la variante ${item.variantId}` });
+        }
+      }
+
+      const totalAmount = input.items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
+      const reference = `TER-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      const qrToken = `ter-${Date.now()}-${Math.random().toString(36).slice(2, 14)}`;
+
+      const { data: order, error } = await supabase
+        .from('terroir_orders')
+        .insert({
+          order_reference: reference,
+          customer_name: input.customerName,
+          customer_phone: input.customerPhone,
+          customer_email: input.customerEmail,
+          pickup_slot_id: input.pickupSlotId,
+          total_amount: totalAmount,
+          status: 'created',
+          payment_status: 'pending',
+          qr_token: qrToken,
+          qr_status: 'inactive',
+          notes: input.notes,
+        })
+        .select('*')
+        .single();
+
+      if (error || !order) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error?.message || 'Impossible de créer la commande terroir' });
+      }
+
+      for (const item of input.items) {
+        const { error: itemError } = await supabase.from('terroir_order_items').insert({
+          order_id: order.id,
+          product_id: item.productId,
+          variant_id: item.variantId,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          total_price: item.quantity * item.unitPrice,
+        });
+        if (itemError) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: itemError.message });
+
+        if (item.variantId) {
+          const { data: variant } = await supabase
+            .from('terroir_product_variants')
+            .select('stock_reserved')
+            .eq('id', item.variantId)
+            .single();
+          const reserved = (variant?.stock_reserved || 0) + item.quantity;
+          await supabase.from('terroir_product_variants').update({ stock_reserved: reserved }).eq('id', item.variantId);
+        }
+      }
+
+      return order;
+    }),
+
+  adminListProducts: adminProcedure.query(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+    const { data, error } = await supabase
+      .from('terroir_products')
+      .select('*, terroir_product_variants(*)')
+      .order('sort_order', { ascending: true });
+    if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+    return data || [];
+  }),
+
+  adminCreateProduct: adminProcedure
+    .input(z.object({
+      name: z.string().min(1),
+      description: z.string().optional(),
+      category: z.string().optional(),
+      imageUrl: z.string().optional(),
+      isActive: z.boolean().default(true),
+      sortOrder: z.number().default(0),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('terroir_products')
+        .insert({
+          name: input.name,
+          description: input.description,
+          category: input.category,
+          image_url: input.imageUrl,
+          is_active: input.isActive,
+          sort_order: input.sortOrder,
+        })
+        .select('*')
+        .single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data;
+    }),
+
+  adminUpdateProduct: adminProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().min(1).optional(),
+      description: z.string().optional(),
+      category: z.string().optional(),
+      imageUrl: z.string().optional(),
+      isActive: z.boolean().optional(),
+      sortOrder: z.number().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const payload: Record<string, unknown> = {};
+      if (input.name !== undefined) payload.name = input.name;
+      if (input.description !== undefined) payload.description = input.description;
+      if (input.category !== undefined) payload.category = input.category;
+      if (input.imageUrl !== undefined) payload.image_url = input.imageUrl;
+      if (input.isActive !== undefined) payload.is_active = input.isActive;
+      if (input.sortOrder !== undefined) payload.sort_order = input.sortOrder;
+
+      const { data, error } = await supabase
+        .from('terroir_products')
+        .update(payload)
+        .eq('id', input.id)
+        .select('*')
+        .single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data;
+    }),
+
+  adminCreateVariant: adminProcedure
+    .input(z.object({
+      productId: z.number(),
+      label: z.string().min(1),
+      sku: z.string().optional(),
+      priceUnit: z.number().min(0),
+      stockTotal: z.number().int().min(0),
+      isActive: z.boolean().default(true),
+      sortOrder: z.number().default(0),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('terroir_product_variants')
+        .insert({
+          product_id: input.productId,
+          label: input.label,
+          sku: input.sku,
+          price_unit: input.priceUnit,
+          stock_total: input.stockTotal,
+          stock_reserved: 0,
+          is_active: input.isActive,
+          sort_order: input.sortOrder,
+        })
+        .select('*')
+        .single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data;
+    }),
+
+  adminListOrders: adminProcedure
+    .input(z.object({ status: z.string().optional(), search: z.string().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      let query = supabase
+        .from('terroir_orders')
+        .select('*, terroir_order_items(*, terroir_products(*), terroir_product_variants(*))')
+        .order('created_at', { ascending: false });
+
+      if (input?.status) query = query.eq('status', input.status);
+      if (input?.search) {
+        const s = input.search.replace(/,/g, ' ');
+        query = query.or(`order_reference.ilike.%${s}%,customer_name.ilike.%${s}%,customer_phone.ilike.%${s}%`);
+      }
+      const { data, error } = await query;
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data || [];
+    }),
+
+  adminStats: adminProcedure.query(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+    const { data, error } = await supabase.from('terroir_orders').select('status,total_amount');
+    if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+
+    const byStatus: Record<string, number> = {};
+    let revenue = 0;
+    for (const row of data || []) {
+      byStatus[row.status] = (byStatus[row.status] || 0) + 1;
+      if (row.status !== 'cancelled' && row.total_amount) revenue += Number(row.total_amount);
+    }
+    return {
+      total: (data || []).length,
+      byStatus,
+      revenue,
+    };
+  }),
+
+  adminUpdateOrderStatus: adminProcedure
+    .input(z.object({ id: z.number(), status: z.enum(['created', 'paid', 'ready', 'picked_up', 'cancelled', 'no_show']) }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('terroir_orders')
+        .update({ status: input.status, updated_at: new Date().toISOString() })
+        .eq('id', input.id)
+        .select('*')
+        .single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data;
+    }),
+});
+
 
 
 const ramadanRouter = router({
@@ -4908,6 +5189,7 @@ export const appRouter = router({
   scanner: scannerRouter,
   qr: qrRouter,
   ramadan: ramadanRouter,
+  terroirModule: terroirModuleRouter,
 });
 
 export type AppRouter = typeof appRouter;
