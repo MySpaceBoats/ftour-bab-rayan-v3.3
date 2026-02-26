@@ -829,20 +829,10 @@ export default function Benevole() {
               <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
               <p className="text-sm text-blue-900 font-medium">
                 {lang === "ar"
-                  ? "تُغلق التسجيلات في الساعة 16:30 لنفس اليوم."
+                  ? "بدون رمز QR صالح، لا يمكن الدخول إلى مقر الجمعية."
                   : lang === "en"
-                    ? "Registrations are closed at 4:30 PM for the same day."
-                    : "Les inscriptions sont fermées à 16h30 pour le jour même."}
-              </p>
-            </div>
-            <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
-              <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
-              <p className="text-sm text-blue-900 font-medium">
-                {lang === "ar"
-                  ? "إذا تغيب المشارك أكثر من مرتين، فلن يكون بإمكانه المشاركة كمتطوع لمدة 7 أيام."
-                  : lang === "en"
-                    ? "If a participant is absent more than twice, they will no longer be able to participate as a volunteer for 7 days."
-                    : "Si un participant s'absente plus de 2 fois, il ne lui sera plus possible de participer en tant que bénévole durant 7 jours."}
+                    ? "Without a valid QR code, entry into the association premises is not possible."
+                    : "Sans QR code valide, il n'est pas possible d'entrer dans l'enceinte de l'association"}
               </p>
             </div>
             <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
@@ -852,7 +842,7 @@ export default function Benevole() {
                   ? "عدد المشاركين محدود لأسباب داخل المؤسسة."
                   : lang === "en"
                     ? "The number of participants is limited for reasons inside the establishment."
-                    : "Le nombre de participants est limité pour des raisons de sécurité intérieure de l'établissement."}
+                    : "Le nombre de participants est limité durant l'évènement pour des raisons de sécurité mais également pour que votre expérience en tant que bénévole et le service assuré pour les bénéficiaires soit d'un niveau appréciable."}
               </p>
             </div>
           </div>
