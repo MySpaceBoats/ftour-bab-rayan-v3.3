@@ -137,7 +137,9 @@ export default function AdminGalerie() {
                         item.status === "published" ? "default" : "secondary"
                       }
                     >
-                      {item.status}
+                      {item.status === "published"
+                        ? "Validée"
+                        : "En attente / refusée"}
                     </Badge>
                     {item.is_featured && (
                       <Star className="h-3 w-3 text-amber-500" />
@@ -156,14 +158,14 @@ export default function AdminGalerie() {
                       variant="outline"
                       onClick={() => toggleUnpublish.mutate({ id: item.id })}
                     >
-                      Dépublier
+                      Refuser
                     </Button>
                   ) : (
                     <Button
                       size="sm"
                       onClick={() => togglePublish.mutate({ id: item.id })}
                     >
-                      Publier
+                      Valider
                     </Button>
                   )}
                 </div>
