@@ -4773,6 +4773,9 @@ export const appRouter = router({
   reservations: reservationsRouter,
   payments: paymentsRouter,
   gallery: galleryRouter,
+  restaurantReservations: restaurantReservationsRouter,
+  restaurantModule: restaurantModuleRouter,
+  terroirModule: terroirModuleRouter,
 });
 
 // ============================================
