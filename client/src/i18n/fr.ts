@@ -554,7 +554,7 @@ export const fr = {
     newsletter: 'Newsletter',
     newsletterPlaceholder: 'Votre email',
     subscribe: "S'abonner",
-    copyright: '© {year} Association Bab Rayan - Reconnue d\'utilité publique. Tous droits réservés.',
+    copyright: '© {year} Association Bab Rayan, reconnue d\'utilité publique. Tous droits réservés.',
     madeWith: 'Fait avec',
     inMorocco: 'au Maroc',
   },
