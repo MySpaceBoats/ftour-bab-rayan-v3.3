@@ -71,18 +71,63 @@ export async function handleCashOrderRequest(request: Request, env: Env): Promis
   const supabase = createSupabaseAdmin(env);
 
   if (url.pathname === '/api/catalog' && request.method === 'GET') {
-    const [goodiesRes, pastriesRes, terroirRes, donationProductsRes] = await Promise.all([
-      supabase.from('goodies').select('id,name,description,price,image_url,sort_order').order('sort_order', { ascending: true }),
-      supabase.from('pastries').select('id,name,description,price,image_url,sort_order').order('sort_order', { ascending: true }),
-      supabase.from('terroir_products').select('id,name,description,image_url,sort_order,terroir_product_variants(id,label,price_unit,is_active)').order('sort_order', { ascending: true }),
+    const [goodiesRes, pastriesRes, terroirJoinRes, donationProductsRes] = await Promise.all([
+      supabase
+        .from('goodies')
+        .select('id,name,description,price,image_url,is_active,sort_order')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true }),
+      supabase
+        .from('pastries')
+        .select('id,name,description,price,image_url,active,is_active,sort_order')
+        .order('sort_order', { ascending: true }),
+      supabase
+        .from('terroir_products')
+        .select('id,name,description,image_url,is_active,sort_order,terroir_product_variants(id,label,price_unit,is_active)')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true }),
       supabase.from('products').select('id,name,price_mad,active').eq('type', 'DONATION'),
     ]);
 
-    if (goodiesRes.error || pastriesRes.error || terroirRes.error) {
-      return jsonResponse({ error: goodiesRes.error?.message || pastriesRes.error?.message || terroirRes.error?.message || 'catalog_error' }, 500);
-    }
-
     const donationProducts = donationProductsRes.error ? [] : (donationProductsRes.data || []);
+
+    const goodies = goodiesRes.error ? [] : (goodiesRes.data || []);
+    const pastries = pastriesRes.error
+      ? []
+      : (pastriesRes.data || []).filter((p: any) => (typeof p.active === 'boolean' ? p.active : p.is_active !== false));
+
+    let terroirProducts = terroirJoinRes.error ? [] : (terroirJoinRes.data || []);
+    if (terroirJoinRes.error) {
+      const terroirProductsRes = await supabase
+        .from('terroir_products')
+        .select('id,name,description,image_url,is_active,sort_order')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+
+      if (!terroirProductsRes.error && (terroirProductsRes.data || []).length > 0) {
+        const productIds = (terroirProductsRes.data || []).map((p: any) => p.id);
+        const terroirVariantsRes = await supabase
+          .from('terroir_product_variants')
+          .select('id,product_id,label,price_unit,is_active')
+          .in('product_id', productIds)
+          .eq('is_active', true);
+
+        if (!terroirVariantsRes.error) {
+          const variantsByProductId = (terroirVariantsRes.data || []).reduce((acc: Record<number, any[]>, variant: any) => {
+            if (!acc[variant.product_id]) {
+              acc[variant.product_id] = [];
+            }
+            acc[variant.product_id].push(variant);
+            return acc;
+          }, {});
+
+          terroirProducts = (terroirProductsRes.data || []).map((product: any) => ({
+            ...product,
+            terroir_product_variants: variantsByProductId[product.id] || [],
+          }));
+        }
+      }
+    }
 
     const mapItem = (item: any, type: 'GOODIE' | 'PASTRY' | 'TERROIR') => ({
       id: `${type}-${item.id}`,
@@ -94,9 +139,9 @@ export async function handleCashOrderRequest(request: Request, env: Env): Promis
       imageUrl: item.image_url || null,
     });
 
-    const terroir = (terroirRes.data || []).flatMap((product: any) =>
+    const terroir = terroirProducts.flatMap((product: any) =>
       (product.terroir_product_variants || [])
-        .filter((variant: any) => variant.is_active)
+        .filter((variant: any) => variant.is_active !== false)
         .map((variant: any) => ({
           id: `TERROIR-${product.id}-${variant.id}`,
           sourceId: product.id,
@@ -110,8 +155,8 @@ export async function handleCashOrderRequest(request: Request, env: Env): Promis
     );
 
     return jsonResponse({
-      goodies: (goodiesRes.data || []).map((i) => mapItem(i, 'GOODIE')),
-      pastries: (pastriesRes.data || []).map((i) => mapItem(i, 'PASTRY')),
+      goodies: goodies.map((i) => mapItem(i, 'GOODIE')),
+      pastries: pastries.map((i) => mapItem(i, 'PASTRY')),
       terroir,
       donations: {
         presets: donationProducts
