@@ -71,14 +71,15 @@ export async function handleCashOrderRequest(request: Request, env: Env): Promis
   const supabase = createSupabaseAdmin(env);
 
   if (url.pathname === '/api/catalog' && request.method === 'GET') {
-    const [goodiesRes, pastriesRes, terroirRes] = await Promise.all([
-      supabase.from('goodies').select('id,name,description,price,image_url,sort_order').eq('is_active', true).order('sort_order', { ascending: true }),
-      supabase.from('pastries').select('id,name,description,price,image_url,sort_order').eq('is_active', true).order('sort_order', { ascending: true }),
-      supabase.from('terroir_products').select('id,name,description,image_url,sort_order,terroir_product_variants(id,label,price_unit,is_active)').eq('is_active', true).order('sort_order', { ascending: true }),
+    const [goodiesRes, pastriesRes, terroirRes, donationProductsRes] = await Promise.all([
+      supabase.from('goodies').select('id,name,description,price,image_url,sort_order').order('sort_order', { ascending: true }),
+      supabase.from('pastries').select('id,name,description,price,image_url,sort_order').order('sort_order', { ascending: true }),
+      supabase.from('terroir_products').select('id,name,description,image_url,sort_order,terroir_product_variants(id,label,price_unit,is_active)').order('sort_order', { ascending: true }),
+      supabase.from('products').select('id,name,price_mad,active').eq('type', 'DONATION').order('sort_order', { ascending: true }),
     ]);
 
-    if (goodiesRes.error || pastriesRes.error || terroirRes.error) {
-      return jsonResponse({ error: goodiesRes.error?.message || pastriesRes.error?.message || terroirRes.error?.message || 'catalog_error' }, 500);
+    if (goodiesRes.error || pastriesRes.error || terroirRes.error || donationProductsRes.error) {
+      return jsonResponse({ error: goodiesRes.error?.message || pastriesRes.error?.message || terroirRes.error?.message || donationProductsRes.error?.message || 'catalog_error' }, 500);
     }
 
     const mapItem = (item: any, type: 'GOODIE' | 'PASTRY' | 'TERROIR') => ({
@@ -111,7 +112,17 @@ export async function handleCashOrderRequest(request: Request, env: Env): Promis
       pastries: (pastriesRes.data || []).map((i) => mapItem(i, 'PASTRY')),
       terroir,
       donations: {
-        presets: [...DONATION_SUGGESTED_AMOUNTS_MAD],
+        presets: (donationProductsRes.data || [])
+          .filter((d: any) => d.active !== false)
+          .map((d: any) => Number(d.price_mad))
+          .filter((v: number) => Number.isFinite(v) && v > 0)
+          .sort((a: number, b: number) => a - b)
+          .reduce((acc: number[], v: number) => (acc.includes(v) ? acc : [...acc, v]), [])
+          .concat(
+            [...DONATION_SUGGESTED_AMOUNTS_MAD].filter(
+              (v) => !(donationProductsRes.data || []).some((d: any) => Number(d.price_mad) === v && d.active !== false),
+            ),
+          ),
       },
     });
   }
