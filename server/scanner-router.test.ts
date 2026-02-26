@@ -22,6 +22,15 @@ describe('scanner token extraction', () => {
   it('keeps checkin reservation tokens intact', () => {
     expect(extractTokenFromUrl('https://ftourbabrayan.ma/checkin-reservation/rp-ABC123')).toBe('rp-ABC123');
   });
+
+  it('extracts goodies order reference from goodies QR URL', () => {
+    expect(extractTokenFromUrl('https://ftourbabrayan.ma/qr/goodies/FBR-2026-0001')).toBe('FBR-2026-0001');
+  });
+
+  it('extracts goodies order reference from wrapped qrserver goodies QR URL', () => {
+    const wrapped = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent('https://ftourbabrayan.ma/qr/goodies/FBR-2026-0002');
+    expect(extractTokenFromUrl(wrapped)).toBe('FBR-2026-0002');
+  });
 });
 
 describe('scanner qr type detection', () => {
