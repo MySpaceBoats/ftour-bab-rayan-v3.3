@@ -11,7 +11,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import {
   ArrowLeft, Search, Download, Package, CheckCircle, XCircle,
-  Clock, Loader2, Mail, Phone, ShoppingBag, CreditCard, QrCode
+  Clock, Loader2, Mail, Phone, ShoppingBag, CreditCard, QrCode, Trash2
 } from "lucide-react";
 
 export default function AdminCommandes() {
@@ -31,6 +31,23 @@ export default function AdminCommandes() {
       toast.error(error.message);
     },
   });
+  const deleteOrderMutation = trpc.orders.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Commande supprimée");
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erreur lors de la suppression");
+    },
+  });
+
+  const handleDeleteOrder = (order: any) => {
+    const confirmed = window.confirm(
+      `Supprimer définitivement la commande ${order.orderReference} ?`
+    );
+    if (!confirmed) return;
+    deleteOrderMutation.mutate({ orderId: order.id });
+  };
 
   // Extract unique product names from all orders for the filter
   const uniqueProducts = Array.from(
@@ -315,6 +332,15 @@ export default function AdminCommandes() {
                                 <XCircle className="h-4 w-4" />
                               </Button>
                             )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-700"
+                              onClick={() => handleDeleteOrder(order)}
+                              disabled={deleteOrderMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>

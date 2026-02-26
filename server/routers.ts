@@ -1859,6 +1859,12 @@ const ordersRouter = router({
       return { success: true };
     }),
 
+  delete: adminBoutiqueProcedure
+    .input(z.object({ orderId: z.number() }))
+    .mutation(async ({ input }) => {
+      return supabaseServices.deleteGoodieOrderSupabase(input.orderId);
+    }),
+
   stats: adminBoutiqueProcedure.query(async () => {
     return supabaseServices.getOrderStatsSupabase();
   }),
@@ -4246,6 +4252,31 @@ const terroirModuleRouter = router({
           code: "INTERNAL_SERVER_ERROR",
           message: error.message,
         });
+      return { success: true };
+    }),
+
+  // --- Admin: delete order ---
+  adminDeleteOrder: adminTerroirProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+
+      const { error } = await supabase
+        .from("terroir_orders")
+        .delete()
+        .eq("id", input.id);
+
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+
       return { success: true };
     }),
 
