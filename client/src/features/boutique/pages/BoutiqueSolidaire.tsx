@@ -3,12 +3,22 @@ import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useI18n } from "@/i18n";
-import { ShoppingBag, Utensils, ArrowRight, Heart } from "lucide-react";
+import { ShoppingBag, Utensils, ArrowRight, Heart, Package } from "lucide-react";
 
 export default function BoutiqueSolidaire() {
   const { t, dir, lang } = useI18n();
 
   const categories = [
+    {
+      key: "terroir" as const,
+      href: `/${lang}/terroir`,
+      icon: Package,
+      color: "#7AA67A",
+      title: t.boutique.terroirTitle,
+      description: t.boutique.terroirDesc,
+      cta: t.boutique.terroirCta,
+      desktopClassName: "lg:col-span-2 lg:mx-auto lg:w-full lg:max-w-xl",
+    },
     {
       key: "goodies" as const,
       href: `/${lang}/goodies`,
@@ -17,6 +27,7 @@ export default function BoutiqueSolidaire() {
       title: t.boutique.goodiesTitle,
       description: t.boutique.goodiesDesc,
       cta: t.boutique.goodiesCta,
+      desktopClassName: "lg:justify-self-end",
     },
     {
       key: "pastries" as const,
@@ -26,6 +37,7 @@ export default function BoutiqueSolidaire() {
       title: t.boutique.pastriesTitle,
       description: t.boutique.pastriesDesc,
       cta: t.boutique.pastriesCta,
+      desktopClassName: "lg:justify-self-start",
     },
   ];
 
@@ -56,13 +68,13 @@ export default function BoutiqueSolidaire() {
         {/* Categories Grid */}
         <section className="py-20 bg-[#5E5B34]">
           <div className="container">
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {categories.map((cat) => {
                 const Icon = cat.icon;
                 return (
                   <div
                     key={cat.key}
-                    className="bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#F2E9D3]/30 transition-all"
+                    className={`bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#F2E9D3]/30 transition-all ${cat.desktopClassName}`}
                   >
                     <div className="h-1" style={{ backgroundColor: cat.color }} />
                     <div className="p-8 space-y-4">
