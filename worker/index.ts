@@ -8,6 +8,7 @@ import { createWorkerContext } from './context';
 import { handleCMSRequest } from './cms-handlers';
 import { createSupabaseAdmin } from './supabase';
 import { DEFAULT_RAMADAN_TIMEZONE, getDateStringInTimeZone, getRamadanDay } from '../shared/ramadan';
+import { handleCashOrderRequest } from './cash-orders';
 
 export interface Env {
   SUPABASE_URL: string;
@@ -22,6 +23,9 @@ export interface Env {
   GITHUB_APP_INSTALLATION_ID: string;
   GITHUB_APP_PRIVATE_KEY: string;
   CMS_ALLOWED_ORIGINS?: string;
+  ORDER_PROOF_SECRET?: string;
+  PUBLIC_APP_URL?: string;
+  CASH_ORDER_ADMIN_CC_EMAIL?: string;
 }
 
 export default {
@@ -121,6 +125,21 @@ export default {
         statusText: response.statusText,
         headers: newHeaders,
       });
+    }
+
+    if (url.pathname === '/api/catalog' || url.pathname.startsWith('/api/orders') || url.pathname.startsWith('/api/proof/')) {
+      const response = await handleCashOrderRequest(request, env);
+      if (response) {
+        const newHeaders = new Headers(response.headers);
+        Object.entries(baseCorsHeaders).forEach(([key, value]) => {
+          newHeaders.set(key, value);
+        });
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers: newHeaders,
+        });
+      }
     }
 
     // Handle tRPC API requests

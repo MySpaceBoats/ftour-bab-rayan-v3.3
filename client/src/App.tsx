@@ -53,7 +53,6 @@ import AdminReservationsCalendar from "@/features/restaurant/admin/AdminReservat
 // PATISSERIE — features/patisserie
 // ============================================
 import Pastries from "@/features/patisserie/pages/Pastries";
-import BuyPastry from "@/features/patisserie/pages/BuyPastry";
 import AdminPastries from "@/features/patisserie/admin/AdminPastries";
 import AdminPastryCatalog from "@/features/patisserie/admin/AdminPastryCatalog";
 
@@ -73,7 +72,6 @@ import BoutiqueSolidaire from "@/features/boutique/pages/BoutiqueSolidaire";
 // GOODIES — features/goodies
 // ============================================
 import Goodies from "@/features/goodies/pages/Goodies";
-import BuyGoodie from "@/features/goodies/pages/BuyGoodie";
 import Cart from "@/features/goodies/pages/Cart";
 import { Checkout as UnifiedCheckout } from "@/features/goodies/pages/Checkout";
 import AdminGoodies from "@/features/goodies/admin/AdminGoodies";
@@ -119,6 +117,10 @@ import AdminContenu from "@/features/contenu/admin/AdminContenu";
 // MESSAGES — features/messages
 // ============================================
 import AdminMessages from "@/features/messages/admin/AdminMessages";
+import MenuSolidaire from "@/features/menu/pages/MenuSolidaire";
+import MenuCheckout from "@/features/menu/pages/MenuCheckout";
+import MenuProof from "@/features/menu/pages/MenuProof";
+import AdminCashOrders from "@/features/menu/admin/AdminCashOrders";
 
 import WhatsAppFloatingButton from "./components/WhatsAppFloatingButton";
 
@@ -242,6 +244,7 @@ function LocalizedRoutes() {
 
       {/* Admin QR Codes Catalogue */}
       <Route path="/admin/qr-codes" component={AdminQRCodes} />
+      <Route path="/admin/orders-cash" component={AdminCashOrders} />
       <Route path="/admin/galerie" component={AdminGalerie} />
       <Route path="/admin/galerie/nouveau" component={AdminGalerieNouveau} />
       <Route path="/admin/galerie/:id" component={AdminGalerieEdit} />
@@ -275,6 +278,12 @@ function LocalizedRoutes() {
           REDIRECT ROOT → default locale
           ================================================ */}
       <Route path="/">{() => <Redirect to={`/${lang}`} />}</Route>
+
+      {/* Menu solidaire QR unique */}
+      <Route path="/menu" component={MenuSolidaire} />
+      <Route path="/shop">{() => <Redirect to="/menu" />}</Route>
+      <Route path="/menu/checkout" component={MenuCheckout} />
+      <Route path="/proof/:reference" component={MenuProof} />
 
       {/* ================================================
           PUBLIC ROUTES — sous /:lang (section 4.1)
@@ -319,11 +328,12 @@ function LocalizedRoutes() {
       <Route path="/:lang/goodies" component={Goodies} />
       <Route path="/:lang/cart/:type" component={Cart} />
       <Route path="/:lang/checkout/:type" component={UnifiedCheckout} />
-      <Route path="/:lang/buy/goodie/:id" component={BuyGoodie} />
-      <Route path="/:lang/buy/pastry/:id" component={BuyPastry} />
+      <Route path="/:lang/buy/goodie/:id">{() => <Redirect to="/menu" />}</Route>
+      <Route path="/:lang/buy/pastry/:id">{() => <Redirect to="/menu" />}</Route>
 
       {/* Dons public */}
       <Route path="/:lang/dons" component={Dons} />
+
 
       {/* ================================================
           LEGACY ROUTES — redirects vers /:lang/*
