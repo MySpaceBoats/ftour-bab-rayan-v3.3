@@ -37,6 +37,10 @@ type ParsedGroupVolunteerRow = {
   city?: string;
 };
 
+type GroupVolunteerForEmail = ParsedGroupVolunteerRow & {
+  qrToken?: string;
+};
+
 const normalizeSpreadsheetValue = (value: unknown): string =>
   String(value ?? "")
     .toLowerCase()
@@ -278,6 +282,78 @@ const runWithConcurrencyLimit = async <T>(
 
   await Promise.all(workers);
   return results;
+};
+
+const sendGroupVolunteerConfirmationEmails = async ({
+  volunteers,
+  day,
+  volunteerSlots,
+}: {
+  volunteers: GroupVolunteerForEmail[];
+  day: { dayNumber: number; date: string; location?: string | null; iftarTime?: string | null };
+  volunteerSlots: Array<"preparation_ftour" | "service_ftour">;
+}) => {
+  if (volunteers.length === 0) {
+    return {
+      sent: 0,
+      failed: 0,
+      details: [] as { email: string; success: boolean; error?: string }[],
+    };
+  }
+
+  const baseUrl =
+    process.env.NODE_ENV === "production"
+      ? "https://ftourbabrayan.ma"
+      : "http://localhost:3000";
+
+  const emailTasks = volunteers.map(volunteer => async () => {
+    if (!volunteer.qrToken) {
+      return {
+        email: volunteer.email,
+        success: false,
+        error: "QR token introuvable",
+      };
+    }
+
+    const emailData = generateVolunteerConfirmationEmail({
+      firstName: volunteer.firstName,
+      lastName: volunteer.lastName,
+      email: volunteer.email,
+      dayNumber: day.dayNumber,
+      dayDate: new Date(day.date).toLocaleDateString("fr-FR", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+      }),
+      location: day.location || "Association Bab Rayan, Casablanca",
+      startTime: day.iftarTime || "18h00",
+      volunteerSlots,
+      qrToken: volunteer.qrToken,
+      baseUrl,
+    });
+
+    const emailResult = await sendEmail({
+      to: volunteer.email,
+      subject: emailData.subject,
+      html: emailData.html,
+    });
+
+    if (emailResult.success) {
+      return { email: volunteer.email, success: true };
+    }
+
+    return {
+      email: volunteer.email,
+      success: false,
+      error: emailResult.error || "Envoi email échoué",
+    };
+  });
+
+  const details = await runWithConcurrencyLimit(emailTasks, 3);
+  const sent = details.filter(result => result.success).length;
+  const failed = details.length - sent;
+
+  return { sent, failed, details };
 };
 
 const volunteerNoShowBlockingMessage =
@@ -1176,6 +1252,7 @@ const volunteersRouter = router({
 
       let importedCount = 0;
       let skippedCount = 0;
+      const createdVolunteersForEmail: GroupVolunteerForEmail[] = [];
 
       try {
         const parsedRows = parseGroupVolunteersFromSpreadsheet(
@@ -1239,6 +1316,17 @@ const volunteersRouter = router({
               }))
             );
 
+          for (const volunteer of created) {
+            createdVolunteersForEmail.push({
+              firstName: volunteer.firstName,
+              lastName: volunteer.lastName,
+              email: volunteer.email,
+              phone: volunteer.phone,
+              city: volunteer.city,
+              qrToken: volunteer.qrToken,
+            });
+          }
+
           importedCount += created.length;
           skippedCount += Math.max(0, rowsChunk.length - created.length);
         }
@@ -1252,6 +1340,25 @@ const volunteersRouter = router({
           message:
             "Le fichier a bien été reçu, mais son import a échoué. Vérifiez son format (.xlsx/.xls/.csv).",
         });
+      }
+
+      if (createdVolunteersForEmail.length > 0 && day) {
+        try {
+          const emailSummary = await sendGroupVolunteerConfirmationEmails({
+            volunteers: createdVolunteersForEmail,
+            day,
+            volunteerSlots: input.volunteerSlots,
+          });
+
+          console.log(
+            `[Group Registration] Confirmation emails: ${emailSummary.sent} sent, ${emailSummary.failed} failed`
+          );
+        } catch (error) {
+          console.error(
+            "[Group Registration] Error while sending confirmation emails:",
+            error
+          );
+        }
       }
 
       return { success: true, importedCount, skippedCount };
@@ -1295,11 +1402,6 @@ const volunteersRouter = router({
             "Colonnes requises introuvables (Nom/Prénom, Email) ou aucune ligne valide dans le fichier.",
         });
       }
-
-      const baseUrl =
-        process.env.NODE_ENV === "production"
-          ? "https://ftourbabrayan.ma"
-          : "http://localhost:3000";
 
       const results: { email: string; success: boolean; error?: string }[] = [];
       const normalizedRows = parsedRows.map(row => ({
@@ -1349,7 +1451,7 @@ const volunteersRouter = router({
         uniqueRows.push(row);
       }
 
-      const createdRows: Array<(typeof uniqueRows)[number]> = [];
+      const createdVolunteersForEmail: GroupVolunteerForEmail[] = [];
 
       if (uniqueRows.length > 0) {
         const insertChunks = chunkArray(uniqueRows, 200);
@@ -1388,7 +1490,14 @@ const volunteersRouter = router({
                 continue;
               }
 
-              createdRows.push(row);
+              createdVolunteersForEmail.push({
+                firstName: row.firstName,
+                lastName: row.lastName,
+                email: row.email,
+                phone: row.phone,
+                city: row.city,
+                qrToken: volunteer.qrToken,
+              });
             }
           } catch (error) {
             const errMsg =
@@ -1401,56 +1510,20 @@ const volunteersRouter = router({
         }
       }
 
-      const emailTasks = createdRows.map(row => async () => {
-        const volunteer = await supabaseServices.getVolunteerByEmailForDay(
-          row.email,
-          input.dayId
-        );
-
-        if (!volunteer?.qrToken) {
-          return {
-            email: row.email,
-            success: true,
-            error: "Inscrit mais QR introuvable pour l'envoi de confirmation",
-          };
-        }
-
-        const emailData = generateVolunteerConfirmationEmail({
-          firstName: row.firstName,
-          lastName: row.lastName,
-          email: row.email,
-          dayNumber: day.dayNumber,
-          dayDate: new Date(day.date).toLocaleDateString("fr-FR", {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-          }),
-          location: day.location || "Association Bab Rayan, Casablanca",
-          startTime: day.iftarTime || "18h00",
+      if (createdVolunteersForEmail.length > 0) {
+        const emailSummary = await sendGroupVolunteerConfirmationEmails({
+          volunteers: createdVolunteersForEmail,
+          day,
           volunteerSlots: input.volunteerSlots,
-          qrToken: volunteer.qrToken,
-          baseUrl,
         });
-
-        const emailResult = await sendEmail({
-          to: row.email,
-          subject: emailData.subject,
-          html: emailData.html,
-        });
-
-        if (emailResult.success) {
-          return { email: row.email, success: true };
-        }
-
-        return {
-          email: row.email,
-          success: true,
-          error: `Inscrit mais email non envoyé: ${emailResult.error}`,
-        };
-      });
-
-      if (emailTasks.length > 0) {
-        const emailResults = await runWithConcurrencyLimit(emailTasks, 8);
+        const emailResults = emailSummary.details.map(result =>
+          result.success
+            ? result
+            : {
+                ...result,
+                error: `Inscrit mais email non envoyé: ${result.error}`,
+              }
+        );
         results.push(...emailResults);
       }
 
@@ -2865,7 +2938,7 @@ function generateReservationConfirmationEmail(reservation: any) {
     <div style="background-color: #5d5a3c; padding: 20px; text-align: center;">
       <p style="color: #d4d4aa; margin: 0; font-size: 14px;">
         Association Bab Rayan<br/>
-        📞 +212 664-887978 | ✉️ contact@ftourbabrayan.ma
+        📞 +212 (0) 666-690534 | ✉️ contact@ftourbabrayan.ma
       </p>
     </div>
   </div>
@@ -3485,8 +3558,8 @@ const restaurantModuleRouter = router({
           message: error.message,
         });
 
-      // Send confirmation email with QR code when reservation is confirmed
-      if (input.status === "confirmed") {
+      // Send notification email when reservation status changes
+      if (input.status === "confirmed" || input.status === "rejected") {
         try {
           const { data: reservation } = await supabase
             .from("restaurant_reservations")
@@ -3494,10 +3567,9 @@ const restaurantModuleRouter = router({
             .eq("id", input.id)
             .single();
 
-          if (reservation?.email && reservation?.qr_token) {
+          if (reservation?.email) {
             const baseUrl =
               process.env.VITE_APP_URL || "https://ftourbabrayan.ma";
-            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${baseUrl}/checkin-reservation/${reservation.qr_token}`)}`;
 
             const typeLabel: Record<string, string> = {
               particulier: "Particulier",
@@ -3505,7 +3577,10 @@ const restaurantModuleRouter = router({
               groupe: "Groupe",
             };
 
-            const emailHtml = `
+            if (input.status === "confirmed" && reservation?.qr_token) {
+              const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${baseUrl}/checkin-reservation/${reservation.qr_token}`)}`;
+
+              const emailHtml = `
 <!DOCTYPE html>
 <html lang="fr">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -3550,7 +3625,7 @@ const restaurantModuleRouter = router({
         </td></tr>
         <tr><td style="background-color:#f8f9fa;padding:20px 30px;text-align:center;border-radius:0 0 8px 8px;border-top:1px solid #e5e7eb;">
           <p style="margin:0 0 10px 0;font-size:14px;color:#6b7280;">Association Bab Rayan</p>
-          <p style="margin:0;font-size:12px;color:#9ca3af;">4 rue Bayt Lahm, quartier Palmier, Casablanca<br>Tél: +212 610 023 555 | contact@ftourbabrayan.ma</p>
+          <p style="margin:0;font-size:12px;color:#9ca3af;">4 rue Bayt Lahm, quartier Palmier, Casablanca<br>Tél: +212 (0) 666-690534 | contact@ftourbabrayan.ma</p>
         </td></tr>
       </table>
     </td></tr>
@@ -3558,15 +3633,69 @@ const restaurantModuleRouter = router({
 </body>
 </html>`;
 
-            await sendEmail({
-              to: reservation.email,
-              subject: `✅ Réservation confirmée - Référence ${reservation.reference}`,
-              html: emailHtml,
-            });
+              await sendEmail({
+                to: reservation.email,
+                subject: `✅ Réservation confirmée - Référence ${reservation.reference}`,
+                html: emailHtml,
+              });
+            }
+
+            if (input.status === "rejected") {
+              const rejectionEmailHtml = `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f5f5f0;">
+  <table role="presentation" style="width:100%;border-collapse:collapse;">
+    <tr><td align="center" style="padding:40px 0;">
+      <table role="presentation" style="width:600px;max-width:100%;border-collapse:collapse;background-color:#ffffff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+        <tr><td style="background:linear-gradient(135deg,#b91c1c 0%,#dc2626 100%);padding:30px;text-align:center;border-radius:8px 8px 0 0;">
+          <h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:bold;">Ftour <span style="color:#fbbf24;">Bab Rayan</span></h1>
+          <p style="color:rgba(255,255,255,0.9);margin:10px 0 0 0;font-size:14px;">Réservation non retenue</p>
+        </td></tr>
+        <tr><td style="padding:40px 30px;">
+          <h2 style="color:#7f1d1d;margin:0 0 20px 0;font-size:24px;">Votre réservation n'a pas pu être confirmée</h2>
+          <p style="color:#374151;font-size:16px;line-height:1.6;">Bonjour <strong>${reservation.name}</strong>,</p>
+          <p style="color:#374151;font-size:16px;line-height:1.6;">Nous sommes désolés, votre demande de réservation au Restaurant Solidaire n'a pas pu être validée pour le moment.</p>
+          <table role="presentation" style="width:100%;border-collapse:collapse;background-color:#fef2f2;border-radius:8px;margin:20px 0;">
+            <tr><td style="padding:20px;">
+              <h3 style="color:#7f1d1d;margin:0 0 15px 0;font-size:18px;">Détails de votre demande</h3>
+              <p style="margin:5px 0;color:#374151;"><strong>Type :</strong> ${typeLabel[reservation.type] || reservation.type}</p>
+              <p style="margin:5px 0;color:#374151;"><strong>Nombre de places :</strong> ${reservation.seats_total}</p>
+              ${reservation.company_name ? `<p style="margin:5px 0;color:#374151;"><strong>Entreprise :</strong> ${reservation.company_name}</p>` : ""}
+              ${reservation.group_name ? `<p style="margin:5px 0;color:#374151;"><strong>Groupe :</strong> ${reservation.group_name}</p>` : ""}
+              <p style="margin:10px 0 0 0;color:#6b7280;font-size:14px;"><strong>Référence :</strong> ${reservation.reference}</p>
+            </td></tr>
+          </table>
+          <p style="color:#374151;font-size:16px;line-height:1.6;">Vous pouvez soumettre une nouvelle demande de réservation ultérieurement ou nous contacter si vous avez des questions.</p>
+          <div style="margin-top:20px;padding:16px;background-color:#fffbeb;border-left:4px solid #f59e0b;border-radius:6px;">
+            <p style="margin:0;color:#92400e;font-size:14px;line-height:1.5;">
+              Besoin d'aide ? Contactez-nous par email à <a href="mailto:contact@ftourbabrayan.ma" style="color:#92400e;font-weight:600;">contact@ftourbabrayan.ma</a>
+              ou par téléphone au +212 (0) 666-690534.
+            </p>
+          </div>
+          <p style="color:#374151;font-size:16px;line-height:1.6;margin:20px 0 0 0;">Merci pour votre compréhension.<br><strong>L'équipe Ftour Bab Rayan</strong></p>
+        </td></tr>
+        <tr><td style="background-color:#f8f9fa;padding:20px 30px;text-align:center;border-radius:0 0 8px 8px;border-top:1px solid #e5e7eb;">
+          <p style="margin:0 0 10px 0;font-size:14px;color:#6b7280;">Association Bab Rayan</p>
+          <p style="margin:0;font-size:12px;color:#9ca3af;">4 rue Bayt Lahm, quartier Palmier, Casablanca<br>Tél: +212 (0) 666-690534 | contact@ftourbabrayan.ma</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+              await sendEmail({
+                to: reservation.email,
+                subject: `❌ Réservation refusée - Référence ${reservation.reference}`,
+                html: rejectionEmailHtml,
+              });
+            }
           }
         } catch (emailError) {
           console.error(
-            "[Restaurant Reservation] Confirmation email failed:",
+            "[Restaurant Reservation] Status notification email failed:",
             emailError
           );
         }
@@ -3976,7 +4105,7 @@ const terroirModuleRouter = router({
         </td></tr>
         <tr><td style="background-color:#f8f9fa;padding:20px 30px;text-align:center;border-radius:0 0 8px 8px;border-top:1px solid #e5e7eb;">
           <p style="margin:0 0 10px 0;font-size:14px;color:#6b7280;">Association Bab Rayan</p>
-          <p style="margin:0;font-size:12px;color:#9ca3af;">4 rue Bayt Lahm, quartier Palmier, Casablanca<br>Tél: +212 610 023 555 | contact@ftourbabrayan.ma</p>
+          <p style="margin:0;font-size:12px;color:#9ca3af;">4 rue Bayt Lahm, quartier Palmier, Casablanca<br>Tél: +212 (0) 666-690534 | contact@ftourbabrayan.ma</p>
         </td></tr>
       </table>
     </td></tr>
@@ -4943,7 +5072,7 @@ const pastryOrdersRouter = router({
         </td></tr>
         <tr><td style="background-color:#f8f9fa;padding:20px 30px;text-align:center;border-radius:0 0 8px 8px;border-top:1px solid #e5e7eb;">
           <p style="margin:0 0 10px 0;font-size:14px;color:#6b7280;">Association Bab Rayan</p>
-          <p style="margin:0;font-size:12px;color:#9ca3af;">4 rue Bayt Lahm, quartier Palmier, Casablanca<br>Tél: +212 610 023 555 | contact@ftourbabrayan.ma</p>
+          <p style="margin:0;font-size:12px;color:#9ca3af;">4 rue Bayt Lahm, quartier Palmier, Casablanca<br>Tél: +212 (0) 666-690534 | contact@ftourbabrayan.ma</p>
         </td></tr>
       </table>
     </td></tr>

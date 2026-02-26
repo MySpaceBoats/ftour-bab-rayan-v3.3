@@ -36,6 +36,10 @@ function normalizeSlots(raw: unknown): string[] {
   return [];
 }
 
+function isVolunteerPresent(volunteer: any): boolean {
+  return volunteer?.status === 'present' || volunteer?.qrStatus === 'validated' || !!volunteer?.scannedAt;
+}
+
 export default function AdminBenevoles() {
   const [selectedDay, setSelectedDay] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -142,6 +146,13 @@ export default function AdminBenevoles() {
     return matchesSearch && matchesStatus && matchesSlot;
   });
 
+  const statsSource = filteredVolunteers;
+  const totalCount = statsSource.length;
+  const registeredCount = statsSource.filter((v: any) => v.status === 'registered').length;
+  const confirmedCount = statsSource.filter((v: any) => v.status === 'confirmed' && !isVolunteerPresent(v)).length;
+  const presentCount = statsSource.filter((v: any) => isVolunteerPresent(v)).length;
+  const absentCount = statsSource.filter((v: any) => v.status === 'absent').length;
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'registered':
@@ -207,7 +218,7 @@ export default function AdminBenevoles() {
           <div>
             <h1 className="font-bold text-lg">Gestion des bénévoles</h1>
             <p className="text-xs text-muted-foreground">
-              {filteredVolunteers?.length || 0} bénévole(s)
+              {totalCount} bénévole(s) affiché(s) / {volunteersList.length || 0} total
             </p>
           </div>
         </div>
@@ -282,14 +293,14 @@ export default function AdminBenevoles() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">{volunteersList.length || 0}</div>
+              <div className="text-2xl font-bold">{totalCount}</div>
               <div className="text-xs text-muted-foreground">Total</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {volunteersList.filter((v: any) => v.status === 'registered').length || 0}
+                {registeredCount}
               </div>
               <div className="text-xs text-muted-foreground">Inscrits</div>
             </CardContent>
@@ -297,7 +308,7 @@ export default function AdminBenevoles() {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-green-600">
-                {volunteersList.filter((v: any) => v.status === 'confirmed').length || 0}
+                {confirmedCount}
               </div>
               <div className="text-xs text-muted-foreground">Confirmés</div>
             </CardContent>
@@ -305,7 +316,7 @@ export default function AdminBenevoles() {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-emerald-600">
-                {volunteersList.filter((v: any) => v.status === 'present').length || 0}
+                {presentCount}
               </div>
               <div className="text-xs text-muted-foreground">Présents</div>
             </CardContent>
@@ -313,7 +324,7 @@ export default function AdminBenevoles() {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-red-600">
-                {volunteersList.filter((v: any) => v.status === 'absent').length || 0}
+                {absentCount}
               </div>
               <div className="text-xs text-muted-foreground">Absents</div>
             </CardContent>

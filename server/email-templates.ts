@@ -72,7 +72,7 @@ function baseTemplate(content: string): string {
               </p>
               <p style="margin: 0; font-size: 12px; color: #9ca3af;">
                 4 rue Bayt Lahm, quartier Palmier, Casablanca<br>
-                Tél: +212 610 023 555 | contact@ftourbabrayan.ma
+                Tél: +212 (0) 666-690534 | contact@ftourbabrayan.ma
               </p>
             </td>
           </tr>
@@ -196,7 +196,7 @@ function getDeliveryInstructions(deliveryMode: DeliveryMode, deliveryData?: {
               20000 Casablanca, Maroc
             </p>
             <p style="margin: 10px 0 0 0; color: #374151;">
-              📞 Tél: +212 610 023 555<br>
+              📞 Tél: +212 (0) 666-690534<br>
               📧 Email: contact@ftourbabrayan.ma
             </p>
             <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;">

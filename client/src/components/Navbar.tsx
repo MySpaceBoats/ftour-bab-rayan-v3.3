@@ -16,6 +16,7 @@ import {
   Heart,
   Users,
   ShoppingBag,
+  Image,
   Home,
   Info,
   LogOut,
@@ -24,7 +25,6 @@ import {
   Lock,
   ShoppingCart,
   UtensilsCrossed,
-  Images,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -61,12 +61,13 @@ export default function Navbar() {
       icon: UtensilsCrossed,
     },
     { href: localizedHref("/benevole"), label: t.nav.volunteer, icon: Users },
-    { href: localizedHref("/galerie"), label: t.nav.gallery, icon: Images },
+    { href: localizedHref("/galerie"), label: t.nav.gallery, icon: Image },
     {
       href: localizedHref("/boutique"),
       label: t.nav.boutique,
       icon: ShoppingBag,
     },
+    { href: localizedHref("/dons"), label: "Donation", icon: Heart },
   ];
 
   const handleLogout = async () => {
@@ -123,7 +124,11 @@ export default function Navbar() {
           {/* Sélecteur de langue */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors" aria-label={t.topMenu.language} title={t.topMenu.language}>
+              <button
+                className="flex items-center text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors"
+                aria-label={t.topMenu.language}
+                title={t.topMenu.language}
+              >
                 <Globe className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>

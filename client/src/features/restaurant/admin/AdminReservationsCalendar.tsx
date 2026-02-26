@@ -178,15 +178,6 @@ export default function AdminReservationsCalendar() {
     return Array.from(dayMap.values());
   }, [allReservations, currentMonth]);
 
-  // Global stats for the month
-  const monthStats = useMemo(() => {
-    const monthDays = calendarData.filter((d) => isSameMonth(d.date, currentMonth));
-    const totalSeats = monthDays.reduce((sum, d) => sum + d.totalSeats, 0);
-    const totalGroups = monthDays.reduce((sum, d) => sum + d.groupCount, 0);
-    const daysWithReservations = monthDays.filter((d) => d.reservations.length > 0).length;
-    return { totalSeats, totalGroups, daysWithReservations };
-  }, [calendarData, currentMonth]);
-
   // Ramadan stats (19 février – 13 mars)
   const RAMADAN_START = new Date(2026, 1, 19); // Feb 19
   const RAMADAN_END = new Date(2026, 2, 13);   // Mar 13
@@ -305,46 +296,6 @@ export default function AdminReservationsCalendar() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Month Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card className="border-[#d4d4aa] bg-[#f5f5e8]/50">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-[#5E5B34] flex items-center justify-center">
-                <UtensilsCrossed className="h-6 w-6 text-[#F2E9D3]" />
-              </div>
-              <div>
-                <p className="text-sm text-[#6b6b4e] font-medium">Places réservées</p>
-                <p className="text-2xl font-bold text-[#5d5a3c]">{monthStats.totalSeats}</p>
-                <p className="text-[10px] text-[#8b8b6e] capitalize">{format(currentMonth, "MMMM yyyy", { locale: fr })}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-blue-200 bg-blue-50/50">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
-                <UsersRound className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-blue-700 font-medium">Groupes inscrits</p>
-                <p className="text-2xl font-bold text-blue-900">{monthStats.totalGroups}</p>
-                <p className="text-[10px] text-blue-600 capitalize">{format(currentMonth, "MMMM yyyy", { locale: fr })}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-violet-200 bg-violet-50/50">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-violet-600 flex items-center justify-center">
-                <CalendarDays className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-violet-700 font-medium">Jours avec réservations</p>
-                <p className="text-2xl font-bold text-violet-900">{monthStats.daysWithReservations}</p>
-                <p className="text-[10px] text-violet-600 capitalize">{format(currentMonth, "MMMM yyyy", { locale: fr })}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Calendar */}
         <Card className="border-[#d4d4aa]">

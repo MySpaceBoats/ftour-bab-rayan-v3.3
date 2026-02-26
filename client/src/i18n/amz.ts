@@ -40,7 +40,7 @@ export const amz: Translations = {
 
   // Top Menu
   topMenu: {
-    phone: '+212 664-887978',
+    phone: '+212 (0) 666-690534',
     language: 'Language',
   },
 
@@ -676,7 +676,7 @@ export const amz: Translations = {
     chequeInstructions: 'Please send your cheque to: Bab Rayan Association, 4 rue Bayt Lahm, Casablanca',
     cashDetails: 'Cash Payment',
     preferredPickupDate: 'Preferred Pickup Date',
-    cashInstructions: 'Please bring cash to our office at: 4 rue Bayt Lahm, Casablanca. Contact us at +212 664-887978',
+    cashInstructions: 'Please bring cash to our office at: 4 rue Bayt Lahm, Casablanca. Contact us at +212 (0) 666-690534',
     paypalDetails: 'PayPal Details',
     paypalEmail: 'PayPal Email',
     paypalEmailRequired: 'PayPal email is required',

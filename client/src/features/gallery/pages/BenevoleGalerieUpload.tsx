@@ -17,8 +17,6 @@ type UploadItem = {
   file: File;
   preview: string;
   progress: number;
-  tags?: string;
-  yearOrEdition?: string;
 };
 
 export default function BenevoleGalerieUpload() {
@@ -93,13 +91,6 @@ export default function BenevoleGalerieUpload() {
         fileName: item.file.name,
         fileType: item.file.type,
         fileData: dataUrl,
-        eventDate: item.yearOrEdition,
-        tags: item.tags
-          ? item.tags
-              .split(",")
-              .map(t => t.trim())
-              .filter(Boolean)
-          : [],
         albumId: null,
         sortOrder: 0,
         status: "draft",
@@ -189,30 +180,6 @@ export default function BenevoleGalerieUpload() {
                   className="h-40 w-full rounded object-cover"
                 />
                 <Progress value={item.progress} />
-                <Input
-                  placeholder="Tags (virgule)"
-                  value={item.tags ?? ""}
-                  onChange={e =>
-                    setItems(prev =>
-                      prev.map((it, i) =>
-                        i === idx ? { ...it, tags: e.target.value } : it
-                      )
-                    )
-                  }
-                />
-                <Input
-                  placeholder="Année xxxx ou édition xxxx"
-                  value={item.yearOrEdition ?? ""}
-                  onChange={e =>
-                    setItems(prev =>
-                      prev.map((it, i) =>
-                        i === idx
-                          ? { ...it, yearOrEdition: e.target.value }
-                          : it
-                      )
-                    )
-                  }
-                />
                 <Button
                   variant="outline"
                   className="w-full"
