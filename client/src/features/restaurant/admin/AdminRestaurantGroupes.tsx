@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,12 +42,33 @@ import {
   CreditCard,
   Trash2,
   Pencil,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
+
+type SortDirection = "asc" | "desc";
+type SortKey =
+  | "reference"
+  | "type"
+  | "groupOrCompany"
+  | "contact"
+  | "seatsTotal"
+  | "date"
+  | "status"
+  | "createdAt";
 
 export default function AdminRestaurantGroupes() {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortConfig, setSortConfig] = useState<{
+    key: SortKey;
+    direction: SortDirection;
+  }>({
+    key: "createdAt",
+    direction: "desc",
+  });
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState<{
     id: number;
@@ -97,10 +118,7 @@ export default function AdminRestaurantGroupes() {
       ...r,
       type: r.type || "entreprise",
     })),
-  ].sort(
-    (a: any, b: any) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  ];
 
   const refetch = () => {
     refetchG();
@@ -227,16 +245,84 @@ export default function AdminRestaurantGroupes() {
     );
   }
 
-  const filteredReservations = reservations?.filter((r: any) => {
-    const matchesSearch =
-      searchQuery === "" ||
-      r.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.groupName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.companyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.reference?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || r.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const getSortValue = (reservation: any, key: SortKey) => {
+    switch (key) {
+      case "reference":
+        return reservation.reference || "";
+      case "type":
+        return reservation.type || "";
+      case "groupOrCompany":
+        return reservation.groupName || reservation.companyName || "";
+      case "contact":
+        return reservation.name || "";
+      case "seatsTotal":
+        return Number(reservation.seatsTotal) || 0;
+      case "date":
+        return reservation.date ? new Date(reservation.date).getTime() : 0;
+      case "status":
+        return reservation.status || "";
+      case "createdAt":
+        return reservation.createdAt
+          ? new Date(reservation.createdAt).getTime()
+          : 0;
+      default:
+        return "";
+    }
+  };
+
+  const filteredReservations = useMemo(() => {
+    const filtered = reservations?.filter((r: any) => {
+      const matchesSearch =
+        searchQuery === "" ||
+        r.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.groupName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.companyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.reference?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === "all" || r.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+
+    return [...filtered].sort((a: any, b: any) => {
+      const aValue = getSortValue(a, sortConfig.key);
+      const bValue = getSortValue(b, sortConfig.key);
+
+      let comparison = 0;
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        comparison = aValue - bValue;
+      } else {
+        comparison = String(aValue).localeCompare(String(bValue), "fr", {
+          sensitivity: "base",
+        });
+      }
+
+      return sortConfig.direction === "asc" ? comparison : -comparison;
+    });
+  }, [reservations, searchQuery, statusFilter, sortConfig]);
+
+  const toggleSort = (key: SortKey) => {
+    setSortConfig(current => {
+      if (current.key === key) {
+        return {
+          ...current,
+          direction: current.direction === "asc" ? "desc" : "asc",
+        };
+      }
+
+      return { key, direction: "asc" };
+    });
+  };
+
+  const renderSortIcon = (key: SortKey) => {
+    if (sortConfig.key !== key) {
+      return <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />;
+    }
+
+    return sortConfig.direction === "asc" ? (
+      <ArrowUp className="h-3.5 w-3.5" />
+    ) : (
+      <ArrowDown className="h-3.5 w-3.5" />
+    );
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -389,14 +475,86 @@ export default function AdminRestaurantGroupes() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Référence</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Groupe / Entreprise</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Places</TableHead>
-                    <TableHead>Date ftour</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Créé le</TableHead>
+                    <TableHead>
+                      <button
+                        type="button"
+                        onClick={() => toggleSort("reference")}
+                        className="inline-flex items-center gap-1 hover:text-foreground"
+                      >
+                        Référence
+                        {renderSortIcon("reference")}
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button
+                        type="button"
+                        onClick={() => toggleSort("type")}
+                        className="inline-flex items-center gap-1 hover:text-foreground"
+                      >
+                        Type
+                        {renderSortIcon("type")}
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button
+                        type="button"
+                        onClick={() => toggleSort("groupOrCompany")}
+                        className="inline-flex items-center gap-1 hover:text-foreground"
+                      >
+                        Groupe / Entreprise
+                        {renderSortIcon("groupOrCompany")}
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button
+                        type="button"
+                        onClick={() => toggleSort("contact")}
+                        className="inline-flex items-center gap-1 hover:text-foreground"
+                      >
+                        Contact
+                        {renderSortIcon("contact")}
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button
+                        type="button"
+                        onClick={() => toggleSort("seatsTotal")}
+                        className="inline-flex items-center gap-1 hover:text-foreground"
+                      >
+                        Places
+                        {renderSortIcon("seatsTotal")}
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button
+                        type="button"
+                        onClick={() => toggleSort("date")}
+                        className="inline-flex items-center gap-1 hover:text-foreground"
+                      >
+                        Date ftour
+                        {renderSortIcon("date")}
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button
+                        type="button"
+                        onClick={() => toggleSort("status")}
+                        className="inline-flex items-center gap-1 hover:text-foreground"
+                      >
+                        Statut
+                        {renderSortIcon("status")}
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button
+                        type="button"
+                        onClick={() => toggleSort("createdAt")}
+                        className="inline-flex items-center gap-1 hover:text-foreground"
+                      >
+                        Créé le
+                        {renderSortIcon("createdAt")}
+                      </button>
+                    </TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
