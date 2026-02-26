@@ -5,21 +5,66 @@ import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
-import { getLoginUrl } from "./const";
-import { clearStoredSession, getStoredSession, isSessionExpiringSoon, setStoredSession } from "./_core/authToken";
+import {
+  clearStoredSession,
+  getStoredSession,
+  isSessionExpiringSoon,
+  setStoredSession,
+} from "./_core/authSession";
 import { I18nProvider } from "./i18n";
 import "./index.css";
 
 const queryClient = new QueryClient();
+
+let refreshPromise: Promise<string | null> | null = null;
+
+const refreshAccessToken = async (refreshToken: string): Promise<string | null> => {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        const response = await fetch("/api/auth/refresh", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ refreshToken }),
+        });
+
+        if (!response.ok) {
+          clearStoredSession();
+          return null;
+        }
+
+        const payload = (await response.json()) as {
+          session?: { accessToken: string; refreshToken: string; expiresAt: number | null };
+        };
+
+        if (!payload.session) {
+          clearStoredSession();
+          return null;
+        }
+
+        setStoredSession(payload.session);
+        return payload.session.accessToken;
+      } catch {
+        clearStoredSession();
+        return null;
+      } finally {
+        refreshPromise = null;
+      }
+    })();
+  }
+
+  return refreshPromise;
+};
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
   if (typeof window === "undefined") return;
 
   const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
-
   if (!isUnauthorized) return;
 
+  clearStoredSession();
   window.location.href = '/connexion';
 };
 
@@ -39,7 +84,6 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-// Utiliser l'API externe en production, locale en développement
 const API_URL = import.meta.env.VITE_API_URL || '/api/trpc';
 
 const trpcClient = trpc.createClient({
@@ -55,25 +99,11 @@ const trpcClient = trpc.createClient({
         }
 
         let accessToken = session.accessToken;
-
         if (isSessionExpiringSoon(session.expiresAt)) {
-          try {
-            const refreshed = await trpcClient.auth.refreshSession.mutate({
-              refreshToken: session.refreshToken,
-            });
-            setStoredSession(refreshed.session);
-            localStorage.setItem('supabase_token', refreshed.session.accessToken);
-            accessToken = refreshed.session.accessToken;
-          } catch (error) {
-            clearStoredSession();
-            accessToken = '';
-          }
+          accessToken = (await refreshAccessToken(session.refreshToken)) ?? '';
         }
 
-        if (!accessToken) {
-          return {};
-        }
-
+        if (!accessToken) return {};
         return { Authorization: `Bearer ${accessToken}` };
       },
       fetch(input, init) {
