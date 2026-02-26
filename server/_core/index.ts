@@ -10,6 +10,10 @@ import { serveStatic, setupVite } from "./vite";
 import { ensureVolunteerSlotsColumn, ensurePastriesTable } from "../supabase";
 import { refreshUserSession } from "../supabase-auth";
 import { getSupabaseAdminClient } from "../supabase";
+import {
+  getAllGoodiesSupabase,
+  getPastriesSupabase,
+} from "../supabase-services";
 import { DONATION_SUGGESTED_AMOUNTS_MAD } from "../../shared/const";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -67,110 +71,130 @@ async function startServer() {
       return;
     }
 
-    try {
-      const [goodiesRes, pastriesRes, terroirRes, donationProductsRes] =
-        await Promise.all([
-          supabase
-            .from("goodies")
-            .select("id,name,description,price,image_url,sort_order")
-            .order("sort_order", { ascending: true }),
-          supabase
-            .from("pastries")
-            .select("id,name,description,price,image_url,sort_order")
-            .order("sort_order", { ascending: true }),
-          supabase
-            .from("terroir_products")
-            .select(
-              "id,name,description,image_url,sort_order,terroir_product_variants(id,label,price_unit,is_active)"
-            )
-            .order("sort_order", { ascending: true }),
-          supabase
-            .from("products")
-            .select("id,name,price_mad,active")
-            .eq("type", "DONATION"),
-        ]);
+    const [goodiesRes, pastriesRes, terroirJoinRes, donationsRes] =
+      await Promise.allSettled([
+        getAllGoodiesSupabase(true),
+        getPastriesSupabase(),
+        supabase
+          .from("terroir_products")
+          .select("*, terroir_product_variants(*)")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("products")
+          .select("id,name,price_mad,active")
+          .eq("type", "DONATION"),
+      ]);
 
-      if (goodiesRes.error || pastriesRes.error || terroirRes.error) {
-        res.status(500).json({
-          error:
-            goodiesRes.error?.message ||
-            pastriesRes.error?.message ||
-            terroirRes.error?.message ||
-            "catalog_error",
-        });
-        return;
-      }
-
-      const donationProducts = donationProductsRes.error
-        ? []
-        : donationProductsRes.data || [];
-
-      const goodies = (goodiesRes.data || []).map((item: any) => ({
-        id: `GOODIE-${item.id}`,
-        sourceId: item.id,
-        type: "GOODIE",
-        name: item.name,
-        description: item.description || "",
-        priceMad: Math.round(Number(item.price || 0)),
-        imageUrl: item.image_url || null,
-      }));
-
-      const pastries = (pastriesRes.data || []).map((item: any) => ({
-        id: `PASTRY-${item.id}`,
-        sourceId: item.id,
-        type: "PASTRY",
-        name: item.name,
-        description: item.description || "",
-        priceMad: Math.round(Number(item.price || 0)),
-        imageUrl: item.image_url || null,
-      }));
-
-      const terroir = (terroirRes.data || []).flatMap((product: any) =>
-        (product.terroir_product_variants || [])
-          .filter((variant: any) => variant.is_active)
-          .map((variant: any) => ({
-            id: `TERROIR-${product.id}-${variant.id}`,
-            sourceId: product.id,
-            type: "TERROIR",
-            name: `${product.name}${variant.label ? ` - ${variant.label}` : ""}`,
-            description: product.description || "",
-            priceMad: Math.round(Number(variant.price_unit || 0)),
-            imageUrl: product.image_url || null,
-            variantId: variant.id,
+    const goodies =
+      goodiesRes.status === "fulfilled"
+        ? goodiesRes.value.map(item => ({
+            id: `GOODIE-${item.id}`,
+            sourceId: item.id,
+            type: "GOODIE",
+            name: item.name,
+            description: item.description || "",
+            priceMad: Math.round(Number(item.price || 0)),
+            imageUrl: item.imageUrl || null,
           }))
-      );
+        : [];
 
-      const presets = donationProducts
-        .filter((d: any) => d.active !== false)
-        .map((d: any) => Number(d.price_mad))
-        .filter((v: number) => Number.isFinite(v) && v > 0)
-        .sort((a: number, b: number) => a - b)
-        .reduce(
-          (acc: number[], v: number) => (acc.includes(v) ? acc : [...acc, v]),
-          []
-        )
-        .concat(
-          [...DONATION_SUGGESTED_AMOUNTS_MAD].filter(
-            v =>
-              !donationProducts.some(
-                (d: any) => Number(d.price_mad) === v && d.active !== false
-              )
-          )
+    const pastries =
+      pastriesRes.status === "fulfilled"
+        ? pastriesRes.value.map((item: any) => ({
+            id: `PASTRY-${item.id}`,
+            sourceId: item.id,
+            type: "PASTRY",
+            name: item.name,
+            description: item.description || "",
+            priceMad: Math.round(Number(item.price || 0)),
+            imageUrl: item.image_url || null,
+          }))
+        : [];
+
+    let terroirProducts: any[] = [];
+    if (terroirJoinRes.status === "fulfilled" && !terroirJoinRes.value.error) {
+      terroirProducts = terroirJoinRes.value.data || [];
+    } else {
+      const productsQuery = await supabase
+        .from("terroir_products")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
+
+      if (!productsQuery.error && (productsQuery.data || []).length) {
+        const productIds = (productsQuery.data || []).map(
+          (product: any) => product.id
+        );
+        const variantsQuery = await supabase
+          .from("terroir_product_variants")
+          .select("*")
+          .in("product_id", productIds)
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true });
+
+        const variantsByProductId = (variantsQuery.data || []).reduce(
+          (acc: Record<number, any[]>, variant: any) => {
+            if (!acc[variant.product_id]) {
+              acc[variant.product_id] = [];
+            }
+            acc[variant.product_id].push(variant);
+            return acc;
+          },
+          {}
         );
 
-      res.json({
-        goodies,
-        pastries,
-        terroir,
-        donations: { presets },
-      });
-    } catch (error) {
-      res
-        .status(500)
-        .json({
-          error: error instanceof Error ? error.message : "catalog_error",
-        });
+        terroirProducts = (productsQuery.data || []).map((product: any) => ({
+          ...product,
+          terroir_product_variants: variantsByProductId[product.id] || [],
+        }));
+      }
     }
+
+    const terroir = terroirProducts.flatMap((product: any) =>
+      (product.terroir_product_variants || [])
+        .filter((variant: any) => variant.is_active !== false)
+        .map((variant: any) => ({
+          id: `TERROIR-${product.id}-${variant.id}`,
+          sourceId: product.id,
+          type: "TERROIR",
+          name: `${product.name}${variant.label ? ` - ${variant.label}` : ""}`,
+          description: product.description || "",
+          priceMad: Math.round(Number(variant.price_unit || 0)),
+          imageUrl: product.image_url || null,
+          variantId: variant.id,
+        }))
+    );
+
+    const donationProducts =
+      donationsRes.status === "fulfilled" && !donationsRes.value.error
+        ? donationsRes.value.data || []
+        : [];
+
+    const presets = donationProducts
+      .filter((d: any) => d.active !== false)
+      .map((d: any) => Number(d.price_mad))
+      .filter((v: number) => Number.isFinite(v) && v > 0)
+      .sort((a: number, b: number) => a - b)
+      .reduce(
+        (acc: number[], v: number) => (acc.includes(v) ? acc : [...acc, v]),
+        []
+      )
+      .concat(
+        [...DONATION_SUGGESTED_AMOUNTS_MAD].filter(
+          v =>
+            !donationProducts.some(
+              (d: any) => Number(d.price_mad) === v && d.active !== false
+            )
+        )
+      );
+
+    res.json({
+      goodies,
+      pastries,
+      terroir,
+      donations: { presets },
+    });
   });
 
   // OAuth callback under /api/oauth/callback
