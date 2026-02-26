@@ -8,6 +8,7 @@ import { appRouterUpdated as appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { ensureVolunteerSlotsColumn, ensurePastriesTable } from "../supabase";
+import { refreshUserSession } from "../supabase-auth";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -38,6 +39,25 @@ async function startServer() {
   // Ensure database schema is up to date
   await ensureVolunteerSlotsColumn();
   await ensurePastriesTable();
+
+
+  app.post("/api/auth/refresh", async (req, res) => {
+    const refreshToken =
+      typeof req.body?.refreshToken === "string" ? req.body.refreshToken : "";
+
+    if (!refreshToken) {
+      res.status(400).json({ error: "refreshToken is required" });
+      return;
+    }
+
+    const result = await refreshUserSession(refreshToken);
+    if (result.error || !result.session) {
+      res.status(401).json({ error: result.error || "Session expirée" });
+      return;
+    }
+
+    res.json({ session: result.session });
+  });
 
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);

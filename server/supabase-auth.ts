@@ -177,6 +177,8 @@ export async function signInUser(data: SignInData): Promise<{ user: AuthUser | n
   }
 }
 
+
+
 export async function refreshUserSession(refreshToken: string): Promise<{ session: AuthSession | null; error: string | null }> {
   try {
     const supabaseAdmin = getAdminClient();
@@ -201,7 +203,6 @@ export async function refreshUserSession(refreshToken: string): Promise<{ sessio
     return { session: null, error: 'Erreur inattendue' };
   }
 }
-
 // Déconnexion
 export async function signOutUser(): Promise<{ error: string | null }> {
   try {
