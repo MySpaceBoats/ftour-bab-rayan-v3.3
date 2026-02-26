@@ -344,6 +344,17 @@ export const pastryOrdersRouter = router({
       }
     }),
 
+  delete: adminBoutiqueProcedure
+    .input(z.object({ orderId: z.number() }))
+    .mutation(async ({ input }) => {
+      try {
+        return await supabaseServices.deletePastryOrderSupabase(input.orderId);
+      } catch (error) {
+        console.error('Error deleting pastry order:', error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Erreur lors de la suppression de la commande' });
+      }
+    }),
+
   stats: adminBoutiqueProcedure.query(async () => {
     try {
       return await supabaseServices.getPastryOrderStatsSupabase();

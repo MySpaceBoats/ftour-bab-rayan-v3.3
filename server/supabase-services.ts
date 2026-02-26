@@ -2354,6 +2354,19 @@ export async function updatePastryOrderStatusSupabase(
   return data;
 }
 
+export async function deletePastryOrderSupabase(orderId: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const { error } = await client
+    .from('pastry_orders')
+    .delete()
+    .eq('id', orderId);
+
+  if (error) throw error;
+  return { success: true };
+}
+
 export async function generateQRTokenSupabase(scope: string, entityId: number) {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error('Supabase not configured');
