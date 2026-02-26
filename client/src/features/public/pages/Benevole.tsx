@@ -272,7 +272,15 @@ export default function Benevole() {
     }
   };
 
-  const availableDays = days?.filter(d => d.isOpen) || [];
+  const isDayFull = (day: {
+    isOpen: boolean;
+    registeredCount?: number | null;
+    capacity: number;
+  }) => !day.isOpen || (day.registeredCount ?? 0) >= day.capacity;
+
+  const availableDays = days?.filter(day => !isDayFull(day)) || [];
+  const selectedDay = days?.find(day => day.id.toString() === formData.dayId);
+  const selectedDayIsFull = selectedDay ? isDayFull(selectedDay) : false;
   const dateLocale =
     lang === "ar" ? "ar-MA" : lang === "en" ? "en-US" : "fr-FR";
 
@@ -427,6 +435,12 @@ export default function Benevole() {
         : lang === "en"
           ? "No date available"
           : "Aucune date disponible",
+    dayFull:
+      lang === "ar"
+        ? "اليوم مكتمل"
+        : lang === "en"
+          ? "Day full"
+          : "Jour complet",
     places: lang === "ar" ? "أماكن" : lang === "en" ? "places" : "places",
     day: lang === "ar" ? "اليوم" : lang === "en" ? "Day" : "Jour",
     firstName:
@@ -983,11 +997,12 @@ export default function Benevole() {
                               <SelectItem value="loading" disabled>
                                 {formTexts.loading}
                               </SelectItem>
-                            ) : availableDays.length > 0 ? (
-                              availableDays.map(day => (
+                            ) : days && days.length > 0 ? (
+                              days.map(day => (
                                 <SelectItem
                                   key={day.id}
                                   value={day.id.toString()}
+                                  disabled={isDayFull(day)}
                                 >
                                   {new Date(day.date).toLocaleDateString(
                                     dateLocale,
@@ -997,6 +1012,9 @@ export default function Benevole() {
                                       month: "long",
                                     }
                                   )}
+                                  {isDayFull(day)
+                                    ? ` - ${formTexts.dayFull}`
+                                    : ""}
                                 </SelectItem>
                               ))
                             ) : (
@@ -1006,6 +1024,12 @@ export default function Benevole() {
                             )}
                           </SelectContent>
                         </Select>
+                        {selectedDayIsFull && (
+                          <p className="text-sm text-destructive flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4" />
+                            {formTexts.dayFull}
+                          </p>
+                        )}
                       </div>
 
                       {/* Group Toggle */}
