@@ -2461,7 +2461,6 @@ export async function logQRScanSupabase(
       validated_by: normalizedValidatedBy,
       success,
       error_message: errorMessage,
-      scanned_at: new Date().toISOString(),
     });
 
   if (error) throw error;
