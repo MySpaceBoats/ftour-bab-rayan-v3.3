@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,8 @@ type ReservationStatus =
   | "completed"
   | "no_show";
 
+type ManualStatus = "validated_pending_payment" | "refused" | "completed";
+
 const getDisplayChoiceOptions = (type: string) => {
   const baseOptions = [{ value: 'jardin', label: 'Pavillon du Jardin' }];
 
@@ -60,6 +62,9 @@ export default function AdminRestaurantReservations() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [depositInput, setDepositInput] = useState<string>("");
+  const [manualStatus, setManualStatus] = useState<ManualStatus>(
+    "validated_pending_payment"
+  );
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState<{
     id: number;
@@ -148,6 +153,23 @@ export default function AdminRestaurantReservations() {
 
   const selectedReservation = filteredReservations.find((res: any) => res.id === selectedId) || null;
   const displayChoiceOptions = editForm ? getDisplayChoiceOptions(editForm.type) : [];
+
+  useEffect(() => {
+    if (!selectedReservation) {
+      return;
+    }
+
+    if (
+      selectedReservation.status === "validated_pending_payment" ||
+      selectedReservation.status === "refused" ||
+      selectedReservation.status === "completed"
+    ) {
+      setManualStatus(selectedReservation.status);
+      return;
+    }
+
+    setManualStatus("validated_pending_payment");
+  }, [selectedReservation]);
 
   // Validate reservation
   const validateMutation = trpc.restaurantReservations.validate.useMutation({
@@ -775,6 +797,45 @@ export default function AdminRestaurantReservations() {
                     Marquer terminée
                   </Button>
                 )}
+
+                <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Changement manuel du statut
+                  </p>
+                  <div className="flex gap-2">
+                    <Select
+                      value={manualStatus}
+                      onValueChange={value =>
+                        setManualStatus(value as ManualStatus)
+                      }
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Choisir un statut" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="validated_pending_payment">
+                          Paiement attendu
+                        </SelectItem>
+                        <SelectItem value="refused">Refusée</SelectItem>
+                        <SelectItem value="completed">Terminée</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      onClick={() =>
+                        updateStatusMutation.mutate({
+                          id: selectedReservation.id,
+                          status: manualStatus,
+                        })
+                      }
+                      disabled={
+                        updateStatusMutation.isPending ||
+                        selectedReservation.status === manualStatus
+                      }
+                    >
+                      Appliquer
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
           </CardContent>
