@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { useLocation } from 'wouter';
 
 type ItemType = 'GOODIE' | 'PASTRY' | 'TERROIR' | 'DONATION';
+type MenuTab = 'ALL' | ItemType;
+
 type CatalogItem = {
   id: string;
   sourceId: number;
@@ -17,6 +19,7 @@ type CatalogItem = {
   imageUrl?: string | null;
   variantId?: number;
 };
+
 type CartItem = {
   key: string;
   productId: number | null;
@@ -31,9 +34,14 @@ const CART_KEY = 'menu_solidaire_cart';
 
 export default function MenuSolidaire() {
   const [, navigate] = useLocation();
-  const [tab, setTab] = useState<ItemType>('GOODIE');
+  const [tab, setTab] = useState<MenuTab>('ALL');
   const [loading, setLoading] = useState(true);
-  const [catalog, setCatalog] = useState<{ goodies: CatalogItem[]; pastries: CatalogItem[]; terroir: CatalogItem[]; donations: { presets: number[] } }>({
+  const [catalog, setCatalog] = useState<{
+    goodies: CatalogItem[];
+    pastries: CatalogItem[];
+    terroir: CatalogItem[];
+    donations: { presets: number[] };
+  }>({
     goodies: [],
     pastries: [],
     terroir: [],
@@ -72,22 +80,53 @@ export default function MenuSolidaire() {
     });
   };
 
-  const visible =
-    tab === 'GOODIE'
-      ? catalog.goodies
-      : tab === 'PASTRY'
-        ? catalog.pastries
-        : tab === 'TERROIR'
-          ? catalog.terroir
-          : [];
+  const sections = useMemo(
+    () => [
+      { key: 'GOODIE' as const, title: 'Goodies', items: catalog.goodies },
+      { key: 'PASTRY' as const, title: 'Pâtisseries', items: catalog.pastries },
+      { key: 'TERROIR' as const, title: 'Produits du terroir', items: catalog.terroir },
+    ],
+    [catalog.goodies, catalog.pastries, catalog.terroir],
+  );
+
+  const hasAnyCatalogItems = sections.some((s) => s.items.length > 0);
+
+  const renderProductCard = (item: CatalogItem) => (
+    <Card key={item.id}>
+      <CardHeader>
+        <CardTitle>{item.name}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <p className="text-sm text-muted-foreground">{item.description}</p>
+        <p className="font-semibold">{item.priceMad} MAD</p>
+        <Button
+          onClick={() =>
+            addToCart({
+              key: item.id,
+              productId: item.sourceId,
+              name: item.name,
+              type: item.type,
+              unitPriceMad: item.priceMad,
+              meta: item.variantId ? { variantId: item.variantId } : undefined,
+            })
+          }
+        >
+          Ajouter
+        </Button>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
       <h1 className="text-3xl font-bold">Menu Solidaire</h1>
-      <p className="text-muted-foreground">Choisissez vos goodies, pâtisseries, produits du terroir ou faites un don. Paiement en espèces uniquement.</p>
+      <p className="text-muted-foreground">
+        Choisissez vos goodies, pâtisseries, produits du terroir ou faites un don. Paiement en espèces uniquement.
+      </p>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as ItemType)}>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as MenuTab)}>
         <TabsList>
+          <TabsTrigger value="ALL">Tous</TabsTrigger>
           <TabsTrigger value="GOODIE">Goodies</TabsTrigger>
           <TabsTrigger value="PASTRY">Pâtisseries</TabsTrigger>
           <TabsTrigger value="TERROIR">Produits du terroir</TabsTrigger>
@@ -95,58 +134,178 @@ export default function MenuSolidaire() {
         </TabsList>
       </Tabs>
 
-      {loading ? <p>Chargement…</p> : (
-        <div className="grid gap-4 md:grid-cols-3">
-          {tab !== 'DONATION' && visible.map((item) => (
-            <Card key={item.id}>
-              <CardHeader><CardTitle>{item.name}</CardTitle></CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-sm text-muted-foreground">{item.description}</p>
-                <p className="font-semibold">{item.priceMad} MAD</p>
-                <Button onClick={() => addToCart({
-                  key: item.id,
-                  productId: item.sourceId,
-                  name: item.name,
-                  type: item.type,
-                  unitPriceMad: item.priceMad,
-                  meta: item.variantId ? { variantId: item.variantId } : undefined,
-                })}>Ajouter</Button>
-              </CardContent>
-            </Card>
-          ))}
+      {loading ? (
+        <p>Chargement…</p>
+      ) : (
+        <div className="space-y-8">
+          {tab === 'ALL' && (
+            <>
+              {!hasAnyCatalogItems && <p className="text-muted-foreground">Aucun produit disponible pour le moment.</p>}
+
+              {sections.map((section) => (
+                <section key={section.key} className="space-y-3">
+                  <h2 className="text-xl font-semibold">{section.title}</h2>
+                  {section.items.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Aucun item dans cette catégorie.</p>
+                  ) : (
+                    <div className="grid gap-4 md:grid-cols-3">{section.items.map(renderProductCard)}</div>
+                  )}
+                </section>
+              ))}
+
+              <section className="space-y-3">
+                <h2 className="text-xl font-semibold">Dons solidaires</h2>
+                <Card>
+                  <CardContent className="pt-6 space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      {catalog.donations.presets.map((amt) => (
+                        <Button
+                          key={amt}
+                          variant="outline"
+                          onClick={() =>
+                            addToCart({
+                              key: `DON-${amt}`,
+                              productId: null,
+                              name: `Don ${amt} MAD`,
+                              type: 'DONATION',
+                              unitPriceMad: amt,
+                              meta: { preset: true },
+                            })
+                          }
+                        >
+                          + {amt} MAD
+                        </Button>
+                      ))}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Don libre (MAD)</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={customDonation || ''}
+                        onChange={(e) => setCustomDonation(Number(e.target.value || 0))}
+                      />
+                      <Button
+                        disabled={!customDonation}
+                        onClick={() =>
+                          addToCart({
+                            key: `DON-CUSTOM-${Date.now()}`,
+                            productId: null,
+                            name: 'Don libre',
+                            type: 'DONATION',
+                            unitPriceMad: customDonation,
+                            meta: { custom: true, amount: customDonation },
+                          })
+                        }
+                      >
+                        Ajouter don libre
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </section>
+            </>
+          )}
+
+          {tab !== 'ALL' && tab !== 'DONATION' && (
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold">
+                {tab === 'GOODIE' ? 'Goodies' : tab === 'PASTRY' ? 'Pâtisseries' : 'Produits du terroir'}
+              </h2>
+              {sections.find((s) => s.key === tab)?.items.length ? (
+                <div className="grid gap-4 md:grid-cols-3">
+                  {sections.find((s) => s.key === tab)!.items.map(renderProductCard)}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Aucun item dans cette catégorie.</p>
+              )}
+            </section>
+          )}
 
           {tab === 'DONATION' && (
-            <Card>
-              <CardHeader><CardTitle>Dons solidaires</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  {catalog.donations.presets.map((amt) => (
-                    <Button key={amt} variant="outline" onClick={() => addToCart({ key: `DON-${amt}`, productId: null, name: `Don ${amt} MAD`, type: 'DONATION', unitPriceMad: amt, meta: { preset: true } })}>+ {amt} MAD</Button>
-                  ))}
-                </div>
-                <div className="space-y-2">
-                  <Label>Don libre (MAD)</Label>
-                  <Input type="number" min={1} value={customDonation || ''} onChange={(e) => setCustomDonation(Number(e.target.value || 0))} />
-                  <Button disabled={!customDonation} onClick={() => addToCart({ key: `DON-CUSTOM-${Date.now()}`, productId: null, name: `Don libre`, type: 'DONATION', unitPriceMad: customDonation, meta: { custom: true, amount: customDonation } })}>Ajouter don libre</Button>
-                </div>
-              </CardContent>
-            </Card>
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold">Dons solidaires</h2>
+              <Card>
+                <CardContent className="pt-6 space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {catalog.donations.presets.map((amt) => (
+                      <Button
+                        key={amt}
+                        variant="outline"
+                        onClick={() =>
+                          addToCart({
+                            key: `DON-${amt}`,
+                            productId: null,
+                            name: `Don ${amt} MAD`,
+                            type: 'DONATION',
+                            unitPriceMad: amt,
+                            meta: { preset: true },
+                          })
+                        }
+                      >
+                        + {amt} MAD
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Don libre (MAD)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={customDonation || ''}
+                      onChange={(e) => setCustomDonation(Number(e.target.value || 0))}
+                    />
+                    <Button
+                      disabled={!customDonation}
+                      onClick={() =>
+                        addToCart({
+                          key: `DON-CUSTOM-${Date.now()}`,
+                          productId: null,
+                          name: 'Don libre',
+                          type: 'DONATION',
+                          unitPriceMad: customDonation,
+                          meta: { custom: true, amount: customDonation },
+                        })
+                      }
+                    >
+                      Ajouter don libre
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
           )}
         </div>
       )}
 
       <div className="fixed bottom-4 right-4 bg-background border rounded-lg shadow p-4 min-w-[280px] space-y-2">
         <p className="font-semibold">Panier ({cart.reduce((s, i) => s + i.qty, 0)} articles)</p>
-        <p className="text-sm">Total: <strong>{total} MAD</strong></p>
+        <p className="text-sm">
+          Total: <strong>{total} MAD</strong>
+        </p>
         <div className="max-h-36 overflow-auto space-y-1 text-sm">
           {cart.map((i) => (
             <div key={i.key} className="flex justify-between gap-2">
-              <span>{i.name} x{i.qty}</span>
-              <button onClick={() => setCart((prev) => prev.map((p) => p.key === i.key ? { ...p, qty: Math.max(0, p.qty - 1) } : p).filter((p) => p.qty > 0))}>-</button>
+              <span>
+                {i.name} x{i.qty}
+              </span>
+              <button
+                onClick={() =>
+                  setCart((prev) =>
+                    prev
+                      .map((p) => (p.key === i.key ? { ...p, qty: Math.max(0, p.qty - 1) } : p))
+                      .filter((p) => p.qty > 0),
+                  )
+                }
+              >
+                -
+              </button>
             </div>
           ))}
         </div>
-        <Button className="w-full" disabled={!cart.length} onClick={() => navigate('/menu/checkout')}>Valider en espèces</Button>
+        <Button className="w-full" disabled={!cart.length} onClick={() => navigate('/menu/checkout')}>
+          Valider en espèces
+        </Button>
       </div>
     </div>
   );
