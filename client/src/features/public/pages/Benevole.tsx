@@ -25,6 +25,14 @@ import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Users,
   Calendar,
   CheckCircle,
@@ -76,6 +84,7 @@ export default function Benevole() {
   });
   const [groupFile, setGroupFile] = useState<File | null>(null);
   const [slotsError, setSlotsError] = useState(false);
+  const [showWhatsAppPopup, setShowWhatsAppPopup] = useState(false);
 
   const [registrationSuccess, setRegistrationSuccess] = useState<{
     qrToken: string;
@@ -101,6 +110,7 @@ export default function Benevole() {
             : "",
         },
       });
+      setShowWhatsAppPopup(true);
       toast.success(t.volunteer.submitSuccess);
     },
     onError: error => {
@@ -334,6 +344,26 @@ export default function Benevole() {
         : lang === "en"
           ? "Confirmation email"
           : "Email de confirmation",
+    whatsappPopupTitle:
+      lang === "ar"
+        ? "انضم إلى مجتمع باب الريان"
+        : lang === "en"
+          ? "Join Bab Rayan Community"
+          : "Rejoignez Bab Rayan Community",
+    whatsappPopupDescription:
+      lang === "ar"
+        ? "انضموا إلى مجموعة واتساب أدناه لدمجكم في Bab Rayan Community."
+        : lang === "en"
+          ? "Join the WhatsApp group below to become part of the Bab Rayan Community."
+          : "Rejoignez le groupe WhatsApp ci-dessous pour intégrer Bab Rayan Community.",
+    whatsappPopupButton:
+      lang === "ar"
+        ? "الانضمام عبر واتساب"
+        : lang === "en"
+          ? "Join via WhatsApp"
+          : "Rejoindre via WhatsApp",
+    whatsappPopupClose:
+      lang === "ar" ? "إغلاق" : lang === "en" ? "Close" : "Fermer",
   };
 
   // Form translations
@@ -435,12 +465,7 @@ export default function Benevole() {
         : lang === "en"
           ? "No date available"
           : "Aucune date disponible",
-    dayFull:
-      lang === "ar"
-        ? "اليوم مكتمل"
-        : lang === "en"
-          ? "Full"
-          : "Complet",
+    dayFull: lang === "ar" ? "اليوم مكتمل" : lang === "en" ? "Full" : "Complet",
     places: lang === "ar" ? "أماكن" : lang === "en" ? "places" : "places",
     day: lang === "ar" ? "اليوم" : lang === "en" ? "Day" : "Jour",
     firstName:
@@ -718,6 +743,35 @@ export default function Benevole() {
   if (registrationSuccess) {
     return (
       <div className="min-h-screen flex flex-col">
+        <Dialog open={showWhatsAppPopup} onOpenChange={setShowWhatsAppPopup}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader className="text-center sm:text-center">
+              <DialogTitle>{successTexts.whatsappPopupTitle}</DialogTitle>
+              <DialogDescription>
+                {successTexts.whatsappPopupDescription}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="sm:justify-center gap-2">
+              <Button asChild className="w-full sm:w-auto">
+                <a
+                  href="https://chat.whatsapp.com/CzGvHX3Wu8C6O74MPaNYO8?mode=gi_t"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {successTexts.whatsappPopupButton}
+                </a>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowWhatsAppPopup(false)}
+                className="w-full sm:w-auto"
+              >
+                {successTexts.whatsappPopupClose}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         <Navbar />
         <main className="flex-1 py-16">
           <div className="container max-w-2xl">
