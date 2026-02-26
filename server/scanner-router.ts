@@ -142,6 +142,14 @@ export function extractTokenFromUrl(rawInput: string): string {
       if (pastryQrIndex >= 0 && pathSegments.length > pastryQrIndex + 1) {
         return pathSegments[pastryQrIndex + 1];
       }
+      const goodiesQrIndex = pathSegments.findIndex(
+        p =>
+          (p === "goodies" || p === "goodie") &&
+          pathSegments[pathSegments.length - 2] === "qr"
+      );
+      if (goodiesQrIndex >= 0 && pathSegments.length > goodiesQrIndex + 1) {
+        return pathSegments[goodiesQrIndex + 1];
+      }
       const terroirQrIndex = pathSegments.findIndex(
         p => p === "terroir" && pathSegments[pathSegments.length - 2] === "qr"
       );
@@ -159,6 +167,14 @@ export function extractTokenFromUrl(rawInput: string): string {
     }
     if (decodedInput.includes("/qr/pastry/")) {
       const parts = decodedInput.split("/qr/pastry/");
+      return parts[parts.length - 1].split("?")[0];
+    }
+    if (decodedInput.includes("/qr/goodies/")) {
+      const parts = decodedInput.split("/qr/goodies/");
+      return parts[parts.length - 1].split("?")[0];
+    }
+    if (decodedInput.includes("/qr/goodie/")) {
+      const parts = decodedInput.split("/qr/goodie/");
       return parts[parts.length - 1].split("?")[0];
     }
     if (decodedInput.includes("/qr/terroir/")) {
