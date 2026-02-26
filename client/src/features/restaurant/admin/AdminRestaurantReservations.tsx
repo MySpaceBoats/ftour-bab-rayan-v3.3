@@ -120,10 +120,16 @@ export default function AdminRestaurantReservations() {
       ...entreprises.map((r: any) => ({ ...r, type: r.type || "entreprise" })),
       ...groupes.map((r: any) => ({ ...r, type: r.type || "groupe" })),
     ];
-    return all.sort(
-      (a: any, b: any) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    return all.sort((a: any, b: any) => {
+      const reservationDateA = a.date ? new Date(a.date).getTime() : 0;
+      const reservationDateB = b.date ? new Date(b.date).getTime() : 0;
+
+      if (reservationDateA !== reservationDateB) {
+        return reservationDateA - reservationDateB;
+      }
+
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
   }, [particuliers, entreprises, groupes]);
 
   // Filter reservations
