@@ -137,9 +137,8 @@ export default function AdminRamadanStats() {
 
         <Card>
           <CardHeader><CardTitle>{editingRowId ? 'Modifier une saisie' : 'Saisie du jour'}</CardTitle></CardHeader>
-          <CardContent className="grid md:grid-cols-5 gap-4">
+          <CardContent className="grid md:grid-cols-4 gap-4">
             <div><Label>Jour Ramadan</Label><Select value={String(form.ramadanDay)} onValueChange={(v)=>setForm(s=>({...s,ramadanDay:Number(v)}))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Array.from({length:30}).map((_,i)=><SelectItem key={i+1} value={String(i+1)}>{i+1}</SelectItem>)}</SelectContent></Select></div>
-            <div><Label>Bénéficiaires</Label><Input type="number" min={0} value={form.beneficiariesServed} onChange={(e)=>setForm(s=>({...s,beneficiariesServed:Number(e.target.value)}))} /></div>
             <div><Label>Repas</Label><Input type="number" min={0} value={form.mealsDistributed} onChange={(e)=>setForm(s=>({...s,mealsDistributed:Number(e.target.value)}))} /></div>
             <div><Label>Bénévoles</Label><Input type="number" min={0} value={form.volunteersPresent} onChange={(e)=>setForm(s=>({...s,volunteersPresent:Number(e.target.value)}))} /></div>
             <div className="flex items-end gap-2">
