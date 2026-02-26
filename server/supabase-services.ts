@@ -913,10 +913,10 @@ export async function scanAndValidateTokenSupabase(token: string, validatedBy?: 
     };
   }
 
-  // Check if it's the right day
-  const today = new Date().toISOString().split('T')[0];
+  // Check if it's the right day (timezone-aware: Morocco by default)
+  const today = getDateStringInTimeZone(new Date(), DEFAULT_RAMADAN_TIMEZONE);
   const volunteerDate = volunteer.day?.date
-    ? new Date(volunteer.day.date).toISOString().split('T')[0]
+    ? String(volunteer.day.date).slice(0, 10)
     : null;
   if (volunteerDate && volunteerDate !== today) {
     console.log(JSON.stringify({ event: 'volunteer_confirm', volunteerId: volunteer.id, state: 'wrong_day', expected: volunteerDate, actual: today }));

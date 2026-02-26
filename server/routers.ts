@@ -22,6 +22,7 @@ import {
 import * as supabaseServices from "./supabase-services";
 import * as reservationServices from "./reservation-services";
 import { getSupabaseAdminClient } from "./supabase";
+import { DEFAULT_RAMADAN_TIMEZONE, getDateStringInTimeZone } from "@shared/ramadan";
 import { companyBookingsRouter } from "./company-booking-routers";
 import { restaurantReservationsRouter } from "./restaurant-reservation-routers";
 import { contentRouter } from "./content-router";
@@ -1573,8 +1574,11 @@ const checkinRouter = router({
         };
       }
 
-      const today = new Date().toISOString().split("T")[0];
-      if (volunteer.day?.date !== today) {
+      const today = getDateStringInTimeZone(new Date(), DEFAULT_RAMADAN_TIMEZONE);
+      const volunteerDate = volunteer.day?.date
+        ? String(volunteer.day.date).slice(0, 10)
+        : null;
+      if (volunteerDate !== today) {
         return {
           valid: false,
           error: "Ce QR code n'est pas valide pour aujourd'hui",
@@ -1583,7 +1587,7 @@ const checkinRouter = router({
           volunteer: {
             firstName: volunteer.firstName,
             lastName: volunteer.lastName,
-            expectedDate: volunteer.day?.date,
+            expectedDate: volunteerDate,
           },
           day: volunteer.day,
         };
