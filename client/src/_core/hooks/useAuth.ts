@@ -1,5 +1,5 @@
 import { getLoginUrl } from "@/const";
-import { clearStoredSession } from "@/_core/authToken";
+import { clearStoredSession } from "@/_core/authSession";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
