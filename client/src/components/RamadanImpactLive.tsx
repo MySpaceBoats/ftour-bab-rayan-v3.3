@@ -25,8 +25,8 @@ export default function RamadanImpactLive({ className = "" }: { className?: stri
         </div>
 
         {isLoading ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, idx) => <Skeleton key={idx} className="h-28 w-full" />)}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 3 }).map((_, idx) => <Skeleton key={idx} className="h-28 w-full" />)}
           </div>
         ) : error ? (
           <Card>
@@ -41,7 +41,7 @@ export default function RamadanImpactLive({ className = "" }: { className?: stri
             </CardContent>
           </Card>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Jour de Ramadan</CardTitle></CardHeader>
               <CardContent><div className="text-3xl font-bold">{data.todayRamadanDay}</div></CardContent>
@@ -49,10 +49,6 @@ export default function RamadanImpactLive({ className = "" }: { className?: stri
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Repas distribués (cumul)</CardTitle></CardHeader>
               <CardContent><div className="text-3xl font-bold">{formatNumber(data.totalsToDate.meals)}</div></CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Bénéficiaires servis (cumul)</CardTitle></CardHeader>
-              <CardContent><div className="text-3xl font-bold">{formatNumber(data.totalsToDate.beneficiaries)}</div></CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Bénévoles (présences cumulées)</CardTitle></CardHeader>

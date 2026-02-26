@@ -119,10 +119,9 @@ export default function AdminRamadanStats() {
       </header>
 
       <main className="container py-6 space-y-6">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Jour Ramadan (aujourd’hui)</CardTitle></CardHeader><CardContent className="text-3xl font-bold">{summaryQuery.data?.todayRamadanDay ?? '—'}</CardContent></Card>
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Total repas (à date)</CardTitle></CardHeader><CardContent className="text-3xl font-bold">{formatNumber(summaryQuery.data?.totalsToDate.meals || 0)}</CardContent></Card>
-          <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Total bénéficiaires (à date)</CardTitle></CardHeader><CardContent className="text-3xl font-bold">{formatNumber(summaryQuery.data?.totalsToDate.beneficiaries || 0)}</CardContent></Card>
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Bénévoles (présences cumulées)</CardTitle></CardHeader><CardContent className="text-3xl font-bold">{formatNumber(summaryQuery.data?.totalsToDate.volunteersPresence || 0)}</CardContent></Card>
         </div>
 
@@ -161,14 +160,14 @@ export default function AdminRamadanStats() {
               {period === 'custom' && <><Input type="date" value={customFrom} onChange={(e)=>setCustomFrom(e.target.value)} className="w-40" /><Input type="date" value={customTo} onChange={(e)=>setCustomTo(e.target.value)} className="w-40" /></>}
             </div>
             <Table>
-              <TableHeader><TableRow><TableHead>Jour Ramadan</TableHead><TableHead>Date</TableHead><TableHead>Bénéficiaires</TableHead><TableHead>Repas</TableHead><TableHead>Bénévoles</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Jour Ramadan</TableHead><TableHead>Date</TableHead><TableHead>Repas</TableHead><TableHead>Bénévoles</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
               <TableBody>
                 {(statsQuery.data?.rows || []).map((row: any)=>(
-                  <TableRow key={row.id}><TableCell>{row.ramadan_day}</TableCell><TableCell>{row.gregorian_date}</TableCell><TableCell>{formatNumber(row.beneficiaries_served)}</TableCell><TableCell>{formatNumber(row.meals_distributed)}</TableCell><TableCell>{formatNumber(row.volunteers_present)}</TableCell><TableCell><div className="flex items-center gap-1"><Button size="icon" variant="ghost" onClick={()=>onEditRow(row)}><Pencil className="h-4 w-4" /></Button><Button size="icon" variant="ghost" onClick={()=>remove.mutate({ id: row.id })}><Trash2 className="h-4 w-4" /></Button></div></TableCell></TableRow>
+                  <TableRow key={row.id}><TableCell>{row.ramadan_day}</TableCell><TableCell>{row.gregorian_date}</TableCell><TableCell>{formatNumber(row.meals_distributed)}</TableCell><TableCell>{formatNumber(row.volunteers_present)}</TableCell><TableCell><div className="flex items-center gap-1"><Button size="icon" variant="ghost" onClick={()=>onEditRow(row)}><Pencil className="h-4 w-4" /></Button><Button size="icon" variant="ghost" onClick={()=>remove.mutate({ id: row.id })}><Trash2 className="h-4 w-4" /></Button></div></TableCell></TableRow>
                 ))}
               </TableBody>
             </Table>
-            <div className="text-sm font-medium">Totaux période — Repas: {formatNumber(statsQuery.data?.totals.meals || 0)} · Bénéficiaires: {formatNumber(statsQuery.data?.totals.beneficiaries || 0)} · Bénévoles (présences): {formatNumber(statsQuery.data?.totals.volunteersPresence || 0)}</div>
+            <div className="text-sm font-medium">Totaux période — Repas: {formatNumber(statsQuery.data?.totals.meals || 0)} · Bénévoles (présences): {formatNumber(statsQuery.data?.totals.volunteersPresence || 0)}</div>
           </CardContent>
         </Card>
       </main>
