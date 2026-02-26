@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { Link } from 'wouter';
 import {
   Download, Filter, Search, ArrowLeft, Loader2, Eye, CheckCircle, XCircle,
-  Package, CakeSlice, Mail, Phone, User
+  Package, CakeSlice, Mail, Phone, User, Trash2
 } from 'lucide-react';
 
 export default function AdminPastries() {
@@ -45,6 +45,23 @@ export default function AdminPastries() {
       orderStatus: orderStatus as any,
       ...(paymentStatus ? { paymentStatus: paymentStatus as any } : {}),
     });
+  };
+
+  const deleteOrder = trpc.pastryOrders.delete.useMutation({
+    onSuccess: () => {
+      utils.pastryOrders.list.invalidate();
+      toast.success('Commande supprimée');
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const handleDeleteOrder = (order: any) => {
+    const confirmed = window.confirm(
+      `Supprimer définitivement la commande ${order.reference} ?`
+    );
+    if (!confirmed) return;
+
+    deleteOrder.mutate({ orderId: order.id });
   };
 
   // Filter orders
@@ -276,6 +293,15 @@ export default function AdminPastries() {
                               <Package className="w-4 h-4" />
                             </Button>
                           )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-700"
+                            onClick={() => handleDeleteOrder(order)}
+                            disabled={deleteOrder.isPending}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
                       </td>
                     </tr>

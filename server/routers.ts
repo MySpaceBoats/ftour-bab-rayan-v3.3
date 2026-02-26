@@ -5145,6 +5145,12 @@ const pastryOrdersRouter = router({
       );
     }),
 
+  delete: adminBoutiqueProcedure
+    .input(z.object({ orderId: z.number() }))
+    .mutation(async ({ input }) => {
+      return supabaseServices.deletePastryOrderSupabase(input.orderId);
+    }),
+
   stats: adminBoutiqueProcedure.query(async () => {
     return supabaseServices.getPastryOrderStatsSupabase();
   }),
