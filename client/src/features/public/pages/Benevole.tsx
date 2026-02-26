@@ -871,7 +871,7 @@ export default function Benevole() {
                         ? "شارك صوركم مع المعرض"
                         : lang === "en"
                           ? "Share your photos with the gallery"
-                          : "Partagez vos photos avec la galerie"}
+                          : "Partagez vos photos sur la galerie"}
                     </h3>
                     <p className="text-sm text-muted-foreground">
                       {lang === "ar"
