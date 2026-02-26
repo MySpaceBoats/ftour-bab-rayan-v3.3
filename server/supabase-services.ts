@@ -1461,6 +1461,19 @@ export async function updateGoodieOrderStatusSupabase(orderId: number, status: s
   if (error) throw error;
 }
 
+
+export async function deleteGoodieOrderSupabase(orderId: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const { error } = await client
+    .from('orders')
+    .delete()
+    .eq('id', orderId);
+
+  if (error) throw error;
+  return { success: true };
+}
 export async function getGoodieOrderByReferenceSupabase(reference: string) {
   const client = getSupabaseAdminClient();
   if (!client) return null;
@@ -2352,6 +2365,19 @@ export async function updatePastryOrderStatusSupabase(
 
   if (error) throw error;
   return data;
+}
+
+export async function deletePastryOrderSupabase(orderId: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const { error } = await client
+    .from('pastry_orders')
+    .delete()
+    .eq('id', orderId);
+
+  if (error) throw error;
+  return { success: true };
 }
 
 export async function generateQRTokenSupabase(scope: string, entityId: number) {

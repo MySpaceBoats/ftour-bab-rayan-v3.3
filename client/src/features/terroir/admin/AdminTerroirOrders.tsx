@@ -10,7 +10,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import RequireRole from "@/components/RequireRole";
 import {
-  ArrowLeft, Search, Loader2, Package, CheckCircle, XCircle, Clock, Truck
+  ArrowLeft, Search, Loader2, Package, CheckCircle, XCircle, Clock, Truck, Trash2
 } from "lucide-react";
 
 const statusLabels: Record<string, string> = {
@@ -44,6 +44,19 @@ export default function AdminTerroirOrders() {
     onSuccess: () => { toast.success("Statut mis à jour"); refetch(); },
     onError: (err: any) => toast.error(err.message),
   });
+
+  const deleteOrderMutation = trpc.terroirModule.adminDeleteOrder.useMutation({
+    onSuccess: () => { toast.success("Commande supprimée"); refetch(); },
+    onError: (err: any) => toast.error(err.message || "Erreur lors de la suppression"),
+  });
+
+  const handleDeleteOrder = (order: any) => {
+    const confirmed = window.confirm(
+      `Supprimer définitivement la commande ${order.order_reference} ?`
+    );
+    if (!confirmed) return;
+    deleteOrderMutation.mutate({ id: order.id });
+  };
 
   return (
     <RequireRole allowedRoles={["admin", "super_admin", "admin_terroir"]}>
@@ -170,6 +183,15 @@ export default function AdminTerroirOrders() {
                                   <XCircle className="h-4 w-4 mr-1" /> Annuler
                                 </Button>
                               )}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-red-700"
+                                onClick={() => handleDeleteOrder(order)}
+                                disabled={deleteOrderMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" /> Supprimer
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
