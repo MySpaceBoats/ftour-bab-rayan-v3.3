@@ -32,24 +32,28 @@ function generateQrToken(): string {
   return crypto.randomBytes(16).toString("hex");
 }
 
-
 async function runAutoCancellationAndNotify() {
-  const cancelledReservations = await reservationServices.autoCancelExpiredPendingDeposits();
+  const cancelledReservations =
+    await reservationServices.autoCancelExpiredPendingDeposits();
 
   for (const reservation of cancelledReservations) {
     try {
       const reservationDateIso = reservation.date
         ? reservation.date.toISOString().split("T")[0]
         : "";
-      const cancellationEmail = generateRestaurantReservationAutoCancelledEmail({
-        firstName: reservation.name,
-        reference: reservation.reference,
-        reservationDateLong: formatReservationDateLong(reservationDateIso),
-        partySize: reservation.seatsTotal,
-        depositDeadlineFormatted: reservation.depositDeadline
-          ? formatCasablancaDateTimeLong(reservation.depositDeadline.toISOString())
-          : undefined,
-      });
+      const cancellationEmail = generateRestaurantReservationAutoCancelledEmail(
+        {
+          firstName: reservation.name,
+          reference: reservation.reference,
+          reservationDateLong: formatReservationDateLong(reservationDateIso),
+          partySize: reservation.seatsTotal,
+          depositDeadlineFormatted: reservation.depositDeadline
+            ? formatCasablancaDateTimeLong(
+                reservation.depositDeadline.toISOString()
+              )
+            : undefined,
+        }
+      );
 
       await sendEmail({
         to: reservation.email,
@@ -58,11 +62,14 @@ async function runAutoCancellationAndNotify() {
         text: cancellationEmail.text,
       });
     } catch (error) {
-      console.error("[runAutoCancellationAndNotify] Unable to send cancellation email", {
-        reservationId: reservation.id,
-        reference: reservation.reference,
-        error,
-      });
+      console.error(
+        "[runAutoCancellationAndNotify] Unable to send cancellation email",
+        {
+          reservationId: reservation.id,
+          reference: reservation.reference,
+          error,
+        }
+      );
     }
   }
 }
@@ -102,15 +109,18 @@ export const restaurantReservationsRouter = router({
               displayChoice: input.displayChoice,
             });
 
-          const requestEmail = generateRestaurantReservationDepositRequiredEmail({
-            firstName: input.firstName,
-            reference,
-            reservationDateLong: formatReservationDateLong(input.date),
-            partySize: input.participantsCount,
-            depositDeadlineFormatted: reservation.depositDeadline
-              ? formatCasablancaDateTimeLong(reservation.depositDeadline.toISOString())
-              : undefined,
-          });
+          const requestEmail =
+            generateRestaurantReservationDepositRequiredEmail({
+              firstName: input.firstName,
+              reference,
+              reservationDateLong: formatReservationDateLong(input.date),
+              partySize: input.participantsCount,
+              depositDeadlineFormatted: reservation.depositDeadline
+                ? formatCasablancaDateTimeLong(
+                    reservation.depositDeadline.toISOString()
+                  )
+                : undefined,
+            });
 
           await sendEmail({
             to: input.email,
@@ -212,15 +222,18 @@ export const restaurantReservationsRouter = router({
               displayChoice: input.displayChoice,
             });
 
-          const customerRequestEmail = generateRestaurantReservationDepositRequiredEmail({
-            firstName: input.contactName,
-            reference,
-            reservationDateLong: formatReservationDateLong(input.date),
-            partySize: input.participantsCount,
-            depositDeadlineFormatted: reservation.depositDeadline
-              ? formatCasablancaDateTimeLong(reservation.depositDeadline.toISOString())
-              : undefined,
-          });
+          const customerRequestEmail =
+            generateRestaurantReservationDepositRequiredEmail({
+              firstName: input.contactName,
+              reference,
+              reservationDateLong: formatReservationDateLong(input.date),
+              partySize: input.participantsCount,
+              depositDeadlineFormatted: reservation.depositDeadline
+                ? formatCasablancaDateTimeLong(
+                    reservation.depositDeadline.toISOString()
+                  )
+                : undefined,
+            });
 
           const customerEmailResult = await sendEmail({
             to: input.email,
@@ -325,15 +338,18 @@ export const restaurantReservationsRouter = router({
               displayChoice: input.displayChoice,
             });
 
-          const customerRequestEmail = generateRestaurantReservationDepositRequiredEmail({
-            firstName: input.contactName,
-            reference,
-            reservationDateLong: formatReservationDateLong(input.date),
-            partySize: input.participantsCount,
-            depositDeadlineFormatted: reservation.depositDeadline
-              ? formatCasablancaDateTimeLong(reservation.depositDeadline.toISOString())
-              : undefined,
-          });
+          const customerRequestEmail =
+            generateRestaurantReservationDepositRequiredEmail({
+              firstName: input.contactName,
+              reference,
+              reservationDateLong: formatReservationDateLong(input.date),
+              partySize: input.participantsCount,
+              depositDeadlineFormatted: reservation.depositDeadline
+                ? formatCasablancaDateTimeLong(
+                    reservation.depositDeadline.toISOString()
+                  )
+                : undefined,
+            });
 
           await sendEmail({
             to: input.email,
@@ -440,8 +456,7 @@ export const restaurantReservationsRouter = router({
 
         return {
           success: true,
-          message:
-            "Réservation validée et marquée en attente de paiement.",
+          message: "Réservation validée et marquée en attente de paiement.",
         };
       } catch (error) {
         console.error("[Validate Reservation] Error:", error);
@@ -458,7 +473,7 @@ export const restaurantReservationsRouter = router({
         reference: z.string(),
         rejectionReason: z.string().optional(),
         rescheduleUrl: z.string().url().optional(),
-      }),
+      })
     )
     .mutation(async ({ input, ctx }) => {
       const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
@@ -603,6 +618,94 @@ export const restaurantReservationsRouter = router({
       });
     }
   }),
+
+  adminCreateManual: protectedProcedure
+    .input(
+      z.object({
+        type: z.enum(["groupe", "entreprise"]),
+        groupOrCompanyName: z
+          .string()
+          .min(1, "Nom du groupe ou de l'entreprise requis"),
+        contactName: z.string().min(1, "Nom du contact requis"),
+        email: z.string().email("Email invalide"),
+        phone: z.string().min(1, "Téléphone requis"),
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide"),
+        seatsTotal: z.number().int().min(2),
+        notes: z.string().optional(),
+        displayChoice: z.enum(["jardin", "brasserie"]).optional(),
+        status: z
+          .enum([
+            "pending_validation",
+            "validated_pending_payment",
+            "paid_confirmed",
+          ])
+          .default("pending_validation"),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      if (!allowedRoles.includes(ctx.user?.role || "")) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Permission refusée",
+        });
+      }
+
+      try {
+        const reference = generateReservationReference(input.type);
+        const qrToken = generateQrToken();
+
+        const reservation =
+          await reservationServices.createRestaurantReservation({
+            reference,
+            type: input.type,
+            name: input.contactName,
+            email: input.email,
+            phone: input.phone,
+            date: new Date(input.date),
+            seatsTotal: input.seatsTotal,
+            qrToken,
+            notes: input.notes,
+            displayChoice: input.displayChoice,
+            companyName:
+              input.type === "entreprise"
+                ? input.groupOrCompanyName
+                : undefined,
+            groupName:
+              input.type === "groupe" ? input.groupOrCompanyName : undefined,
+          });
+
+        if (input.status !== "pending_validation") {
+          await reservationServices.updateRestaurantReservationStatus(
+            reservation.id,
+            input.status
+          );
+
+          if (input.status === "paid_confirmed") {
+            await reservationServices.activateQrCode(reservation.id);
+          }
+        }
+
+        const updated = await reservationServices.getRestaurantReservationById(
+          reservation.id
+        );
+
+        return {
+          success: true,
+          reservation: updated || reservation,
+          message: "Réservation créée manuellement",
+        };
+      } catch (error) {
+        console.error("[Admin Create Manual Reservation] Error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Erreur lors de la création de la réservation manuelle",
+        });
+      }
+    }),
 
   adminUpdateDepositPercentage: protectedProcedure
     .input(
@@ -776,7 +879,8 @@ export const restaurantReservationsRouter = router({
             const confirmedEmail = generateRestaurantReservationConfirmedEmail({
               firstName: updated.name,
               reference: updated.reference,
-              reservationDateLong: formatReservationDateLong(reservationDateIso),
+              reservationDateLong:
+                formatReservationDateLong(reservationDateIso),
               partySize: updated.seatsTotal,
               partySizeConfirmed: updated.seatsTotal,
               depositPercent: updated.depositPercentage || 50,
@@ -796,15 +900,14 @@ export const restaurantReservationsRouter = router({
             firstName: existingReservation.name,
             brandName: "La Table du Jardin",
             reference: existingReservation.reference,
-            reservationDateLong: (existingReservation.date || new Date()).toLocaleDateString(
-              "fr-FR",
-              {
-                weekday: "long",
-                day: "2-digit",
-                month: "long",
-                year: "numeric",
-              },
-            ),
+            reservationDateLong: (
+              existingReservation.date || new Date()
+            ).toLocaleDateString("fr-FR", {
+              weekday: "long",
+              day: "2-digit",
+              month: "long",
+              year: "numeric",
+            }),
             partySize: existingReservation.seatsTotal,
             contactEmail: "contact@ftourbabrayan.ma",
             contactPhone: "+212 (0) 666-690534",
