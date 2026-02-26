@@ -45,6 +45,7 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Plus,
 } from "lucide-react";
 
 type SortDirection = "asc" | "desc";
@@ -70,6 +71,19 @@ export default function AdminRestaurantGroupes() {
     direction: "desc",
   });
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    type: "groupe",
+    groupOrCompanyName: "",
+    contactName: "",
+    email: "",
+    phone: "",
+    date: "",
+    seatsTotal: 2,
+    notes: "",
+    displayChoice: "jardin",
+    status: "pending_validation",
+  });
   const [editForm, setEditForm] = useState<{
     id: number;
     name: string;
@@ -178,6 +192,30 @@ export default function AdminRestaurantGroupes() {
     },
   });
 
+  const createManualMutation =
+    trpc.restaurantReservations.adminCreateManual.useMutation({
+      onSuccess: () => {
+        toast.success("Réservation ajoutée manuellement");
+        setCreateDialogOpen(false);
+        setCreateForm({
+          type: "groupe",
+          groupOrCompanyName: "",
+          contactName: "",
+          email: "",
+          phone: "",
+          date: "",
+          seatsTotal: 2,
+          notes: "",
+          displayChoice: "jardin",
+          status: "pending_validation",
+        });
+        refetch();
+      },
+      onError: error => {
+        toast.error(error.message || "Erreur lors de la création manuelle");
+      },
+    });
+
   const openEditDialog = (reservation: any) => {
     setEditForm({
       id: reservation.id,
@@ -222,6 +260,29 @@ export default function AdminRestaurantGroupes() {
     );
     if (!confirmed) return;
     deleteMutation.mutate({ id: reservation.id });
+  };
+
+  const handleCreateManualReservation = () => {
+    if (
+      !createForm.groupOrCompanyName ||
+      !createForm.contactName ||
+      !createForm.email ||
+      !createForm.phone ||
+      !createForm.date
+    ) {
+      toast.error("Veuillez remplir tous les champs obligatoires");
+      return;
+    }
+
+    createManualMutation.mutate({
+      ...createForm,
+      type: createForm.type as "groupe" | "entreprise",
+      displayChoice: createForm.displayChoice as "jardin" | "brasserie",
+      status: createForm.status as
+        | "pending_validation"
+        | "validated_pending_payment"
+        | "paid_confirmed",
+    });
   };
 
   if (!hasAccess) {
@@ -445,6 +506,10 @@ export default function AdminRestaurantGroupes() {
               <SelectItem value="no_show">No show</SelectItem>
             </SelectContent>
           </Select>
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Ajouter manuellement
+          </Button>
         </div>
 
         {/* Table */}
@@ -703,7 +768,9 @@ export default function AdminRestaurantGroupes() {
                 <Input
                   id="edit-name"
                   value={editForm.name}
-                  onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                  onChange={e =>
+                    setEditForm({ ...editForm, name: e.target.value })
+                  }
                 />
               </div>
 
@@ -713,7 +780,9 @@ export default function AdminRestaurantGroupes() {
                   id="edit-email"
                   type="email"
                   value={editForm.email}
-                  onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                  onChange={e =>
+                    setEditForm({ ...editForm, email: e.target.value })
+                  }
                 />
               </div>
 
@@ -722,7 +791,9 @@ export default function AdminRestaurantGroupes() {
                 <Input
                   id="edit-phone"
                   value={editForm.phone}
-                  onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
+                  onChange={e =>
+                    setEditForm({ ...editForm, phone: e.target.value })
+                  }
                 />
               </div>
 
@@ -732,7 +803,9 @@ export default function AdminRestaurantGroupes() {
                   id="edit-date"
                   type="date"
                   value={editForm.date}
-                  onChange={e => setEditForm({ ...editForm, date: e.target.value })}
+                  onChange={e =>
+                    setEditForm({ ...editForm, date: e.target.value })
+                  }
                 />
               </div>
 
@@ -746,7 +819,10 @@ export default function AdminRestaurantGroupes() {
                   onChange={e =>
                     setEditForm({
                       ...editForm,
-                      seatsTotal: Math.max(1, parseInt(e.target.value || "1", 10)),
+                      seatsTotal: Math.max(
+                        1,
+                        parseInt(e.target.value || "1", 10)
+                      ),
                     })
                   }
                 />
@@ -783,7 +859,9 @@ export default function AdminRestaurantGroupes() {
                 <Textarea
                   id="edit-notes"
                   value={editForm.notes}
-                  onChange={e => setEditForm({ ...editForm, notes: e.target.value })}
+                  onChange={e =>
+                    setEditForm({ ...editForm, notes: e.target.value })
+                  }
                   rows={3}
                 />
               </div>
@@ -813,6 +891,185 @@ export default function AdminRestaurantGroupes() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Ajouter une réservation manuelle</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Select
+                value={createForm.type}
+                onValueChange={value =>
+                  setCreateForm({ ...createForm, type: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="groupe">Groupe</SelectItem>
+                  <SelectItem value="entreprise">Entreprise</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>
+                {createForm.type === "groupe"
+                  ? "Nom du groupe"
+                  : "Nom de l'entreprise"}
+              </Label>
+              <Input
+                value={createForm.groupOrCompanyName}
+                onChange={e =>
+                  setCreateForm({
+                    ...createForm,
+                    groupOrCompanyName: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Nom du contact</Label>
+              <Input
+                value={createForm.contactName}
+                onChange={e =>
+                  setCreateForm({ ...createForm, contactName: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={createForm.email}
+                onChange={e =>
+                  setCreateForm({ ...createForm, email: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Téléphone</Label>
+              <Input
+                value={createForm.phone}
+                onChange={e =>
+                  setCreateForm({ ...createForm, phone: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Date du ftour</Label>
+              <Input
+                type="date"
+                value={createForm.date}
+                onChange={e =>
+                  setCreateForm({ ...createForm, date: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Nombre de places</Label>
+              <Input
+                type="number"
+                min={2}
+                value={createForm.seatsTotal}
+                onChange={e =>
+                  setCreateForm({
+                    ...createForm,
+                    seatsTotal: Math.max(
+                      2,
+                      parseInt(e.target.value || "2", 10)
+                    ),
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Choix d'espace</Label>
+              <Select
+                value={createForm.displayChoice}
+                onValueChange={value =>
+                  setCreateForm({ ...createForm, displayChoice: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="jardin">Jardin</SelectItem>
+                  <SelectItem value="brasserie">Brasserie</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Statut initial</Label>
+              <Select
+                value={createForm.status}
+                onValueChange={value =>
+                  setCreateForm({ ...createForm, status: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending_validation">En attente</SelectItem>
+                  <SelectItem value="validated_pending_payment">
+                    Paiement attendu
+                  </SelectItem>
+                  <SelectItem value="paid_confirmed">Confirmée</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Textarea
+                rows={3}
+                value={createForm.notes}
+                onChange={e =>
+                  setCreateForm({ ...createForm, notes: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button
+                onClick={handleCreateManualReservation}
+                disabled={createManualMutation.isPending}
+                className="flex-1"
+              >
+                {createManualMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Création...
+                  </>
+                ) : (
+                  "Créer"
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setCreateDialogOpen(false)}
+                className="flex-1"
+              >
+                Annuler
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
