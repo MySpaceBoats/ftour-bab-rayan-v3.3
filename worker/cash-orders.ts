@@ -70,23 +70,65 @@ export async function handleCashOrderRequest(request: Request, env: Env): Promis
   const url = new URL(request.url);
   const supabase = createSupabaseAdmin(env);
 
+  const fetchAllRows = async (
+    table: string,
+    select: string,
+    options?: {
+      filters?: (query: any) => any;
+      orderBy?: { column: string; ascending?: boolean };
+      chunkSize?: number;
+    },
+  ) => {
+    const chunkSize = options?.chunkSize ?? 1000;
+    const allRows: any[] = [];
+    let from = 0;
+
+    while (true) {
+      let query = supabase.from(table).select(select);
+      if (options?.filters) {
+        query = options.filters(query);
+      }
+      if (options?.orderBy) {
+        query = query.order(options.orderBy.column, { ascending: options.orderBy.ascending ?? true });
+      }
+
+      const { data, error } = await query.range(from, from + chunkSize - 1);
+      if (error) {
+        return { data: [] as any[], error };
+      }
+
+      const rows = data || [];
+      allRows.push(...rows);
+
+      if (rows.length < chunkSize) {
+        break;
+      }
+      from += chunkSize;
+    }
+
+    return { data: allRows, error: null };
+  };
+
   if (url.pathname === '/api/catalog' && request.method === 'GET') {
     const [goodiesRes, pastriesRes, terroirJoinRes, donationProductsRes] = await Promise.all([
-      supabase
-        .from('goodies')
-        .select('id,name,description,price,image_url,is_active,sort_order')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true }),
-      supabase
-        .from('pastries')
-        .select('id,name,description,price,image_url,active,is_active,sort_order')
-        .order('sort_order', { ascending: true }),
-      supabase
-        .from('terroir_products')
-        .select('id,name,description,image_url,is_active,sort_order,terroir_product_variants(id,label,price_unit,is_active)')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true }),
-      supabase.from('products').select('id,name,price_mad,active').eq('type', 'DONATION'),
+      fetchAllRows('goodies', 'id,name,description,price,image_url,is_active,sort_order', {
+        filters: (query) => query.eq('is_active', true),
+        orderBy: { column: 'sort_order', ascending: true },
+      }),
+      fetchAllRows('pastries', 'id,name,description,price,image_url,active,is_active,sort_order', {
+        orderBy: { column: 'sort_order', ascending: true },
+      }),
+      fetchAllRows(
+        'terroir_products',
+        'id,name,description,image_url,is_active,sort_order,terroir_product_variants(id,label,price_unit,is_active)',
+        {
+          filters: (query) => query.eq('is_active', true),
+          orderBy: { column: 'sort_order', ascending: true },
+        },
+      ),
+      fetchAllRows('products', 'id,name,price_mad,active', {
+        filters: (query) => query.eq('type', 'DONATION'),
+      }),
     ]);
 
     const donationProducts = donationProductsRes.error ? [] : (donationProductsRes.data || []);
@@ -98,19 +140,16 @@ export async function handleCashOrderRequest(request: Request, env: Env): Promis
 
     let terroirProducts = terroirJoinRes.error ? [] : (terroirJoinRes.data || []);
     if (terroirJoinRes.error) {
-      const terroirProductsRes = await supabase
-        .from('terroir_products')
-        .select('id,name,description,image_url,is_active,sort_order')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
+      const terroirProductsRes = await fetchAllRows('terroir_products', 'id,name,description,image_url,is_active,sort_order', {
+        filters: (query) => query.eq('is_active', true),
+        orderBy: { column: 'sort_order', ascending: true },
+      });
 
       if (!terroirProductsRes.error && (terroirProductsRes.data || []).length > 0) {
         const productIds = (terroirProductsRes.data || []).map((p: any) => p.id);
-        const terroirVariantsRes = await supabase
-          .from('terroir_product_variants')
-          .select('id,product_id,label,price_unit,is_active')
-          .in('product_id', productIds)
-          .eq('is_active', true);
+        const terroirVariantsRes = await fetchAllRows('terroir_product_variants', 'id,product_id,label,price_unit,is_active', {
+          filters: (query) => query.in('product_id', productIds).eq('is_active', true),
+        });
 
         if (!terroirVariantsRes.error) {
           const variantsByProductId = (terroirVariantsRes.data || []).reduce((acc: Record<number, any[]>, variant: any) => {
