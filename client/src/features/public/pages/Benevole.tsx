@@ -439,8 +439,8 @@ export default function Benevole() {
       lang === "ar"
         ? "اليوم مكتمل"
         : lang === "en"
-          ? "Day full"
-          : "Jour complet",
+          ? "Full"
+          : "Complet",
     places: lang === "ar" ? "أماكن" : lang === "en" ? "places" : "places",
     day: lang === "ar" ? "اليوم" : lang === "en" ? "Day" : "Jour",
     firstName:
