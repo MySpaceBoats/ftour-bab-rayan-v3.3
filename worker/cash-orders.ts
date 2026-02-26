@@ -75,12 +75,14 @@ export async function handleCashOrderRequest(request: Request, env: Env): Promis
       supabase.from('goodies').select('id,name,description,price,image_url,sort_order').order('sort_order', { ascending: true }),
       supabase.from('pastries').select('id,name,description,price,image_url,sort_order').order('sort_order', { ascending: true }),
       supabase.from('terroir_products').select('id,name,description,image_url,sort_order,terroir_product_variants(id,label,price_unit,is_active)').order('sort_order', { ascending: true }),
-      supabase.from('products').select('id,name,price_mad,active').eq('type', 'DONATION').order('sort_order', { ascending: true }),
+      supabase.from('products').select('id,name,price_mad,active').eq('type', 'DONATION'),
     ]);
 
-    if (goodiesRes.error || pastriesRes.error || terroirRes.error || donationProductsRes.error) {
-      return jsonResponse({ error: goodiesRes.error?.message || pastriesRes.error?.message || terroirRes.error?.message || donationProductsRes.error?.message || 'catalog_error' }, 500);
+    if (goodiesRes.error || pastriesRes.error || terroirRes.error) {
+      return jsonResponse({ error: goodiesRes.error?.message || pastriesRes.error?.message || terroirRes.error?.message || 'catalog_error' }, 500);
     }
+
+    const donationProducts = donationProductsRes.error ? [] : (donationProductsRes.data || []);
 
     const mapItem = (item: any, type: 'GOODIE' | 'PASTRY' | 'TERROIR') => ({
       id: `${type}-${item.id}`,
@@ -112,7 +114,7 @@ export async function handleCashOrderRequest(request: Request, env: Env): Promis
       pastries: (pastriesRes.data || []).map((i) => mapItem(i, 'PASTRY')),
       terroir,
       donations: {
-        presets: (donationProductsRes.data || [])
+        presets: donationProducts
           .filter((d: any) => d.active !== false)
           .map((d: any) => Number(d.price_mad))
           .filter((v: number) => Number.isFinite(v) && v > 0)
@@ -120,7 +122,7 @@ export async function handleCashOrderRequest(request: Request, env: Env): Promis
           .reduce((acc: number[], v: number) => (acc.includes(v) ? acc : [...acc, v]), [])
           .concat(
             [...DONATION_SUGGESTED_AMOUNTS_MAD].filter(
-              (v) => !(donationProductsRes.data || []).some((d: any) => Number(d.price_mad) === v && d.active !== false),
+              (v) => !donationProducts.some((d: any) => Number(d.price_mad) === v && d.active !== false),
             ),
           ),
       },
