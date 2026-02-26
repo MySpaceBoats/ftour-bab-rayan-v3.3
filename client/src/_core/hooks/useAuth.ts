@@ -1,4 +1,5 @@
 import { getLoginUrl } from "@/const";
+import { clearStoredSession } from "@/_core/authSession";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
@@ -36,8 +37,8 @@ export function useAuth(options?: UseAuthOptions) {
       }
       throw error;
     } finally {
-      // Nettoyer le token Supabase
-      localStorage.removeItem('supabase_token');
+      // Nettoyer la session Supabase persistée
+      clearStoredSession();
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
     }

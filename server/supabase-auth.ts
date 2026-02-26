@@ -32,6 +32,12 @@ export interface SignInData {
   password: string;
 }
 
+export interface AuthSession {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number | null;
+}
+
 // Inscription d'un nouvel utilisateur
 export async function signUpUser(data: SignUpData): Promise<{ user: AuthUser | null; error: string | null }> {
   try {
@@ -92,7 +98,7 @@ export async function signUpUser(data: SignUpData): Promise<{ user: AuthUser | n
 }
 
 // Connexion d'un utilisateur
-export async function signInUser(data: SignInData): Promise<{ user: AuthUser | null; session: string | null; error: string | null }> {
+export async function signInUser(data: SignInData): Promise<{ user: AuthUser | null; session: AuthSession | null; error: string | null }> {
   try {
     const supabaseAdmin = getAdminClient();
     
@@ -140,7 +146,11 @@ export async function signInUser(data: SignInData): Promise<{ user: AuthUser | n
           name: authData.user.user_metadata?.name,
           createdAt: new Date()
         },
-        session: authData.session.access_token,
+        session: {
+          accessToken: authData.session.access_token,
+          refreshToken: authData.session.refresh_token,
+          expiresAt: authData.session.expires_at ?? null,
+        },
         error: null
       };
     }
@@ -154,7 +164,11 @@ export async function signInUser(data: SignInData): Promise<{ user: AuthUser | n
         phone: userData.phone,
         createdAt: new Date(userData.created_at)
       },
-      session: authData.session.access_token,
+      session: {
+        accessToken: authData.session.access_token,
+        refreshToken: authData.session.refresh_token,
+        expiresAt: authData.session.expires_at ?? null,
+      },
       error: null
     };
   } catch (err) {
@@ -163,6 +177,32 @@ export async function signInUser(data: SignInData): Promise<{ user: AuthUser | n
   }
 }
 
+
+
+export async function refreshUserSession(refreshToken: string): Promise<{ session: AuthSession | null; error: string | null }> {
+  try {
+    const supabaseAdmin = getAdminClient();
+    const { data, error } = await supabaseAdmin.auth.refreshSession({
+      refresh_token: refreshToken,
+    });
+
+    if (error || !data.session) {
+      return { session: null, error: error?.message || 'Session invalide' };
+    }
+
+    return {
+      session: {
+        accessToken: data.session.access_token,
+        refreshToken: data.session.refresh_token,
+        expiresAt: data.session.expires_at ?? null,
+      },
+      error: null,
+    };
+  } catch (err) {
+    console.error('[Supabase Auth] Refresh session error:', err);
+    return { session: null, error: 'Erreur inattendue' };
+  }
+}
 // Déconnexion
 export async function signOutUser(): Promise<{ error: string | null }> {
   try {

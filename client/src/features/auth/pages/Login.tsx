@@ -9,6 +9,7 @@ import { Heart, Loader2, Mail, Lock, AlertCircle } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { setStoredSession } from '@/_core/authSession';
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -17,10 +18,10 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
 
   const loginMutation = trpc.auth.login.useMutation({
-    onSuccess: (data: { user: { role?: string } | null; session: string | null }) => {
+    onSuccess: (data: { user: { role?: string } | null; session: { accessToken: string; refreshToken: string; expiresAt: number | null } | null }) => {
       if (data.session) {
-        // Stocker le token dans localStorage
-        localStorage.setItem('supabase_token', data.session);
+        // Stocker la session persistée (token + refresh)
+        setStoredSession(data.session);
         // Rediriger vers /admin si l'utilisateur est admin, sinon vers l'accueil
         const isAdmin = data.user?.role && ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'admin_patisserie', 'admin_terroir', 'admin_contenu', 'admin_messages'].includes(data.user.role);
         window.location.href = isAdmin ? '/admin' : '/';
