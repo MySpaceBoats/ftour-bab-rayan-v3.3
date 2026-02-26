@@ -4516,6 +4516,66 @@ const restaurantReservationsRouter = router({
       return (data || []).map(mapReservation);
     }),
 
+  adminCreateManual: protectedProcedure
+    .input(z.object({
+      type: z.enum(['groupe', 'entreprise']),
+      groupOrCompanyName: z.string().min(1, "Nom du groupe ou de l'entreprise requis"),
+      contactName: z.string().min(1, 'Nom du contact requis'),
+      email: z.string().email('Email invalide'),
+      phone: z.string().min(1, 'Téléphone requis'),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format date invalide'),
+      seatsTotal: z.number().int().min(2),
+      notes: z.string().optional(),
+      displayChoice: z.enum(['jardin', 'brasserie']).optional(),
+      status: z.enum(['pending_validation', 'validated_pending_payment', 'paid_confirmed']).default('pending_validation'),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const allowedRoles = ['admin', 'super_admin', 'admin_restaurant'];
+      if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission refusée' });
+      }
+
+      const reference = generateReservationReference(input.type);
+      const qrToken = generateQrToken();
+      const now = new Date().toISOString();
+
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('restaurant_reservations')
+        .insert({
+          reference,
+          type: input.type,
+          name: input.contactName,
+          email: input.email,
+          phone: input.phone,
+          date: input.date,
+          seats_total: input.seatsTotal,
+          notes: input.notes || null,
+          display_choice: input.displayChoice || null,
+          company_name: input.type === 'entreprise' ? input.groupOrCompanyName : null,
+          group_name: input.type === 'groupe' ? input.groupOrCompanyName : null,
+          status: input.status,
+          payment_status: 'not_applicable',
+          qr_token: qrToken,
+          qr_status: input.status === 'paid_confirmed' ? 'active' : 'inactive',
+          created_at: now,
+          updated_at: now,
+        })
+        .select('*')
+        .single();
+
+      if (error || !data) {
+        console.error('[adminCreateManual] Error:', error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Erreur lors de la création de la réservation manuelle' });
+      }
+
+      return {
+        success: true,
+        reservation: mapReservation(data),
+        message: 'Réservation créée manuellement',
+      };
+    }),
+
   adminUpdateStatus: protectedProcedure
     .input(z.object({
       id: z.number(),
