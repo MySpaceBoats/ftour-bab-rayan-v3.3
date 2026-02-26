@@ -148,3 +148,38 @@ Public:
 - Public:
   - `/:lang/galerie`
   - `/galerie` (redirect)
+
+## QR unique – flux espèces
+
+Nouveau flux "Menu Solidaire" via QR unique:
+
+- Route publique: `/menu` (alias `/shop`)
+- Checkout espèces uniquement (pas de paiement en ligne)
+- Création d'une commande `PENDING_CASH` via `POST /api/orders`
+- Preuve client: `/proof/:reference?t=<proofToken>`
+- API catalogue unifié: `GET /api/catalog` (Goodies + Pâtisseries + Produits du terroir + Dons, synchronisés avec les catalogues existants)
+- Staff: `/admin/orders-cash` pour rechercher par référence et marquer `FULFILLED`
+
+### Variables d'environnement Worker
+
+- `ORDER_PROOF_SECRET` (recommandé): secret HMAC pour proof token
+- `PUBLIC_APP_URL` (recommandé): URL publique utilisée dans les emails
+- `CASH_ORDER_ADMIN_CC_EMAIL` (optionnel): copie email admin
+
+### E2E rapide
+
+1. Ouvrir `/menu`, ajouter des items goodies/pâtisseries/produits du terroir/dons.
+2. Aller sur `/menu/checkout`, saisir identité, cocher acceptation, valider.
+3. Vérifier l'affichage de `/proof/<reference>?t=...` avec référence + QR.
+4. Vérifier la réception email Resend (si clé configurée).
+5. Côté staff, ouvrir `/admin/orders-cash`, chercher la référence et cliquer "Marquer remis".
+
+Note: en cas de nouvelle tentative de publication PR, vérifier que le commit de suivi est bien poussé avant création de PR.
+
+### Dépannage création de PR
+
+Si la création de PR échoue dans l’automatisation:
+
+1. Vérifier qu’un commit de suivi existe localement (`git log -n 3`).
+2. Relancer la création de PR avec un titre distinct.
+3. Confirmer que le corps PR référence bien le dernier commit.
