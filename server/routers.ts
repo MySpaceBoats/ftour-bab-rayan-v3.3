@@ -3945,11 +3945,26 @@ const terroirModuleRouter = router({
       .eq("is_active", true)
       .order("sort_order", { ascending: true });
 
-    if (productsError)
+    if (productsError) {
+      const isMissingTerroirTable =
+        productsError.code === "PGRST205" ||
+        /could not find the table ['\"]?public\.terroir_products/i.test(
+          productsError.message
+        );
+
+      if (isMissingTerroirTable) {
+        console.warn(
+          "[Terroir] terroir_products table is missing from schema cache. Returning empty catalog.",
+          productsError.message
+        );
+        return [];
+      }
+
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
         message: productsError.message,
       });
+    }
 
     const productIds = (products || []).map(product => product.id);
     if (productIds.length === 0) {
