@@ -31,6 +31,23 @@ export function computeMaxConsecutiveDays(dayNumbers: number[]): number {
   return maxStreak;
 }
 
+export type VolunteerQrDateState = 'valid_today' | 'expired_past_day' | 'not_yet_valid';
+
+export function getVolunteerQrDateState(volunteerDate: string | null | undefined, todayDate: string): VolunteerQrDateState {
+  const normalizedVolunteerDate = volunteerDate ? String(volunteerDate).slice(0, 10) : null;
+  if (!normalizedVolunteerDate) return 'valid_today';
+
+  if (normalizedVolunteerDate < todayDate) {
+    return 'expired_past_day';
+  }
+
+  if (normalizedVolunteerDate > todayDate) {
+    return 'not_yet_valid';
+  }
+
+  return 'valid_today';
+}
+
 function buildManagerRecommendationEmailHtml(volunteer: {
   id: number;
   firstName: string;
@@ -963,6 +980,49 @@ export async function scanAndValidateTokenSupabase(token: string, validatedBy?: 
     groupMeta && groupMeta.groupLeaderEmail === volunteer.email.toLowerCase().trim()
   );
 
+  const today = getDateStringInTimeZone(new Date(), DEFAULT_RAMADAN_TIMEZONE);
+  const volunteerDate = volunteer.day?.date
+    ? String(volunteer.day.date).slice(0, 10)
+    : null;
+  const qrDateState = getVolunteerQrDateState(volunteerDate, today);
+
+  if (qrDateState === 'expired_past_day') {
+    if (volunteer.qrStatus !== 'validated' && volunteer.qrStatus !== 'expired') {
+      const { error: expireError } = await client
+        .from('volunteers')
+        .update({
+          qr_status: 'expired',
+        })
+        .eq('id', volunteer.id);
+
+      if (expireError) {
+        throw expireError;
+      }
+    }
+
+    console.log(JSON.stringify({ event: 'volunteer_confirm', volunteerId: volunteer.id, state: 'expired', expected: volunteerDate, actual: today }));
+    return {
+      success: false,
+      error: 'Ce QR code est expiré (date dépassée).',
+      code: 'QR_EXPIRED',
+      state: 'expired' as const,
+      volunteer,
+      expectedDate: volunteerDate,
+    };
+  }
+
+  if (qrDateState === 'not_yet_valid') {
+    console.log(JSON.stringify({ event: 'volunteer_confirm', volunteerId: volunteer.id, state: 'future_qr', expected: volunteerDate, actual: today }));
+    return {
+      success: false,
+      error: "Ce QR code n'est pas encore valide (date future).",
+      code: 'QR_NOT_YET_VALID',
+      state: 'not_yet_valid' as const,
+      volunteer,
+      expectedDate: volunteerDate,
+    };
+  }
+
   if (isGroupLeaderQr && groupMeta) {
     if (groupMeta.groupRemainingEntries <= 0) {
       console.log(JSON.stringify({
@@ -980,25 +1040,11 @@ export async function scanAndValidateTokenSupabase(token: string, validatedBy?: 
   } else if (volunteer.qrStatus === 'validated') {
     console.log(JSON.stringify({ event: 'volunteer_confirm', volunteerId: volunteer.id, state: 'already_confirmed' }));
     return {
-      success: true,
-      state: 'already_confirmed' as const,
-      volunteer,
-    };
-  }
-
-  // Check if it's the right day (timezone-aware: Morocco by default)
-  const today = getDateStringInTimeZone(new Date(), DEFAULT_RAMADAN_TIMEZONE);
-  const volunteerDate = volunteer.day?.date
-    ? String(volunteer.day.date).slice(0, 10)
-    : null;
-  if (volunteerDate && volunteerDate !== today) {
-    console.log(JSON.stringify({ event: 'volunteer_confirm', volunteerId: volunteer.id, state: 'wrong_day', expected: volunteerDate, actual: today }));
-    return {
       success: false,
-      error: "Ce QR code n'est pas valide pour aujourd'hui",
-      code: 'WRONG_DAY',
+      state: 'already_confirmed' as const,
+      error: 'Ce QR code a déjà été utilisé.',
+      code: 'QR_ALREADY_USED',
       volunteer,
-      expectedDate: volunteerDate,
     };
   }
 
