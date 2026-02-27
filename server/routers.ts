@@ -317,7 +317,9 @@ const sendGroupVolunteerConfirmationEmails = async ({
       ? "https://ftourbabrayan.ma"
       : "http://localhost:3000";
 
-  const emailTasks = volunteers.map(volunteer => async () => {
+  const emailTasks: Array<
+    () => Promise<{ email: string; success: boolean; error?: string }>
+  > = volunteers.map(volunteer => async () => {
     if (!volunteer.qrToken) {
       return {
         email: volunteer.email,
@@ -361,11 +363,165 @@ const sendGroupVolunteerConfirmationEmails = async ({
     };
   });
 
-  const details = await runWithConcurrencyLimit(emailTasks, 3);
+  const details: { email: string; success: boolean; error?: string }[] = [];
+  const emailBatches = chunkArray(emailTasks, 25);
+
+  for (let batchIndex = 0; batchIndex < emailBatches.length; batchIndex += 1) {
+    const emailBatch = emailBatches[batchIndex];
+    const batchResults = await runWithConcurrencyLimit(emailBatch, 3);
+    details.push(...batchResults);
+
+    if (batchIndex < emailBatches.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 800));
+    }
+  }
+
   const sent = details.filter(result => result.success).length;
   const failed = details.length - sent;
 
   return { sent, failed, details };
+};
+
+const processGroupVolunteerRows = async ({
+  parsedRows,
+  dayId,
+  day,
+  volunteerSlots,
+}: {
+  parsedRows: ParsedGroupVolunteerRow[];
+  dayId: number;
+  day: {
+    dayNumber: number;
+    date: string;
+    location?: string | null;
+    iftarTime?: string | null;
+  };
+  volunteerSlots: Array<"preparation_ftour" | "service_ftour">;
+}) => {
+  const results: { email: string; success: boolean; error?: string }[] = [];
+  const normalizedRows = parsedRows.map(row => ({
+    ...row,
+    email: row.email.toLowerCase().trim(),
+  }));
+
+  const existingEmails = new Set<string>();
+  const duplicateCheckChunks = chunkArray(
+    normalizedRows.map(row => row.email),
+    400
+  );
+  for (const emailChunk of duplicateCheckChunks) {
+    const chunkExisting = await supabaseServices.getExistingVolunteerEmailsForDay(
+      dayId,
+      emailChunk
+    );
+    chunkExisting.forEach(existingEmail => {
+      existingEmails.add(existingEmail);
+    });
+  }
+
+  const uniqueRows: typeof normalizedRows = [];
+  const seenInFile = new Set<string>();
+
+  for (const row of normalizedRows) {
+    if (existingEmails.has(row.email)) {
+      results.push({
+        email: row.email,
+        success: false,
+        error: "Déjà inscrit pour ce jour",
+      });
+      continue;
+    }
+
+    if (seenInFile.has(row.email)) {
+      results.push({
+        email: row.email,
+        success: false,
+        error: "Email en doublon dans le fichier",
+      });
+      continue;
+    }
+
+    seenInFile.add(row.email);
+    uniqueRows.push(row);
+  }
+
+  const createdVolunteersForEmail: GroupVolunteerForEmail[] = [];
+
+  if (uniqueRows.length > 0) {
+    const insertChunks = chunkArray(uniqueRows, 200);
+
+    for (const rowsChunk of insertChunks) {
+      try {
+        const createdVolunteers =
+          await supabaseServices.createVolunteerShiftsBulkSupabase(
+            rowsChunk.map(row => ({
+              firstName: row.firstName,
+              lastName: row.lastName,
+              email: row.email,
+              phone: row.phone,
+              city: row.city,
+              dayId,
+              volunteerSlots,
+              acceptedTerms: true,
+            }))
+          );
+
+        const createdByEmail = new Map(
+          createdVolunteers.map(vol => [vol.email.toLowerCase().trim(), vol])
+        );
+
+        for (const row of rowsChunk) {
+          const volunteer = createdByEmail.get(row.email);
+          if (!volunteer) {
+            results.push({
+              email: row.email,
+              success: false,
+              error: "Inscription créée de façon incomplète",
+            });
+            continue;
+          }
+
+          createdVolunteersForEmail.push({
+            firstName: row.firstName,
+            lastName: row.lastName,
+            email: row.email,
+            phone: row.phone,
+            city: row.city,
+            qrToken: volunteer.qrToken,
+          });
+        }
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : "Erreur inconnue";
+        for (const row of rowsChunk) {
+          results.push({ email: row.email, success: false, error: errMsg });
+        }
+        console.error("[ProcessGroupRows] Bulk creation error:", error);
+      }
+    }
+  }
+
+  if (createdVolunteersForEmail.length > 0) {
+    const emailSummary = await sendGroupVolunteerConfirmationEmails({
+      volunteers: createdVolunteersForEmail,
+      day,
+      volunteerSlots,
+    });
+
+    const emailResults = emailSummary.details.map(result =>
+      result.success
+        ? result
+        : {
+            ...result,
+            error: `Inscrit mais email non envoyé: ${result.error}`,
+          }
+    );
+    results.push(...emailResults);
+  }
+
+  const successCount = results.filter(r => r.success).length;
+  const failCount = results.filter(r => !r.success).length;
+
+  return { results, successCount, failCount, totalRows: parsedRows.length };
 };
 
 const volunteerNoShowBlockingMessage =
@@ -1534,6 +1690,9 @@ const volunteersRouter = router({
       let createdVolunteer: Awaited<
         ReturnType<typeof supabaseServices.createVolunteerShiftSupabase>
       > | null = null;
+      let groupProcessingSummary:
+        | { successCount: number; failCount: number; totalRows: number }
+        | null = null;
 
       if (input.action === "validate") {
         const duplicate = await supabaseServices.checkVolunteerEmailExistsForDay(
@@ -1616,6 +1775,46 @@ const volunteersRouter = router({
               emailData?.html ||
               `<p>Bonjour ${request.responsible_name ?? request.responsibleName},</p><p>Votre demande d'inscription groupe <strong>${request.group_name ?? request.groupName}</strong> pour le jour ${day.dayNumber} du Ramadan a été validée.</p>`,
           });
+
+          const requestFileBase64 = String(
+            request.file_base64 ?? request.fileBase64 ?? ""
+          ).trim();
+
+          if (requestFileBase64) {
+            try {
+              const parsedRows = parseGroupVolunteersFromSpreadsheet(
+                requestFileBase64
+              );
+
+              if (parsedRows.length > 0) {
+                const processResult = await processGroupVolunteerRows({
+                  parsedRows,
+                  dayId,
+                  day,
+                  volunteerSlots: (
+                    request.volunteer_slots ??
+                    request.volunteerSlots ??
+                    []
+                  ) as Array<"preparation_ftour" | "service_ftour">,
+                });
+
+                groupProcessingSummary = {
+                  successCount: processResult.successCount,
+                  failCount: processResult.failCount,
+                  totalRows: processResult.totalRows,
+                };
+
+                console.log(
+                  `[ReviewGroupRequest] Processed attachment for request ${input.requestId}: ${processResult.successCount} success, ${processResult.failCount} failures out of ${processResult.totalRows}`
+                );
+              }
+            } catch (error) {
+              console.error(
+                `[ReviewGroupRequest] Failed to process attachment for request ${input.requestId}`,
+                error
+              );
+            }
+          }
         } else {
           await sendEmail({
             to: normalizedResponsibleEmail,
@@ -1627,7 +1826,7 @@ const volunteersRouter = router({
         console.error("[Volunteer Group Request] email notification failed", error);
       }
 
-      return { success: true, request: updated };
+      return { success: true, request: updated, groupProcessingSummary };
     }),
 
   deleteGroupRequest: adminOpsProcedure
@@ -1676,138 +1875,18 @@ const volunteersRouter = router({
         });
       }
 
-      const results: { email: string; success: boolean; error?: string }[] = [];
-      const normalizedRows = parsedRows.map(row => ({
-        ...row,
-        email: row.email.toLowerCase().trim(),
-      }));
-
-      const existingEmails = new Set<string>();
-      const duplicateCheckChunks = chunkArray(
-        normalizedRows.map(row => row.email),
-        400
-      );
-      for (const emailChunk of duplicateCheckChunks) {
-        const chunkExisting =
-          await supabaseServices.getExistingVolunteerEmailsForDay(
-            input.dayId,
-            emailChunk
-          );
-        chunkExisting.forEach(existingEmail => {
-          existingEmails.add(existingEmail);
-        });
-      }
-
-      const uniqueRows: typeof normalizedRows = [];
-      const seenInFile = new Set<string>();
-
-      for (const row of normalizedRows) {
-        if (existingEmails.has(row.email)) {
-          results.push({
-            email: row.email,
-            success: false,
-            error: "Déjà inscrit pour ce jour",
-          });
-          continue;
-        }
-
-        if (seenInFile.has(row.email)) {
-          results.push({
-            email: row.email,
-            success: false,
-            error: "Email en doublon dans le fichier",
-          });
-          continue;
-        }
-
-        seenInFile.add(row.email);
-        uniqueRows.push(row);
-      }
-
-      const createdVolunteersForEmail: GroupVolunteerForEmail[] = [];
-
-      if (uniqueRows.length > 0) {
-        const insertChunks = chunkArray(uniqueRows, 200);
-
-        for (const rowsChunk of insertChunks) {
-          try {
-            const createdVolunteers =
-              await supabaseServices.createVolunteerShiftsBulkSupabase(
-                rowsChunk.map(row => ({
-                  firstName: row.firstName,
-                  lastName: row.lastName,
-                  email: row.email,
-                  phone: row.phone,
-                  city: row.city,
-                  dayId: input.dayId,
-                  volunteerSlots: input.volunteerSlots,
-                  acceptedTerms: true,
-                }))
-              );
-
-            const createdByEmail = new Map(
-              createdVolunteers.map(vol => [
-                vol.email.toLowerCase().trim(),
-                vol,
-              ])
-            );
-
-            for (const row of rowsChunk) {
-              const volunteer = createdByEmail.get(row.email);
-              if (!volunteer) {
-                results.push({
-                  email: row.email,
-                  success: false,
-                  error: "Inscription créée de façon incomplète",
-                });
-                continue;
-              }
-
-              createdVolunteersForEmail.push({
-                firstName: row.firstName,
-                lastName: row.lastName,
-                email: row.email,
-                phone: row.phone,
-                city: row.city,
-                qrToken: volunteer.qrToken,
-              });
-            }
-          } catch (error) {
-            const errMsg =
-              error instanceof Error ? error.message : "Erreur inconnue";
-            for (const row of rowsChunk) {
-              results.push({ email: row.email, success: false, error: errMsg });
-            }
-            console.error("[ProcessGroupExcel] Bulk creation error:", error);
-          }
-        }
-      }
-
-      if (createdVolunteersForEmail.length > 0) {
-        const emailSummary = await sendGroupVolunteerConfirmationEmails({
-          volunteers: createdVolunteersForEmail,
-          day,
-          volunteerSlots: input.volunteerSlots,
-        });
-        const emailResults = emailSummary.details.map(result =>
-          result.success
-            ? result
-            : {
-                ...result,
-                error: `Inscrit mais email non envoyé: ${result.error}`,
-              }
-        );
-        results.push(...emailResults);
-      }
-
-      const successCount = results.filter(r => r.success).length;
-      const failCount = results.filter(r => !r.success).length;
+      const processResult = await processGroupVolunteerRows({
+        parsedRows,
+        dayId: input.dayId,
+        day,
+        volunteerSlots: input.volunteerSlots,
+      });
 
       console.log(
-        `[ProcessGroupExcel] Completed: ${successCount} success, ${failCount} failures out of ${parsedRows.length} rows`
+        `[ProcessGroupExcel] Completed: ${processResult.successCount} success, ${processResult.failCount} failures out of ${processResult.totalRows} rows`
       );
 
-      return { results, successCount, failCount, totalRows: parsedRows.length };
+      return processResult;
     }),
 });
 
