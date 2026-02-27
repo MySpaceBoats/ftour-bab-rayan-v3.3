@@ -328,8 +328,9 @@ function LocalizedRoutes() {
       <Route path="/:lang/goodies" component={Goodies} />
       <Route path="/:lang/cart/:type" component={Cart} />
       <Route path="/:lang/checkout/:type" component={UnifiedCheckout} />
-      <Route path="/:lang/buy/goodie/:id">{() => <Redirect to="/menu" />}</Route>
-      <Route path="/:lang/buy/pastry/:id">{() => <Redirect to="/menu" />}</Route>
+      <Route path="/:lang/buy/goodie/:id">{() => <Redirect to={`/${lang}/goodies`} />}</Route>
+      <Route path="/:lang/buy/pastry/:id">{() => <Redirect to={`/${lang}/patisserie`} />}</Route>
+      <Route path="/:lang/buy/terroir/:id">{() => <Redirect to={`/${lang}/terroir`} />}</Route>
 
       {/* Dons public */}
       <Route path="/:lang/dons" component={Dons} />
