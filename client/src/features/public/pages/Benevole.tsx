@@ -1105,30 +1105,23 @@ export default function Benevole() {
                                   {formTexts.loading}
                                 </SelectItem>
                               ) : days && days.length > 0 ? (
-                                days.map(day => {
-                                  const remainingSeats = Math.max(
-                                    0,
-                                    day.capacity - (day.registeredCount ?? 0)
-                                  );
-                                  return (
-                                    <SelectItem
-                                      key={`group-${day.id}`}
-                                      value={day.id.toString()}
-                                      disabled={!day.isOpen}
-                                    >
-                                      {new Date(day.date).toLocaleDateString(
-                                        dateLocale,
-                                        {
-                                          weekday: "long",
-                                          day: "numeric",
-                                          month: "long",
-                                        }
-                                      )}
-                                      {` - ${remainingSeats} ${formTexts.places}`}
-                                      {!day.isOpen ? ` - ${formTexts.dayFull}` : ""}
-                                    </SelectItem>
-                                  );
-                                })
+                                days.map(day => (
+                                  <SelectItem
+                                    key={`group-${day.id}`}
+                                    value={day.id.toString()}
+                                    disabled={!day.isOpen}
+                                  >
+                                    {new Date(day.date).toLocaleDateString(
+                                      dateLocale,
+                                      {
+                                        weekday: "long",
+                                        day: "numeric",
+                                        month: "long",
+                                      }
+                                    )}
+                                    {!day.isOpen ? ` - ${formTexts.dayFull}` : ""}
+                                  </SelectItem>
+                                ))
                               ) : (
                                 <SelectItem value="none-group" disabled>
                                   {formTexts.noDay}
