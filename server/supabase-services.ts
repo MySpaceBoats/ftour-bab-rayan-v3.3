@@ -6,6 +6,13 @@ import { sendEmail } from './email';
 const MANAGER_RECOMMENDATION_STREAK = 6;
 const ADMIN_MANAGER_RECOMMENDATION_EMAIL = 'admin@myspace.boats';
 const RSE_MANAGER_RECOMMENDATION_EMAIL = 'rsebbani@myspace.boats';
+const VOLUNTEER_DUPLICATE_EMAIL_EXCEPTIONS = new Set([
+  'reda.sebbani@gmail.com',
+]);
+
+export function isVolunteerDuplicateEmailExempt(email: string): boolean {
+  return VOLUNTEER_DUPLICATE_EMAIL_EXCEPTIONS.has(email.toLowerCase().trim());
+}
 
 export function computeMaxConsecutiveDays(dayNumbers: number[]): number {
   if (dayNumbers.length === 0) return 0;
@@ -773,6 +780,8 @@ export async function deleteVolunteerGroupRequestSupabase(id: number) {
 }
 
 export async function checkVolunteerEmailExistsForDay(email: string, dayId: number): Promise<boolean> {
+  if (isVolunteerDuplicateEmailExempt(email)) return false;
+
   const client = getSupabaseAdminClient();
   if (!client) return false;
 
@@ -889,7 +898,12 @@ export async function getExistingVolunteerEmailsForDay(dayId: number, emails: st
   const client = getSupabaseAdminClient();
   if (!client || emails.length === 0) return new Set();
 
-  const normalizedEmails = Array.from(new Set(emails.map(email => email.toLowerCase().trim())));
+  const normalizedEmails = Array.from(
+    new Set(emails.map(email => email.toLowerCase().trim()))
+  ).filter(email => !isVolunteerDuplicateEmailExempt(email));
+
+  if (normalizedEmails.length === 0) return new Set();
+
   const { data, error } = await client
     .from('volunteers')
     .select('email')
