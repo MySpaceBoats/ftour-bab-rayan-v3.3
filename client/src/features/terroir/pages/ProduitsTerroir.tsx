@@ -186,7 +186,7 @@ export default function ProduitsTerroir() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {products.map(product => {
-                    const variants = product.terroir_product_variants?.filter((v: any) => v.is_active) || [];
+                    const variants = product.terroir_product_variants?.filter((v: any) => v.is_active !== false) || [];
                     const first = variants[0];
                     return (
                       <Card key={product.id} className="overflow-hidden">
@@ -202,15 +202,20 @@ export default function ProduitsTerroir() {
                           {product.description && <p className="text-sm text-muted-foreground">{product.description}</p>}
                           <div className="space-y-2">
                             {variants.map((variant: any) => {
-                              const availableStock = (variant.stock_total || 0) - (variant.stock_reserved || 0);
-                              const isOutOfStock = availableStock <= 0;
+                              const hasStockTracking = variant.stock_total != null || variant.stock_reserved != null;
+                              const totalStock = Number(variant.stock_total ?? variant.stock ?? 0);
+                              const reservedStock = Number(variant.stock_reserved ?? 0);
+                              const availableStock = Math.max(0, totalStock - reservedStock);
+                              const isOutOfStock = hasStockTracking && availableStock <= 0;
 
                               return (
                               <div key={variant.id} className="flex items-center justify-between border rounded-md p-2">
                                 <div>
                                   <p className="text-sm font-medium">{variant.label}</p>
                                   <p className="text-xs text-muted-foreground">{Number(variant.price_unit)} DH</p>
-                                  <p className="text-xs text-muted-foreground">Stock: {availableStock}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Stock: {hasStockTracking ? availableStock : 'Disponible'}
+                                  </p>
                                 </div>
                                 <Button size="sm" disabled={isOutOfStock} onClick={() => handleAddToCart(product, variant)}>
                                   <Plus className="h-4 w-4 mr-1" />
