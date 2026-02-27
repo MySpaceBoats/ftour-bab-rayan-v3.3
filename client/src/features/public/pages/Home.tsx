@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useI18n } from "@/i18n";
-import { Heart, Users, Calendar, ShoppingBag, ArrowRight, Star, Clock, MapPin, Utensils, GraduationCap, Home as HomeIcon, Baby } from "lucide-react";
+import { Heart, Users, ShoppingBag, ArrowRight, Star, Clock, MapPin, Utensils, GraduationCap, Home as HomeIcon, Baby } from "lucide-react";
 import RamadanImpactLive from "@/components/RamadanImpactLive";
 
 export default function Home() {
@@ -490,16 +490,6 @@ export default function Home() {
                 >
                   <Users className="h-5 w-5 mr-2" />
                   Devenir bénévole
-                </Button>
-              </Link>
-              <Link href={`/${lang}/programme`}>
-                <Button 
-                  size="lg" 
-                  variant="outline" 
-                  className="w-full sm:w-auto text-lg px-8 border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
-                >
-                  <Calendar className="h-5 w-5 mr-2" />
-                  Voir le programme
                 </Button>
               </Link>
             </div>
