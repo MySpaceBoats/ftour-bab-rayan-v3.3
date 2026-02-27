@@ -1388,7 +1388,8 @@ const volunteersRouter = router({
 
       try {
         await sendEmail({
-          to: "admin@ftourbabrayan.ma",
+          to: "contact@ftourbabrayan.ma",
+          cc: ["naylabennani@hotmail.com"],
           subject: adminEmailData.subject,
           html: adminEmailData.html,
           attachments: [
