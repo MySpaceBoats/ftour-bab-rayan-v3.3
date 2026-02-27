@@ -126,7 +126,7 @@ export default function Benevole() {
           ? "تم تسجيل المجموعة بنجاح!"
           : lang === "en"
             ? "Group registration successful!"
-            : "Inscription groupe enregistrée !"
+            : "Demande groupe envoyée !"
       );
     },
     onError: error => {
@@ -213,6 +213,17 @@ export default function Benevole() {
         );
         return;
       }
+      if (selectedGroupDayInsufficientCapacity) {
+        toast.error(
+          lang === "ar"
+            ? "اليوم المختار ممتلئ لهذا العدد"
+            : lang === "en"
+              ? "Selected day is full for this group size"
+              : "Le jour choisi est complet pour cet effectif de groupe"
+        );
+        return;
+      }
+
       if (!groupFile) {
         toast.error(
           lang === "ar"
@@ -291,6 +302,15 @@ export default function Benevole() {
   const availableDays = days?.filter(day => !isDayFull(day)) || [];
   const selectedDay = days?.find(day => day.id.toString() === formData.dayId);
   const selectedDayIsFull = selectedDay ? isDayFull(selectedDay) : false;
+  const selectedGroupSize = Number(groupData.estimatedSize || 0);
+  const selectedDayRemainingSeats = selectedDay
+    ? Math.max(0, selectedDay.capacity - (selectedDay.registeredCount ?? 0))
+    : 0;
+  const selectedGroupDayInsufficientCapacity =
+    isGroup &&
+    selectedDay &&
+    selectedGroupSize > 0 &&
+    selectedGroupSize > selectedDayRemainingSeats;
   const dateLocale =
     lang === "ar" ? "ar-MA" : lang === "en" ? "en-US" : "fr-FR";
 
@@ -671,19 +691,19 @@ export default function Benevole() {
           ? "تم تسجيل المجموعة بنجاح!"
           : lang === "en"
             ? "Group registration confirmed!"
-            : "Inscription groupe confirmée !",
+            : "Demande groupe envoyée !",
       message:
         lang === "ar"
           ? "تم إرسال ملف Excel الخاص بكم إلى الإدارة. سيتم التواصل معكم قريباً."
           : lang === "en"
             ? "Your Excel file has been sent to the administration. You will be contacted soon."
-            : "Votre fichier Excel a été transmis à l'administration. Vous serez contacté(e) prochainement.",
+            : "Votre demande a été transmise à l'administration. Vous recevrez un email après validation ou refus.",
       emailSent:
         lang === "ar"
           ? "تم إرسال بريد إلكتروني إلى الإدارة مع الملف المرفق."
           : lang === "en"
             ? "An email has been sent to the administration with the attached file."
-            : "Un email a été envoyé à l'administration avec le fichier en pièce jointe.",
+            : "Un email de décision vous sera envoyé après traitement de votre demande.",
     };
     return (
       <div className="min-h-screen flex flex-col">
@@ -1027,51 +1047,106 @@ export default function Benevole() {
                       {/* Day Selection */}
                       <div className="space-y-2">
                         <Label htmlFor="day">{formTexts.dayLabel}</Label>
-                        <Select
-                          value={formData.dayId}
-                          onValueChange={value =>
-                            setFormData(prev => ({ ...prev, dayId: value }))
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={formTexts.selectDay} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {daysLoading ? (
-                              <SelectItem value="loading" disabled>
-                                {formTexts.loading}
-                              </SelectItem>
-                            ) : days && days.length > 0 ? (
-                              days.map(day => (
-                                <SelectItem
-                                  key={day.id}
-                                  value={day.id.toString()}
-                                  disabled={isDayFull(day)}
-                                >
-                                  {new Date(day.date).toLocaleDateString(
-                                    dateLocale,
-                                    {
-                                      weekday: "long",
-                                      day: "numeric",
-                                      month: "long",
-                                    }
-                                  )}
-                                  {isDayFull(day)
-                                    ? ` - ${formTexts.dayFull}`
-                                    : ""}
+                        {!isGroup ? (
+                          <Select
+                            value={formData.dayId}
+                            onValueChange={value =>
+                              setFormData(prev => ({ ...prev, dayId: value }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={formTexts.selectDay} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {daysLoading ? (
+                                <SelectItem value="loading" disabled>
+                                  {formTexts.loading}
                                 </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="none" disabled>
-                                {formTexts.noDay}
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        {selectedDayIsFull && (
+                              ) : days && days.length > 0 ? (
+                                days.map(day => (
+                                  <SelectItem
+                                    key={day.id}
+                                    value={day.id.toString()}
+                                    disabled={isDayFull(day)}
+                                  >
+                                    {new Date(day.date).toLocaleDateString(
+                                      dateLocale,
+                                      {
+                                        weekday: "long",
+                                        day: "numeric",
+                                        month: "long",
+                                      }
+                                    )}
+                                    {isDayFull(day)
+                                      ? ` - ${formTexts.dayFull}`
+                                      : ""}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="none" disabled>
+                                  {formTexts.noDay}
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Select
+                            value={formData.dayId}
+                            onValueChange={value =>
+                              setFormData(prev => ({ ...prev, dayId: value }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={`${formTexts.selectDay} (groupe)`} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {daysLoading ? (
+                                <SelectItem value="loading-group" disabled>
+                                  {formTexts.loading}
+                                </SelectItem>
+                              ) : days && days.length > 0 ? (
+                                days.map(day => {
+                                  const remainingSeats = Math.max(
+                                    0,
+                                    day.capacity - (day.registeredCount ?? 0)
+                                  );
+                                  return (
+                                    <SelectItem
+                                      key={`group-${day.id}`}
+                                      value={day.id.toString()}
+                                      disabled={!day.isOpen}
+                                    >
+                                      {new Date(day.date).toLocaleDateString(
+                                        dateLocale,
+                                        {
+                                          weekday: "long",
+                                          day: "numeric",
+                                          month: "long",
+                                        }
+                                      )}
+                                      {` - ${remainingSeats} ${formTexts.places}`}
+                                      {!day.isOpen ? ` - ${formTexts.dayFull}` : ""}
+                                    </SelectItem>
+                                  );
+                                })
+                              ) : (
+                                <SelectItem value="none-group" disabled>
+                                  {formTexts.noDay}
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        {selectedDayIsFull && !isGroup && (
                           <p className="text-sm text-destructive flex items-center gap-2">
                             <AlertCircle className="h-4 w-4" />
                             {formTexts.dayFull}
+                          </p>
+                        )}
+                        {selectedGroupDayInsufficientCapacity && (
+                          <p className="text-sm text-destructive flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4" />
+                            Jour choisi complet pour cet effectif de groupe.
                           </p>
                         )}
                       </div>
