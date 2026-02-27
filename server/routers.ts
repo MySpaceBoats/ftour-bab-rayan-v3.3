@@ -1715,6 +1715,7 @@ const goodiesRouter = router({
         name: z.string().min(2),
         description: z.string().optional(),
         price: z.number().min(0),
+        stock: z.number().min(0).default(0),
         imageUrl: z.string().optional(),
         category: z.string().optional(),
         isActive: z.boolean().default(true),
@@ -1733,6 +1734,7 @@ const goodiesRouter = router({
         name: z.string().min(2).optional(),
         description: z.string().optional(),
         price: z.number().min(0).optional(),
+        stock: z.number().min(0).optional(),
         imageUrl: z.string().optional(),
         category: z.string().optional(),
         isActive: z.boolean().optional(),
@@ -1814,6 +1816,23 @@ const ordersRouter = router({
                 message: `Stock insuffisant pour la variante #${item.variantId} (dispo: ${variant.stock}, demandé: ${item.quantity})`,
               });
             }
+          } else {
+            const { data: goodie } = await supabase
+              .from("goodies")
+              .select("stock")
+              .eq("id", item.goodieId)
+              .single();
+            if (!goodie)
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message: `Produit #${item.goodieId} introuvable`,
+              });
+            if ((goodie.stock ?? 0) < item.quantity) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: `Stock insuffisant pour le produit #${item.goodieId} (dispo: ${goodie.stock ?? 0}, demandé: ${item.quantity})`,
+              });
+            }
           }
         }
       }
@@ -1834,6 +1853,18 @@ const ordersRouter = router({
                 .from("goodie_variants")
                 .update({ stock: Math.max(0, variant.stock - item.quantity) })
                 .eq("id", item.variantId);
+            }
+          } else {
+            const { data: goodie } = await supabase
+              .from("goodies")
+              .select("stock")
+              .eq("id", item.goodieId)
+              .single();
+            if (goodie) {
+              await supabase
+                .from("goodies")
+                .update({ stock: Math.max(0, (goodie.stock ?? 0) - item.quantity) })
+                .eq("id", item.goodieId);
             }
           }
         }
@@ -1905,7 +1936,7 @@ const ordersRouter = router({
         if (supabase) {
           const { data: orderItems } = await supabase
             .from("order_items")
-            .select("variant_id, quantity")
+            .select("variant_id, goodie_id, quantity")
             .eq("order_id", input.orderId);
           if (orderItems) {
             for (const item of orderItems) {
@@ -1920,6 +1951,18 @@ const ordersRouter = router({
                     .from("goodie_variants")
                     .update({ stock: variant.stock + item.quantity })
                     .eq("id", item.variant_id);
+                }
+              } else if (item.goodie_id) {
+                const { data: goodie } = await supabase
+                  .from("goodies")
+                  .select("stock")
+                  .eq("id", item.goodie_id)
+                  .single();
+                if (goodie) {
+                  await supabase
+                    .from("goodies")
+                    .update({ stock: (goodie.stock ?? 0) + item.quantity })
+                    .eq("id", item.goodie_id);
                 }
               }
             }
@@ -4937,6 +4980,7 @@ const pastriesRouter = router({
         price: z.number().positive(),
         imageUrl: z.string().optional(),
         category: z.string().optional(),
+        stock: z.number().min(0).default(0),
         sortOrder: z.number().default(0),
       })
     )
@@ -4956,6 +5000,7 @@ const pastriesRouter = router({
           price: input.price,
           image_url: input.imageUrl,
           category: input.category,
+          stock: input.stock,
           sort_order: input.sortOrder,
           active: true,
         })
@@ -4989,6 +5034,7 @@ const pastriesRouter = router({
         price: z.number().positive().optional(),
         imageUrl: z.string().optional(),
         category: z.string().optional(),
+        stock: z.number().min(0).optional(),
         active: z.boolean().optional(),
         sortOrder: z.number().optional(),
       })
@@ -5007,6 +5053,7 @@ const pastriesRouter = router({
       if (input.price) updateData.price = input.price;
       if (input.imageUrl) updateData.image_url = input.imageUrl;
       if (input.category !== undefined) updateData.category = input.category;
+      if (input.stock !== undefined) updateData.stock = input.stock;
       if (input.active !== undefined) updateData.active = input.active;
       if (input.sortOrder !== undefined)
         updateData.sort_order = input.sortOrder;
@@ -5102,6 +5149,26 @@ const pastryOrdersRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (supabase) {
+        for (const item of input.items) {
+          const { data: pastry } = await supabase
+            .from("pastries")
+            .select("stock")
+            .eq("id", item.pastryId)
+            .single();
+          if (!pastry) {
+            throw new TRPCError({ code: "NOT_FOUND", message: `Pâtisserie #${item.pastryId} introuvable` });
+          }
+          if ((pastry.stock ?? 0) < item.quantity) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Stock insuffisant pour la pâtisserie #${item.pastryId} (dispo: ${pastry.stock ?? 0}, demandé: ${item.quantity})`,
+            });
+          }
+        }
+      }
+
       // Générer référence unique
       const reference = `PASTRY-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
@@ -5116,8 +5183,24 @@ const pastryOrdersRouter = router({
         paymentMethod: input.paymentMethod,
       });
 
+      // Décrémenter le stock
+      if (supabase) {
+        for (const item of input.items) {
+          const { data: pastry } = await supabase
+            .from("pastries")
+            .select("stock")
+            .eq("id", item.pastryId)
+            .single();
+          if (pastry) {
+            await supabase
+              .from("pastries")
+              .update({ stock: Math.max(0, (pastry.stock ?? 0) - item.quantity) })
+              .eq("id", item.pastryId);
+          }
+        }
+      }
+
       // Générer QR token si nécessaire
-      const supabase = getSupabaseAdminClient();
       if (input.channel === "online" || input.channel === "on_site_qr") {
         const qrData = await supabaseServices.generateQRTokenSupabase(
           "pastry",

@@ -1,0 +1,6 @@
+-- Add stock management columns for goodies and pastries
+ALTER TABLE IF EXISTS goodies
+  ADD COLUMN IF NOT EXISTS stock INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE IF EXISTS pastries
+  ADD COLUMN IF NOT EXISTS stock INTEGER NOT NULL DEFAULT 0;

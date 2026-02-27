@@ -201,18 +201,24 @@ export default function ProduitsTerroir() {
                           <h3 className="font-semibold text-lg">{product.name}</h3>
                           {product.description && <p className="text-sm text-muted-foreground">{product.description}</p>}
                           <div className="space-y-2">
-                            {variants.map((variant: any) => (
+                            {variants.map((variant: any) => {
+                              const availableStock = (variant.stock_total || 0) - (variant.stock_reserved || 0);
+                              const isOutOfStock = availableStock <= 0;
+
+                              return (
                               <div key={variant.id} className="flex items-center justify-between border rounded-md p-2">
                                 <div>
                                   <p className="text-sm font-medium">{variant.label}</p>
                                   <p className="text-xs text-muted-foreground">{Number(variant.price_unit)} DH</p>
+                                  <p className="text-xs text-muted-foreground">Stock: {availableStock}</p>
                                 </div>
-                                <Button size="sm" onClick={() => handleAddToCart(product, variant)}>
+                                <Button size="sm" disabled={isOutOfStock} onClick={() => handleAddToCart(product, variant)}>
                                   <Plus className="h-4 w-4 mr-1" />
-                                  {t.terroir.addToCart}
+                                  {isOutOfStock ? 'Indisponible' : t.terroir.addToCart}
                                 </Button>
                               </div>
-                            ))}
+                              );
+                            })}
                           </div>
                           {variants.length === 0 && (
                             <Button size="sm" disabled className="w-full">

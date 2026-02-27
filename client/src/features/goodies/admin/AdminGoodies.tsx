@@ -37,6 +37,7 @@ export default function AdminGoodies() {
     name: "",
     description: "",
     price: 0,
+    stock: 0,
     imageUrl: "",
     category: "",
     isActive: true,
@@ -91,6 +92,7 @@ export default function AdminGoodies() {
       name: "",
       description: "",
       price: 0,
+      stock: 0,
       imageUrl: "",
       category: "",
       isActive: true,
@@ -173,6 +175,7 @@ export default function AdminGoodies() {
       name: goodie.name,
       description: goodie.description || "",
       price: goodie.price || 0,
+      stock: goodie.stock || 0,
       imageUrl: goodie.imageUrl || "",
       category: goodie.category || "",
       isActive: goodie.isActive ?? true,
@@ -315,7 +318,7 @@ export default function AdminGoodies() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Prix (DH) *</Label>
                     <Input
@@ -325,6 +328,16 @@ export default function AdminGoodies() {
                       placeholder="100"
                       min="0"
                       step="0.01"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Stock</Label>
+                    <Input
+                      type="number"
+                      value={formData.stock === 0 ? '' : formData.stock}
+                      onChange={(e) => setFormData({ ...formData, stock: e.target.value === '' ? 0 : parseInt(e.target.value) })}
+                      placeholder="0"
+                      min="0"
                     />
                   </div>
                   <div className="space-y-2">
@@ -428,6 +441,7 @@ export default function AdminGoodies() {
                       <TableHead>Produit</TableHead>
                       <TableHead>Prix</TableHead>
                       <TableHead>Catégorie</TableHead>
+                      <TableHead>Stock</TableHead>
                       <TableHead>Tags</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Actions</TableHead>
@@ -455,6 +469,7 @@ export default function AdminGoodies() {
                         </TableCell>
                         <TableCell className="font-medium">{goodie.price} DH</TableCell>
                         <TableCell>{goodie.category || "-"}</TableCell>
+                        <TableCell>{goodie.stock ?? 0}</TableCell>
                         <TableCell>
                           <div className="flex gap-1 flex-wrap">
                             {goodie.isBestSeller && (
@@ -512,7 +527,7 @@ export default function AdminGoodies() {
                                     />
                                   </div>
 
-                                  <div className="grid grid-cols-2 gap-4">
+                                  <div className="grid grid-cols-3 gap-4">
                                     <div className="space-y-2">
                                       <Label>Prix (DH) *</Label>
                                       <Input
@@ -521,6 +536,15 @@ export default function AdminGoodies() {
                                         onChange={(e) => setFormData({ ...formData, price: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
                                         min="0"
                                         step="0.01"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label>Stock</Label>
+                                      <Input
+                                        type="number"
+                                        value={formData.stock === 0 ? '' : formData.stock}
+                                        onChange={(e) => setFormData({ ...formData, stock: e.target.value === '' ? 0 : parseInt(e.target.value) })}
+                                        min="0"
                                       />
                                     </div>
                                     <div className="space-y-2">

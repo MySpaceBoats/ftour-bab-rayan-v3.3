@@ -37,6 +37,7 @@ export default function AdminPastryCatalog() {
     name: "",
     description: "",
     price: 0,
+    stock: 0,
     imageUrl: "",
     category: "",
     sortOrder: 0,
@@ -94,6 +95,7 @@ export default function AdminPastryCatalog() {
       name: "",
       description: "",
       price: 0,
+      stock: 0,
       imageUrl: "",
       category: "",
       sortOrder: 0,
@@ -159,6 +161,7 @@ export default function AdminPastryCatalog() {
       name: formData.name,
       description: formData.description || undefined,
       price: formData.price,
+      stock: formData.stock,
       imageUrl: formData.imageUrl || undefined,
       category: formData.category || undefined,
       sortOrder: formData.sortOrder,
@@ -172,6 +175,7 @@ export default function AdminPastryCatalog() {
       name: formData.name || undefined,
       description: formData.description || undefined,
       price: formData.price || undefined,
+      stock: formData.stock,
       imageUrl: formData.imageUrl || undefined,
       category: formData.category || undefined,
       active: formData.active,
@@ -185,6 +189,7 @@ export default function AdminPastryCatalog() {
       name: pastry.name || "",
       description: pastry.description || "",
       price: pastry.price || 0,
+      stock: pastry.stock || 0,
       imageUrl: pastry.image_url || "",
       category: pastry.category || "",
       sortOrder: pastry.sort_order || 0,
@@ -327,7 +332,7 @@ export default function AdminPastryCatalog() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Prix (DH) *</Label>
                     <Input
@@ -337,6 +342,16 @@ export default function AdminPastryCatalog() {
                       placeholder="50"
                       min="0"
                       step="0.01"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Stock</Label>
+                    <Input
+                      type="number"
+                      value={formData.stock === 0 ? '' : formData.stock}
+                      onChange={(e) => setFormData({ ...formData, stock: e.target.value === '' ? 0 : parseInt(e.target.value) })}
+                      placeholder="0"
+                      min="0"
                     />
                   </div>
                   <div className="space-y-2">
@@ -429,6 +444,7 @@ export default function AdminPastryCatalog() {
                     <TableRow>
                       <TableHead>Produit</TableHead>
                       <TableHead>Prix</TableHead>
+                      <TableHead>Stock</TableHead>
                       <TableHead>Ordre</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Actions</TableHead>
@@ -455,6 +471,7 @@ export default function AdminPastryCatalog() {
                           </div>
                         </TableCell>
                         <TableCell className="font-medium">{pastry.price} DH</TableCell>
+                        <TableCell>{pastry.stock ?? 0}</TableCell>
                         <TableCell>{pastry.sort_order || 0}</TableCell>
                         <TableCell>
                           <Badge variant={pastry.active ? "default" : "secondary"}>
@@ -497,7 +514,7 @@ export default function AdminPastryCatalog() {
                                     />
                                   </div>
 
-                                  <div className="grid grid-cols-2 gap-4">
+                                  <div className="grid grid-cols-3 gap-4">
                                     <div className="space-y-2">
                                       <Label>Prix (DH) *</Label>
                                       <Input
@@ -506,6 +523,16 @@ export default function AdminPastryCatalog() {
                                         onChange={(e) => setFormData({ ...formData, price: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
                                         min="0"
                                         step="0.01"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label>Stock</Label>
+                                      <Input
+                                        type="number"
+                                        value={formData.stock === 0 ? '' : formData.stock}
+                                        onChange={(e) => setFormData({ ...formData, stock: e.target.value === '' ? 0 : parseInt(e.target.value) })}
+                                        placeholder="0"
+                                        min="0"
                                       />
                                     </div>
                                     <div className="space-y-2">
