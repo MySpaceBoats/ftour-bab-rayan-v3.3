@@ -61,6 +61,45 @@ const decodeBase64Payload = (payload: string): Buffer => {
   return Buffer.from(cleanPayload, "base64");
 };
 
+const getTimeInMinutesInRamadanTimezone = (date: Date): number => {
+  const formatter = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: DEFAULT_RAMADAN_TIMEZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(date);
+  const hour = Number(parts.find(part => part.type === "hour")?.value ?? "0");
+  const minute = Number(
+    parts.find(part => part.type === "minute")?.value ?? "0"
+  );
+  return hour * 60 + minute;
+};
+
+const isAutoReopenedForServiceOnly = (day: {
+  date: string;
+  isOpen: boolean;
+  registeredCount?: number | null;
+  capacity: number;
+}) => {
+  const now = new Date();
+  const isSameRamadanDate =
+    getDateStringInTimeZone(now, DEFAULT_RAMADAN_TIMEZONE) === day.date;
+  if (!isSameRamadanDate) return false;
+
+  const isAfterReopenTime =
+    getTimeInMinutesInRamadanTimezone(now) >= 17 * 60 + 30;
+  if (!isAfterReopenTime) return false;
+
+  const isDayClosedOrFull =
+    !day.isOpen || (day.registeredCount ?? 0) >= day.capacity;
+  return isDayClosedOrFull;
+};
+
+const isServiceOnlySelection = (volunteerSlots: string[]) =>
+  volunteerSlots.length > 0 &&
+  volunteerSlots.every(slot => slot === "service_ftour");
+
 const parseGroupVolunteersFromSheet = (
   sheet: XLSX.WorkSheet
 ): ParsedGroupVolunteerRow[] => {
@@ -1250,10 +1289,22 @@ const volunteersRouter = router({
       if (!day) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
       }
-      if (!day.isOpen) {
+      const dayAutoReopenedForServiceOnly = isAutoReopenedForServiceOnly(day);
+      if (!day.isOpen && !dayAutoReopenedForServiceOnly) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Ce jour est fermé aux inscriptions",
+        });
+      }
+
+      if (
+        dayAutoReopenedForServiceOnly &&
+        !isServiceOnlySelection(input.volunteerSlots)
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Après 17h30, seul le créneau service est ouvert pour ce jour.",
         });
       }
 
@@ -1261,7 +1312,11 @@ const volunteersRouter = router({
         typeof input.comment === "string" &&
         input.comment.toUpperCase().includes("DOUZ");
 
-      if ((day.registeredCount ?? 0) >= day.capacity && !hasBypassCode) {
+      if (
+        !dayAutoReopenedForServiceOnly &&
+        (day.registeredCount ?? 0) >= day.capacity &&
+        !hasBypassCode
+      ) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Ce jour a atteint le nombre maximum d'inscriptions",
@@ -1555,16 +1610,28 @@ const volunteersRouter = router({
       if (!day) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
       }
-      if (!day.isOpen) {
+      const dayAutoReopenedForServiceOnly = isAutoReopenedForServiceOnly(day);
+      if (!day.isOpen && !dayAutoReopenedForServiceOnly) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Ce jour est fermé aux inscriptions",
         });
       }
 
+      if (
+        dayAutoReopenedForServiceOnly &&
+        !isServiceOnlySelection(input.volunteerSlots)
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Après 17h30, seul le créneau service est ouvert pour ce jour.",
+        });
+      }
+
       const estimatedGroupSize = Math.max(1, input.estimatedSize ?? 1);
       const availableSeats = Math.max(0, day.capacity - (day.registeredCount ?? 0));
-      if (estimatedGroupSize > availableSeats) {
+      if (!dayAutoReopenedForServiceOnly && estimatedGroupSize > availableSeats) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message:
