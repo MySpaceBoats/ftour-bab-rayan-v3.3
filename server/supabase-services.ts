@@ -1286,6 +1286,7 @@ export interface GoodieData {
   name: string;
   description?: string;
   price: number;
+  stock: number;
   imageUrl?: string;
   category?: string;
   isActive?: boolean;
@@ -1302,6 +1303,7 @@ export async function createGoodieSupabase(data: GoodieData) {
       name: data.name,
       description: data.description,
       price: String(data.price), // Convert number to string for Supabase
+      stock: data.stock,
       image_url: data.imageUrl,
       category: data.category,
       is_active: data.isActive ?? true,
@@ -1384,6 +1386,7 @@ export async function getAllGoodiesSupabase(activeOnly = false) {
     category: g.category,
     isActive: g.is_active,
     sortOrder: g.sort_order,
+    stock: g.stock ?? 0,
     variants: g.goodie_variants?.map((v: { id: number; size: string | null; color: string | null; stock: number; price_modifier: string; is_available: boolean }) => ({
       id: v.id,
       size: v.size,
@@ -1404,6 +1407,7 @@ export async function updateGoodieSupabase(id: number, updates: Partial<GoodieDa
   if (updates.name !== undefined) updateData.name = updates.name;
   if (updates.description !== undefined) updateData.description = updates.description;
   if (updates.price !== undefined) updateData.price = String(updates.price);
+  if (updates.stock !== undefined) updateData.stock = updates.stock;
   if (updates.imageUrl !== undefined) updateData.image_url = updates.imageUrl;
   if (updates.category !== undefined) updateData.category = updates.category;
   if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
