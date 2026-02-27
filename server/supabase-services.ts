@@ -598,6 +598,9 @@ export interface VolunteerData {
   dayId: number;
   volunteerSlots?: string[];
   acceptedTerms: boolean;
+  groupLeaderEmail?: string;
+  groupMembersCount?: number;
+  groupRemainingEntries?: number;
 }
 
 export async function checkVolunteerEmailExistsForDay(email: string, dayId: number): Promise<boolean> {
@@ -659,7 +662,21 @@ export async function createVolunteerShiftSupabase(data: VolunteerData) {
     status: 'registered',
     accepted_terms: data.acceptedTerms,
     email_sent: false,
+    notes: null,
   };
+
+  const hasGroupMetadata = Boolean(data.groupLeaderEmail && data.groupMembersCount && data.groupMembersCount > 1);
+  if (hasGroupMetadata) {
+    const initialRemainingEntries = Math.max(
+      0,
+      data.groupRemainingEntries ?? data.groupMembersCount ?? 0
+    );
+    insertPayload.notes = JSON.stringify({
+      groupLeaderEmail: data.groupLeaderEmail,
+      groupMembersCount: data.groupMembersCount,
+      groupRemainingEntries: initialRemainingEntries,
+    });
+  }
 
   // Always include volunteer_slots - PostgREST silently ignores it
   // if the column doesn't exist in the DB
@@ -723,20 +740,37 @@ export async function createVolunteerShiftsBulkSupabase(data: VolunteerData[]) {
   if (!client) throw new Error('Supabase not configured');
   if (data.length === 0) return [];
 
-  const payload = data.map((row) => ({
-    first_name: row.firstName,
-    last_name: row.lastName,
-    email: row.email.toLowerCase().trim(),
-    phone: row.phone,
-    city: row.city,
-    day_id: row.dayId,
-    qr_token: generateSecureToken(),
-    qr_status: 'generated',
-    status: 'registered',
-    accepted_terms: row.acceptedTerms,
-    email_sent: false,
-    volunteer_slots: row.volunteerSlots || [],
-  }));
+  const payload = data.map((row) => {
+    const hasGroupMetadata = Boolean(
+      row.groupLeaderEmail && row.groupMembersCount && row.groupMembersCount > 1
+    );
+    const notes = hasGroupMetadata
+      ? JSON.stringify({
+          groupLeaderEmail: row.groupLeaderEmail,
+          groupMembersCount: row.groupMembersCount,
+          groupRemainingEntries: Math.max(
+            0,
+            row.groupRemainingEntries ?? row.groupMembersCount ?? 0
+          ),
+        })
+      : null;
+
+    return {
+      first_name: row.firstName,
+      last_name: row.lastName,
+      email: row.email.toLowerCase().trim(),
+      phone: row.phone,
+      city: row.city,
+      day_id: row.dayId,
+      qr_token: generateSecureToken(),
+      qr_status: 'generated',
+      status: 'registered',
+      accepted_terms: row.acceptedTerms,
+      email_sent: false,
+      volunteer_slots: row.volunteerSlots || [],
+      notes,
+    };
+  });
 
   const { data: volunteers, error } = await client
     .from('volunteers')
@@ -903,8 +937,47 @@ export async function scanAndValidateTokenSupabase(token: string, validatedBy?: 
     return { success: false, error: 'Token invalide', code: 'INVALID_TOKEN' };
   }
 
-  // Idempotent: already confirmed/validated → return success
-  if (volunteer.qrStatus === 'validated') {
+  const parseGroupMetadata = (notes: string | null | undefined) => {
+    if (!notes) return null;
+    try {
+      const parsed = JSON.parse(notes);
+      if (!parsed || typeof parsed !== 'object') return null;
+      const groupMembersCount = Number((parsed as any).groupMembersCount ?? 0);
+      const groupRemainingEntries = Number((parsed as any).groupRemainingEntries ?? groupMembersCount);
+      const groupLeaderEmail = typeof (parsed as any).groupLeaderEmail === 'string'
+        ? (parsed as any).groupLeaderEmail.toLowerCase().trim()
+        : '';
+      if (groupMembersCount <= 1 || !groupLeaderEmail) return null;
+      return {
+        groupLeaderEmail,
+        groupMembersCount,
+        groupRemainingEntries: Math.max(0, groupRemainingEntries),
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  const groupMeta = parseGroupMetadata(volunteer.notes);
+  const isGroupLeaderQr = Boolean(
+    groupMeta && groupMeta.groupLeaderEmail === volunteer.email.toLowerCase().trim()
+  );
+
+  if (isGroupLeaderQr && groupMeta) {
+    if (groupMeta.groupRemainingEntries <= 0) {
+      console.log(JSON.stringify({
+        event: 'volunteer_confirm',
+        volunteerId: volunteer.id,
+        state: 'group_entries_exhausted',
+      }));
+      return {
+        success: false,
+        error: 'Toutes les entrées de ce groupe ont déjà été consommées.',
+        code: 'GROUP_ENTRIES_EXHAUSTED',
+        volunteer,
+      };
+    }
+  } else if (volunteer.qrStatus === 'validated') {
     console.log(JSON.stringify({ event: 'volunteer_confirm', volunteerId: volunteer.id, state: 'already_confirmed' }));
     return {
       success: true,
@@ -922,30 +995,42 @@ export async function scanAndValidateTokenSupabase(token: string, validatedBy?: 
     console.log(JSON.stringify({ event: 'volunteer_confirm', volunteerId: volunteer.id, state: 'wrong_day', expected: volunteerDate, actual: today }));
     return {
       success: false,
-      error: 'Ce QR code n\'est pas valide pour aujourd\'hui',
+      error: "Ce QR code n'est pas valide pour aujourd'hui",
       code: 'WRONG_DAY',
       volunteer,
       expectedDate: volunteerDate,
     };
   }
 
-  // Confirm the volunteer
   const now = new Date().toISOString();
+  const isFirstValidation = volunteer.qrStatus !== 'validated';
+
+  const updatePayload: Record<string, any> = {
+    qr_status: 'validated',
+    status: 'confirmed',
+    scanned_at: now,
+    scanned_by: validatedBy,
+  };
+
+  if (isFirstValidation) {
+    updatePayload.confirmed_at = now;
+  }
+
+  if (isGroupLeaderQr && groupMeta) {
+    const remainingAfterScan = Math.max(0, groupMeta.groupRemainingEntries - 1);
+    updatePayload.notes = JSON.stringify({
+      ...groupMeta,
+      groupRemainingEntries: remainingAfterScan,
+    });
+  }
 
   const { error: updateError } = await client
     .from('volunteers')
-    .update({
-      qr_status: 'validated',
-      status: 'confirmed',
-      confirmed_at: now,
-      scanned_at: now,
-      scanned_by: validatedBy,
-    })
+    .update(updatePayload)
     .eq('id', volunteer.id);
 
   if (updateError) throw updateError;
 
-  // Create checkin record for audit
   await client.from('checkins').insert({
     volunteer_id: volunteer.id,
     token: token,
@@ -956,47 +1041,63 @@ export async function scanAndValidateTokenSupabase(token: string, validatedBy?: 
     user_agent: userAgent,
   });
 
-  try {
-    const { data: presentHistory, error: presentHistoryError } = await client
-      .from('volunteers')
-      .select('day_id, ramadan_days(day_number)')
-      .eq('email', volunteer.email)
-      .eq('status', 'present');
+  if (isFirstValidation) {
+    try {
+      const { data: presentHistory, error: presentHistoryError } = await client
+        .from('volunteers')
+        .select('day_id, ramadan_days(day_number)')
+        .eq('email', volunteer.email)
+        .eq('status', 'present');
 
-    if (presentHistoryError) {
-      console.warn('[Volunteer] Unable to fetch present history for manager recommendation', {
-        volunteerId: volunteer.id,
-        error: presentHistoryError.message,
-      });
-    } else {
-      const dayNumbers = (presentHistory || [])
-        .map((row: any) => row.ramadan_days?.day_number)
-        .filter((dayNumber: unknown): dayNumber is number => typeof dayNumber === 'number');
+      if (presentHistoryError) {
+        console.warn('[Volunteer] Unable to fetch present history for manager recommendation', {
+          volunteerId: volunteer.id,
+          error: presentHistoryError.message,
+        });
+      } else {
+        const dayNumbers = (presentHistory || [])
+          .map((row: any) => row.ramadan_days?.day_number)
+          .filter((dayNumber: unknown): dayNumber is number => typeof dayNumber === 'number');
 
-      const maxStreak = computeMaxConsecutiveDays(dayNumbers);
-      if (maxStreak >= MANAGER_RECOMMENDATION_STREAK) {
-        await notifyManagerRecommendation({
-          id: volunteer.id,
-          firstName: volunteer.firstName,
-          lastName: volunteer.lastName,
-          email: volunteer.email,
-          phone: volunteer.phone,
-        }, maxStreak);
+        const maxStreak = computeMaxConsecutiveDays(dayNumbers);
+        if (maxStreak >= MANAGER_RECOMMENDATION_STREAK) {
+          await notifyManagerRecommendation({
+            id: volunteer.id,
+            firstName: volunteer.firstName,
+            lastName: volunteer.lastName,
+            email: volunteer.email,
+            phone: volunteer.phone,
+          }, maxStreak);
+        }
       }
+    } catch (error) {
+      console.warn('[Volunteer] Manager recommendation workflow failed', {
+        volunteerId: volunteer.id,
+        error,
+      });
     }
-  } catch (error) {
-    console.warn('[Volunteer] Manager recommendation workflow failed', {
-      volunteerId: volunteer.id,
-      error,
-    });
   }
 
-  console.log(JSON.stringify({ event: 'volunteer_confirm', volunteerId: volunteer.id, state: 'confirmed' }));
+  const state = isGroupLeaderQr
+    ? 'group_entry_confirmed'
+    : isFirstValidation
+      ? 'confirmed'
+      : 'already_confirmed';
+
+  console.log(JSON.stringify({ event: 'volunteer_confirm', volunteerId: volunteer.id, state }));
+
+  const volunteerResponse = {
+    ...volunteer,
+    qrStatus: 'validated' as const,
+    status: 'confirmed' as const,
+    confirmedAt: isFirstValidation ? new Date(now) : volunteer.confirmedAt,
+    scannedAt: new Date(now),
+  };
 
   return {
     success: true,
-    state: 'confirmed' as const,
-    volunteer: { ...volunteer, qrStatus: 'validated', status: 'confirmed', confirmedAt: new Date(now), scannedAt: new Date(now) },
+    state,
+    volunteer: volunteerResponse,
   };
 }
 

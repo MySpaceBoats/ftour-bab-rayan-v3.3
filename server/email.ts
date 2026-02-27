@@ -241,6 +241,7 @@ export interface VolunteerEmailData {
   volunteerSlots?: string[];
   qrToken: string;
   baseUrl: string;
+  groupMembersCount?: number;
 }
 
 export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { subject: string; html: string } {
@@ -256,6 +257,16 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
   const slotsHtml = (data.volunteerSlots || []).map(s =>
     `<li style="margin-bottom: 4px;">${slotLabels[s] || s}</li>`
   ).join('');
+  const groupHintHtml = data.groupMembersCount && data.groupMembersCount > 1
+    ? `<table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fef3c7; border-radius: 8px; margin: 20px 0; border: 1px solid #f59e0b;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #92400e; margin: 0 0 10px 0; font-size: 18px;">👥 Inscription groupe</h3>
+          <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">Ce QR code est valable pour <strong>${data.groupMembersCount} personnes</strong>. Le responsable doit présenter ce même QR code ${data.groupMembersCount} fois à l'entrée.</p>
+        </td>
+      </tr>
+    </table>`
+    : '';
 
   const content = `
     <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
@@ -294,6 +305,8 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
       </tr>
     </table>
     ` : ''}
+
+    ${groupHintHtml}
 
     <!-- QR Code -->
     <div style="text-align: center; margin: 30px 0; padding: 20px; background-color: #ffffff; border: 2px dashed #166534; border-radius: 8px;">

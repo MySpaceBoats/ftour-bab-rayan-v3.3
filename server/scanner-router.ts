@@ -343,7 +343,9 @@ export const scannerRouter = router({
             validationMessage: validationResult.success
               ? validationResult.state === "already_confirmed"
                 ? `Déjà confirmé — ${fullName}`
-                : `Bénévole confirmé — ${fullName}`
+                : validationResult.state === "group_entry_confirmed"
+                  ? `Entrée groupe validée — ${fullName}`
+                  : `Bénévole confirmé — ${fullName}`
               : validationResult.error || "Erreur de validation",
             validationSuccess: validationResult.success,
             entity: {

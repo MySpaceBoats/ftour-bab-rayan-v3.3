@@ -43,6 +43,7 @@ type ParsedGroupVolunteerRow = {
 
 type GroupVolunteerForEmail = ParsedGroupVolunteerRow & {
   qrToken?: string;
+  groupMembersCount?: number;
 };
 
 const normalizeSpreadsheetValue = (value: unknown): string =>
@@ -339,6 +340,7 @@ const sendGroupVolunteerConfirmationEmails = async ({
       volunteerSlots,
       qrToken: volunteer.qrToken,
       baseUrl,
+      groupMembersCount: volunteer.groupMembersCount,
     });
 
     const emailResult = await sendEmail({
@@ -1369,70 +1371,38 @@ const volunteersRouter = router({
           });
         }
 
-        const normalizedRows = parsedRows.map(row => ({
-          ...row,
-          email: row.email.toLowerCase().trim(),
-        }));
+        importedCount = parsedRows.length;
 
-        const existingEmails = new Set<string>();
-        const duplicateCheckChunks = chunkArray(
-          normalizedRows.map(row => row.email),
-          400
-        );
+        const responsibleNameParts = input.responsibleName
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean);
+        const leaderFirstName = responsibleNameParts[0] || input.responsibleName;
+        const leaderLastName =
+          responsibleNameParts.slice(1).join(" ") || responsibleNameParts[0] || input.groupName;
 
-        for (const emailChunk of duplicateCheckChunks) {
-          const chunkExisting =
-            await supabaseServices.getExistingVolunteerEmailsForDay(
-              input.dayId,
-              emailChunk
-            );
-          chunkExisting.forEach(existingEmail => {
-            existingEmails.add(existingEmail);
-          });
-        }
+        const groupLeader = await supabaseServices.createVolunteerShiftSupabase({
+          firstName: leaderFirstName,
+          lastName: leaderLastName,
+          email: normalizedGroupEmail,
+          phone: input.responsiblePhone,
+          dayId: input.dayId,
+          volunteerSlots: input.volunteerSlots,
+          acceptedTerms: true,
+          groupLeaderEmail: normalizedGroupEmail,
+          groupMembersCount: importedCount,
+          groupRemainingEntries: importedCount,
+        });
 
-        const uniqueRows: typeof normalizedRows = [];
-        const seenInFile = new Set<string>();
-
-        for (const row of normalizedRows) {
-          if (existingEmails.has(row.email) || seenInFile.has(row.email)) {
-            skippedCount += 1;
-            continue;
-          }
-          seenInFile.add(row.email);
-          uniqueRows.push(row);
-        }
-
-        const insertChunks = chunkArray(uniqueRows, 200);
-        for (const rowsChunk of insertChunks) {
-          const created =
-            await supabaseServices.createVolunteerShiftsBulkSupabase(
-              rowsChunk.map(row => ({
-                firstName: row.firstName,
-                lastName: row.lastName,
-                email: row.email,
-                phone: row.phone,
-                city: row.city,
-                dayId: input.dayId,
-                volunteerSlots: input.volunteerSlots,
-                acceptedTerms: true,
-              }))
-            );
-
-          for (const volunteer of created) {
-            createdVolunteersForEmail.push({
-              firstName: volunteer.firstName,
-              lastName: volunteer.lastName,
-              email: volunteer.email,
-              phone: volunteer.phone,
-              city: volunteer.city,
-              qrToken: volunteer.qrToken,
-            });
-          }
-
-          importedCount += created.length;
-          skippedCount += Math.max(0, rowsChunk.length - created.length);
-        }
+        createdVolunteersForEmail.push({
+          firstName: input.responsibleName,
+          lastName: input.groupName,
+          email: normalizedGroupEmail,
+          phone: input.responsiblePhone,
+          city: "",
+          qrToken: groupLeader.qrToken,
+          groupMembersCount: importedCount,
+        });
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;
