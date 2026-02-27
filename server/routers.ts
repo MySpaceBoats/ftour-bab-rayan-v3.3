@@ -290,6 +290,54 @@ const runWithConcurrencyLimit = async <T>(
   return results;
 };
 
+const GROUP_MAIL_DISPATCH_CC = [
+  "naylabennani@hotmail.com",
+  "ratibhind3@gmail.com",
+  "rsebbani@myspace.boats",
+] as const;
+
+const sendGroupMailDispatchSummary = async ({
+  groupName,
+  responsibleName,
+  responsibleEmail,
+  dayNumber,
+  dayDate,
+  createdQrCount,
+  emailsSentCount,
+  emailsFailedCount,
+}: {
+  groupName: string;
+  responsibleName: string;
+  responsibleEmail: string;
+  dayNumber: number;
+  dayDate: string;
+  createdQrCount: number;
+  emailsSentCount: number;
+  emailsFailedCount: number;
+}) => {
+  const subject = `QR groupe envoyés - ${groupName} (${emailsSentCount} emails envoyés)`;
+
+  await sendEmail({
+    to: "contact@ftourbabrayan.ma",
+    cc: [...GROUP_MAIL_DISPATCH_CC],
+    subject,
+    html: `
+      <p>Bonjour,</p>
+      <p>Les emails d'inscription du groupe ont été traités.</p>
+      <ul>
+        <li><strong>Groupe :</strong> ${groupName}</li>
+        <li><strong>Responsable :</strong> ${responsibleName}</li>
+        <li><strong>Email responsable :</strong> ${responsibleEmail}</li>
+        <li><strong>Jour Ramadan :</strong> ${dayNumber} (${dayDate})</li>
+        <li><strong>QR codes produits :</strong> ${createdQrCount}</li>
+        <li><strong>Emails envoyés :</strong> ${emailsSentCount}</li>
+        <li><strong>Emails en échec :</strong> ${emailsFailedCount}</li>
+      </ul>
+      <p>Ceci est un message d'information automatique.</p>
+    `,
+  });
+};
+
 const sendGroupVolunteerConfirmationEmails = async ({
   volunteers,
   day,
@@ -446,6 +494,8 @@ const processGroupVolunteerRows = async ({
   }
 
   const createdVolunteersForEmail: GroupVolunteerForEmail[] = [];
+  let emailsSentCount = 0;
+  let emailsFailedCount = 0;
 
   if (uniqueRows.length > 0) {
     const insertChunks = chunkArray(uniqueRows, 200);
@@ -506,6 +556,8 @@ const processGroupVolunteerRows = async ({
       day,
       volunteerSlots,
     });
+    emailsSentCount = emailSummary.sent;
+    emailsFailedCount = emailSummary.failed;
 
     const emailResults = emailSummary.details.map(result =>
       result.success
@@ -521,7 +573,15 @@ const processGroupVolunteerRows = async ({
   const successCount = results.filter(r => r.success).length;
   const failCount = results.filter(r => !r.success).length;
 
-  return { results, successCount, failCount, totalRows: parsedRows.length };
+  return {
+    results,
+    successCount,
+    failCount,
+    totalRows: parsedRows.length,
+    createdQrCount: createdVolunteersForEmail.length,
+    emailsSentCount,
+    emailsFailedCount,
+  };
 };
 
 const volunteerNoShowBlockingMessage =
@@ -1803,6 +1863,30 @@ const volunteersRouter = router({
                   failCount: processResult.failCount,
                   totalRows: processResult.totalRows,
                 };
+
+                try {
+                  await sendGroupMailDispatchSummary({
+                    groupName: String(request.group_name ?? request.groupName),
+                    responsibleName: String(
+                      request.responsible_name ?? request.responsibleName
+                    ),
+                    responsibleEmail: normalizedResponsibleEmail,
+                    dayNumber: day.dayNumber,
+                    dayDate: new Date(day.date).toLocaleDateString("fr-FR", {
+                      weekday: "long",
+                      month: "long",
+                      day: "numeric",
+                    }),
+                    createdQrCount: processResult.createdQrCount,
+                    emailsSentCount: processResult.emailsSentCount,
+                    emailsFailedCount: processResult.emailsFailedCount,
+                  });
+                } catch (error) {
+                  console.error(
+                    `[ReviewGroupRequest] Failed to send dispatch summary for request ${input.requestId}`,
+                    error
+                  );
+                }
 
                 console.log(
                   `[ReviewGroupRequest] Processed attachment for request ${input.requestId}: ${processResult.successCount} success, ${processResult.failCount} failures out of ${processResult.totalRows}`
