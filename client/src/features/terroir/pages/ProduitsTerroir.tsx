@@ -191,7 +191,7 @@ export default function ProduitsTerroir() {
                     return (
                       <Card key={product.id} className="overflow-hidden">
                         {product.image_url ? (
-                          <img src={product.image_url} alt={product.name} className="w-full h-44 object-cover" />
+                          <img src={product.image_url} alt={product.name} className="w-full h-52 object-contain bg-muted p-2" />
                         ) : (
                           <div className="h-44 bg-muted flex items-center justify-center">
                             <Package className="h-10 w-10 text-muted-foreground" />
