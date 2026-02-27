@@ -2849,6 +2849,37 @@ const volunteersRouter = router({
         });
       }
 
+      try {
+        const normalizedResponsibleEmail = String(request.responsible_email || "")
+          .toLowerCase()
+          .trim();
+
+        if (normalizedResponsibleEmail) {
+          const { sendEmail } = await import("./email");
+          const responsibleName = String(request.responsible_name || "").trim();
+          const groupName = String(request.group_name || "").trim();
+          const dayNumber = request.ramadan_days?.day_number || "";
+
+          if (input.action === "validate") {
+            await sendEmail({
+              to: normalizedResponsibleEmail,
+              subject: "Votre demande groupe bénévole est validée",
+              html: `<p>Bonjour ${responsibleName},</p><p>Votre demande d'inscription groupe <strong>${groupName}</strong>${dayNumber ? ` pour le jour ${dayNumber} du Ramadan` : ""} a été validée.</p>`,
+              apiKey: ctx.env.RESEND_API_KEY,
+            });
+          } else {
+            await sendEmail({
+              to: normalizedResponsibleEmail,
+              subject: "Votre demande groupe bénévole est refusée",
+              html: `<p>Bonjour ${responsibleName},</p><p>Votre demande d'inscription groupe <strong>${groupName}</strong> n'a pas pu être validée.</p>${input.rejectionReason ? `<p>Motif: ${input.rejectionReason}</p>` : ""}`,
+              apiKey: ctx.env.RESEND_API_KEY,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("[Group Request] Failed to send review notification email", error);
+      }
+
       return { success: true, request: updated };
     }),
 
