@@ -493,7 +493,7 @@ const gallerySchema = z.object({
   albumId: z.string().uuid().nullable().optional(),
   sortOrder: z.number().int().default(0),
   isFeatured: z.boolean().default(false),
-  status: z.enum(["draft", "published"]).default("draft"),
+  status: z.enum(["draft", "published", "rejected"]).default("draft"),
 });
 
 const galleryRouter = router({
@@ -542,7 +542,7 @@ const galleryRouter = router({
           albumId: z.string().uuid().optional(),
           tag: z.string().optional(),
           featured: z.boolean().optional(),
-          status: z.enum(["draft", "published"]).optional(),
+          status: z.enum(["draft", "published", "rejected"]).optional(),
         })
         .optional()
     )
@@ -769,6 +769,24 @@ const galleryRouter = router({
       const { error } = await client
         .from("gallery_photos")
         .update({ status: "draft" })
+        .eq("id", input.id);
+      if (error)
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      return { success: true };
+    }),
+
+  reject: adminProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ input }) => {
+      const client = getSupabaseAdminClient();
+      if (!client)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+      const { error } = await client
+        .from("gallery_photos")
+        .update({ status: "rejected" })
         .eq("id", input.id);
       if (error)
         throw new TRPCError({ code: "BAD_REQUEST", message: error.message });

@@ -8,7 +8,7 @@ export const GALLERY_ALLOWED_MIME_TYPES = [
 export const GALLERY_MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024;
 export const GALLERY_MAX_BATCH = 20;
 
-export type GalleryStatus = "draft" | "published";
+export type GalleryStatus = "draft" | "published" | "rejected";
 
 export interface GalleryPhotoCreateInput {
   title?: string;
