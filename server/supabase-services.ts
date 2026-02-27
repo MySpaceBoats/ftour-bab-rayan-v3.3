@@ -634,6 +634,37 @@ export interface VolunteerGroupRequestData {
   fileBase64: string;
 }
 
+async function hydrateVolunteerGroupRequestDays(rows: any[]) {
+  const client = getSupabaseAdminClient();
+  if (!client || rows.length === 0) return rows;
+
+  const dayIds = Array.from(
+    new Set(
+      rows
+        .map((row: any) => Number(row.day_id ?? row.dayId))
+        .filter((dayId: number) => Number.isFinite(dayId) && dayId > 0)
+    )
+  );
+
+  if (dayIds.length === 0) return rows;
+
+  const { data: days, error } = await client
+    .from('ramadan_days')
+    .select('*')
+    .in('id', dayIds);
+
+  if (error) {
+    console.error('[Volunteer Group Requests] Unable to hydrate days:', error);
+    return rows;
+  }
+
+  const dayById = new Map((days ?? []).map((day: any) => [day.id, day]));
+  return rows.map((row: any) => ({
+    ...row,
+    ramadan_days: dayById.get(Number(row.day_id ?? row.dayId)) ?? null,
+  }));
+}
+
 export async function createVolunteerGroupRequestSupabase(input: VolunteerGroupRequestData) {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error('Supabase not configured');
@@ -652,11 +683,12 @@ export async function createVolunteerGroupRequestSupabase(input: VolunteerGroupR
       file_base64: input.fileBase64,
       status: 'pending',
     })
-    .select('*, ramadan_days(*)')
+    .select('*')
     .single();
 
   if (error) throw error;
-  return data;
+  const [hydrated] = await hydrateVolunteerGroupRequestDays([data]);
+  return hydrated;
 }
 
 export async function listVolunteerGroupRequestsSupabase() {
@@ -665,11 +697,11 @@ export async function listVolunteerGroupRequestsSupabase() {
 
   const { data, error } = await client
     .from('volunteer_group_requests')
-    .select('*, ramadan_days(*)')
+    .select('*')
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data ?? [];
+  return hydrateVolunteerGroupRequestDays(data ?? []);
 }
 
 export async function getVolunteerGroupRequestByIdSupabase(id: number) {
@@ -678,12 +710,14 @@ export async function getVolunteerGroupRequestByIdSupabase(id: number) {
 
   const { data, error } = await client
     .from('volunteer_group_requests')
-    .select('*, ramadan_days(*)')
+    .select('*')
     .eq('id', id)
     .maybeSingle();
 
   if (error) throw error;
-  return data;
+  if (!data) return null;
+  const [hydrated] = await hydrateVolunteerGroupRequestDays([data]);
+  return hydrated;
 }
 
 export async function updateVolunteerGroupRequestSupabase(id: number, updates: {
@@ -718,11 +752,12 @@ export async function updateVolunteerGroupRequestSupabase(id: number, updates: {
     .from('volunteer_group_requests')
     .update(payload)
     .eq('id', id)
-    .select('*, ramadan_days(*)')
+    .select('*')
     .single();
 
   if (error) throw error;
-  return data;
+  const [hydrated] = await hydrateVolunteerGroupRequestDays([data]);
+  return hydrated;
 }
 
 export async function deleteVolunteerGroupRequestSupabase(id: number) {

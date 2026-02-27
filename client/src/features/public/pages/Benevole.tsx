@@ -213,16 +213,6 @@ export default function Benevole() {
         );
         return;
       }
-      if (!groupData.estimatedSize.trim() || Number(groupData.estimatedSize) < 2) {
-        toast.error(
-          lang === "ar"
-            ? "يرجى إدخال حجم المجموعة (2 على الأقل)"
-            : lang === "en"
-              ? "Please enter the estimated group size (minimum 2)"
-              : "Veuillez saisir la taille estimée du groupe (minimum 2)"
-        );
-        return;
-      }
       if (selectedGroupDayInsufficientCapacity) {
         toast.error(
           lang === "ar"
@@ -1116,11 +1106,15 @@ export default function Benevole() {
                                 </SelectItem>
                               ) : days && days.length > 0 ? (
                                 days.map(day => {
+                                  const remainingSeats = Math.max(
+                                    0,
+                                    day.capacity - (day.registeredCount ?? 0)
+                                  );
                                   return (
                                     <SelectItem
                                       key={`group-${day.id}`}
                                       value={day.id.toString()}
-                                      disabled={isDayFull(day)}
+                                      disabled={!day.isOpen}
                                     >
                                       {new Date(day.date).toLocaleDateString(
                                         dateLocale,
@@ -1130,9 +1124,8 @@ export default function Benevole() {
                                           month: "long",
                                         }
                                       )}
-                                      {isDayFull(day)
-                                        ? ` - ${formTexts.dayFull}`
-                                        : ""}
+                                      {` - ${remainingSeats} ${formTexts.places}`}
+                                      {!day.isOpen ? ` - ${formTexts.dayFull}` : ""}
                                     </SelectItem>
                                   );
                                 })

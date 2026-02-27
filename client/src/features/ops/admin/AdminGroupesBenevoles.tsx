@@ -6,11 +6,38 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Download, Loader2, CheckCircle, XCircle, Pencil, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Download,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 
 const slotLabel: Record<string, string> = {
   preparation_ftour: "Préparation ftour",
@@ -30,7 +57,7 @@ export default function AdminGroupesBenevoles() {
       toast.success("Demande mise à jour");
       utils.volunteers.listGroupRequests.invalidate();
     },
-    onError: (error) => toast.error(error.message),
+    onError: error => toast.error(error.message),
   });
 
   const deleteMutation = trpc.volunteers.deleteGroupRequest.useMutation({
@@ -38,7 +65,7 @@ export default function AdminGroupesBenevoles() {
       toast.success("Demande supprimée");
       utils.volunteers.listGroupRequests.invalidate();
     },
-    onError: (error) => toast.error(error.message),
+    onError: error => toast.error(error.message),
   });
 
   const updateMutation = trpc.volunteers.updateGroupRequest.useMutation({
@@ -47,7 +74,7 @@ export default function AdminGroupesBenevoles() {
       setEditing(null);
       utils.volunteers.listGroupRequests.invalidate();
     },
-    onError: (error) => toast.error(error.message),
+    onError: error => toast.error(error.message),
   });
 
   const filtered = useMemo(() => {
@@ -63,6 +90,32 @@ export default function AdminGroupesBenevoles() {
       );
     });
   }, [query.data, search, statusFilter]);
+
+  const handleDownloadAttachment = async (
+    requestId: number,
+    fallbackFileName: string
+  ) => {
+    try {
+      const attachment = await utils.volunteers.getGroupRequestAttachment.fetch({
+        requestId,
+      });
+      const raw = attachment.fileBase64.includes(",")
+        ? attachment.fileBase64.split(",").pop() || ""
+        : attachment.fileBase64;
+      const blob = new Blob([
+        Uint8Array.from(atob(raw), char => char.charCodeAt(0)),
+      ]);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download =
+        attachment.fileName || fallbackFileName || `groupe_${requestId}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      toast.error(error?.message || "Impossible de télécharger la pièce jointe");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-muted/20 p-6 space-y-6">
@@ -83,9 +136,15 @@ export default function AdminGroupesBenevoles() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid md:grid-cols-3 gap-3">
-            <Input placeholder="Rechercher groupe/email" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input
+              placeholder="Rechercher groupe/email"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous</SelectItem>
                 <SelectItem value="pending">En attente</SelectItem>
@@ -95,8 +154,14 @@ export default function AdminGroupesBenevoles() {
             </Select>
           </div>
 
-          {query.isLoading ? (
-            <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Chargement...</div>
+          {query.error ? (
+            <div className="text-sm text-destructive">
+              Erreur chargement demandes: {query.error.message}
+            </div>
+          ) : query.isLoading ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Chargement...
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -115,62 +180,177 @@ export default function AdminGroupesBenevoles() {
                   <TableRow key={row.id}>
                     <TableCell>
                       <div className="font-medium">{row.groupName}</div>
-                      <div className="text-xs text-muted-foreground">{(row.volunteerSlots || []).map((s: string) => slotLabel[s] || s).join(", ")}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {(row.volunteerSlots || [])
+                          .map((s: string) => slotLabel[s] || s)
+                          .join(", ")}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div>{row.responsibleName}</div>
-                      <div className="text-xs text-muted-foreground">{row.responsibleEmail}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {row.responsibleEmail}
+                      </div>
                     </TableCell>
                     <TableCell>{row.day ? `Jour ${row.day.dayNumber}` : "-"}</TableCell>
                     <TableCell>{row.estimatedSize || "-"}</TableCell>
                     <TableCell>
-                      <Badge variant={row.status === "validated" ? "default" : row.status === "refused" ? "destructive" : "secondary"}>{row.status}</Badge>
+                      <Badge
+                        variant={
+                          row.status === "validated"
+                            ? "default"
+                            : row.status === "refused"
+                              ? "destructive"
+                              : "secondary"
+                        }
+                      >
+                        {row.status}
+                      </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button variant="outline" size="sm" onClick={() => {
-                        const blob = new Blob([Uint8Array.from(atob(row.fileBase64), c => c.charCodeAt(0))]);
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.href = url;
-                        a.download = row.fileName || `groupe_${row.id}.xlsx`;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                      }}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          handleDownloadAttachment(
+                            row.id,
+                            row.fileName || `groupe_${row.id}.xlsx`
+                          )
+                        }
+                      >
                         <Download className="h-4 w-4 mr-1" /> Télécharger
                       </Button>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2 flex-wrap">
-                        <Button size="sm" disabled={row.status !== "pending" || reviewMutation.isPending} onClick={() => reviewMutation.mutate({ requestId: row.id, action: "validate" })}><CheckCircle className="h-4 w-4 mr-1" /> Valider</Button>
-                        <Button size="sm" variant="destructive" disabled={row.status !== "pending" || reviewMutation.isPending} onClick={() => {
-                          const reason = window.prompt("Motif de refus (optionnel)") || undefined;
-                          reviewMutation.mutate({ requestId: row.id, action: "refuse", rejectionReason: reason });
-                        }}><XCircle className="h-4 w-4 mr-1" /> Refuser</Button>
+                        <Button
+                          size="sm"
+                          disabled={
+                            row.status !== "pending" || reviewMutation.isPending
+                          }
+                          onClick={() =>
+                            reviewMutation.mutate({
+                              requestId: row.id,
+                              action: "validate",
+                            })
+                          }
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" /> Valider
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          disabled={
+                            row.status !== "pending" || reviewMutation.isPending
+                          }
+                          onClick={() => {
+                            const reason =
+                              window.prompt("Motif de refus (optionnel)") ||
+                              undefined;
+                            reviewMutation.mutate({
+                              requestId: row.id,
+                              action: "refuse",
+                              rejectionReason: reason,
+                            });
+                          }}
+                        >
+                          <XCircle className="h-4 w-4 mr-1" /> Refuser
+                        </Button>
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button size="sm" variant="outline" onClick={() => setEditing(row)}><Pencil className="h-4 w-4" /></Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setEditing(row)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
                           </DialogTrigger>
                           <DialogContent>
-                            <DialogHeader><DialogTitle>Modifier la demande</DialogTitle></DialogHeader>
+                            <DialogHeader>
+                              <DialogTitle>Modifier la demande</DialogTitle>
+                            </DialogHeader>
                             {editing && (
                               <div className="space-y-3">
-                                <div><Label>Nom groupe</Label><Input value={editing.groupName} onChange={(e) => setEditing({ ...editing, groupName: e.target.value })} /></div>
-                                <div><Label>Responsable</Label><Input value={editing.responsibleName} onChange={(e) => setEditing({ ...editing, responsibleName: e.target.value })} /></div>
-                                <div><Label>Email</Label><Input value={editing.responsibleEmail} onChange={(e) => setEditing({ ...editing, responsibleEmail: e.target.value })} /></div>
-                                <div><Label>Téléphone</Label><Input value={editing.responsiblePhone} onChange={(e) => setEditing({ ...editing, responsiblePhone: e.target.value })} /></div>
-                                <Button onClick={() => updateMutation.mutate({
-                                  requestId: editing.id,
-                                  groupName: editing.groupName,
-                                  responsibleName: editing.responsibleName,
-                                  responsibleEmail: editing.responsibleEmail,
-                                  responsiblePhone: editing.responsiblePhone,
-                                  estimatedSize: editing.estimatedSize ? Number(editing.estimatedSize) : null,
-                                })}>Sauvegarder</Button>
+                                <div>
+                                  <Label>Nom groupe</Label>
+                                  <Input
+                                    value={editing.groupName}
+                                    onChange={e =>
+                                      setEditing({
+                                        ...editing,
+                                        groupName: e.target.value,
+                                      })
+                                    }
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Responsable</Label>
+                                  <Input
+                                    value={editing.responsibleName}
+                                    onChange={e =>
+                                      setEditing({
+                                        ...editing,
+                                        responsibleName: e.target.value,
+                                      })
+                                    }
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Email</Label>
+                                  <Input
+                                    value={editing.responsibleEmail}
+                                    onChange={e =>
+                                      setEditing({
+                                        ...editing,
+                                        responsibleEmail: e.target.value,
+                                      })
+                                    }
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Téléphone</Label>
+                                  <Input
+                                    value={editing.responsiblePhone}
+                                    onChange={e =>
+                                      setEditing({
+                                        ...editing,
+                                        responsiblePhone: e.target.value,
+                                      })
+                                    }
+                                  />
+                                </div>
+                                <Button
+                                  onClick={() =>
+                                    updateMutation.mutate({
+                                      requestId: editing.id,
+                                      groupName: editing.groupName,
+                                      responsibleName: editing.responsibleName,
+                                      responsibleEmail:
+                                        editing.responsibleEmail,
+                                      responsiblePhone:
+                                        editing.responsiblePhone,
+                                      estimatedSize: editing.estimatedSize
+                                        ? Number(editing.estimatedSize)
+                                        : null,
+                                    })
+                                  }
+                                >
+                                  Sauvegarder
+                                </Button>
                               </div>
                             )}
                           </DialogContent>
                         </Dialog>
-                        <Button size="sm" variant="ghost" onClick={() => deleteMutation.mutate({ requestId: row.id })}><Trash2 className="h-4 w-4" /></Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            deleteMutation.mutate({ requestId: row.id })
+                          }
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>

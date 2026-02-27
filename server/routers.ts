@@ -1386,7 +1386,6 @@ const volunteersRouter = router({
       dayId: row.day_id ?? row.dayId,
       volunteerSlots: row.volunteer_slots ?? row.volunteerSlots ?? [],
       fileName: row.file_name ?? row.fileName,
-      fileBase64: row.file_base64 ?? row.fileBase64,
       status: row.status,
       rejectionReason: row.rejection_reason ?? row.rejectionReason,
       reviewedAt: row.reviewed_at ?? row.reviewedAt,
@@ -1400,6 +1399,23 @@ const volunteersRouter = router({
         : null,
     }));
   }),
+
+  getGroupRequestAttachment: adminOpsProcedure
+    .input(z.object({ requestId: z.number() }))
+    .query(async ({ input }) => {
+      const request = await supabaseServices.getVolunteerGroupRequestByIdSupabase(
+        input.requestId
+      );
+
+      if (!request) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Demande introuvable" });
+      }
+
+      return {
+        fileName: request.file_name ?? request.fileName,
+        fileBase64: request.file_base64 ?? request.fileBase64,
+      };
+    }),
 
   updateGroupRequest: adminOpsProcedure
     .input(
