@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,10 +12,20 @@ import Footer from '@/components/Footer';
 import { setStoredSession } from '@/_core/authSession';
 
 export default function Login() {
-  const [, setLocation] = useLocation();
+  const [location] = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  const { lang, redirectTo } = useMemo(() => {
+    const parts = location.split('/').filter(Boolean);
+    const detectedLang = parts[0] || 'fr';
+    const params = new URLSearchParams(window.location.search);
+    return {
+      lang: detectedLang,
+      redirectTo: params.get('redirectTo') || '/profil-benevole',
+    };
+  }, [location]);
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: (data: { user: { role?: string } | null; session: { accessToken: string; refreshToken: string; expiresAt: number | null } | null }) => {
@@ -24,7 +34,7 @@ export default function Login() {
         setStoredSession(data.session);
         // Rediriger vers /admin si l'utilisateur est admin, sinon vers l'accueil
         const isAdmin = data.user?.role && ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'admin_patisserie', 'admin_terroir', 'admin_contenu', 'admin_messages'].includes(data.user.role);
-        window.location.href = isAdmin ? '/admin' : '/';
+        window.location.href = isAdmin ? '/admin' : redirectTo;
       }
     },
     onError: (err: { message?: string }) => {
@@ -122,7 +132,7 @@ export default function Login() {
               
               <p className="text-sm text-stone-500 text-center">
                 Pas encore de compte ?{' '}
-                <Link href="/inscription" className="text-emerald-600 hover:underline">
+                <Link href={`/${lang}/inscription`} className="text-emerald-600 hover:underline">
                   S'inscrire
                 </Link>
               </p>
