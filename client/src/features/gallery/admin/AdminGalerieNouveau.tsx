@@ -24,7 +24,7 @@ type Item = {
   tags?: string;
   yearOrEdition?: string;
   sortOrder: number;
-  status: "draft" | "published";
+  status: "draft" | "published" | "rejected";
   isFeatured: boolean;
 };
 
@@ -194,7 +194,9 @@ export default function AdminGalerieNouveau() {
                   onChange={e =>
                     setItems(prev =>
                       prev.map((it, i) =>
-                        i === idx ? { ...it, yearOrEdition: e.target.value } : it
+                        i === idx
+                          ? { ...it, yearOrEdition: e.target.value }
+                          : it
                       )
                     )
                   }
@@ -214,7 +216,7 @@ export default function AdminGalerieNouveau() {
                 </div>
                 <Select
                   value={item.status}
-                  onValueChange={(v: "draft" | "published") =>
+                  onValueChange={(v: "draft" | "published" | "rejected") =>
                     setItems(prev =>
                       prev.map((it, i) =>
                         i === idx ? { ...it, status: v } : it
@@ -226,8 +228,9 @@ export default function AdminGalerieNouveau() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="draft">draft</SelectItem>
-                    <SelectItem value="published">published</SelectItem>
+                    <SelectItem value="draft">En attente</SelectItem>
+                    <SelectItem value="published">Validée</SelectItem>
+                    <SelectItem value="rejected">Refusée</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button

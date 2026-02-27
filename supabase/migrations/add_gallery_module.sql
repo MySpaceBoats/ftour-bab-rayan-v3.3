@@ -7,7 +7,7 @@ create table if not exists public.gallery_albums (
   slug text not null unique,
   sort_order integer not null default 0,
   cover_photo_id uuid,
-  status text not null default 'published' check (status in ('draft', 'published')),
+  status text not null default 'published' check (status in ('draft', 'published', 'rejected')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -23,7 +23,7 @@ create table if not exists public.gallery_photos (
   album_id uuid references public.gallery_albums(id) on delete set null,
   sort_order integer not null default 0,
   is_featured boolean not null default false,
-  status text not null default 'draft' check (status in ('draft', 'published')),
+  status text not null default 'draft' check (status in ('draft', 'published', 'rejected')),
   image_original_url text not null,
   image_thumb_url text not null,
   image_medium_url text,

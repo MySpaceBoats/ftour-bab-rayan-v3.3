@@ -118,7 +118,7 @@ export default function AdminGalerieEdit() {
                 <Label>Statut</Label>
                 <Select
                   value={form.status}
-                  onValueChange={(v: "draft" | "published") =>
+                  onValueChange={(v: "draft" | "published" | "rejected") =>
                     setForm((f: any) => ({ ...f, status: v }))
                   }
                 >
@@ -126,8 +126,9 @@ export default function AdminGalerieEdit() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="draft">draft</SelectItem>
-                    <SelectItem value="published">published</SelectItem>
+                    <SelectItem value="draft">En attente</SelectItem>
+                    <SelectItem value="published">Validée</SelectItem>
+                    <SelectItem value="rejected">Refusée</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

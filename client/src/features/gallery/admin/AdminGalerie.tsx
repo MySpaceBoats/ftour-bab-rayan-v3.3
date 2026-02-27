@@ -18,7 +18,9 @@ import { ArrowLeft, Plus, Search, Star, Trash2 } from "lucide-react";
 export default function AdminGalerie() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<"all" | "draft" | "published">("all");
+  const [status, setStatus] = useState<
+    "all" | "draft" | "published" | "rejected"
+  >("all");
   const [featured, setFeatured] = useState<"all" | "true" | "false">("all");
 
   const filters = useMemo(
@@ -53,6 +55,13 @@ export default function AdminGalerie() {
   const toggleUnpublish = trpc.gallery.unpublish.useMutation({
     onSuccess: async () => {
       toast.success("Statut mis à jour");
+      await utils.gallery.listPhotos.invalidate();
+    },
+    onError: e => toast.error(e.message),
+  });
+  const toggleReject = trpc.gallery.reject.useMutation({
+    onSuccess: async () => {
+      toast.success("Photo refusée");
       await utils.gallery.listPhotos.invalidate();
     },
     onError: e => toast.error(e.message),
@@ -102,6 +111,7 @@ export default function AdminGalerie() {
                 <SelectItem value="all">Tous statuts</SelectItem>
                 <SelectItem value="draft">Brouillon</SelectItem>
                 <SelectItem value="published">Publié</SelectItem>
+                <SelectItem value="rejected">Refusé</SelectItem>
               </SelectContent>
             </Select>
             <Select value={featured} onValueChange={(v: any) => setFeatured(v)}>
@@ -139,14 +149,20 @@ export default function AdminGalerie() {
                     >
                       {item.status === "published"
                         ? "Validée"
-                        : "En attente / refusée"}
+                        : item.status === "rejected"
+                          ? "Refusée"
+                          : "En attente"}
                     </Badge>
                     {item.is_featured && (
                       <Star className="h-3 w-3 text-amber-500" />
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div
+                  className={`grid gap-2 ${
+                    item.status === "published" ? "grid-cols-2" : "grid-cols-3"
+                  }`}
+                >
                   <Link href={`/admin/galerie/${item.id}`}>
                     <Button size="sm" variant="outline" className="w-full">
                       Modifier
@@ -156,17 +172,29 @@ export default function AdminGalerie() {
                     <Button
                       size="sm"
                       variant="outline"
+                      className="w-full"
                       onClick={() => toggleUnpublish.mutate({ id: item.id })}
                     >
-                      Refuser
+                      Retirer
                     </Button>
                   ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => togglePublish.mutate({ id: item.id })}
-                    >
-                      Valider
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        className="w-full"
+                        onClick={() => togglePublish.mutate({ id: item.id })}
+                      >
+                        Valider
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => toggleReject.mutate({ id: item.id })}
+                      >
+                        Refuser
+                      </Button>
+                    </>
                   )}
                 </div>
                 <Button
