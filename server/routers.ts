@@ -1846,6 +1846,11 @@ const checkinRouter = router({
         };
       }
 
+      const isGroupLeaderQr = supabaseServices.isGroupLeaderVolunteer(
+        volunteer.email,
+        volunteer.notes
+      );
+
       const today = getDateStringInTimeZone(
         new Date(),
         DEFAULT_RAMADAN_TIMEZONE
@@ -1853,7 +1858,7 @@ const checkinRouter = router({
       const volunteerDate = volunteer.day?.date
         ? String(volunteer.day.date).slice(0, 10)
         : null;
-      if (volunteerDate !== today) {
+      if (volunteerDate !== today && !isGroupLeaderQr) {
         return {
           valid: false,
           error: "Ce QR code n'est pas valide pour aujourd'hui",

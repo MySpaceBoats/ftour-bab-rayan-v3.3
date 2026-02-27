@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateSecureToken } from "./qrcode";
-import { computeMaxConsecutiveDays, getVolunteerQrDateState } from "./supabase-services";
+import { computeMaxConsecutiveDays, getVolunteerQrDateState, isGroupLeaderVolunteer, parseGroupQrMetadata } from "./supabase-services";
 
 describe("Supabase Services", () => {
   describe("Token Generation", () => {
@@ -78,6 +78,39 @@ describe("Supabase Services", () => {
 
     it("returns valid_today when volunteer date is missing", () => {
       expect(getVolunteerQrDateState(null, "2026-03-01")).toBe("valid_today");
+    });
+  });
+
+
+
+  describe("Group leader QR metadata", () => {
+    it("parses valid group metadata from notes", () => {
+      const meta = parseGroupQrMetadata(JSON.stringify({
+        groupLeaderEmail: "Leader@Example.com",
+        groupMembersCount: 4,
+        groupRemainingEntries: 3,
+      }));
+
+      expect(meta).toEqual({
+        groupLeaderEmail: "leader@example.com",
+        groupMembersCount: 4,
+        groupRemainingEntries: 3,
+      });
+    });
+
+    it("returns null for non-group metadata", () => {
+      expect(parseGroupQrMetadata(JSON.stringify({ groupMembersCount: 1 }))).toBeNull();
+      expect(parseGroupQrMetadata("not-json")).toBeNull();
+    });
+
+    it("detects group leader based on email and notes", () => {
+      const notes = JSON.stringify({
+        groupLeaderEmail: "leader@example.com",
+        groupMembersCount: 5,
+      });
+
+      expect(isGroupLeaderVolunteer("LEADER@example.com", notes)).toBe(true);
+      expect(isGroupLeaderVolunteer("other@example.com", notes)).toBe(false);
     });
   });
 

@@ -40,6 +40,43 @@ export function computeMaxConsecutiveDays(dayNumbers: number[]): number {
 
 export type VolunteerQrDateState = 'valid_today' | 'expired_past_day' | 'not_yet_valid';
 
+type GroupQrMetadata = {
+  groupLeaderEmail: string;
+  groupMembersCount: number;
+  groupRemainingEntries: number;
+};
+
+export function parseGroupQrMetadata(notes: string | null | undefined): GroupQrMetadata | null {
+  if (!notes) return null;
+
+  try {
+    const parsed = JSON.parse(notes);
+    if (!parsed || typeof parsed !== 'object') return null;
+
+    const groupMembersCount = Number((parsed as any).groupMembersCount ?? 0);
+    const groupRemainingEntries = Number((parsed as any).groupRemainingEntries ?? groupMembersCount);
+    const groupLeaderEmail = typeof (parsed as any).groupLeaderEmail === 'string'
+      ? (parsed as any).groupLeaderEmail.toLowerCase().trim()
+      : '';
+
+    if (groupMembersCount <= 1 || !groupLeaderEmail) return null;
+
+    return {
+      groupLeaderEmail,
+      groupMembersCount,
+      groupRemainingEntries: Math.max(0, groupRemainingEntries),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function isGroupLeaderVolunteer(email: string, notes: string | null | undefined): boolean {
+  const groupMeta = parseGroupQrMetadata(notes);
+  if (!groupMeta) return false;
+  return groupMeta.groupLeaderEmail === email.toLowerCase().trim();
+}
+
 export function getVolunteerQrDateState(volunteerDate: string | null | undefined, todayDate: string): VolunteerQrDateState {
   const normalizedVolunteerDate = volunteerDate ? String(volunteerDate).slice(0, 10) : null;
   if (!normalizedVolunteerDate) return 'valid_today';
@@ -1120,28 +1157,7 @@ export async function scanAndValidateTokenSupabase(token: string, validatedBy?: 
     return { success: false, error: 'Token invalide', code: 'INVALID_TOKEN' };
   }
 
-  const parseGroupMetadata = (notes: string | null | undefined) => {
-    if (!notes) return null;
-    try {
-      const parsed = JSON.parse(notes);
-      if (!parsed || typeof parsed !== 'object') return null;
-      const groupMembersCount = Number((parsed as any).groupMembersCount ?? 0);
-      const groupRemainingEntries = Number((parsed as any).groupRemainingEntries ?? groupMembersCount);
-      const groupLeaderEmail = typeof (parsed as any).groupLeaderEmail === 'string'
-        ? (parsed as any).groupLeaderEmail.toLowerCase().trim()
-        : '';
-      if (groupMembersCount <= 1 || !groupLeaderEmail) return null;
-      return {
-        groupLeaderEmail,
-        groupMembersCount,
-        groupRemainingEntries: Math.max(0, groupRemainingEntries),
-      };
-    } catch {
-      return null;
-    }
-  };
-
-  const groupMeta = parseGroupMetadata(volunteer.notes);
+  const groupMeta = parseGroupQrMetadata(volunteer.notes);
   const isGroupLeaderQr = Boolean(
     groupMeta && groupMeta.groupLeaderEmail === volunteer.email.toLowerCase().trim()
   );
@@ -1152,7 +1168,7 @@ export async function scanAndValidateTokenSupabase(token: string, validatedBy?: 
     : null;
   const qrDateState = getVolunteerQrDateState(volunteerDate, today);
 
-  if (qrDateState === 'expired_past_day') {
+  if (qrDateState === 'expired_past_day' && !isGroupLeaderQr) {
     if (volunteer.qrStatus !== 'validated' && volunteer.qrStatus !== 'expired') {
       const { error: expireError } = await client
         .from('volunteers')
@@ -1177,7 +1193,7 @@ export async function scanAndValidateTokenSupabase(token: string, validatedBy?: 
     };
   }
 
-  if (qrDateState === 'not_yet_valid') {
+  if (qrDateState === 'not_yet_valid' && !isGroupLeaderQr) {
     console.log(JSON.stringify({ event: 'volunteer_confirm', volunteerId: volunteer.id, state: 'future_qr', expected: volunteerDate, actual: today }));
     return {
       success: false,
