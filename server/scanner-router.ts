@@ -219,6 +219,10 @@ function buildCompactToken(prefix: string, maxLength: number = 20): string {
   return `${safePrefix}-${body}`.slice(0, maxLength);
 }
 
+function toSafeVarchar(value: string, maxLength: number): string {
+  return value.trim().slice(0, Math.max(1, maxLength));
+}
+
 function toSafeValidatedBy(userId: unknown): number {
   if (typeof userId === "number" && Number.isFinite(userId)) return userId;
   if (typeof userId === "string" && /^\d+$/.test(userId)) return Number(userId);
@@ -1152,30 +1156,38 @@ export const scannerRouter = router({
         const unitPrice = parseFloat(product.price as any) || 0;
 
         const overflowMessage = "value too long for type character varying(20)";
-        const buildInsertPayload = (variant: "default" | "minimal") => {
+        const buildInsertPayload = (
+          variant: "default" | "minimal" | "legacy20"
+        ) => {
+          const isLegacy = variant === "legacy20";
+          const orderReferenceMax =
+            variant === "default" ? 20 : variant === "minimal" ? 10 : 8;
+
           const base = {
-            order_reference: buildCompactToken(
-              "FBR",
-              variant === "default" ? 20 : 10
+            order_reference: toSafeVarchar(
+              buildCompactToken("FBR", orderReferenceMax),
+              isLegacy ? 20 : orderReferenceMax
             ),
-            customer_name: variant === "default" ? "Scan goodies" : "Scan",
-            customer_email: "scan@fbr.ma",
-            customer_phone: "0000000000",
+            customer_name: toSafeVarchar(
+              isLegacy ? "Scan" : variant === "default" ? "Scan goodies" : "Scan",
+              isLegacy ? 20 : 200
+            ),
+            customer_email: toSafeVarchar(
+              isLegacy ? "scan@f.ma" : "scan@fbr.ma",
+              isLegacy ? 20 : 320
+            ),
+            customer_phone: toSafeVarchar(isLegacy ? "0" : "0000000000", 20),
             total_amount: unitPrice,
+            status: toSafeVarchar("paid", 20),
+            payment_method: toSafeVarchar("cash", 20),
           };
 
-          if (variant === "minimal") {
-            return {
-              ...base,
-              status: "paid",
-              payment_method: "cash",
-            };
+          if (variant === "minimal" || variant === "legacy20") {
+            return base;
           }
 
           return {
             ...base,
-            status: "paid",
-            payment_method: "cash",
             notes: "scan_catalog",
           };
         };
@@ -1197,6 +1209,19 @@ export const scannerRouter = router({
             .single();
           createdOrder = retry.data;
           orderError = retry.error;
+        }
+
+        if (
+          (orderError || !createdOrder) &&
+          String(orderError?.message || "").includes(overflowMessage)
+        ) {
+          const legacyRetry = await supabase
+            .from("orders")
+            .insert(buildInsertPayload("legacy20"))
+            .select("id, order_reference")
+            .single();
+          createdOrder = legacyRetry.data;
+          orderError = legacyRetry.error;
         }
 
         if (orderError || !createdOrder) {
