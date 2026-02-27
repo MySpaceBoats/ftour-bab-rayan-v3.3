@@ -1,3 +1,4 @@
+import { DASHBOARD_ROUTE_PERMISSIONS } from '@shared/dashboard/dashboardItems';
 // ============================================
 // RBAC — Source unique de vérité
 // ============================================
@@ -176,4 +177,9 @@ export function getRolesForRoute(route: string): readonly Role[] {
 export function isAdminRole(role: string | undefined | null): boolean {
   if (!role) return false;
   return role !== ROLES.USER;
+}
+
+
+export function getDashboardItemForRoute(route: string): string | undefined {
+  return DASHBOARD_ROUTE_PERMISSIONS[route];
 }

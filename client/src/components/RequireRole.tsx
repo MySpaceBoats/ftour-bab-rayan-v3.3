@@ -6,7 +6,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Users, Loader2 } from "lucide-react";
 import { Link } from "wouter";
-import { getRolesForRoute } from "@/shared/rbac/permissions";
+import { getDashboardItemForRoute, getRolesForRoute } from "@/shared/rbac/permissions";
+import { useAllowedDashboardKeys } from '@/dashboard/access';
 
 interface RequireRoleProps {
   /**
@@ -31,6 +32,7 @@ export default function RequireRole({
 }: RequireRoleProps) {
   const { user, isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
+  const { isLoading: dashboardLoading, hasAccess } = useAllowedDashboardKeys();
 
   // Résoudre les rôles : RBAC centralisé (route) > allowedRoles explicite
   const resolvedRoles: readonly string[] = route
@@ -51,7 +53,17 @@ export default function RequireRole({
     );
   }
 
-  if (!isAuthenticated || !user?.role || !resolvedRoles.includes(user.role)) {
+  const dashboardItemKey = route ? getDashboardItemForRoute(route) : undefined;
+
+  if (dashboardLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || !user?.role || !resolvedRoles.includes(user.role) || (dashboardItemKey ? !hasAccess(dashboardItemKey) : false)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="max-w-md w-full">
