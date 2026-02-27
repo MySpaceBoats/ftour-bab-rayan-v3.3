@@ -1531,6 +1531,10 @@ const volunteersRouter = router({
         .toLowerCase()
         .trim();
 
+      let createdVolunteer: Awaited<
+        ReturnType<typeof supabaseServices.createVolunteerShiftSupabase>
+      > | null = null;
+
       if (input.action === "validate") {
         const duplicate = await supabaseServices.checkVolunteerEmailExistsForDay(
           normalizedResponsibleEmail,
@@ -1543,9 +1547,10 @@ const volunteersRouter = router({
           });
         }
 
-        await supabaseServices.createVolunteerShiftSupabase({
-          firstName: String(request.responsible_name ?? request.responsibleName)
-            .split(" ")[0] || String(request.group_name ?? request.groupName),
+        createdVolunteer = await supabaseServices.createVolunteerShiftSupabase({
+          firstName:
+            String(request.responsible_name ?? request.responsibleName).split(" ")[0] ||
+            String(request.group_name ?? request.groupName),
           lastName:
             String(request.responsible_name ?? request.responsibleName)
               .split(" ")
@@ -1556,6 +1561,9 @@ const volunteersRouter = router({
           dayId,
           volunteerSlots: (request.volunteer_slots ?? request.volunteerSlots ?? []) as string[],
           acceptedTerms: true,
+          groupLeaderEmail: normalizedResponsibleEmail,
+          groupMembersCount: normalizedEstimatedSize,
+          groupRemainingEntries: normalizedEstimatedSize,
         });
       }
 
@@ -1570,10 +1578,43 @@ const volunteersRouter = router({
 
       try {
         if (input.action === "validate") {
+          const responsibleName = String(
+            request.responsible_name ?? request.responsibleName
+          ).trim();
+          const [firstName = "", ...lastNameParts] = responsibleName.split(" ");
+          const fallbackGroupName = String(request.group_name ?? request.groupName);
+          const baseUrl =
+            process.env.NODE_ENV === "production"
+              ? "https://ftourbabrayan.ma"
+              : "http://localhost:3000";
+
+          const emailData =
+            createdVolunteer?.qrToken &&
+            generateVolunteerConfirmationEmail({
+              firstName: firstName || fallbackGroupName,
+              lastName: lastNameParts.join(" ") || fallbackGroupName,
+              email: normalizedResponsibleEmail,
+              dayNumber: day.dayNumber,
+              dayDate: new Date(day.date).toLocaleDateString("fr-FR", {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+              }),
+              location: day.location || "Association Bab Rayan, Casablanca",
+              startTime: day.iftarTime || "18h00",
+              volunteerSlots: (request.volunteer_slots ?? request.volunteerSlots ?? []) as string[],
+              qrToken: createdVolunteer.qrToken,
+              baseUrl,
+              groupMembersCount: normalizedEstimatedSize,
+            });
+
           await sendEmail({
             to: normalizedResponsibleEmail,
-            subject: "Votre demande groupe bénévole est validée",
-            html: `<p>Bonjour ${request.responsible_name ?? request.responsibleName},</p><p>Votre demande d'inscription groupe <strong>${request.group_name ?? request.groupName}</strong> pour le jour ${day.dayNumber} du Ramadan a été validée.</p>`,
+            subject:
+              emailData?.subject || "Votre demande groupe bénévole est validée",
+            html:
+              emailData?.html ||
+              `<p>Bonjour ${request.responsible_name ?? request.responsibleName},</p><p>Votre demande d'inscription groupe <strong>${request.group_name ?? request.groupName}</strong> pour le jour ${day.dayNumber} du Ramadan a été validée.</p>`,
           });
         } else {
           await sendEmail({
