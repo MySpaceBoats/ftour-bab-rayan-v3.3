@@ -620,6 +620,123 @@ export interface VolunteerData {
   groupRemainingEntries?: number;
 }
 
+export type VolunteerGroupRequestStatus = 'pending' | 'validated' | 'refused';
+
+export interface VolunteerGroupRequestData {
+  groupName: string;
+  responsibleName: string;
+  responsibleEmail: string;
+  responsiblePhone: string;
+  estimatedSize?: number;
+  dayId: number;
+  volunteerSlots: string[];
+  fileName: string;
+  fileBase64: string;
+}
+
+export async function createVolunteerGroupRequestSupabase(input: VolunteerGroupRequestData) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const { data, error } = await client
+    .from('volunteer_group_requests')
+    .insert({
+      group_name: input.groupName,
+      responsible_name: input.responsibleName,
+      responsible_email: input.responsibleEmail.toLowerCase().trim(),
+      responsible_phone: input.responsiblePhone,
+      estimated_size: input.estimatedSize ?? null,
+      day_id: input.dayId,
+      volunteer_slots: input.volunteerSlots,
+      file_name: input.fileName,
+      file_base64: input.fileBase64,
+      status: 'pending',
+    })
+    .select('*, ramadan_days(*)')
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function listVolunteerGroupRequestsSupabase() {
+  const client = getSupabaseAdminClient();
+  if (!client) return [];
+
+  const { data, error } = await client
+    .from('volunteer_group_requests')
+    .select('*, ramadan_days(*)')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getVolunteerGroupRequestByIdSupabase(id: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) return null;
+
+  const { data, error } = await client
+    .from('volunteer_group_requests')
+    .select('*, ramadan_days(*)')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateVolunteerGroupRequestSupabase(id: number, updates: {
+  groupName?: string;
+  responsibleName?: string;
+  responsibleEmail?: string;
+  responsiblePhone?: string;
+  estimatedSize?: number | null;
+  dayId?: number;
+  volunteerSlots?: string[];
+  status?: VolunteerGroupRequestStatus;
+  rejectionReason?: string | null;
+  reviewedBy?: number | null;
+}) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const payload: Record<string, any> = {};
+  if (updates.groupName !== undefined) payload.group_name = updates.groupName;
+  if (updates.responsibleName !== undefined) payload.responsible_name = updates.responsibleName;
+  if (updates.responsibleEmail !== undefined) payload.responsible_email = updates.responsibleEmail.toLowerCase().trim();
+  if (updates.responsiblePhone !== undefined) payload.responsible_phone = updates.responsiblePhone;
+  if (updates.estimatedSize !== undefined) payload.estimated_size = updates.estimatedSize;
+  if (updates.dayId !== undefined) payload.day_id = updates.dayId;
+  if (updates.volunteerSlots !== undefined) payload.volunteer_slots = updates.volunteerSlots;
+  if (updates.status !== undefined) payload.status = updates.status;
+  if (updates.rejectionReason !== undefined) payload.rejection_reason = updates.rejectionReason;
+  if (updates.reviewedBy !== undefined) payload.reviewed_by = updates.reviewedBy;
+  if (updates.status === 'validated' || updates.status === 'refused') payload.reviewed_at = new Date().toISOString();
+
+  const { data, error } = await client
+    .from('volunteer_group_requests')
+    .update(payload)
+    .eq('id', id)
+    .select('*, ramadan_days(*)')
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteVolunteerGroupRequestSupabase(id: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const { error } = await client
+    .from('volunteer_group_requests')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
 export async function checkVolunteerEmailExistsForDay(email: string, dayId: number): Promise<boolean> {
   const client = getSupabaseAdminClient();
   if (!client) return false;

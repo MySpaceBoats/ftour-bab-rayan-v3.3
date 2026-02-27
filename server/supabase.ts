@@ -261,6 +261,28 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['volunteers']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['volunteers']['Insert']>;
       };
+      volunteer_group_requests: {
+        Row: {
+          id: number;
+          group_name: string;
+          responsible_name: string;
+          responsible_email: string;
+          responsible_phone: string;
+          estimated_size: number | null;
+          day_id: number;
+          volunteer_slots: string[];
+          file_name: string;
+          file_base64: string;
+          status: 'pending' | 'validated' | 'refused';
+          rejection_reason: string | null;
+          reviewed_by: number | null;
+          reviewed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['volunteer_group_requests']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['volunteer_group_requests']['Insert']>;
+      };
       checkins: {
         Row: {
           id: number;

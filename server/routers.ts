@@ -1257,7 +1257,7 @@ const volunteersRouter = router({
         responsibleName: z.string().min(2, "Nom du responsable requis"),
         responsibleEmail: z.string().email("Email invalide"),
         responsiblePhone: z.string().min(8, "Téléphone invalide"),
-        estimatedSize: z.number().optional(),
+        estimatedSize: z.number().int().positive().optional(),
         dayId: z.number(),
         volunteerSlots: z
           .array(z.enum(["preparation_ftour", "service_ftour"]))
@@ -1277,7 +1277,6 @@ const volunteersRouter = router({
         });
       }
 
-      // Validate file extension
       const ext = input.fileName.toLowerCase().split(".").pop();
       if (!ext || !["xlsx", "xls", "csv"].includes(ext)) {
         throw new TRPCError({
@@ -1287,10 +1286,8 @@ const volunteersRouter = router({
         });
       }
 
-      // Normalize email and check for absences / duplicates
       const normalizedGroupEmail = input.responsibleEmail.toLowerCase().trim();
 
-      // Check if responsible person has been absent 2+ times (blocked from re-registering)
       const groupAbsenceCount =
         await supabaseServices.countVolunteerAbsencesByEmail(
           normalizedGroupEmail
@@ -1302,23 +1299,39 @@ const volunteersRouter = router({
         });
       }
 
-      const groupEmailExists =
-        await supabaseServices.checkVolunteerEmailExistsForDay(
-          normalizedGroupEmail,
-          input.dayId
-        );
-      if (groupEmailExists) {
+      const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
+      if (!day) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
+      }
+      if (!day.isOpen) {
         throw new TRPCError({
-          code: "CONFLICT",
-          message:
-            "Cette adresse email est déjà inscrite pour ce jour. Si vous souhaitez modifier votre inscription, veuillez nous contacter.",
+          code: "BAD_REQUEST",
+          message: "Ce jour est fermé aux inscriptions",
         });
       }
 
-      // Get day info for the email
-      const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
+      const estimatedGroupSize = Math.max(1, input.estimatedSize ?? 1);
+      const availableSeats = Math.max(0, day.capacity - (day.registeredCount ?? 0));
+      if (estimatedGroupSize > availableSeats) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Le jour choisi est complet pour ce volume de groupe. Merci de choisir un autre jour ou de réduire l'effectif.",
+        });
+      }
 
-      // Build and send email with attachment to admin
+      const createdRequest = await supabaseServices.createVolunteerGroupRequestSupabase({
+        groupName: input.groupName,
+        responsibleName: input.responsibleName,
+        responsibleEmail: normalizedGroupEmail,
+        responsiblePhone: input.responsiblePhone,
+        estimatedSize: input.estimatedSize,
+        dayId: input.dayId,
+        volunteerSlots: input.volunteerSlots,
+        fileName: input.fileName,
+        fileBase64: input.fileBase64,
+      });
+
       const adminEmailData = generateGroupRegistrationEmail({
         groupName: input.groupName,
         responsibleName: input.responsibleName,
@@ -1326,15 +1339,15 @@ const volunteersRouter = router({
         responsiblePhone: input.responsiblePhone,
         estimatedSize: input.estimatedSize,
         volunteerSlots: input.volunteerSlots,
-        dayNumber: day?.dayNumber,
-        dayDate: day?.date
+        dayNumber: day.dayNumber,
+        dayDate: day.date
           ? new Date(day.date).toLocaleDateString("fr-FR", {
               weekday: "long",
               day: "numeric",
               month: "long",
             })
           : undefined,
-        startTime: day?.iftarTime || "18h00",
+        startTime: day.iftarTime || "18h00",
         fileName: input.fileName,
       });
 
@@ -1350,91 +1363,184 @@ const volunteersRouter = router({
             },
           ],
         });
-        console.log("[Group Registration] Admin email sent successfully");
       } catch (error) {
         console.error("[Group Registration] Admin email failed:", error);
       }
 
-      let importedCount = 0;
-      let skippedCount = 0;
-      const createdVolunteersForEmail: GroupVolunteerForEmail[] = [];
+      return {
+        success: true,
+        requestId: createdRequest.id,
+        message: "Votre demande groupe a bien été envoyée. Elle sera traitée par l'administration.",
+      };
+    }),
 
-      try {
-        const parsedRows = parseGroupVolunteersFromSpreadsheet(
-          input.fileBase64
-        );
-        if (parsedRows.length === 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message:
-              "Le fichier ne contient aucune ligne valide (Nom/Prénom + Email).",
-          });
-        }
+  listGroupRequests: adminOpsProcedure.query(async () => {
+    const rows = await supabaseServices.listVolunteerGroupRequestsSupabase();
+    return rows.map((row: any) => ({
+      id: row.id,
+      groupName: row.group_name ?? row.groupName,
+      responsibleName: row.responsible_name ?? row.responsibleName,
+      responsibleEmail: row.responsible_email ?? row.responsibleEmail,
+      responsiblePhone: row.responsible_phone ?? row.responsiblePhone,
+      estimatedSize: row.estimated_size ?? row.estimatedSize,
+      dayId: row.day_id ?? row.dayId,
+      volunteerSlots: row.volunteer_slots ?? row.volunteerSlots ?? [],
+      fileName: row.file_name ?? row.fileName,
+      fileBase64: row.file_base64 ?? row.fileBase64,
+      status: row.status,
+      rejectionReason: row.rejection_reason ?? row.rejectionReason,
+      reviewedAt: row.reviewed_at ?? row.reviewedAt,
+      createdAt: row.created_at ?? row.createdAt,
+      day: row.ramadan_days
+        ? {
+            id: row.ramadan_days.id,
+            dayNumber: row.ramadan_days.day_number ?? row.ramadan_days.dayNumber,
+            date: row.ramadan_days.date,
+          }
+        : null,
+    }));
+  }),
 
-        importedCount = parsedRows.length;
-
-        const responsibleNameParts = input.responsibleName
-          .trim()
-          .split(/\s+/)
-          .filter(Boolean);
-        const leaderFirstName = responsibleNameParts[0] || input.responsibleName;
-        const leaderLastName =
-          responsibleNameParts.slice(1).join(" ") || responsibleNameParts[0] || input.groupName;
-
-        const groupLeader = await supabaseServices.createVolunteerShiftSupabase({
-          firstName: leaderFirstName,
-          lastName: leaderLastName,
-          email: normalizedGroupEmail,
-          phone: input.responsiblePhone,
+  updateGroupRequest: adminOpsProcedure
+    .input(
+      z.object({
+        requestId: z.number(),
+        groupName: z.string().min(2).optional(),
+        responsibleName: z.string().min(2).optional(),
+        responsibleEmail: z.string().email().optional(),
+        responsiblePhone: z.string().min(8).optional(),
+        estimatedSize: z.number().int().positive().nullable().optional(),
+        dayId: z.number().optional(),
+        volunteerSlots: z.array(z.enum(["preparation_ftour", "service_ftour"]))
+          .min(1)
+          .optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const updated = await supabaseServices.updateVolunteerGroupRequestSupabase(
+        input.requestId,
+        {
+          groupName: input.groupName,
+          responsibleName: input.responsibleName,
+          responsibleEmail: input.responsibleEmail,
+          responsiblePhone: input.responsiblePhone,
+          estimatedSize: input.estimatedSize,
           dayId: input.dayId,
           volunteerSlots: input.volunteerSlots,
-          acceptedTerms: true,
-          groupLeaderEmail: normalizedGroupEmail,
-          groupMembersCount: importedCount,
-          groupRemainingEntries: importedCount,
-        });
-
-        createdVolunteersForEmail.push({
-          firstName: input.responsibleName,
-          lastName: input.groupName,
-          email: normalizedGroupEmail,
-          phone: input.responsiblePhone,
-          city: "",
-          qrToken: groupLeader.qrToken,
-          groupMembersCount: importedCount,
-        });
-      } catch (error) {
-        if (error instanceof TRPCError) {
-          throw error;
         }
+      );
 
+      return { success: true, request: updated };
+    }),
+
+  reviewGroupRequest: adminOpsProcedure
+    .input(
+      z.object({
+        requestId: z.number(),
+        action: z.enum(["validate", "refuse"]),
+        rejectionReason: z.string().max(500).optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const request = await supabaseServices.getVolunteerGroupRequestByIdSupabase(
+        input.requestId
+      );
+      if (!request) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Demande introuvable" });
+      }
+      if (request.status !== "pending") {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message:
-            "Le fichier a bien été reçu, mais son import a échoué. Vérifiez son format (.xlsx/.xls/.csv).",
+          message: "Cette demande a déjà été traitée.",
         });
       }
 
-      if (createdVolunteersForEmail.length > 0 && day) {
-        try {
-          const emailSummary = await sendGroupVolunteerConfirmationEmails({
-            volunteers: createdVolunteersForEmail,
-            day,
-            volunteerSlots: input.volunteerSlots,
-          });
-
-          console.log(
-            `[Group Registration] Confirmation emails: ${emailSummary.sent} sent, ${emailSummary.failed} failed`
-          );
-        } catch (error) {
-          console.error(
-            "[Group Registration] Error while sending confirmation emails:",
-            error
-          );
-        }
+      const dayId = request.day_id ?? request.dayId;
+      const day = await supabaseServices.getRamadanDayByIdSupabase(dayId);
+      if (!day) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
       }
 
-      return { success: true, importedCount, skippedCount };
+      const estimatedSize = Number(request.estimated_size ?? request.estimatedSize ?? 1);
+      const normalizedEstimatedSize = Number.isFinite(estimatedSize) && estimatedSize > 0 ? estimatedSize : 1;
+      const availableSeats = Math.max(0, day.capacity - (day.registeredCount ?? 0));
+
+      if (input.action === "validate" && normalizedEstimatedSize > availableSeats) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Le jour choisi est complet pour cet effectif de groupe.",
+        });
+      }
+
+      const normalizedResponsibleEmail = String(
+        request.responsible_email ?? request.responsibleEmail
+      )
+        .toLowerCase()
+        .trim();
+
+      if (input.action === "validate") {
+        const duplicate = await supabaseServices.checkVolunteerEmailExistsForDay(
+          normalizedResponsibleEmail,
+          dayId
+        );
+        if (duplicate) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Le responsable est déjà inscrit sur ce jour.",
+          });
+        }
+
+        await supabaseServices.createVolunteerShiftSupabase({
+          firstName: String(request.responsible_name ?? request.responsibleName)
+            .split(" ")[0] || String(request.group_name ?? request.groupName),
+          lastName:
+            String(request.responsible_name ?? request.responsibleName)
+              .split(" ")
+              .slice(1)
+              .join(" ") || String(request.group_name ?? request.groupName),
+          email: normalizedResponsibleEmail,
+          phone: String(request.responsible_phone ?? request.responsiblePhone),
+          dayId,
+          volunteerSlots: (request.volunteer_slots ?? request.volunteerSlots ?? []) as string[],
+          acceptedTerms: true,
+        });
+      }
+
+      const updated = await supabaseServices.updateVolunteerGroupRequestSupabase(
+        input.requestId,
+        {
+          status: input.action === "validate" ? "validated" : "refused",
+          rejectionReason: input.action === "refuse" ? input.rejectionReason || null : null,
+          reviewedBy: ctx.user?.id ?? null,
+        }
+      );
+
+      try {
+        if (input.action === "validate") {
+          await sendEmail({
+            to: normalizedResponsibleEmail,
+            subject: "Votre demande groupe bénévole est validée",
+            html: `<p>Bonjour ${request.responsible_name ?? request.responsibleName},</p><p>Votre demande d'inscription groupe <strong>${request.group_name ?? request.groupName}</strong> pour le jour ${day.dayNumber} du Ramadan a été validée.</p>`,
+          });
+        } else {
+          await sendEmail({
+            to: normalizedResponsibleEmail,
+            subject: "Votre demande groupe bénévole est refusée",
+            html: `<p>Bonjour ${request.responsible_name ?? request.responsibleName},</p><p>Votre demande d'inscription groupe <strong>${request.group_name ?? request.groupName}</strong> n'a pas pu être validée.</p>${input.rejectionReason ? `<p>Motif: ${input.rejectionReason}</p>` : ""}`,
+          });
+        }
+      } catch (error) {
+        console.error("[Volunteer Group Request] email notification failed", error);
+      }
+
+      return { success: true, request: updated };
+    }),
+
+  deleteGroupRequest: adminOpsProcedure
+    .input(z.object({ requestId: z.number() }))
+    .mutation(async ({ input }) => {
+      await supabaseServices.deleteVolunteerGroupRequestSupabase(input.requestId);
+      return { success: true };
     }),
 
   processGroupExcel: adminOpsProcedure

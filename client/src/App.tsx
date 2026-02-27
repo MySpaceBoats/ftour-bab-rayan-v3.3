@@ -88,6 +88,7 @@ import AdminDons from "@/features/dons/admin/AdminDons";
 // ============================================
 import AdminDashboard from "@/features/ops/admin/AdminDashboard";
 import AdminBenevoles from "@/features/ops/admin/AdminBenevoles";
+import AdminGroupesBenevoles from "@/features/ops/admin/AdminGroupesBenevoles";
 import AdminJours from "@/features/ops/admin/AdminJours";
 
 import AdminScanProduct from "@/features/ops/admin/AdminScanProduct";
@@ -236,6 +237,7 @@ function LocalizedRoutes() {
 
       {/* Admin Ops */}
       <Route path="/admin/benevoles" component={AdminBenevoles} />
+      <Route path="/admin/benevoles-groupes" component={AdminGroupesBenevoles} />
       <Route path="/admin/jours" component={AdminJours} />
       <Route path="/admin/ramadan-stats" component={AdminRamadanStats} />
       <Route path="/admin/scan-product" component={AdminScanProduct} />
