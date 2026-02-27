@@ -1,27 +1,20 @@
 import { useState } from 'react';
-import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { trpc } from '@/lib/trpc';
 import { useI18n } from '@/i18n';
 import PaymentMethodSelector, { type PaymentMethod } from '@/components/PaymentMethodSelector';
 import PastriesConfirmation from '@/components/PastriesConfirmation';
-
-interface CartItem {
-  pastryId: number;
-  name: string;
-  price: number;
-  quantity: number;
-}
+import { useCart } from '@/contexts/CartContext';
+import { toast } from 'sonner';
 
 export default function Pastries() {
-  const [, setLocation] = useLocation();
   const { t } = useI18n();
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const { cart: unifiedCart, addToCart: addToCartContext, updateQuantity: updateQuantityContext, removeFromCart: removeFromCartContext, getCartByType, clearCartByType } = useCart();
+  const cart = getCartByType('pastry');
   const [step, setStep] = useState<'browse' | 'checkout' | 'success'>('browse');
   const [orderData, setOrderData] = useState<any>(null);
   const [formData, setFormData] = useState<{
@@ -53,39 +46,39 @@ export default function Pastries() {
   const { data: pastries, isLoading } = trpc.pastries.list.useQuery();
   const createOrderMutation = trpc.pastryOrders.create.useMutation();
 
+  const findPastryCartIndex = (pastryId: number) =>
+    unifiedCart.findIndex(item => item.productType === 'pastry' && item.productId === pastryId);
+
   const addToCart = (pastry: any) => {
-    setCart(prev => {
-      const existing = prev.find(item => item.pastryId === pastry.id);
-      if (existing) {
-        return prev.map(item =>
-          item.pastryId === pastry.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      }
-      return [...prev, {
-        pastryId: pastry.id,
-        name: pastry.name,
-        price: pastry.price,
-        quantity: 1,
-      }];
+    addToCartContext({
+      productType: 'pastry',
+      productId: pastry.id,
+      name: pastry.name,
+      price: pastry.price,
+      quantity: 1,
+      imageUrl: pastry.image_url || undefined,
     });
-    // Toast notification would go here
+    toast.success(t.pastries.addToCart);
   };
 
   const removeFromCart = (pastryId: number) => {
-    setCart(prev => prev.filter(item => item.pastryId !== pastryId));
+    const index = findPastryCartIndex(pastryId);
+    if (index >= 0) {
+      removeFromCartContext(index);
+    }
   };
 
   const updateQuantity = (pastryId: number, quantity: number) => {
-    if (quantity <= 0) {
-      removeFromCart(pastryId);
-    } else {
-      setCart(prev =>
-        prev.map(item =>
-          item.pastryId === pastryId ? { ...item, quantity } : item
-        )
-      );
+    const index = findPastryCartIndex(pastryId);
+    const cartItem = cart.find(item => item.productId === pastryId);
+
+    if (index < 0 || !cartItem) {
+      return;
+    }
+
+    const delta = quantity - cartItem.quantity;
+    if (delta !== 0) {
+      updateQuantityContext(index, delta);
     }
   };
 
@@ -95,7 +88,7 @@ export default function Pastries() {
 
   const handleCheckout = () => {
     if (cart.length === 0) {
-      // Toast notification would go here
+      toast.error(t.pastries.cartEmpty);
       return;
     }
     setStep('checkout');
@@ -103,12 +96,12 @@ export default function Pastries() {
 
   const handleSubmitOrder = async () => {
     if (!formData.fullName || !formData.phone) {
-      // Toast notification would go here
+      toast.error(t.pastries.fillInfo);
       return;
     }
 
     if (formData.deliveryMode === 'delivery' && !formData.deliveryAddress) {
-      // Toast notification would go here
+      toast.error(t.pastries.deliveryAddress);
       return;
     }
 
@@ -118,7 +111,7 @@ export default function Pastries() {
         phone: formData.phone,
         email: formData.email || undefined,
         items: cart.map(item => ({
-          pastryId: item.pastryId,
+          pastryId: item.productId,
           quantity: item.quantity,
           price: item.price,
         })),
@@ -129,9 +122,10 @@ export default function Pastries() {
 
       setOrderData(result);
       setStep('success');
-      setCart([]);
+      clearCartByType('pastry');
+      toast.success(t.pastries.confirmReservation);
     } catch (error) {
-      // Toast notification would go here
+      toast.error(t.pastries.error || 'Erreur lors de la réservation');
     }
   };
 
@@ -205,7 +199,7 @@ export default function Pastries() {
                   <>
                     <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
                       {cart.map(item => (
-                        <div key={item.pastryId} className="flex items-center justify-between text-sm border-b pb-2">
+                        <div key={item.productId} className="flex items-center justify-between text-sm border-b pb-2">
                           <div className="flex-1">
                             <p className="font-medium">{item.name}</p>
                             <p className="text-muted-foreground">{item.price} DH × {item.quantity}</p>
@@ -214,7 +208,7 @@ export default function Pastries() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => updateQuantity(item.pastryId, item.quantity - 1)}
+                              onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                             >
                               −
                             </Button>
@@ -222,14 +216,14 @@ export default function Pastries() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => updateQuantity(item.pastryId, item.quantity + 1)}
+                              onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                             >
                               +
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => removeFromCart(item.pastryId)}
+                              onClick={() => removeFromCart(item.productId)}
                             >
                               ✕
                             </Button>
