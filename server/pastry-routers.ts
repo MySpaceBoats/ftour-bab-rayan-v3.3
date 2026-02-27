@@ -51,7 +51,9 @@ export const pastriesRouter = router({
       name: z.string().min(1),
       description: z.string().optional(),
       price: z.number().positive(),
+      stock: z.number().min(0).default(0),
       imageUrl: z.string().optional(),
+      category: z.string().optional(),
       sortOrder: z.number().default(0),
     }))
     .mutation(async ({ input }) => {
@@ -65,7 +67,9 @@ export const pastriesRouter = router({
             name: input.name,
             description: input.description,
             price: input.price,
+            stock: input.stock,
             image_url: input.imageUrl,
+            category: input.category,
             sort_order: input.sortOrder,
             active: true,
           })
@@ -93,7 +97,9 @@ export const pastriesRouter = router({
       name: z.string().optional(),
       description: z.string().optional(),
       price: z.number().positive().optional(),
+      stock: z.number().min(0).optional(),
       imageUrl: z.string().optional(),
+      category: z.string().optional(),
       active: z.boolean().optional(),
       sortOrder: z.number().optional(),
     }))
@@ -106,7 +112,9 @@ export const pastriesRouter = router({
         if (input.name) updateData.name = input.name;
         if (input.description) updateData.description = input.description;
         if (input.price) updateData.price = input.price;
+        if (input.stock !== undefined) updateData.stock = input.stock;
         if (input.imageUrl) updateData.image_url = input.imageUrl;
+        if (input.category !== undefined) updateData.category = input.category;
         if (input.active !== undefined) updateData.active = input.active;
         if (input.sortOrder !== undefined) updateData.sort_order = input.sortOrder;
 

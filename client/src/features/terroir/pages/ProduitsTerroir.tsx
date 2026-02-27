@@ -191,7 +191,7 @@ export default function ProduitsTerroir() {
                     return (
                       <Card key={product.id} className="overflow-hidden">
                         {product.image_url ? (
-                          <img src={product.image_url} alt={product.name} className="w-full h-44 object-cover" />
+                          <img src={product.image_url} alt={product.name} className="w-full h-52 object-contain bg-muted p-2" />
                         ) : (
                           <div className="h-44 bg-muted flex items-center justify-center">
                             <Package className="h-10 w-10 text-muted-foreground" />
@@ -201,18 +201,24 @@ export default function ProduitsTerroir() {
                           <h3 className="font-semibold text-lg">{product.name}</h3>
                           {product.description && <p className="text-sm text-muted-foreground">{product.description}</p>}
                           <div className="space-y-2">
-                            {variants.map((variant: any) => (
+                            {variants.map((variant: any) => {
+                              const availableStock = (variant.stock_total || 0) - (variant.stock_reserved || 0);
+                              const isOutOfStock = availableStock <= 0;
+
+                              return (
                               <div key={variant.id} className="flex items-center justify-between border rounded-md p-2">
                                 <div>
                                   <p className="text-sm font-medium">{variant.label}</p>
                                   <p className="text-xs text-muted-foreground">{Number(variant.price_unit)} DH</p>
+                                  <p className="text-xs text-muted-foreground">Stock: {availableStock}</p>
                                 </div>
-                                <Button size="sm" onClick={() => handleAddToCart(product, variant)}>
+                                <Button size="sm" disabled={isOutOfStock} onClick={() => handleAddToCart(product, variant)}>
                                   <Plus className="h-4 w-4 mr-1" />
-                                  {t.terroir.addToCart}
+                                  {isOutOfStock ? 'Indisponible' : t.terroir.addToCart}
                                 </Button>
                               </div>
-                            ))}
+                              );
+                            })}
                           </div>
                           {variants.length === 0 && (
                             <Button size="sm" disabled className="w-full">

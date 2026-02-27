@@ -635,10 +635,10 @@ export default function Benevole() {
           : "Téléphone du responsable *",
     estimatedSize:
       lang === "ar"
-        ? "الحجم التقديري (اختياري)"
+        ? "الحجم التقديري *"
         : lang === "en"
-          ? "Estimated size (optional)"
-          : "Taille estimée (optionnel)",
+          ? "Estimated size *"
+          : "Taille estimée *",
     estimatedSizePlaceholder:
       lang === "ar"
         ? "عدد المتطوعين تقريباً"
@@ -1265,6 +1265,7 @@ export default function Benevole() {
                                 }))
                               }
                               placeholder={formTexts.estimatedSizePlaceholder}
+                              required
                             />
                           </div>
 

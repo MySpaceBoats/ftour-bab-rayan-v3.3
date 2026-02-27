@@ -304,6 +304,7 @@ export interface Database {
           name: string;
           description: string | null;
           price: string;
+          stock: number;
           image_url: string | null;
           category: string | null;
           is_active: boolean;

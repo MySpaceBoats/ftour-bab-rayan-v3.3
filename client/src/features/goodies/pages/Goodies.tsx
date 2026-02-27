@@ -184,7 +184,13 @@ export default function Goodies() {
               </div>
             ) : goodies && goodies.length > 0 ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {goodies.map((goodie) => (
+                {goodies.map((goodie) => {
+                  const totalVariantStock = (goodie.variants || []).filter((v: any) => v.isAvailable).reduce((sum: number, v: any) => sum + (v.stock || 0), 0);
+                  const hasVariants = (goodie.variants?.length || 0) > 0;
+                  const availableStock = hasVariants ? totalVariantStock : (goodie.stock ?? 0);
+                  const isOutOfStock = availableStock <= 0;
+
+                  return (
                   <Card key={goodie.id} className="overflow-hidden group bg-[#4A4829] border-[#F2E9D3]/10 hover:border-[#F2E9D3]/30 transition-all">
                     {/* Image */}
                     <div className="aspect-square bg-[#5E5B34] relative overflow-hidden">
@@ -216,9 +222,11 @@ export default function Goodies() {
                         <span className="text-xl font-bold text-[#CDBB8A]">
                           {goodie.price.toFixed(0)} DH
                         </span>
+                        <span className="text-xs text-[#E6DCC3]">Stock: {availableStock}</span>
                         <Button 
                           size="sm"
                           className="bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]"
+                          disabled={isOutOfStock}
                           onClick={() => {
                             if (goodie.variants && goodie.variants.length > 0) {
                               setSelectedGoodie(goodie.id);
@@ -228,12 +236,13 @@ export default function Goodies() {
                           }}
                         >
                           <Plus className="h-4 w-4 mr-1" />
-                          {t.goodies.addToCart}
+                          {isOutOfStock ? "Indisponible" : t.goodies.addToCart}
                         </Button>
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-16">

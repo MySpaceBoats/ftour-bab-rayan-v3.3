@@ -35,6 +35,10 @@ interface UniversalScannerCoreProps {
 }
 
 export default function UniversalScannerCore({ onBack }: UniversalScannerCoreProps) {
+  const SCAN_INTERVAL_MS = 120;
+  const SCAN_CANVAS_SIZE = 480;
+  const SCAN_CROP_RATIO = 0.7;
+
   const [mode, setMode] = useState<'camera' | 'manual'>('camera');
   const [manualCode, setManualCode] = useState("");
   const [isScanning, setIsScanning] = useState(false);
@@ -48,6 +52,7 @@ export default function UniversalScannerCore({ onBack }: UniversalScannerCorePro
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const lastScanTimeRef = useRef(0);
 
   // ============ MUTATIONS ============
   const identifyMutation = trpc.scanner.identify.useMutation({
@@ -106,16 +111,37 @@ export default function UniversalScannerCore({ onBack }: UniversalScannerCorePro
   // ============ QR SCANNING ============
   const scanQRCode = useCallback(() => {
     if (!videoRef.current || !canvasRef.current || !isScanning || identifiedResult) return;
+
+    const now = performance.now();
+    if (now - lastScanTimeRef.current < SCAN_INTERVAL_MS) {
+      animationFrameRef.current = requestAnimationFrame(scanQRCode);
+      return;
+    }
+
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
+
     if (!ctx || video.readyState !== video.HAVE_ENOUGH_DATA) {
       animationFrameRef.current = requestAnimationFrame(scanQRCode);
       return;
     }
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const sourceWidth = video.videoWidth;
+    const sourceHeight = video.videoHeight;
+    const cropSize = Math.floor(Math.min(sourceWidth, sourceHeight) * SCAN_CROP_RATIO);
+    const sourceX = Math.floor((sourceWidth - cropSize) / 2);
+    const sourceY = Math.floor((sourceHeight - cropSize) / 2);
+
+    if (canvas.width !== SCAN_CANVAS_SIZE || canvas.height !== SCAN_CANVAS_SIZE) {
+      canvas.width = SCAN_CANVAS_SIZE;
+      canvas.height = SCAN_CANVAS_SIZE;
+    }
+
+    ctx.drawImage(video, sourceX, sourceY, cropSize, cropSize, 0, 0, SCAN_CANVAS_SIZE, SCAN_CANVAS_SIZE);
+
+    lastScanTimeRef.current = now;
+
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
     if (code && code.data && code.data !== lastScannedCode) {
@@ -147,7 +173,7 @@ export default function UniversalScannerCore({ onBack }: UniversalScannerCorePro
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+        video: { facingMode: 'environment', width: { ideal: 960 }, height: { ideal: 540 } }
       });
       streamRef.current = stream;
       if (videoRef.current) {
