@@ -791,7 +791,7 @@ const scannerRouter = router({
         entityId: z.number(),
       })
     )
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async ({ input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
 
       // ---- VOLUNTEER ----
@@ -2502,37 +2502,57 @@ const volunteersRouter = router({
 
       const supabase = createSupabaseAdmin(ctx.env);
 
-      // Get day info for the email
-      const { data: day } = await supabase
+      // Get day info for availability and email
+      const { data: day, error: dayError } = await supabase
         .from("ramadan_days")
         .select("*")
         .eq("id", input.dayId)
         .single();
 
-      // Generate QR token for the group entry
-      const qrToken = crypto.randomUUID();
+      if (dayError || !day) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
+      }
 
-      // Create a volunteer entry for the group (so it appears in the dashboard)
-      const { data: volunteer, error: volError } = await supabase
-        .from("volunteers")
+      if (!day.is_open) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Ce jour est fermé aux inscriptions",
+        });
+      }
+
+      const estimatedGroupSize = Math.max(1, input.estimatedSize ?? 1);
+      const availableSeats = Math.max(0, day.capacity - (day.registered_count ?? 0));
+      if (estimatedGroupSize > availableSeats) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Le jour choisi est complet pour ce volume de groupe. Merci de choisir un autre jour ou de réduire l'effectif.",
+        });
+      }
+
+      const normalizedGroupEmail = input.responsibleEmail.toLowerCase().trim();
+
+      const { data: createdRequest, error: requestError } = await supabase
+        .from("volunteer_group_requests")
         .insert({
-          first_name: `[Groupe] ${input.groupName}`,
-          last_name: input.responsibleName,
-          email: input.responsibleEmail,
-          phone: input.responsiblePhone,
+          group_name: input.groupName,
+          responsible_name: input.responsibleName,
+          responsible_email: normalizedGroupEmail,
+          responsible_phone: input.responsiblePhone,
+          estimated_size: input.estimatedSize,
           day_id: input.dayId,
           volunteer_slots: input.volunteerSlots,
-          qr_token: qrToken,
-          qr_status: "generated",
-          status: "registered",
-          accepted_terms: input.acceptedTerms,
-          email_sent: false,
+          file_name: input.fileName,
+          file_base64: input.fileBase64,
         })
-        .select()
+        .select("id")
         .single();
 
-      if (volError) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: volError.message });
+      if (requestError || !createdRequest) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: requestError?.message || "Erreur lors de la création de la demande",
+        });
       }
 
       // Build and send email with attachment to admin
@@ -2576,7 +2596,277 @@ const volunteersRouter = router({
         console.error("[Group Registration] Admin email failed:", error);
       }
 
-      return { success: true, volunteerId: volunteer.id };
+      return {
+        success: true,
+        requestId: createdRequest.id,
+        message:
+          "Votre demande groupe a bien été envoyée. Elle sera traitée par l'administration.",
+      };
+    }),
+
+  listGroupRequests: adminProcedure.query(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+
+    const { data, error } = await supabase
+      .from("volunteer_group_requests")
+      .select("*, ramadan_days(id, day_number, date)")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+    }
+
+    return (data || []).map(row => ({
+      id: row.id,
+      groupName: row.group_name,
+      responsibleName: row.responsible_name,
+      responsibleEmail: row.responsible_email,
+      responsiblePhone: row.responsible_phone,
+      estimatedSize: row.estimated_size,
+      dayId: row.day_id,
+      volunteerSlots: normalizeVolunteerSlots(row.volunteer_slots),
+      fileName: row.file_name,
+      status: row.status,
+      rejectionReason: row.rejection_reason,
+      reviewedAt: row.reviewed_at,
+      createdAt: row.created_at,
+      day: row.ramadan_days
+        ? {
+            id: row.ramadan_days.id,
+            dayNumber: row.ramadan_days.day_number,
+            date: row.ramadan_days.date,
+          }
+        : null,
+    }));
+  }),
+
+  getGroupRequestAttachment: adminProcedure
+    .input(z.object({ requestId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const { data, error } = await supabase
+        .from("volunteer_group_requests")
+        .select("file_name, file_base64")
+        .eq("id", input.requestId)
+        .maybeSingle();
+
+      if (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      }
+
+      if (!data) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Demande introuvable" });
+      }
+
+      return {
+        fileName: data.file_name,
+        fileBase64: data.file_base64,
+      };
+    }),
+
+  updateGroupRequest: adminProcedure
+    .input(
+      z.object({
+        requestId: z.number(),
+        groupName: z.string().min(2).optional(),
+        responsibleName: z.string().min(2).optional(),
+        responsibleEmail: z.string().email().optional(),
+        responsiblePhone: z.string().min(8).optional(),
+        estimatedSize: z.number().int().positive().nullable().optional(),
+        dayId: z.number().optional(),
+        volunteerSlots: z
+          .array(z.enum(["preparation_ftour", "service_ftour"]))
+          .min(1)
+          .optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const updatePayload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if (input.groupName !== undefined) updatePayload.group_name = input.groupName;
+      if (input.responsibleName !== undefined)
+        updatePayload.responsible_name = input.responsibleName;
+      if (input.responsibleEmail !== undefined)
+        updatePayload.responsible_email = input.responsibleEmail.toLowerCase().trim();
+      if (input.responsiblePhone !== undefined)
+        updatePayload.responsible_phone = input.responsiblePhone;
+      if (input.estimatedSize !== undefined) updatePayload.estimated_size = input.estimatedSize;
+      if (input.dayId !== undefined) updatePayload.day_id = input.dayId;
+      if (input.volunteerSlots !== undefined)
+        updatePayload.volunteer_slots = input.volunteerSlots;
+
+      const { data, error } = await supabase
+        .from("volunteer_group_requests")
+        .update(updatePayload)
+        .eq("id", input.requestId)
+        .select("*")
+        .single();
+
+      if (error || !data) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: error?.message || "Impossible de modifier la demande",
+        });
+      }
+
+      return { success: true, request: data };
+    }),
+
+  reviewGroupRequest: adminProcedure
+    .input(
+      z.object({
+        requestId: z.number(),
+        action: z.enum(["validate", "refuse"]),
+        rejectionReason: z.string().max(500).optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const { data: request, error: requestError } = await supabase
+        .from("volunteer_group_requests")
+        .select("*")
+        .eq("id", input.requestId)
+        .maybeSingle();
+
+      if (requestError) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: requestError.message });
+      }
+
+      if (!request) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Demande introuvable" });
+      }
+
+      if (request.status !== "pending") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cette demande a déjà été traitée.",
+        });
+      }
+
+      const dayId = request.day_id;
+
+      if (input.action === "validate") {
+        const { data: day, error: dayError } = await supabase
+          .from("ramadan_days")
+          .select("*")
+          .eq("id", dayId)
+          .single();
+
+        if (dayError || !day) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
+        }
+
+        const estimatedSize = Number(request.estimated_size ?? 1);
+        const normalizedEstimatedSize =
+          Number.isFinite(estimatedSize) && estimatedSize > 0 ? estimatedSize : 1;
+        const availableSeats = Math.max(0, day.capacity - (day.registered_count ?? 0));
+
+        if (normalizedEstimatedSize > availableSeats) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Le jour choisi est complet pour cet effectif de groupe.",
+          });
+        }
+
+        const normalizedResponsibleEmail = String(request.responsible_email)
+          .toLowerCase()
+          .trim();
+
+        const { data: duplicateVolunteer, error: duplicateError } = await supabase
+          .from("volunteers")
+          .select("id")
+          .eq("day_id", dayId)
+          .eq("email", normalizedResponsibleEmail)
+          .limit(1)
+          .maybeSingle();
+
+        if (duplicateError) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: duplicateError.message });
+        }
+
+        if (duplicateVolunteer) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Le responsable est déjà inscrit sur ce jour.",
+          });
+        }
+
+        const qrToken = crypto.randomUUID();
+        const responsibleName = String(request.responsible_name || "").trim();
+        const nameParts = responsibleName.split(/\s+/).filter(Boolean);
+
+        const { error: createVolunteerError } = await supabase.from("volunteers").insert({
+          first_name: nameParts[0] || request.group_name,
+          last_name: nameParts.slice(1).join(" ") || request.group_name,
+          email: normalizedResponsibleEmail,
+          phone: request.responsible_phone,
+          day_id: dayId,
+          volunteer_slots: request.volunteer_slots || [],
+          qr_token: qrToken,
+          qr_status: "generated",
+          status: "registered",
+          accepted_terms: true,
+          email_sent: false,
+        });
+
+        if (createVolunteerError) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: createVolunteerError.message,
+          });
+        }
+
+        await supabase
+          .from("ramadan_days")
+          .update({
+            registered_count: (day.registered_count ?? 0) + 1,
+            is_open: (day.registered_count ?? 0) + 1 < day.capacity,
+          })
+          .eq("id", dayId);
+      }
+
+      const { data: updated, error: updateError } = await supabase
+        .from("volunteer_group_requests")
+        .update({
+          status: input.action === "validate" ? "validated" : "refused",
+          rejection_reason:
+            input.action === "refuse" ? (input.rejectionReason ?? null) : null,
+          reviewed_by: ctx.user?.id ?? null,
+          reviewed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", input.requestId)
+        .select("*")
+        .single();
+
+      if (updateError || !updated) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: updateError?.message || "Impossible de mettre à jour la demande",
+        });
+      }
+
+      return { success: true, request: updated };
+    }),
+
+  deleteGroupRequest: adminProcedure
+    .input(z.object({ requestId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const { error } = await supabase
+        .from("volunteer_group_requests")
+        .delete()
+        .eq("id", input.requestId);
+
+      if (error) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      }
+
+      return { success: true };
     }),
 
   // Import groupe Excel - traitement admin d'un fichier Excel pour inscrire plusieurs bénévoles
