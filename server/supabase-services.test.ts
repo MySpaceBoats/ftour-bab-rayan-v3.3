@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateSecureToken } from "./qrcode";
-import { computeMaxConsecutiveDays } from "./supabase-services";
+import { computeMaxConsecutiveDays, getVolunteerQrDateState } from "./supabase-services";
 
 describe("Supabase Services", () => {
   describe("Token Generation", () => {
@@ -59,6 +59,25 @@ describe("Supabase Services", () => {
       const currentStatus = 'validated';
       const canRevalidate = currentStatus !== 'validated';
       expect(canRevalidate).toBe(false);
+    });
+  });
+
+
+  describe("Volunteer QR date state", () => {
+    it("returns valid_today when volunteer date matches today", () => {
+      expect(getVolunteerQrDateState("2026-03-01", "2026-03-01")).toBe("valid_today");
+    });
+
+    it("returns expired_past_day for past volunteer dates", () => {
+      expect(getVolunteerQrDateState("2026-02-28", "2026-03-01")).toBe("expired_past_day");
+    });
+
+    it("returns not_yet_valid for future volunteer dates", () => {
+      expect(getVolunteerQrDateState("2026-03-02", "2026-03-01")).toBe("not_yet_valid");
+    });
+
+    it("returns valid_today when volunteer date is missing", () => {
+      expect(getVolunteerQrDateState(null, "2026-03-01")).toBe("valid_today");
     });
   });
 
