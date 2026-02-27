@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateSecureToken } from "./qrcode";
-import { computeMaxConsecutiveDays } from "./supabase-services";
+import { computeMaxConsecutiveDays, getQRDateEligibility } from "./supabase-services";
 
 describe("Supabase Services", () => {
   describe("Token Generation", () => {
@@ -59,6 +59,27 @@ describe("Supabase Services", () => {
       const currentStatus = 'validated';
       const canRevalidate = currentStatus !== 'validated';
       expect(canRevalidate).toBe(false);
+    });
+  });
+
+
+
+  describe("QR date eligibility", () => {
+    it("accepts only QR codes for today", () => {
+      expect(getQRDateEligibility("2026-03-10", "2026-03-10")).toBe("today");
+    });
+
+    it("marks past QR code dates as expired candidates", () => {
+      expect(getQRDateEligibility("2026-03-09", "2026-03-10")).toBe("past");
+    });
+
+    it("rejects future QR code dates for current day usage", () => {
+      expect(getQRDateEligibility("2026-03-11", "2026-03-10")).toBe("future");
+    });
+
+    it("returns unknown for empty or malformed dates", () => {
+      expect(getQRDateEligibility(null, "2026-03-10")).toBe("unknown");
+      expect(getQRDateEligibility("10/03/2026", "2026-03-10")).toBe("unknown");
     });
   });
 

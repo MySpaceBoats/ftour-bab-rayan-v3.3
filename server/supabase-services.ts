@@ -31,6 +31,18 @@ export function computeMaxConsecutiveDays(dayNumbers: number[]): number {
   return maxStreak;
 }
 
+export type QRDateEligibility = 'today' | 'past' | 'future' | 'unknown';
+
+export function getQRDateEligibility(targetDate: string | null | undefined, today: string): QRDateEligibility {
+  if (!targetDate) return 'unknown';
+  const normalizedTargetDate = String(targetDate).slice(0, 10);
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedTargetDate)) return 'unknown';
+  if (normalizedTargetDate === today) return 'today';
+  if (normalizedTargetDate < today) return 'past';
+  return 'future';
+}
+
 function buildManagerRecommendationEmailHtml(volunteer: {
   id: number;
   firstName: string;
@@ -903,12 +915,24 @@ export async function scanAndValidateTokenSupabase(token: string, validatedBy?: 
     return { success: false, error: 'Token invalide', code: 'INVALID_TOKEN' };
   }
 
-  // Idempotent: already confirmed/validated → return success
+  // Already validated => reject any second validation
   if (volunteer.qrStatus === 'validated') {
     console.log(JSON.stringify({ event: 'volunteer_confirm', volunteerId: volunteer.id, state: 'already_confirmed' }));
     return {
-      success: true,
+      success: false,
       state: 'already_confirmed' as const,
+      code: 'ALREADY_VALIDATED' as const,
+      error: 'Ce QR code a déjà été validé',
+      volunteer,
+    };
+  }
+
+  if (volunteer.qrStatus === 'expired') {
+    return {
+      success: false,
+      state: 'expired' as const,
+      code: 'QR_EXPIRED' as const,
+      error: 'Ce QR code a expiré',
       volunteer,
     };
   }
@@ -918,7 +942,37 @@ export async function scanAndValidateTokenSupabase(token: string, validatedBy?: 
   const volunteerDate = volunteer.day?.date
     ? String(volunteer.day.date).slice(0, 10)
     : null;
-  if (volunteerDate && volunteerDate !== today) {
+
+  const dateEligibility = getQRDateEligibility(volunteerDate, today);
+  if (dateEligibility === 'past') {
+    await client
+      .from('volunteers')
+      .update({ qr_status: 'expired' })
+      .eq('id', volunteer.id)
+      .neq('qr_status', 'validated');
+
+    console.log(JSON.stringify({ event: 'volunteer_confirm', volunteerId: volunteer.id, state: 'expired', expected: volunteerDate, actual: today }));
+    return {
+      success: false,
+      error: 'Ce QR code a expiré car sa date est déjà passée',
+      code: 'QR_EXPIRED',
+      volunteer,
+      expectedDate: volunteerDate,
+    };
+  }
+
+  if (dateEligibility === 'future') {
+    console.log(JSON.stringify({ event: 'volunteer_confirm', volunteerId: volunteer.id, state: 'wrong_day_future', expected: volunteerDate, actual: today }));
+    return {
+      success: false,
+      error: 'Ce QR code est prévu pour une date future et ne peut pas être utilisé aujourd\'hui',
+      code: 'WRONG_DAY_FUTURE',
+      volunteer,
+      expectedDate: volunteerDate,
+    };
+  }
+
+  if (dateEligibility === 'unknown') {
     console.log(JSON.stringify({ event: 'volunteer_confirm', volunteerId: volunteer.id, state: 'wrong_day', expected: volunteerDate, actual: today }));
     return {
       success: false,
@@ -932,7 +986,7 @@ export async function scanAndValidateTokenSupabase(token: string, validatedBy?: 
   // Confirm the volunteer
   const now = new Date().toISOString();
 
-  const { error: updateError } = await client
+  const { data: updatedVolunteer, error: updateError } = await client
     .from('volunteers')
     .update({
       qr_status: 'validated',
@@ -941,9 +995,21 @@ export async function scanAndValidateTokenSupabase(token: string, validatedBy?: 
       scanned_at: now,
       scanned_by: validatedBy,
     })
-    .eq('id', volunteer.id);
+    .eq('id', volunteer.id)
+    .eq('qr_status', 'generated')
+    .select('id')
+    .maybeSingle();
 
   if (updateError) throw updateError;
+  if (!updatedVolunteer) {
+    return {
+      success: false,
+      state: 'already_confirmed' as const,
+      code: 'ALREADY_VALIDATED' as const,
+      error: 'Ce QR code a déjà été validé',
+      volunteer,
+    };
+  }
 
   // Create checkin record for audit
   await client.from('checkins').insert({

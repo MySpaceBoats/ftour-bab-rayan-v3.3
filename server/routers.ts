@@ -1683,7 +1683,52 @@ const checkinRouter = router({
       const volunteerDate = volunteer.day?.date
         ? String(volunteer.day.date).slice(0, 10)
         : null;
-      if (volunteerDate !== today) {
+      const dateEligibility = supabaseServices.getQRDateEligibility(
+        volunteerDate,
+        today
+      );
+
+      if (dateEligibility === "past") {
+        const client = getSupabaseAdminClient();
+        if (client) {
+          await client
+            .from("volunteers")
+            .update({ qr_status: "expired" })
+            .eq("id", volunteer.id)
+            .neq("qr_status", "validated");
+        }
+
+        return {
+          valid: false,
+          error: "Ce QR code a expiré car sa date est déjà passée",
+          code: "QR_EXPIRED",
+          status: "expired" as const,
+          volunteer: {
+            firstName: volunteer.firstName,
+            lastName: volunteer.lastName,
+            expectedDate: volunteerDate,
+          },
+          day: volunteer.day,
+        };
+      }
+
+      if (dateEligibility === "future") {
+        return {
+          valid: false,
+          error:
+            "Ce QR code est prévu pour une date future et ne peut pas être utilisé aujourd'hui",
+          code: "WRONG_DAY_FUTURE",
+          status: "wrong_date" as const,
+          volunteer: {
+            firstName: volunteer.firstName,
+            lastName: volunteer.lastName,
+            expectedDate: volunteerDate,
+          },
+          day: volunteer.day,
+        };
+      }
+
+      if (dateEligibility !== "today") {
         return {
           valid: false,
           error: "Ce QR code n'est pas valide pour aujourd'hui",
