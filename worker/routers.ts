@@ -1753,6 +1753,7 @@ const publicRouter = router({
       category: g.category,
       isActive: g.is_active,
       sortOrder: g.sort_order,
+      stock: g.stock ?? 0,
       variants: (g.goodie_variants || []).map((v: any) => ({
         id: v.id,
         size: v.size,
@@ -3047,6 +3048,7 @@ const goodiesRouter = router({
       category: g.category,
       isActive: g.is_active,
       sortOrder: g.sort_order,
+      stock: g.stock ?? 0,
       variants: (g.goodie_variants || []).map((v: any) => ({
         id: v.id,
         size: v.size,
@@ -3097,6 +3099,7 @@ const goodiesRouter = router({
       category: g.category,
       isActive: g.is_active,
       sortOrder: g.sort_order,
+      stock: g.stock ?? 0,
       variants: (g.goodie_variants || []).map((v: any) => ({
         id: v.id,
         size: v.size,
@@ -3115,6 +3118,7 @@ const goodiesRouter = router({
         name: z.string().min(2),
         description: z.string().optional(),
         price: z.number().min(0),
+        stock: z.number().min(0).default(0),
         imageUrl: z.string().optional(),
         category: z.string().optional(),
         isActive: z.boolean().default(true),
@@ -3130,6 +3134,7 @@ const goodiesRouter = router({
           name: input.name,
           description: input.description,
           price: String(input.price),
+          stock: input.stock,
           image_url: input.imageUrl,
           category: input.category,
           is_active: input.isActive,
@@ -3152,6 +3157,7 @@ const goodiesRouter = router({
         name: z.string().min(2).optional(),
         description: z.string().optional(),
         price: z.number().min(0).optional(),
+        stock: z.number().min(0).optional(),
         imageUrl: z.string().optional(),
         category: z.string().optional(),
         isActive: z.boolean().optional(),
@@ -3168,6 +3174,7 @@ const goodiesRouter = router({
         dbData.description = updateData.description;
       if (updateData.price !== undefined)
         dbData.price = String(updateData.price);
+      if (updateData.stock !== undefined) dbData.stock = updateData.stock;
       if (updateData.imageUrl !== undefined)
         dbData.image_url = updateData.imageUrl;
       if (updateData.category !== undefined)
@@ -6175,6 +6182,42 @@ const terroirModuleRouter = router({
         });
       return data;
     }),
+  adminUpdateVariant: adminProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        label: z.string().min(1).optional(),
+        sku: z.string().optional(),
+        priceUnit: z.number().min(0).optional(),
+        stockTotal: z.number().int().min(0).optional(),
+        isActive: z.boolean().optional(),
+        sortOrder: z.number().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const payload: Record<string, unknown> = {};
+      if (input.label !== undefined) payload.label = input.label;
+      if (input.sku !== undefined) payload.sku = input.sku;
+      if (input.priceUnit !== undefined) payload.price_unit = input.priceUnit;
+      if (input.stockTotal !== undefined) payload.stock_total = input.stockTotal;
+      if (input.isActive !== undefined) payload.is_active = input.isActive;
+      if (input.sortOrder !== undefined) payload.sort_order = input.sortOrder;
+
+      const { data, error } = await supabase
+        .from("terroir_product_variants")
+        .update(payload)
+        .eq("id", input.id)
+        .select("*")
+        .single();
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      return data;
+    }),
+
 
   adminListOrders: adminProcedure
     .input(
