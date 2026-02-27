@@ -283,7 +283,7 @@ export const fr = {
     title: 'Pâtisserie solidaire',
     subtitle: 'Pré-commandez nos délicieuses pâtisseries ou achetez sur place',
     description: 'Tous les bénéfices sont reversés à l\'association Bab Rayan pour financer les actions en faveur des enfants.',
-    addToCart: 'Ajouter',
+    addToCart: 'Ajouter au panier',
     outOfStock: 'Rupture de stock',
     price: 'Prix',
     cartTitle: 'Votre panier',

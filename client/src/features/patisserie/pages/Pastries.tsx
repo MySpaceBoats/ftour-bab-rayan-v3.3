@@ -10,11 +10,15 @@ import PaymentMethodSelector, { type PaymentMethod } from '@/components/PaymentM
 import PastriesConfirmation from '@/components/PastriesConfirmation';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+import { ShoppingCart } from 'lucide-react';
 
 export default function Pastries() {
   const { t } = useI18n();
-  const { cart: unifiedCart, addToCart: addToCartContext, updateQuantity: updateQuantityContext, removeFromCart: removeFromCartContext, getCartByType, clearCartByType } = useCart();
+  const { cart: unifiedCart, addToCart: addToCartContext, updateQuantity: updateQuantityContext, removeFromCart: removeFromCartContext, getCartByType, getCartCountByType, clearCartByType } = useCart();
   const cart = getCartByType('pastry');
+  const pastryCartCount = getCartCountByType('pastry');
   const [step, setStep] = useState<'browse' | 'checkout' | 'success'>('browse');
   const [orderData, setOrderData] = useState<any>(null);
   const [formData, setFormData] = useState<{
@@ -134,16 +138,23 @@ export default function Pastries() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navbar />
       {/* Header */}
       <div className="bg-gradient-to-r from-amber-50 to-orange-50 py-12 border-b">
         <div className="container">
-          <h1 className="text-4xl font-bold text-foreground mb-2">{t.pastries.title}</h1>
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-4xl font-bold text-foreground mb-2">{t.pastries.title}</h1>
+            <div className="inline-flex items-center gap-2 rounded-full border bg-background/70 px-3 py-1.5 text-sm font-medium">
+              <ShoppingCart className="h-4 w-4" />
+              <span>{pastryCartCount}</span>
+            </div>
+          </div>
           <p className="text-lg text-muted-foreground">{t.pastries.subtitle}</p>
         </div>
       </div>
 
-      <div className="container py-12">
+      <div className="container py-12 flex-1">
         {step === 'browse' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Pastries Grid */}
@@ -412,6 +423,16 @@ export default function Pastries() {
           </div>
         )}
       </div>
+
+      {step === 'browse' && cart.length > 0 && (
+        <div className="fixed bottom-4 left-4 right-4 lg:hidden z-40">
+          <Button onClick={handleCheckout} className="w-full" size="lg">
+            {t.pastries.checkout} ({pastryCartCount})
+          </Button>
+        </div>
+      )}
+
+      <Footer />
     </div>
   );
 }
