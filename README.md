@@ -183,3 +183,42 @@ Si la création de PR échoue dans l’automatisation:
 1. Vérifier qu’un commit de suivi existe localement (`git log -n 3`).
 2. Relancer la création de PR avec un titre distinct.
 3. Confirmer que le corps PR référence bien le dernier commit.
+
+## Espace Profil Bénévole
+
+### Migrations SQL
+
+Exécuter la migration suivante dans Supabase SQL Editor:
+
+- `supabase/migrations/add_volunteer_profiles_space.sql`
+
+Cette migration ajoute:
+
+- `volunteer_role` (enum: blue/orange/yellow/red)
+- `user_roles` (admin/staff)
+- `volunteer_profiles` lié à `auth.users`
+- `volunteer_attendance_view` (vue basée sur les inscriptions bénévoles existantes)
+- RLS + policies + fonctions `is_admin_user` et `ensure_volunteer_profile`
+
+### Test local rapide
+
+1. Se connecter avec un compte (route `/:lang/connexion`).
+2. Ouvrir `/:lang/profil-benevole`.
+3. Vérifier:
+   - chargement du profil,
+   - sauvegarde des champs `first_name`, `last_name`, `phone`,
+   - lecture de l'historique de participation.
+
+### Vérifier les règles RLS
+
+Dans Supabase SQL Editor (ou psql), simuler 2 utilisateurs authentifiés différents:
+
+- `userA` ne doit lire que sa ligne `volunteer_profiles`
+- `userA` peut modifier `phone`, mais pas `role`, `points_total`, `level`
+- seules les sessions admin (`user_roles.role='admin'`) peuvent modifier tous les champs et gérer l'historique
+
+Exemples de vérification:
+
+- `select * from volunteer_profiles where id = auth.uid();`
+- `update volunteer_profiles set phone='0600000000' where id=auth.uid();`
+- `update volunteer_profiles set role='red' where id=auth.uid();` (doit échouer hors admin)

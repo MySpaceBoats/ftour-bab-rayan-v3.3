@@ -122,6 +122,7 @@ import MenuSolidaire from "@/features/menu/pages/MenuSolidaire";
 import MenuCheckout from "@/features/menu/pages/MenuCheckout";
 import MenuProof from "@/features/menu/pages/MenuProof";
 import AdminCashOrders from "@/features/menu/admin/AdminCashOrders";
+import VolunteerProfilePage from "@/features/volunteer/pages/VolunteerProfile";
 
 import WhatsAppFloatingButton from "./components/WhatsAppFloatingButton";
 
@@ -303,6 +304,7 @@ function LocalizedRoutes() {
       <Route path="/:lang/galerie" component={Galerie} />
       <Route path="/:lang/connexion" component={Login} />
       <Route path="/:lang/inscription" component={Signup} />
+      <Route path="/:lang/profil-benevole" component={VolunteerProfilePage} />
 
       {/* Restaurant public */}
       <Route
@@ -375,6 +377,9 @@ function LocalizedRoutes() {
       </Route>
       <Route path="/inscription">
         {() => <Redirect to={`/${lang}/inscription`} />}
+      </Route>
+      <Route path="/profil-benevole">
+        {() => <Redirect to={`/${lang}/profil-benevole`} />}
       </Route>
       <Route path="/reservation">
         {() => <Redirect to={`/${lang}/reservation`} />}

@@ -1,5 +1,6 @@
 import { getSupabaseAdminClient } from './supabase';
 import { normalizeUserRole } from './supabase-services';
+import { ensureVolunteerProfile } from './volunteer-profile-services';
 
 // Get the admin client
 const getAdminClient = () => {
@@ -80,6 +81,13 @@ export async function signUpUser(data: SignUpData): Promise<{ user: AuthUser | n
       return { user: null, error: 'Erreur lors de la création du profil' };
     }
 
+    await ensureVolunteerProfile({
+      id: authData.user.id,
+      email: data.email,
+      name: data.name ?? null,
+      phone: data.phone ?? null,
+    });
+
     return {
       user: {
         id: authData.user.id,
@@ -138,6 +146,13 @@ export async function signInUser(data: SignInData): Promise<{ user: AuthUser | n
           role: 'user'
         });
 
+      await ensureVolunteerProfile({
+        id: authData.user.id,
+        email: data.email,
+        name: authData.user.user_metadata?.name ?? null,
+        phone: authData.user.user_metadata?.phone ?? null,
+      });
+
       return {
         user: {
           id: authData.user.id,
@@ -154,6 +169,13 @@ export async function signInUser(data: SignInData): Promise<{ user: AuthUser | n
         error: null
       };
     }
+
+    await ensureVolunteerProfile({
+      id: authData.user.id,
+      email: data.email,
+      name: userData.name ?? authData.user.user_metadata?.name ?? null,
+      phone: userData.phone ?? authData.user.user_metadata?.phone ?? null,
+    });
 
     return {
       user: {

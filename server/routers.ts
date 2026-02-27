@@ -31,6 +31,7 @@ import { restaurantReservationsRouter } from "./restaurant-reservation-routers";
 import { contentRouter } from "./content-router";
 import { scannerRouter } from "./scanner-router";
 import * as galleryServices from "./gallery-services";
+import * as volunteerProfileServices from "./volunteer-profile-services";
 import * as XLSX from "xlsx";
 
 type ParsedGroupVolunteerRow = {
@@ -5006,6 +5007,84 @@ const paymentsRouter = router({
   }),
 });
 
+const volunteerProfileRouter = router({
+  me: protectedProcedure.query(async ({ ctx }) => {
+    const authHeader = ctx.req.headers.authorization;
+    const accessToken = authHeader?.startsWith("Bearer ")
+      ? authHeader.substring(7)
+      : null;
+
+    if (!accessToken) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
+    }
+
+    await volunteerProfileServices.ensureVolunteerProfile({
+      id: String(ctx.user.id),
+      email: ctx.user.email,
+      name: ctx.user.name,
+      phone: ctx.user.phone,
+    });
+
+    return volunteerProfileServices.getMyVolunteerProfile(accessToken);
+  }),
+
+  updateMe: protectedProcedure
+    .input(
+      z.object({
+        first_name: z.string().min(1),
+        last_name: z.string().min(1),
+        phone: z.string().trim().optional().nullable(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const authHeader = ctx.req.headers.authorization;
+      const accessToken = authHeader?.startsWith("Bearer ")
+        ? authHeader.substring(7)
+        : null;
+
+      if (!accessToken) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
+      }
+
+      return volunteerProfileServices.updateMyVolunteerProfile(accessToken, {
+        first_name: input.first_name,
+        last_name: input.last_name,
+        phone: input.phone ?? null,
+      });
+    }),
+
+  attendance: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(30).default(20),
+        offset: z.number().min(0).default(0),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const authHeader = ctx.req.headers.authorization;
+      const accessToken = authHeader?.startsWith("Bearer ")
+        ? authHeader.substring(7)
+        : null;
+
+      if (!accessToken) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
+      }
+
+      await volunteerProfileServices.ensureVolunteerProfile({
+        id: String(ctx.user.id),
+        email: ctx.user.email,
+        name: ctx.user.name,
+        phone: ctx.user.phone,
+      });
+
+      return volunteerProfileServices.getMyAttendance(
+        accessToken,
+        input.limit,
+        input.offset
+      );
+    }),
+});
+
 // ============================================
 // MAIN APP ROUTER
 // ============================================
@@ -5103,6 +5182,7 @@ export const appRouter = router({
   restaurantReservations: restaurantReservationsRouter,
   restaurantModule: restaurantModuleRouter,
   terroirModule: terroirModuleRouter,
+  volunteerProfile: volunteerProfileRouter,
 });
 
 // ============================================
@@ -5764,6 +5844,7 @@ export const appRouterUpdated = router({
   content: contentRouter,
   scanner: scannerRouter,
   ramadan: ramadanRouter,
+  volunteerProfile: volunteerProfileRouter,
 });
 
 export type AppRouter = typeof appRouterUpdated;
