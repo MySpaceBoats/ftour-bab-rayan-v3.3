@@ -791,7 +791,7 @@ const scannerRouter = router({
         entityId: z.number(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
 
       // ---- VOLUNTEER ----
