@@ -1106,15 +1106,11 @@ export default function Benevole() {
                                 </SelectItem>
                               ) : days && days.length > 0 ? (
                                 days.map(day => {
-                                  const remainingSeats = Math.max(
-                                    0,
-                                    day.capacity - (day.registeredCount ?? 0)
-                                  );
                                   return (
                                     <SelectItem
                                       key={`group-${day.id}`}
                                       value={day.id.toString()}
-                                      disabled={!day.isOpen}
+                                      disabled={isDayFull(day)}
                                     >
                                       {new Date(day.date).toLocaleDateString(
                                         dateLocale,
@@ -1124,8 +1120,9 @@ export default function Benevole() {
                                           month: "long",
                                         }
                                       )}
-                                      {` - ${remainingSeats} ${formTexts.places}`}
-                                      {!day.isOpen ? ` - ${formTexts.dayFull}` : ""}
+                                      {isDayFull(day)
+                                        ? ` - ${formTexts.dayFull}`
+                                        : ""}
                                     </SelectItem>
                                   );
                                 })
