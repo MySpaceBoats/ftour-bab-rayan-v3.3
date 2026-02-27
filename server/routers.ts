@@ -22,7 +22,10 @@ import {
 import * as supabaseServices from "./supabase-services";
 import * as reservationServices from "./reservation-services";
 import { getSupabaseAdminClient } from "./supabase";
-import { DEFAULT_RAMADAN_TIMEZONE, getDateStringInTimeZone } from "@shared/ramadan";
+import {
+  DEFAULT_RAMADAN_TIMEZONE,
+  getDateStringInTimeZone,
+} from "@shared/ramadan";
 import { companyBookingsRouter } from "./company-booking-routers";
 import { restaurantReservationsRouter } from "./restaurant-reservation-routers";
 import { contentRouter } from "./content-router";
@@ -291,7 +294,12 @@ const sendGroupVolunteerConfirmationEmails = async ({
   volunteerSlots,
 }: {
   volunteers: GroupVolunteerForEmail[];
-  day: { dayNumber: number; date: string; location?: string | null; iftarTime?: string | null };
+  day: {
+    dayNumber: number;
+    date: string;
+    location?: string | null;
+    iftarTime?: string | null;
+  };
   volunteerSlots: Array<"preparation_ftour" | "service_ftour">;
 }) => {
   if (volunteers.length === 0) {
@@ -1065,6 +1073,100 @@ const volunteersRouter = router({
       return { id: volunteer.id, qrToken: volunteer.qrToken };
     }),
 
+  adminCreateManual: adminOpsProcedure
+    .input(
+      z.object({
+        firstName: z.string().min(2, "Prénom requis"),
+        lastName: z.string().min(2, "Nom requis"),
+        email: z.string().email("Email invalide"),
+        phone: z.string().min(8, "Téléphone invalide"),
+        city: z.string().optional().default(""),
+        dayId: z.number(),
+        volunteerSlots: z
+          .array(z.enum(["preparation_ftour", "service_ftour"]))
+          .min(1, "Veuillez sélectionner au moins un créneau"),
+        status: z
+          .enum(["registered", "confirmed", "present", "absent", "cancelled"])
+          .default("registered"),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const normalizedEmail = input.email.toLowerCase().trim();
+
+      const existingVolunteer =
+        await supabaseServices.getVolunteerByEmailForDay(
+          normalizedEmail,
+          input.dayId
+        );
+
+      if (existingVolunteer) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Cette adresse email est déjà inscrite pour ce jour.",
+        });
+      }
+
+      const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
+      if (!day) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
+      }
+
+      const volunteer = await supabaseServices.createVolunteerShiftSupabase({
+        firstName: input.firstName,
+        lastName: input.lastName,
+        email: normalizedEmail,
+        phone: input.phone,
+        city: input.city,
+        dayId: input.dayId,
+        volunteerSlots: input.volunteerSlots,
+        acceptedTerms: true,
+      });
+
+      if (input.status !== "registered") {
+        await supabaseServices.updateVolunteerStatusSupabase(
+          volunteer.id,
+          input.status
+        );
+      }
+
+      try {
+        const baseUrl =
+          process.env.NODE_ENV === "production"
+            ? "https://ftourbabrayan.ma"
+            : "http://localhost:3000";
+
+        const emailData = generateVolunteerConfirmationEmail({
+          firstName: input.firstName,
+          lastName: input.lastName,
+          email: normalizedEmail,
+          dayNumber: day.dayNumber,
+          dayDate: new Date(day.date).toLocaleDateString("fr-FR", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          }),
+          location: day.location || "Association Bab Rayan, Casablanca",
+          startTime: day.iftarTime || "18h00",
+          volunteerSlots: input.volunteerSlots,
+          qrToken: volunteer.qrToken,
+          baseUrl,
+        });
+
+        await sendEmail({
+          to: normalizedEmail,
+          subject: emailData.subject,
+          html: emailData.html,
+        });
+      } catch (error) {
+        console.error(
+          "[Volunteer Admin Manual Create] Email send failed:",
+          error
+        );
+      }
+
+      return { success: true, id: volunteer.id, qrToken: volunteer.qrToken };
+    }),
+
   getByQrCode: scannerProcedure
     .input(z.object({ qrCode: z.string() }))
     .query(async ({ input }) => {
@@ -1574,7 +1676,10 @@ const checkinRouter = router({
         };
       }
 
-      const today = getDateStringInTimeZone(new Date(), DEFAULT_RAMADAN_TIMEZONE);
+      const today = getDateStringInTimeZone(
+        new Date(),
+        DEFAULT_RAMADAN_TIMEZONE
+      );
       const volunteerDate = volunteer.day?.date
         ? String(volunteer.day.date).slice(0, 10)
         : null;
