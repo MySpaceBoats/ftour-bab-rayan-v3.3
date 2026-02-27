@@ -1,21 +1,35 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { trpc } from '@/lib/trpc';
-import { useI18n } from '@/i18n';
-import PaymentMethodSelector, { type PaymentMethod } from '@/components/PaymentMethodSelector';
-import PastriesConfirmation from '@/components/PastriesConfirmation';
-import { useCart } from '@/contexts/CartContext';
-import { toast } from 'sonner';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/i18n";
+import PaymentMethodSelector, {
+  type PaymentMethod,
+} from "@/components/PaymentMethodSelector";
+import PastriesConfirmation from "@/components/PastriesConfirmation";
+import { useCart } from "@/contexts/CartContext";
+import { toast } from "sonner";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import { ShoppingCart } from "lucide-react";
 
 export default function Pastries() {
   const { t } = useI18n();
-  const { cart: unifiedCart, addToCart: addToCartContext, updateQuantity: updateQuantityContext, removeFromCart: removeFromCartContext, getCartByType, clearCartByType } = useCart();
-  const cart = getCartByType('pastry');
-  const [step, setStep] = useState<'browse' | 'checkout' | 'success'>('browse');
+  const {
+    cart: unifiedCart,
+    addToCart: addToCartContext,
+    updateQuantity: updateQuantityContext,
+    removeFromCart: removeFromCartContext,
+    getCartByType,
+    getCartCountByType,
+    clearCartByType,
+  } = useCart();
+  const cart = getCartByType("pastry");
+  const pastryCartCount = getCartCountByType("pastry");
+  const [step, setStep] = useState<"browse" | "checkout" | "success">("browse");
   const [orderData, setOrderData] = useState<any>(null);
   const [formData, setFormData] = useState<{
     fullName: string;
@@ -30,28 +44,30 @@ export default function Pastries() {
     deliveryInstructions: string;
     paymentMethod: PaymentMethod;
   }>({
-    fullName: '',
-    phone: '',
-    email: '',
-    deliveryMode: 'pickup',
-    deliveryAddress: '',
-    city: '',
-    neighborhood: '',
-    postalCode: '',
-    contactPhone: '',
-    deliveryInstructions: '',
-    paymentMethod: 'bank_transfer',
+    fullName: "",
+    phone: "",
+    email: "",
+    deliveryMode: "pickup",
+    deliveryAddress: "",
+    city: "",
+    neighborhood: "",
+    postalCode: "",
+    contactPhone: "",
+    deliveryInstructions: "",
+    paymentMethod: "bank_transfer",
   });
 
   const { data: pastries, isLoading } = trpc.pastries.list.useQuery();
   const createOrderMutation = trpc.pastryOrders.create.useMutation();
 
   const findPastryCartIndex = (pastryId: number) =>
-    unifiedCart.findIndex(item => item.productType === 'pastry' && item.productId === pastryId);
+    unifiedCart.findIndex(
+      item => item.productType === "pastry" && item.productId === pastryId
+    );
 
   const addToCart = (pastry: any) => {
     addToCartContext({
-      productType: 'pastry',
+      productType: "pastry",
       productId: pastry.id,
       name: pastry.name,
       price: pastry.price,
@@ -82,8 +98,11 @@ export default function Pastries() {
     }
   };
 
-  const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const deliveryFee = formData.deliveryMode === 'delivery' ? 30 : 0;
+  const cartTotal = cart.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+  const deliveryFee = formData.deliveryMode === "delivery" ? 30 : 0;
   const estimatedTotal = cartTotal + deliveryFee;
 
   const handleCheckout = () => {
@@ -91,7 +110,7 @@ export default function Pastries() {
       toast.error(t.pastries.cartEmpty);
       return;
     }
-    setStep('checkout');
+    setStep("checkout");
   };
 
   const handleSubmitOrder = async () => {
@@ -100,7 +119,7 @@ export default function Pastries() {
       return;
     }
 
-    if (formData.deliveryMode === 'delivery' && !formData.deliveryAddress) {
+    if (formData.deliveryMode === "delivery" && !formData.deliveryAddress) {
       toast.error(t.pastries.deliveryAddress);
       return;
     }
@@ -117,34 +136,43 @@ export default function Pastries() {
         })),
         totalAmount: estimatedTotal,
         paymentMethod: formData.paymentMethod as any,
-        channel: 'online',
+        channel: "online",
       });
 
       setOrderData(result);
-      setStep('success');
-      clearCartByType('pastry');
+      setStep("success");
+      clearCartByType("pastry");
       toast.success(t.pastries.confirmReservation);
     } catch (error) {
-      toast.error(t.pastries.error || 'Erreur lors de la réservation');
+      toast.error(t.pastries.error || "Erreur lors de la réservation");
     }
   };
 
-  if (step === 'success' && orderData) {
+  if (step === "success" && orderData) {
     return <PastriesConfirmation order={orderData} />;
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navbar />
       {/* Header */}
       <div className="bg-gradient-to-r from-amber-50 to-orange-50 py-12 border-b">
         <div className="container">
-          <h1 className="text-4xl font-bold text-foreground mb-2">{t.pastries.title}</h1>
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-4xl font-bold text-foreground mb-2">
+              {t.pastries.title}
+            </h1>
+            <div className="inline-flex items-center gap-2 rounded-full border bg-background/70 px-3 py-1.5 text-sm font-medium">
+              <ShoppingCart className="h-4 w-4" />
+              <span>{pastryCartCount}</span>
+            </div>
+          </div>
           <p className="text-lg text-muted-foreground">{t.pastries.subtitle}</p>
         </div>
       </div>
 
-      <div className="container py-12">
-        {step === 'browse' && (
+      <div className="container py-12 flex-1">
+        {step === "browse" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Pastries Grid */}
             <div className="lg:col-span-2">
@@ -152,13 +180,20 @@ export default function Pastries() {
                 <div className="text-center py-12">{t.pastries.loading}</div>
               ) : !pastries || pastries.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-lg text-muted-foreground">{t.pastries.noProducts}</p>
-                  <p className="text-sm text-muted-foreground">{t.pastries.comingSoon}</p>
+                  <p className="text-lg text-muted-foreground">
+                    {t.pastries.noProducts}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {t.pastries.comingSoon}
+                  </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {pastries.map(pastry => (
-                    <Card key={pastry.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                    <Card
+                      key={pastry.id}
+                      className="overflow-hidden hover:shadow-lg transition-shadow"
+                    >
                       {pastry.image_url && (
                         <img
                           src={pastry.image_url}
@@ -167,18 +202,26 @@ export default function Pastries() {
                         />
                       )}
                       <div className="p-4">
-                        <h3 className="font-semibold text-lg mb-2">{pastry.name}</h3>
+                        <h3 className="font-semibold text-lg mb-2">
+                          {pastry.name}
+                        </h3>
                         {pastry.description && (
-                          <p className="text-sm text-muted-foreground mb-3">{pastry.description}</p>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            {pastry.description}
+                          </p>
                         )}
                         <div className="flex items-center justify-between">
-                          <span className="text-2xl font-bold text-primary">{pastry.price} DH</span>
+                          <span className="text-2xl font-bold text-primary">
+                            {pastry.price} DH
+                          </span>
                           <Button
                             onClick={() => addToCart(pastry)}
                             disabled={!pastry.active}
                             size="sm"
                           >
-                            {pastry.active ? t.pastries.addToCart : t.pastries.outOfStock}
+                            {pastry.active
+                              ? t.pastries.addToCart
+                              : t.pastries.outOfStock}
                           </Button>
                         </div>
                       </div>
@@ -191,32 +234,53 @@ export default function Pastries() {
             {/* Cart Sidebar */}
             <div className="lg:col-span-1">
               <Card className="sticky top-4 p-6">
-                <h2 className="text-xl font-bold mb-4">{t.pastries.cartTitle}</h2>
+                <h2 className="text-xl font-bold mb-4">
+                  {t.pastries.cartTitle}
+                </h2>
 
                 {cart.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">{t.pastries.cartEmpty}</p>
+                  <p className="text-muted-foreground text-center py-8">
+                    {t.pastries.cartEmpty}
+                  </p>
                 ) : (
                   <>
                     <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
                       {cart.map(item => (
-                        <div key={item.productId} className="flex items-center justify-between text-sm border-b pb-2">
+                        <div
+                          key={item.productId}
+                          className="flex items-center justify-between text-sm border-b pb-2"
+                        >
                           <div className="flex-1">
                             <p className="font-medium">{item.name}</p>
-                            <p className="text-muted-foreground">{item.price} DH × {item.quantity}</p>
+                            <p className="text-muted-foreground">
+                              {item.price} DH × {item.quantity}
+                            </p>
                           </div>
                           <div className="flex items-center gap-2">
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                              onClick={() =>
+                                updateQuantity(
+                                  item.productId,
+                                  item.quantity - 1
+                                )
+                              }
                             >
                               −
                             </Button>
-                            <span className="w-6 text-center">{item.quantity}</span>
+                            <span className="w-6 text-center">
+                              {item.quantity}
+                            </span>
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                              onClick={() =>
+                                updateQuantity(
+                                  item.productId,
+                                  item.quantity + 1
+                                )
+                              }
                             >
                               +
                             </Button>
@@ -263,7 +327,7 @@ export default function Pastries() {
           </div>
         )}
 
-        {step === 'checkout' && (
+        {step === "checkout" && (
           <div className="max-w-2xl mx-auto">
             <Card className="p-8">
               <h2 className="text-2xl font-bold mb-6">{t.pastries.checkout}</h2>
@@ -271,13 +335,17 @@ export default function Pastries() {
               <div className="space-y-6">
                 {/* Customer Info */}
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-lg">{t.pastries.fillInfo}</h3>
+                  <h3 className="font-semibold text-lg">
+                    {t.pastries.fillInfo}
+                  </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label>{t.pastries.fullName}</Label>
                       <Input
                         value={formData.fullName}
-                        onChange={e => setFormData({ ...formData, fullName: e.target.value })}
+                        onChange={e =>
+                          setFormData({ ...formData, fullName: e.target.value })
+                        }
                         placeholder={t.pastries.fullName}
                       />
                     </div>
@@ -285,7 +353,9 @@ export default function Pastries() {
                       <Label>{t.pastries.phone}</Label>
                       <Input
                         value={formData.phone}
-                        onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                        onChange={e =>
+                          setFormData({ ...formData, phone: e.target.value })
+                        }
                         placeholder={t.pastries.phone}
                       />
                     </div>
@@ -294,7 +364,9 @@ export default function Pastries() {
                       <Input
                         type="email"
                         value={formData.email}
-                        onChange={e => setFormData({ ...formData, email: e.target.value })}
+                        onChange={e =>
+                          setFormData({ ...formData, email: e.target.value })
+                        }
                         placeholder={t.pastries.email}
                       />
                     </div>
@@ -303,18 +375,32 @@ export default function Pastries() {
 
                 {/* Delivery Mode */}
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-lg">{t.pastries.deliveryMode}</h3>
+                  <h3 className="font-semibold text-lg">
+                    {t.pastries.deliveryMode}
+                  </h3>
                   <div className="grid grid-cols-2 gap-4">
                     <Button
-                      variant={formData.deliveryMode === 'pickup' ? 'default' : 'outline'}
-                      onClick={() => setFormData({ ...formData, deliveryMode: 'pickup' })}
+                      variant={
+                        formData.deliveryMode === "pickup"
+                          ? "default"
+                          : "outline"
+                      }
+                      onClick={() =>
+                        setFormData({ ...formData, deliveryMode: "pickup" })
+                      }
                       className="h-auto py-4"
                     >
                       {t.pastries.pickupAtLocation}
                     </Button>
                     <Button
-                      variant={formData.deliveryMode === 'delivery' ? 'default' : 'outline'}
-                      onClick={() => setFormData({ ...formData, deliveryMode: 'delivery' })}
+                      variant={
+                        formData.deliveryMode === "delivery"
+                          ? "default"
+                          : "outline"
+                      }
+                      onClick={() =>
+                        setFormData({ ...formData, deliveryMode: "delivery" })
+                      }
                       className="h-auto py-4"
                     >
                       {t.pastries.homeDelivery}
@@ -323,35 +409,59 @@ export default function Pastries() {
                 </div>
 
                 {/* Delivery Address */}
-                {formData.deliveryMode === 'delivery' && (
+                {formData.deliveryMode === "delivery" && (
                   <div className="space-y-4">
-                    <h3 className="font-semibold text-lg">{t.pastries.deliveryAddress}</h3>
+                    <h3 className="font-semibold text-lg">
+                      {t.pastries.deliveryAddress}
+                    </h3>
                     <div className="space-y-3">
                       <Input
                         value={formData.deliveryAddress}
-                        onChange={e => setFormData({ ...formData, deliveryAddress: e.target.value })}
+                        onChange={e =>
+                          setFormData({
+                            ...formData,
+                            deliveryAddress: e.target.value,
+                          })
+                        }
                         placeholder={t.pastries.fullAddress}
                       />
                       <div className="grid grid-cols-2 gap-3">
                         <Input
                           value={formData.city}
-                          onChange={e => setFormData({ ...formData, city: e.target.value })}
+                          onChange={e =>
+                            setFormData({ ...formData, city: e.target.value })
+                          }
                           placeholder={t.pastries.city}
                         />
                         <Input
                           value={formData.neighborhood}
-                          onChange={e => setFormData({ ...formData, neighborhood: e.target.value })}
+                          onChange={e =>
+                            setFormData({
+                              ...formData,
+                              neighborhood: e.target.value,
+                            })
+                          }
                           placeholder={t.pastries.neighborhood}
                         />
                       </div>
                       <Input
                         value={formData.postalCode}
-                        onChange={e => setFormData({ ...formData, postalCode: e.target.value })}
+                        onChange={e =>
+                          setFormData({
+                            ...formData,
+                            postalCode: e.target.value,
+                          })
+                        }
                         placeholder={t.pastries.postalCode}
                       />
                       <Textarea
                         value={formData.deliveryInstructions}
-                        onChange={e => setFormData({ ...formData, deliveryInstructions: e.target.value })}
+                        onChange={e =>
+                          setFormData({
+                            ...formData,
+                            deliveryInstructions: e.target.value,
+                          })
+                        }
                         placeholder={t.pastries.deliveryInstructions}
                       />
                     </div>
@@ -360,10 +470,14 @@ export default function Pastries() {
 
                 {/* Payment Method */}
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-lg">{t.checkout.paymentMethod}</h3>
+                  <h3 className="font-semibold text-lg">
+                    {t.checkout.paymentMethod}
+                  </h3>
                   <PaymentMethodSelector
                     value={formData.paymentMethod}
-                    onChange={method => setFormData({ ...formData, paymentMethod: method })}
+                    onChange={method =>
+                      setFormData({ ...formData, paymentMethod: method })
+                    }
                   />
                 </div>
 
@@ -391,7 +505,7 @@ export default function Pastries() {
                 <div className="flex gap-4">
                   <Button
                     variant="outline"
-                    onClick={() => setStep('browse')}
+                    onClick={() => setStep("browse")}
                     className="flex-1"
                   >
                     {t.pastries.continueShopping}
@@ -401,7 +515,9 @@ export default function Pastries() {
                     disabled={createOrderMutation.isPending}
                     className="flex-1"
                   >
-                    {createOrderMutation.isPending ? t.pastries.processing : t.pastries.confirmReservation}
+                    {createOrderMutation.isPending
+                      ? t.pastries.processing
+                      : t.pastries.confirmReservation}
                   </Button>
                 </div>
               </div>
@@ -409,6 +525,16 @@ export default function Pastries() {
           </div>
         )}
       </div>
+
+      {step === "browse" && cart.length > 0 && (
+        <div className="fixed bottom-4 left-4 right-4 lg:hidden z-40">
+          <Button onClick={handleCheckout} className="w-full" size="lg">
+            {t.pastries.checkout} ({pastryCartCount})
+          </Button>
+        </div>
+      )}
+
+      <Footer />
     </div>
   );
 }
