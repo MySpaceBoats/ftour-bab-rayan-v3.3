@@ -23,7 +23,7 @@ export default function Login() {
     const params = new URLSearchParams(window.location.search);
     return {
       lang: detectedLang,
-      redirectTo: params.get('redirectTo') || '/',
+      redirectTo: params.get('redirectTo') || '/profil-benevole',
     };
   }, [location]);
 
