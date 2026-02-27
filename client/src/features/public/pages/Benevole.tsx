@@ -51,6 +51,54 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/i18n";
 
+
+const RAMADAN_TIMEZONE = "Africa/Casablanca";
+
+const getTimeInMinutesInRamadanTimezone = (date: Date): number => {
+  const formatter = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: RAMADAN_TIMEZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(date);
+  const hour = Number(parts.find(part => part.type === "hour")?.value ?? "0");
+  const minute = Number(parts.find(part => part.type === "minute")?.value ?? "0");
+  return hour * 60 + minute;
+};
+
+const getDateStringInRamadanTimezone = (date: Date): string => {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: RAMADAN_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  const parts = formatter.formatToParts(date);
+  const year = parts.find(part => part.type === "year")?.value;
+  const month = parts.find(part => part.type === "month")?.value;
+  const day = parts.find(part => part.type === "day")?.value;
+
+  return `${year}-${month}-${day}`;
+};
+
+const isAutoReopenedForServiceOnly = (day: {
+  date: string;
+  isOpen: boolean;
+  registeredCount?: number | null;
+  capacity: number;
+}) => {
+  const now = new Date();
+  const isSameRamadanDate = getDateStringInRamadanTimezone(now) === day.date;
+  if (!isSameRamadanDate) return false;
+
+  const isAfterReopenTime = getTimeInMinutesInRamadanTimezone(now) >= 17 * 60 + 30;
+  if (!isAfterReopenTime) return false;
+
+  return !day.isOpen || (day.registeredCount ?? 0) >= day.capacity;
+};
+
 export default function Benevole() {
   const { t, lang } = useI18n();
   const search = useSearch();
@@ -294,10 +342,13 @@ export default function Benevole() {
   };
 
   const isDayFull = (day: {
+    date: string;
     isOpen: boolean;
     registeredCount?: number | null;
     capacity: number;
-  }) => !day.isOpen || (day.registeredCount ?? 0) >= day.capacity;
+  }) =>
+    (!day.isOpen || (day.registeredCount ?? 0) >= day.capacity) &&
+    !isAutoReopenedForServiceOnly(day);
 
   const availableDays = days?.filter(day => !isDayFull(day)) || [];
   const selectedDay = days?.find(day => day.id.toString() === formData.dayId);
@@ -1136,6 +1187,14 @@ export default function Benevole() {
                             {formTexts.dayFull}
                           </p>
                         )}
+                        {!isGroup &&
+                          selectedDay &&
+                          isAutoReopenedForServiceOnly(selectedDay) && (
+                            <p className="text-sm text-amber-700 flex items-center gap-2">
+                              <Info className="h-4 w-4" />
+                              Après 17h30, seul le créneau service est ouvert pour ce jour.
+                            </p>
+                          )}
                         {selectedGroupDayInsufficientCapacity && (
                           <p className="text-sm text-destructive flex items-center gap-2">
                             <AlertCircle className="h-4 w-4" />
