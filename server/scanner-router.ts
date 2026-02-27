@@ -99,7 +99,7 @@ export function extractTokenFromUrl(rawInput: string): string {
     }
 
     // Legacy printed QR formats (without /buy/ segment)
-    const legacyGoodieId = cleanPath.match(/\/goodies\/(\d+)$/i)?.[1];
+    const legacyGoodieId = cleanPath.match(/\/(?:goodies|goodie)\/(\d+)$/i)?.[1];
     if (legacyGoodieId) return `PROD-GOODIE-${legacyGoodieId}`;
     const legacyPastryId = cleanPath.match(
       /\/(?:patisserie|pastries)\/(\d+)$/i
