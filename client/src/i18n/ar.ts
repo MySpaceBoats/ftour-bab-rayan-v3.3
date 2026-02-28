@@ -29,6 +29,7 @@ export const ar: Translations = {
   cta: {
     volunteer: 'كن متطوعاً',
     donate: 'تبرع',
+    partner: 'كن شريكاً',
     register: 'سجل',
     submit: 'إرسال',
     cancel: 'إلغاء',

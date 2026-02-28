@@ -15,6 +15,7 @@ import {
   Menu,
   Heart,
   Users,
+  Handshake,
   ShoppingBag,
   Home,
   Info,
@@ -48,6 +49,15 @@ export default function Navbar() {
   const localizedHref = (path: string) => {
     if (path === "/") return `/${lang}`;
     return `/${lang}${path}`;
+  };
+
+  const trackNavCtaClick = (label: string) => {
+    if (typeof window === "undefined") return;
+    const gtag = (window as Window & { gtag?: (...args: unknown[]) => void })
+      .gtag;
+    if (typeof gtag === "function") {
+      gtag("event", "nav_cta_click", { label });
+    }
   };
 
   // Nouveau menu principal selon le cahier des charges
@@ -219,10 +229,23 @@ export default function Navbar() {
               <Button
                 size="sm"
                 variant="outline"
+                onClick={() => trackNavCtaClick("faire_un_don")}
                 className="border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829] font-semibold"
               >
                 <Heart className="h-4 w-4 mr-2" />
                 {t.cta.donate}
+              </Button>
+            </Link>
+            <Link href={localizedHref("/devenir-partenaire")}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => trackNavCtaClick("devenir_partenaire")}
+                className="border-[#CDBB8A] text-[#CDBB8A] bg-transparent hover:bg-[#CDBB8A] hover:text-[#4A4829] font-semibold"
+                aria-label={t.cta.partner}
+              >
+                <Handshake className="h-4 w-4 mr-2" />
+                {t.cta.partner}
               </Button>
             </Link>
           </div>
@@ -334,10 +357,25 @@ export default function Navbar() {
                   >
                     <Button
                       variant="outline"
+                      onClick={() => trackNavCtaClick("faire_un_don")}
                       className="w-full border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829] font-semibold"
                     >
                       <Heart className="h-4 w-4 mr-2" />
                       {t.cta.donate}
+                    </Button>
+                  </Link>
+                  <Link
+                    href={localizedHref("/devenir-partenaire")}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <Button
+                      variant="outline"
+                      onClick={() => trackNavCtaClick("devenir_partenaire")}
+                      className="w-full border-[#CDBB8A] text-[#CDBB8A] bg-transparent hover:bg-[#CDBB8A] hover:text-[#4A4829] font-semibold"
+                      aria-label={t.cta.partner}
+                    >
+                      <Handshake className="h-4 w-4 mr-2" />
+                      {t.cta.partner}
                     </Button>
                   </Link>
                 </div>

@@ -17,6 +17,7 @@ import Benevole from "@/features/public/pages/Benevole";
 import Evenement from "@/features/public/pages/Evenement";
 import Association from "@/features/public/pages/Association";
 import Contact from "@/features/public/pages/Contact";
+import DevenirPartenaire from "@/features/public/pages/DevenirPartenaire";
 import FAQ from "@/features/public/pages/FAQ";
 import MentionsLegales from "@/features/public/pages/MentionsLegales";
 import RibDownload from "@/features/public/pages/RibDownload";
@@ -299,6 +300,7 @@ function LocalizedRoutes() {
       <Route path="/:lang/evenement" component={Evenement} />
       <Route path="/:lang/association" component={Association} />
       <Route path="/:lang/contact" component={Contact} />
+      <Route path="/:lang/devenir-partenaire" component={DevenirPartenaire} />
       <Route path="/:lang/faq" component={FAQ} />
       <Route path="/:lang/mentions-legales" component={MentionsLegales} />
       <Route path="/:lang/RIB" component={RibDownload} />
@@ -365,6 +367,9 @@ function LocalizedRoutes() {
       </Route>
       <Route path="/contact">
         {() => <Redirect to={`/${lang}/contact`} />}
+      </Route>
+      <Route path="/devenir-partenaire">
+        {() => <Redirect to={`/${lang}/devenir-partenaire`} />}
       </Route>
       <Route path="/faq">{() => <Redirect to={`/${lang}/faq`} />}</Route>
       <Route path="/mentions-legales">
