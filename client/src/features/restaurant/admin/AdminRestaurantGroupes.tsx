@@ -106,7 +106,15 @@ export default function AdminRestaurantGroupes() {
     email: "",
     phone: "",
     date: "",
-    seatsTotal: 2,
+    nbAdult: 2,
+    nbKids: 0,
+    totalAmount: 580,
+    amountReceived: 0,
+    deposit: 0,
+    paymentMode: "cash",
+    respResa: "Nayla",
+    modeDeposit: "",
+    dateAvReg: "",
     notes: "",
     displayChoice: "jardin",
     status: "pending_validation",
@@ -288,7 +296,15 @@ export default function AdminRestaurantGroupes() {
           email: "",
           phone: "",
           date: "",
-          seatsTotal: 2,
+          nbAdult: 2,
+          nbKids: 0,
+          totalAmount: 580,
+          amountReceived: 0,
+          deposit: 0,
+          paymentMode: "cash",
+          respResa: "Nayla",
+          modeDeposit: "",
+          dateAvReg: "",
           notes: "",
           displayChoice: "jardin",
           status: "pending_validation",
@@ -380,8 +396,13 @@ export default function AdminRestaurantGroupes() {
 
     createManualMutation.mutate({
       ...createForm,
+      seatsTotal: createForm.nbAdult + createForm.nbKids,
       type: createForm.type as "groupe" | "entreprise",
       displayChoice: createForm.displayChoice as "jardin" | "brasserie",
+      paymentMode: createForm.paymentMode as "cash" | "virement" | "espece",
+      respResa: createForm.respResa as "Nayla" | "Hind" | "Kamal" | "Rita",
+      modeDeposit: createForm.modeDeposit || undefined,
+      dateAvReg: createForm.dateAvReg || undefined,
       status: createForm.status as
         | "pending_validation"
         | "validated_pending_payment"
@@ -1652,19 +1673,145 @@ export default function AdminRestaurantGroupes() {
             </div>
 
             <div className="space-y-2">
-              <Label>Nombre de places</Label>
+              <Label>NB adultes</Label>
               <Input
                 type="number"
                 min={2}
-                value={createForm.seatsTotal}
+                value={createForm.nbAdult}
                 onChange={e =>
                   setCreateForm({
                     ...createForm,
-                    seatsTotal: Math.max(
+                    nbAdult: Math.max(
                       2,
                       parseInt(e.target.value || "2", 10)
                     ),
                   })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>NB kids</Label>
+              <Input
+                type="number"
+                min={0}
+                value={createForm.nbKids}
+                onChange={e =>
+                  setCreateForm({
+                    ...createForm,
+                    nbKids: Math.max(0, parseInt(e.target.value || "0", 10)),
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Total (DH)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={createForm.totalAmount}
+                onChange={e =>
+                  setCreateForm({
+                    ...createForm,
+                    totalAmount: Math.max(
+                      0,
+                      parseFloat(e.target.value || "0") || 0
+                    ),
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Montant reçu (DH)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={createForm.amountReceived}
+                onChange={e =>
+                  setCreateForm({
+                    ...createForm,
+                    amountReceived: Math.max(
+                      0,
+                      parseFloat(e.target.value || "0") || 0
+                    ),
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Acompte (DH)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={createForm.deposit}
+                onChange={e =>
+                  setCreateForm({
+                    ...createForm,
+                    deposit: Math.max(0, parseFloat(e.target.value || "0") || 0),
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Mode paiement</Label>
+              <Select
+                value={createForm.paymentMode}
+                onValueChange={value =>
+                  setCreateForm({ ...createForm, paymentMode: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="virement">Virement</SelectItem>
+                  <SelectItem value="espece">Espèce</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>RESP RESA</Label>
+              <Select
+                value={createForm.respResa}
+                onValueChange={value =>
+                  setCreateForm({ ...createForm, respResa: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Nayla">Nayla</SelectItem>
+                  <SelectItem value="Hind">Hind</SelectItem>
+                  <SelectItem value="Kamal">Kamal</SelectItem>
+                  <SelectItem value="Rita">Rita</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Mode deposit</Label>
+              <Input
+                value={createForm.modeDeposit}
+                onChange={e =>
+                  setCreateForm({ ...createForm, modeDeposit: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Date AV REG</Label>
+              <Input
+                type="date"
+                value={createForm.dateAvReg}
+                onChange={e =>
+                  setCreateForm({ ...createForm, dateAvReg: e.target.value })
                 }
               />
             </div>
