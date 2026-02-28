@@ -358,6 +358,14 @@ export default function Benevole() {
     return dayDate > today;
   };
 
+  const isPastDay = (date: string) => {
+    const dayDate = new Date(date);
+    const today = new Date();
+    dayDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    return dayDate < today;
+  };
+
   const availableDays = days?.filter(day => !isDayFull(day)) || [];
   const selectedDay = days?.find(day => day.id.toString() === formData.dayId);
   const selectedDayIsFull = selectedDay ? isDayFull(selectedDay) : false;
@@ -1142,7 +1150,7 @@ export default function Benevole() {
                                         month: "long",
                                       }
                                     )}
-                                    {isDayFull(day)
+                                    {isDayFull(day) && !isPastDay(day.date)
                                       ? ` - ${isFutureDay(day.date) ? formTexts.upcomingOpenSoon : formTexts.dayFull}`
                                       : ""}
                                   </SelectItem>
