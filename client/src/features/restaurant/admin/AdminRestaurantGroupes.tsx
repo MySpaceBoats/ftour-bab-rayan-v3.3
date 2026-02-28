@@ -635,6 +635,9 @@ export default function AdminRestaurantGroupes() {
                         {renderSortIcon("date")}
                       </button>
                     </TableHead>
+                    <TableHead>Montant total</TableHead>
+                    <TableHead>Montant reçu</TableHead>
+                    <TableHead>Montant restant</TableHead>
                     <TableHead>
                       <button
                         type="button"
