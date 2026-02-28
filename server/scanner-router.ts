@@ -1110,8 +1110,16 @@ export const scannerRouter = router({
             });
           await supabase
             .from("orders")
-            .update({ status: "delivered" })
+            .update({ status: "delivered", processed_by: validatedBy || null })
             .eq("id", input.entityId);
+          await logQRScanSafely({
+            token: input.token,
+            scope: "goodies",
+            entityId: input.entityId,
+            validationAction: "delivered",
+            validatedBy,
+            success: true,
+          });
           return { success: true, message: "Commande goodies remise !" };
         }
         // Fallback: try via qr_tokens table
@@ -1120,6 +1128,14 @@ export const scannerRouter = router({
             input.token,
             "goodies"
           );
+          await logQRScanSafely({
+            token: input.token,
+            scope: "goodies",
+            entityId: input.entityId,
+            validationAction: "delivered",
+            validatedBy,
+            success: true,
+          });
           return { success: true, message: "Commande goodies validée !" };
         } catch (err: any) {
           throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
