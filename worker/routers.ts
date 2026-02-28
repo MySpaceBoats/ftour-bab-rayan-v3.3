@@ -3355,6 +3355,63 @@ const checkinRouter = router({
 
       return { success: true };
     }),
+
+  cancelVolunteer: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      // Récupérer le bénévole par son token
+      const { data: volunteer, error } = await supabase
+        .from("volunteers")
+        .select("*")
+        .eq("qr_token", input.token)
+        .single();
+
+      if (error || !volunteer) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Inscription introuvable. Le lien est peut-être invalide.",
+        });
+      }
+
+      // Déjà annulé
+      if (volunteer.status === "cancelled") {
+        return {
+          success: true,
+          alreadyCancelled: true,
+          message: "Cette inscription a déjà été annulée.",
+          volunteer: {
+            firstName: volunteer.first_name,
+            lastName: volunteer.last_name,
+          },
+        };
+      }
+
+      // Déjà validé sur site
+      if (volunteer.status === "present" || volunteer.qr_status === "validated") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Impossible d'annuler : votre présence a déjà été validée sur site.",
+        });
+      }
+
+      // Annuler l'inscription
+      await supabase
+        .from("volunteers")
+        .update({ status: "cancelled", qr_status: "expired" })
+        .eq("id", volunteer.id);
+
+      return {
+        success: true,
+        alreadyCancelled: false,
+        message: "Votre inscription a bien été annulée.",
+        volunteer: {
+          firstName: volunteer.first_name,
+          lastName: volunteer.last_name,
+        },
+      };
+    }),
 });
 
 // ============================================
