@@ -16,7 +16,6 @@ import {
   Heart,
   Users,
   ShoppingBag,
-  Image,
   Home,
   Info,
   LogOut,
@@ -66,7 +65,6 @@ export default function Navbar() {
       label: t.nav.boutique,
       icon: ShoppingBag,
     },
-    { href: localizedHref("/galerie"), label: t.nav.gallery, icon: Image },
     { href: localizedHref("/dons"), label: "Donation", icon: Heart },
   ];
 
