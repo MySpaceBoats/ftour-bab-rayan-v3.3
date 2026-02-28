@@ -5,8 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
-import { useAllowedDashboardKeys } from "@/dashboard/access";
-import { DASHBOARD_ROUTE_PERMISSIONS } from "@shared/dashboard/dashboardItems";
 import {
   Users,
   ShoppingBag,
@@ -36,7 +34,6 @@ import {
 // ============================================
 
 type ModuleDefinition = {
-  key?: string;
   label: string;
   description: string;
   route: string;
@@ -340,7 +337,6 @@ const sections: SectionDefinition[] = [
 
 export default function Admin() {
   const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
-  const { isLoading: dashboardLoading, hasAccess } = useAllowedDashboardKeys();
   const [, navigate] = useLocation();
 
   const isAdmin = user?.role && ALL_ADMIN_ROLES.includes(user.role);
@@ -410,7 +406,7 @@ export default function Admin() {
     navigate("/");
   };
 
-  if (authLoading || dashboardLoading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -448,11 +444,7 @@ export default function Admin() {
   const visibleSections = sections
     .map(section => ({
       ...section,
-      modules: section.modules.filter(m => {
-        if (!m.allowedRoles.includes(userRole)) return false;
-        const key = m.key || DASHBOARD_ROUTE_PERMISSIONS[m.route];
-        return key ? hasAccess(key) : true;
-      }),
+      modules: section.modules.filter(m => m.allowedRoles.includes(userRole)),
     }))
     .filter(section => section.modules.length > 0);
 
@@ -489,7 +481,7 @@ export default function Admin() {
       <main className="container py-8">
         {/* Quick Stats */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {canManageVolunteers && hasAccess("dash.volunteers.table") && (
+          {canManageVolunteers && (
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -510,7 +502,7 @@ export default function Admin() {
             </Card>
           )}
 
-          {canManageOrders && hasAccess("dash.orders.goodies") && (
+          {canManageOrders && (
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -531,7 +523,7 @@ export default function Admin() {
             </Card>
           )}
 
-          {canManageDonations && hasAccess("dash.donations.kpis") && (
+          {canManageDonations && (
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -552,7 +544,7 @@ export default function Admin() {
             </Card>
           )}
 
-          {canManageRestaurant && hasAccess("dash.reservations.table") && restaurantStats && (
+          {canManageRestaurant && restaurantStats && (
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">

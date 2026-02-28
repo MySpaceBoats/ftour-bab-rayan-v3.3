@@ -13,7 +13,6 @@ import {
   formatCasablancaDateTimeLong,
 } from "./email";
 import * as reservationServices from "./restaurant-reservation-services";
-import * as supabaseServices from "./supabase-services";
 import crypto from "crypto";
 
 // ============================================
@@ -72,28 +71,6 @@ async function runAutoCancellationAndNotify() {
         }
       );
     }
-  }
-}
-
-async function assertDashboardAccess(
-  user: { openId: string; role: string } | null | undefined,
-  itemKey: string
-) {
-  if (!user) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Authentification requise" });
-  }
-
-  if (["admin", "super_admin"].includes(user.role)) {
-    return;
-  }
-
-  const hasAccess = await supabaseServices.userHasDashboardItemAccessSupabase(
-    user.openId,
-    itemKey
-  );
-
-  if (!hasAccess) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Permission dashboard refusée" });
   }
 }
 
@@ -581,7 +558,6 @@ export const restaurantReservationsRouter = router({
     if (!allowedRoles.includes(ctx.user?.role || "")) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
     }
-    await assertDashboardAccess(ctx.user, "dash.reservations.table");
     try {
       await runAutoCancellationAndNotify();
       return await reservationServices.listRestaurantReservations({
@@ -604,7 +580,6 @@ export const restaurantReservationsRouter = router({
     if (!allowedRoles.includes(ctx.user?.role || "")) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
     }
-    await assertDashboardAccess(ctx.user, "dash.reservations.groups");
     try {
       await runAutoCancellationAndNotify();
       return await reservationServices.listRestaurantReservations({
@@ -627,7 +602,6 @@ export const restaurantReservationsRouter = router({
     if (!allowedRoles.includes(ctx.user?.role || "")) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
     }
-    await assertDashboardAccess(ctx.user, "dash.reservations.enterprises");
     try {
       await runAutoCancellationAndNotify();
       return await reservationServices.listRestaurantReservations({
