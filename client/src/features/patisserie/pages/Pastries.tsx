@@ -185,7 +185,9 @@ export default function Pastries() {
                         <div className="flex items-center justify-between">
                           <div>
                             <span className="text-2xl font-bold text-primary">{pastry.price} DH</span>
-                            <p className="text-xs text-muted-foreground">Stock: {pastry.stock ?? 0}</p>
+                            <p className={`text-xs font-medium ${(pastry.stock ?? 0) > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                              {(pastry.stock ?? 0) > 0 ? `${t.pastries.inStock || 'En stock'} (${pastry.stock})` : (t.pastries.outOfStock || 'Rupture de stock')}
+                            </p>
                           </div>
                           <Button
                             onClick={() => addToCart(pastry)}
