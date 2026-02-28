@@ -2129,6 +2129,48 @@ const checkinRouter = router({
 
       return result;
     }),
+
+  cancelVolunteer: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .mutation(async ({ input }) => {
+      const result = await supabaseServices.cancelVolunteerByTokenSupabase(input.token);
+
+      if (!result) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Inscription introuvable. Le lien est peut-être invalide.",
+        });
+      }
+
+      if (result.alreadyCancelled) {
+        return {
+          success: true,
+          alreadyCancelled: true,
+          message: "Cette inscription a déjà été annulée.",
+          volunteer: {
+            firstName: result.volunteer.firstName,
+            lastName: result.volunteer.lastName,
+          },
+        };
+      }
+
+      if (result.alreadyValidated) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Impossible d'annuler : votre présence a déjà été validée sur site.",
+        });
+      }
+
+      return {
+        success: true,
+        alreadyCancelled: false,
+        message: "Votre inscription a bien été annulée.",
+        volunteer: {
+          firstName: result.volunteer.firstName,
+          lastName: result.volunteer.lastName,
+        },
+      };
+    }),
 });
 
 // ============================================

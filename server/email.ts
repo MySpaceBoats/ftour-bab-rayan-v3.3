@@ -317,6 +317,16 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
       </p>
     </div>
 
+    <!-- Lien d'annulation -->
+    <div style="text-align: center; margin: 20px 0; padding: 15px; background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;">
+      <p style="color: #991b1b; font-size: 14px; margin: 0 0 10px 0;">
+        En cas d'empêchement, vous pouvez annuler votre inscription en cliquant sur le lien ci-dessous :
+      </p>
+      <a href="${data.baseUrl}/cancel-volunteer/${data.qrToken}" style="display: inline-block; background-color: #dc2626; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 6px; font-size: 14px; font-weight: 600;">
+        Annuler mon inscription
+      </a>
+    </div>
+
     <!-- Consignes importantes (obligatoires) -->
     <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fef3c7; border-radius: 8px; margin: 20px 0;">
       <tr>

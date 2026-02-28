@@ -102,6 +102,7 @@ import AdminRamadanStats from "@/features/ops/admin/AdminRamadanStats";
 // ============================================
 import Scanner from "@/features/scanner/pages/Scanner";
 import Checkin from "@/features/scanner/pages/Checkin";
+import CancelVolunteer from "@/features/scanner/pages/CancelVolunteer";
 import ScannerPatisserie from "@/features/scanner/pages/ScannerPatisserie";
 import ScannerUnifie from "@/features/scanner/pages/ScannerUnifie";
 import ScannerGoodies from "@/features/scanner/pages/ScannerGoodies";
@@ -271,6 +272,7 @@ function LocalizedRoutes() {
           PUBLIC CHECK-IN — sans :lang
           ================================================ */}
       <Route path="/checkin/:token" component={Checkin} />
+      <Route path="/cancel-volunteer/:token" component={CancelVolunteer} />
       <Route
         path="/checkin-reservation/:token"
         component={CheckinReservation}
