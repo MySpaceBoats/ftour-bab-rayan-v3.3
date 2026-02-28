@@ -100,6 +100,13 @@ const isServiceOnlySelection = (volunteerSlots: string[]) =>
   volunteerSlots.length > 0 &&
   volunteerSlots.every(slot => slot === "service_ftour");
 
+const DUPLICATE_SIGNUP_EXEMPT_EMAILS = new Set([
+  "reda.sebbani@gmail.com",
+]);
+
+const isDuplicateSignupExemptEmail = (email: string) =>
+  DUPLICATE_SIGNUP_EXEMPT_EMAILS.has(email.toLowerCase().trim());
+
 const parseGroupVolunteersFromSheet = (
   sheet: XLSX.WorkSheet
 ): ParsedGroupVolunteerRow[] => {
@@ -1271,11 +1278,14 @@ const volunteersRouter = router({
       }
 
       // Check for duplicate email on the same day
-      const emailExists =
-        await supabaseServices.checkVolunteerEmailExistsForDay(
-          normalizedEmail,
-          input.dayId
-        );
+      const shouldSkipDuplicateCheck =
+        isDuplicateSignupExemptEmail(normalizedEmail);
+      const emailExists = shouldSkipDuplicateCheck
+        ? false
+        : await supabaseServices.checkVolunteerEmailExistsForDay(
+            normalizedEmail,
+            input.dayId
+          );
       if (emailExists) {
         throw new TRPCError({
           code: "CONFLICT",
@@ -1822,10 +1832,14 @@ const volunteersRouter = router({
         | null = null;
 
       if (input.action === "validate") {
-        const duplicate = await supabaseServices.checkVolunteerEmailExistsForDay(
-          normalizedResponsibleEmail,
-          dayId
-        );
+        const duplicate = isDuplicateSignupExemptEmail(
+          normalizedResponsibleEmail
+        )
+          ? false
+          : await supabaseServices.checkVolunteerEmailExistsForDay(
+              normalizedResponsibleEmail,
+              dayId
+            );
         if (duplicate) {
           throw new TRPCError({
             code: "CONFLICT",
