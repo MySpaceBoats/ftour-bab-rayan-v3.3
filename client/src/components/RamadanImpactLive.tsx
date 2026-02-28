@@ -47,11 +47,11 @@ export default function RamadanImpactLive({ className = "" }: { className?: stri
               <CardContent><div className="text-3xl font-bold">{data.todayRamadanDay}</div></CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Repas distribués (cumul)</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Repas distribués</CardTitle></CardHeader>
               <CardContent><div className="text-3xl font-bold">{formatNumber(data.totalsToDate.meals)}</div></CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Bénévoles (présences cumulées)</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Bénévoles (présents)</CardTitle></CardHeader>
               <CardContent><div className="text-3xl font-bold">{formatNumber(data.totalsToDate.volunteersPresence)}</div></CardContent>
             </Card>
           </div>

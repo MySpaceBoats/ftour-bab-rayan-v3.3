@@ -27,6 +27,7 @@ export const fr = {
   cta: {
     volunteer: 'Devenir bénévole',
     donate: 'Faire un don',
+    partner: 'Devenir partenaire',
     register: "S'inscrire",
     submit: 'Envoyer',
     cancel: 'Annuler',

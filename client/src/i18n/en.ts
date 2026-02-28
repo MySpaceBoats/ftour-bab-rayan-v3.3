@@ -29,6 +29,7 @@ export const en: Translations = {
   cta: {
     volunteer: 'Become a Volunteer',
     donate: 'Donate',
+    partner: 'Become a Partner',
     register: 'Register',
     submit: 'Submit',
     cancel: 'Cancel',

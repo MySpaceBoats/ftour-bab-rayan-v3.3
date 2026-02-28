@@ -247,6 +247,7 @@ export interface VolunteerEmailData {
 export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { subject: string; html: string } {
   const qrCodeUrl = getQrCodeUrl(data.qrToken, data.baseUrl);
   const checkinUrl = `${data.baseUrl}/checkin/${data.qrToken}`;
+  const cancellationUrl = `${data.baseUrl}/benevole-annulation/${data.qrToken}`;
 
   // Build slots display with dynamic times based on iftar time
   const times = computeSlotTimes(data.startTime);
@@ -610,6 +611,45 @@ export function generateContactNotificationEmail(data: ContactEmailData): { subj
 }
 
 
+
+
+export interface PartnerLeadEmailData {
+  companyName: string;
+  contactName: string;
+  email: string;
+  phone?: string;
+  city?: string;
+  partnershipType?: string;
+  budgetRange?: string;
+  message?: string;
+  locale?: string;
+  source?: string;
+}
+
+export function generatePartnerLeadNotificationEmail(data: PartnerLeadEmailData): { subject: string; html: string } {
+  const content = `
+    <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">Nouveau lead partenaire</h2>
+
+    <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+      <tr><td style="padding: 10px; background-color: #f3f4f6; font-weight: bold; width: 160px;">Entreprise</td><td style="padding: 10px; background-color: #f9fafb;">${escapeHtml(data.companyName)}</td></tr>
+      <tr><td style="padding: 10px; background-color: #f3f4f6; font-weight: bold;">Contact</td><td style="padding: 10px; background-color: #f9fafb;">${escapeHtml(data.contactName)}</td></tr>
+      <tr><td style="padding: 10px; background-color: #f3f4f6; font-weight: bold;">Email</td><td style="padding: 10px; background-color: #f9fafb;"><a href="mailto:${escapeHtml(data.email)}">${escapeHtml(data.email)}</a></td></tr>
+      ${data.phone ? `<tr><td style="padding: 10px; background-color: #f3f4f6; font-weight: bold;">Téléphone</td><td style="padding: 10px; background-color: #f9fafb;">${escapeHtml(data.phone)}</td></tr>` : ''}
+      ${data.city ? `<tr><td style="padding: 10px; background-color: #f3f4f6; font-weight: bold;">Ville</td><td style="padding: 10px; background-color: #f9fafb;">${escapeHtml(data.city)}</td></tr>` : ''}
+      ${data.partnershipType ? `<tr><td style="padding: 10px; background-color: #f3f4f6; font-weight: bold;">Type partenariat</td><td style="padding: 10px; background-color: #f9fafb;">${escapeHtml(data.partnershipType)}</td></tr>` : ''}
+      ${data.budgetRange ? `<tr><td style="padding: 10px; background-color: #f3f4f6; font-weight: bold;">Budget</td><td style="padding: 10px; background-color: #f9fafb;">${escapeHtml(data.budgetRange)}</td></tr>` : ''}
+      ${data.locale ? `<tr><td style="padding: 10px; background-color: #f3f4f6; font-weight: bold;">Locale</td><td style="padding: 10px; background-color: #f9fafb;">${escapeHtml(data.locale)}</td></tr>` : ''}
+      ${data.source ? `<tr><td style="padding: 10px; background-color: #f3f4f6; font-weight: bold;">Source</td><td style="padding: 10px; background-color: #f9fafb;">${escapeHtml(data.source)}</td></tr>` : ''}
+    </table>
+
+    ${data.message ? `<div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;"><h3 style="color: #374151; margin: 0 0 10px 0; font-size: 16px;">Message :</h3><p style="margin: 0; color: #374151; white-space: pre-wrap;">${escapeHtml(data.message)}</p></div>` : ''}
+  `;
+
+  return {
+    subject: `🤝 Nouveau lead partenaire - ${data.companyName}`,
+    html: baseTemplate(content),
+  };
+}
 
 // ============================================
 // RESTAURANT RESERVATION EMAIL LAYOUT + TEMPLATES
@@ -1719,6 +1759,54 @@ export interface GroupRegistrationEmailData {
   dayDate?: string;
   startTime?: string;
   fileName: string;
+}
+
+export interface GroupRefusalEmailData {
+  responsibleName: string;
+  groupName: string;
+  dayNumber?: number;
+  rejectionReason?: string;
+}
+
+export function generateGroupRefusalEmail(data: GroupRefusalEmailData): { subject: string; html: string } {
+  const content = `
+    <h2 style="color: #991b1b; margin: 0 0 20px 0; font-size: 24px;">
+      Demande groupe bénévole non retenue
+    </h2>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Cher(e) <strong>${data.responsibleName}</strong>,
+    </p>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Nous avons bien étudié votre demande d'inscription groupe <strong>${data.groupName}</strong>${data.dayNumber ? ` pour le jour ${data.dayNumber} du Ramadan` : ''}.
+      Malheureusement, nous ne pouvons pas y donner suite.
+    </p>
+
+    ${data.rejectionReason ? `
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fef2f2; border-radius: 8px; margin: 20px 0; border: 1px solid #fca5a5;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #991b1b; margin: 0 0 10px 0; font-size: 16px;">Motif</h3>
+          <p style="margin: 0; color: #374151; font-size: 15px; line-height: 1.6;">${data.rejectionReason}</p>
+        </td>
+      </tr>
+    </table>` : ''}
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
+      Pour toute question, n'hésitez pas à nous contacter à <a href="mailto:contact@ftourbabrayan.ma" style="color: #166534;">contact@ftourbabrayan.ma</a>.
+    </p>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">
+      Cordialement,<br>
+      <strong>L'équipe Ftour Bab Rayan</strong>
+    </p>
+  `;
+
+  return {
+    subject: `Votre demande groupe bénévole – ${data.groupName}`,
+    html: baseTemplate(content),
+  };
 }
 
 export function generateGroupRegistrationEmail(data: GroupRegistrationEmailData): { subject: string; html: string } {

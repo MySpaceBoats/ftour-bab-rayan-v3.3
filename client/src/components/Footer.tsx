@@ -1,10 +1,10 @@
 import { Link } from "wouter";
-import { Heart, Facebook, Instagram, Linkedin, Mail, Phone, MapPin } from "lucide-react";
+import { Facebook, Heart, Instagram, Linkedin, Mail, Phone, MapPin } from "lucide-react";
 import { useI18n } from "@/i18n";
 
 export default function Footer() {
   const { t, lang } = useI18n();
-  const currentYear = new Date().getFullYear();
+  const footerYear = 2015;
   const isRTL = lang === 'ar';
 
   return (
@@ -142,7 +142,7 @@ export default function Footer() {
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-[#F2E9D3]/10">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-[#E6DCC3]">
-            <p>{t.footer.copyright.replace('{year}', currentYear.toString())}</p>
+            <p>{t.footer.copyright.replace('{year}', footerYear.toString())}</p>
             <p className="flex items-center gap-1">
               {t.footer.madeWith} <Heart className="h-4 w-4 text-[#CDBB8A]" /> {t.footer.inMorocco}
             </p>

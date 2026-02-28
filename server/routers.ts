@@ -11,6 +11,8 @@ import {
   generateDonationConfirmationEmail,
   generateContactNotificationEmail,
   generateGroupRegistrationEmail,
+  generateGroupRefusalEmail,
+  generatePartnerLeadNotificationEmail,
 } from "./email";
 import {
   signInUser,
@@ -455,7 +457,7 @@ const sendGroupVolunteerConfirmationEmails = async ({
 
   for (let batchIndex = 0; batchIndex < emailBatches.length; batchIndex += 1) {
     const emailBatch = emailBatches[batchIndex];
-    const batchResults = await runWithConcurrencyLimit(emailBatch, 3);
+    const batchResults = await runWithConcurrencyLimit(emailBatch, 1);
     details.push(...batchResults);
 
     if (batchIndex < emailBatches.length - 1) {
@@ -1525,6 +1527,32 @@ const volunteersRouter = router({
       return supabaseServices.getVolunteersByDaySupabase(input.dayId);
     }),
 
+  cancelByToken: publicProcedure
+    .input(z.object({ token: z.string().min(10) }))
+    .mutation(async ({ input }) => {
+      const volunteer = await supabaseServices.getVolunteerByTokenSupabase(
+        input.token
+      );
+
+      if (!volunteer) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Lien d'annulation invalide ou expiré",
+        });
+      }
+
+      if (volunteer.status === "cancelled") {
+        return { success: true, alreadyCancelled: true };
+      }
+
+      await supabaseServices.updateVolunteerStatusSupabase(
+        volunteer.id,
+        "cancelled"
+      );
+
+      return { success: true, alreadyCancelled: false };
+    }),
+
   updateStatus: adminOpsProcedure
     .input(
       z.object({
@@ -1967,10 +1995,16 @@ const volunteersRouter = router({
             }
           }
         } else {
+          const refusalEmailData = generateGroupRefusalEmail({
+            responsibleName: String(request.responsible_name ?? request.responsibleName),
+            groupName: String(request.group_name ?? request.groupName),
+            dayNumber: day.dayNumber,
+            rejectionReason: input.rejectionReason,
+          });
           await sendEmail({
             to: normalizedResponsibleEmail,
-            subject: "Votre demande groupe bénévole est refusée",
-            html: `<p>Bonjour ${request.responsible_name ?? request.responsibleName},</p><p>Votre demande d'inscription groupe <strong>${request.group_name ?? request.groupName}</strong> n'a pas pu être validée.</p>${input.rejectionReason ? `<p>Motif: ${input.rejectionReason}</p>` : ""}`,
+            subject: refusalEmailData.subject,
+            html: refusalEmailData.html,
           });
         }
       } catch (error) {
@@ -2620,6 +2654,41 @@ const contactRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       return supabaseServices.deleteContactMessageSupabase(input.id);
+    }),
+});
+
+
+const partnerLeadsRouter = router({
+  create: publicProcedure
+    .input(
+      z.object({
+        companyName: z.string().min(2),
+        contactName: z.string().min(2),
+        email: z.string().email(),
+        phone: z.string().optional(),
+        city: z.string().optional(),
+        partnershipType: z.string().optional(),
+        budgetRange: z.string().optional(),
+        message: z.string().optional(),
+        source: z.string().optional(),
+        locale: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const lead = await supabaseServices.createPartnerLeadSupabase(input);
+
+      try {
+        const emailData = generatePartnerLeadNotificationEmail(input);
+        await sendEmail({
+          to: "contact@ftourbabrayan.ma",
+          subject: emailData.subject,
+          html: emailData.html,
+        });
+      } catch (error) {
+        console.error("[Partner Leads] Email send failed:", error);
+      }
+
+      return { success: true, id: lead.id };
     }),
 });
 
@@ -5491,6 +5560,7 @@ export const appRouter = router({
   orders: ordersRouter,
   donations: donationsRouter,
   contact: contactRouter,
+  partnerLeads: partnerLeadsRouter,
   users: usersRouter,
   public: publicRouter,
   upload: uploadRouter,
@@ -5530,7 +5600,7 @@ const pastriesRouter = router({
     }
   }),
 
-  create: adminBoutiqueProcedure
+  create: adminPatisserieProcedure
     .input(
       z.object({
         name: z.string(),
@@ -5583,7 +5653,7 @@ const pastriesRouter = router({
       return data;
     }),
 
-  update: adminBoutiqueProcedure
+  update: adminPatisserieProcedure
     .input(
       z.object({
         id: z.number(),
@@ -5641,7 +5711,7 @@ const pastriesRouter = router({
       return data;
     }),
 
-  delete: adminBoutiqueProcedure
+  delete: adminPatisserieProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const client = getSupabaseAdminClient();
@@ -6146,6 +6216,7 @@ export const appRouterUpdated = router({
   orders: ordersRouter,
   donations: donationsRouter,
   contact: contactRouter,
+  partnerLeads: partnerLeadsRouter,
   users: usersRouter,
   public: publicRouter,
   upload: uploadRouter,

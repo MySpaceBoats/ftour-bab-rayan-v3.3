@@ -57,6 +57,13 @@ function mapReservation(r: any) {
     processedBy: r.processed_by ?? r.processedBy ?? null,
     processedAt: rawProcessedAt ? new Date(rawProcessedAt) : null,
     notes: r.notes,
+    totalAmount: Number(r.total_amount ?? r.totalAmount ?? 0),
+    amountReceived: Number(r.amount_received ?? r.amountReceived ?? 0),
+    deposit: Number(r.deposit ?? r.depositAmount ?? 0),
+    nbAdult: Number(r.nb_adult ?? r.nbAdult ?? 0),
+    nbKids: Number(r.nb_kids ?? r.nbKids ?? 0),
+    paymentMode: r.payment_mode ?? r.paymentMode ?? "cash",
+    respResa: r.resp_resa ?? r.respResa ?? "Nayla",
     createdAt: rawCreatedAt ? new Date(rawCreatedAt) : new Date(),
     updatedAt: rawUpdatedAt ? new Date(rawUpdatedAt) : new Date(),
   };
@@ -83,6 +90,13 @@ export async function createRestaurantReservation(data: {
   groupType?: string;
   notes?: string;
   displayChoice?: string;
+  totalAmount?: number;
+  amountReceived?: number;
+  deposit?: number;
+  nbAdult?: number;
+  nbKids?: number;
+  paymentMode?: "cash" | "virement" | "espece";
+  respResa?: "Nayla" | "Hind" | "Kamal" | "Rita";
 }) {
   try {
     const client = getClient();
@@ -102,6 +116,13 @@ export async function createRestaurantReservation(data: {
         group_name: data.groupName || null,
         group_type: data.groupType || null,
         notes: data.notes || null,
+        total_amount: data.totalAmount ?? 0,
+        amount_received: data.amountReceived ?? 0,
+        deposit: data.deposit ?? 0,
+        nb_adult: data.nbAdult ?? 0,
+        nb_kids: data.nbKids ?? 0,
+        payment_mode: data.paymentMode ?? "cash",
+        resp_resa: data.respResa ?? "Nayla",
         display_choice: data.displayChoice || null,
         status: "pending_validation",
         payment_status: "not_requested",
@@ -387,6 +408,13 @@ export async function updateRestaurantReservation(
     companyName?: string;
     groupName?: string;
     displayChoice?: string;
+    totalAmount?: number;
+    amountReceived?: number;
+    deposit?: number;
+    nbAdult?: number;
+    nbKids?: number;
+    paymentMode?: "cash" | "virement" | "espece";
+    respResa?: "Nayla" | "Hind" | "Kamal" | "Rita";
   }
 ) {
   try {
@@ -409,6 +437,14 @@ export async function updateRestaurantReservation(
       updateData.group_name = data.groupName || null;
     if (data.displayChoice !== undefined)
       updateData.display_choice = data.displayChoice || null;
+    if (data.totalAmount !== undefined) updateData.total_amount = data.totalAmount;
+    if (data.amountReceived !== undefined)
+      updateData.amount_received = data.amountReceived;
+    if (data.deposit !== undefined) updateData.deposit = data.deposit;
+    if (data.nbAdult !== undefined) updateData.nb_adult = data.nbAdult;
+    if (data.nbKids !== undefined) updateData.nb_kids = data.nbKids;
+    if (data.paymentMode !== undefined) updateData.payment_mode = data.paymentMode;
+    if (data.respResa !== undefined) updateData.resp_resa = data.respResa;
 
     const { error } = await client
       .from("restaurant_reservations")
