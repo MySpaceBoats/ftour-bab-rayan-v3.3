@@ -456,7 +456,7 @@ const sendGroupVolunteerConfirmationEmails = async ({
 
   for (let batchIndex = 0; batchIndex < emailBatches.length; batchIndex += 1) {
     const emailBatch = emailBatches[batchIndex];
-    const batchResults = await runWithConcurrencyLimit(emailBatch, 3);
+    const batchResults = await runWithConcurrencyLimit(emailBatch, 1);
     details.push(...batchResults);
 
     if (batchIndex < emailBatches.length - 1) {
