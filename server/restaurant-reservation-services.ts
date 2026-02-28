@@ -64,6 +64,8 @@ function mapReservation(r: any) {
     nbKids: Number(r.nb_kids ?? r.nbKids ?? 0),
     paymentMode: r.payment_mode ?? r.paymentMode ?? "cash",
     respResa: r.resp_resa ?? r.respResa ?? "Nayla",
+    modeDeposit: r.mode_deposit ?? r.modeDeposit ?? null,
+    dateAvReg: r.date_av_reg ?? r.dateAvReg ?? null,
     createdAt: rawCreatedAt ? new Date(rawCreatedAt) : new Date(),
     updatedAt: rawUpdatedAt ? new Date(rawUpdatedAt) : new Date(),
   };
@@ -97,6 +99,8 @@ export async function createRestaurantReservation(data: {
   nbKids?: number;
   paymentMode?: "cash" | "virement" | "espece";
   respResa?: "Nayla" | "Hind" | "Kamal" | "Rita";
+  modeDeposit?: string;
+  dateAvReg?: string;
 }) {
   try {
     const client = getClient();
@@ -123,6 +127,8 @@ export async function createRestaurantReservation(data: {
         nb_kids: data.nbKids ?? 0,
         payment_mode: data.paymentMode ?? "cash",
         resp_resa: data.respResa ?? "Nayla",
+        mode_deposit: data.modeDeposit ?? null,
+        date_av_reg: data.dateAvReg ?? null,
         display_choice: data.displayChoice || null,
         status: "pending_validation",
         payment_status: "not_requested",
@@ -415,6 +421,8 @@ export async function updateRestaurantReservation(
     nbKids?: number;
     paymentMode?: "cash" | "virement" | "espece";
     respResa?: "Nayla" | "Hind" | "Kamal" | "Rita";
+    modeDeposit?: string | null;
+    dateAvReg?: string | null;
   }
 ) {
   try {
@@ -445,6 +453,8 @@ export async function updateRestaurantReservation(
     if (data.nbKids !== undefined) updateData.nb_kids = data.nbKids;
     if (data.paymentMode !== undefined) updateData.payment_mode = data.paymentMode;
     if (data.respResa !== undefined) updateData.resp_resa = data.respResa;
+    if (data.modeDeposit !== undefined) updateData.mode_deposit = data.modeDeposit;
+    if (data.dateAvReg !== undefined) updateData.date_av_reg = data.dateAvReg;
 
     const { error } = await client
       .from("restaurant_reservations")

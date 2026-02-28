@@ -102,6 +102,8 @@ export default function AdminRestaurantGroupes() {
     companyName: string;
     groupName: string;
     type: string;
+    modeDeposit: string;
+    dateAvReg: string;
   } | null>(null);
 
   const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
@@ -244,6 +246,10 @@ export default function AdminRestaurantGroupes() {
       companyName: reservation.companyName || "",
       groupName: reservation.groupName || "",
       type: reservation.type || "",
+      modeDeposit: reservation.modeDeposit || "",
+      dateAvReg: reservation.dateAvReg
+        ? new Date(reservation.dateAvReg).toISOString().split("T")[0]
+        : "",
     });
     setEditDialogOpen(true);
   };
@@ -267,6 +273,8 @@ export default function AdminRestaurantGroupes() {
       respResa: editForm.respResa,
       companyName: editForm.companyName || undefined,
       groupName: editForm.groupName || undefined,
+      modeDeposit: editForm.modeDeposit || null,
+      dateAvReg: editForm.dateAvReg || null,
     });
   };
 
@@ -578,20 +586,32 @@ export default function AdminRestaurantGroupes() {
                     <TableHead>
                       <button
                         type="button"
-                        onClick={() => toggleSort("reference")}
+                        onClick={() => toggleSort("date")}
                         className="inline-flex items-center gap-1 hover:text-foreground"
                       >
-                        Référence
-                        {renderSortIcon("reference")}
+                        DATE FTOUR
+                        {renderSortIcon("date")}
                       </button>
                     </TableHead>
+                    <TableHead>RESP. RÉSA</TableHead>
+                    <TableHead>
+                      <button
+                        type="button"
+                        onClick={() => toggleSort("seatsTotal")}
+                        className="inline-flex items-center gap-1 hover:text-foreground"
+                      >
+                        NB PAX
+                        {renderSortIcon("seatsTotal")}
+                      </button>
+                    </TableHead>
+                    <TableHead>NB KIDS</TableHead>
                     <TableHead>
                       <button
                         type="button"
                         onClick={() => toggleSort("groupOrCompany")}
                         className="inline-flex items-center gap-1 hover:text-foreground"
                       >
-                        Groupe / Entreprise
+                        NOM DE L'ENTREPRISE
                         {renderSortIcon("groupOrCompany")}
                       </button>
                     </TableHead>
@@ -601,62 +621,21 @@ export default function AdminRestaurantGroupes() {
                         onClick={() => toggleSort("contact")}
                         className="inline-flex items-center gap-1 hover:text-foreground"
                       >
-                        Contact
+                        PRÉNOM NOM
                         {renderSortIcon("contact")}
                       </button>
                     </TableHead>
-                    <TableHead>
-                      <button
-                        type="button"
-                        onClick={() => toggleSort("seatsTotal")}
-                        className="inline-flex items-center gap-1 hover:text-foreground"
-                      >
-                        Places
-                        {renderSortIcon("seatsTotal")}
-                      </button>
-                    </TableHead>
-                    <TableHead>
-                      <button
-                        type="button"
-                        onClick={() => toggleSort("date")}
-                        className="inline-flex items-center gap-1 hover:text-foreground"
-                      >
-                        Date ftour
-                        {renderSortIcon("date")}
-                      </button>
-                    </TableHead>
-                    <TableHead>Montant total</TableHead>
-                    <TableHead>Montant reçu</TableHead>
-                    <TableHead>Montant restant</TableHead>
-                    <TableHead>Deposit</TableHead>
-                    <TableHead>NB ADULT</TableHead>
-                    <TableHead>NB KIDS</TableHead>
-                    <TableHead>Mode règlement</TableHead>
-                    <TableHead>RESP RESA</TableHead>
-                    <TableHead>Notes</TableHead>
-                    <TableHead>
-                      <button
-                        type="button"
-                        onClick={() => toggleSort("status")}
-                        className="inline-flex items-center gap-1 hover:text-foreground"
-                      >
-                        Statut
-                        {renderSortIcon("status")}
-                      </button>
-                    </TableHead>
-                    <TableHead>
-                      <button
-                        type="button"
-                        onClick={() => toggleSort("createdAt")}
-                        className="inline-flex items-center gap-1 hover:text-foreground"
-                      >
-                        Créé le
-                        {renderSortIcon("createdAt")}
-                      </button>
-                    </TableHead>
-                    <TableHead>Montant total</TableHead>
-                    <TableHead>Montant reçu</TableHead>
-                    <TableHead>Montant restant</TableHead>
+                    <TableHead>NUMÉRO TÉL</TableHead>
+                    <TableHead>EMAIL</TableHead>
+                    <TableHead>PRIX ADULTE</TableHead>
+                    <TableHead>PRIX KIDS</TableHead>
+                    <TableHead>TOTAL</TableHead>
+                    <TableHead>DEPOSIT</TableHead>
+                    <TableHead>MODE DEPOSIT</TableHead>
+                    <TableHead>COMPLÉMENT PAIEMENT</TableHead>
+                    <TableHead>MODE RÈGLEMENT</TableHead>
+                    <TableHead>DATE AV/REG</TableHead>
+                    <TableHead>RESTE À PAYER</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -673,44 +652,35 @@ export default function AdminRestaurantGroupes() {
                   ) : (
                     filteredReservations?.map((r: any) => (
                       <TableRow key={`${r.type}-${r.id}`}>
-                        <TableCell className="font-mono text-sm">
-                          {r.reference}
-                        </TableCell>
+                        <TableCell>{formatDate(r.date)}</TableCell>
+                        <TableCell>{r.respResa || "-"}</TableCell>
+                        <TableCell>{Number(r.nbAdult || 0)}</TableCell>
+                        <TableCell>{Number(r.nbKids || 0)}</TableCell>
                         <TableCell>
                           <div className="font-medium">
                             {r.groupName || r.companyName || "-"}
                           </div>
                         </TableCell>
+                        <TableCell>{r.name || "-"}</TableCell>
+                        <TableCell>{r.phone || "-"}</TableCell>
+                        <TableCell>{r.email || "-"}</TableCell>
                         <TableCell>
-                          <div>{r.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {r.phone}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {r.email}
-                          </div>
+                          {formatAmount(Number(r.nbAdult || 0) * ADULT_PRICE)}
                         </TableCell>
-                        <TableCell>{r.seatsTotal}</TableCell>
-                        <TableCell>{formatDate(r.date)}</TableCell>
+                        <TableCell>
+                          {formatAmount(Number(r.nbKids || 0) * KIDS_PRICE)}
+                        </TableCell>
                         <TableCell>
                           {formatAmount(Number(r.totalAmount || 0))}
                         </TableCell>
+                        <TableCell>{formatAmount(Number(r.deposit || 0))}</TableCell>
+                        <TableCell>{r.modeDeposit || "-"}</TableCell>
                         <TableCell>
                           {formatAmount(Number(r.amountReceived || 0))}
                         </TableCell>
-                        <TableCell>{formatAmount(getRemainingAmount(r))}</TableCell>
-                        <TableCell>{formatAmount(Number(r.deposit || 0))}</TableCell>
-                        <TableCell>{Number(r.nbAdult || 0)}</TableCell>
-                        <TableCell>{Number(r.nbKids || 0)}</TableCell>
                         <TableCell>{r.paymentMode || "-"}</TableCell>
-                        <TableCell>{r.respResa || "-"}</TableCell>
-                        <TableCell className="max-w-[220px] truncate" title={r.notes || ""}>
-                          {r.notes || "-"}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(r.status)}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatDate(r.createdAt)}
-                        </TableCell>
+                        <TableCell>{r.dateAvReg ? formatDate(r.dateAvReg) : "-"}</TableCell>
+                        <TableCell>{formatAmount(getRemainingAmount(r))}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
                             {(r.status === "pending_validation" ||
@@ -973,6 +943,38 @@ export default function AdminRestaurantGroupes() {
                     }}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-mode-deposit">Mode deposit</Label>
+                <Select
+                  value={editForm.modeDeposit || ""}
+                  onValueChange={value =>
+                    setEditForm({ ...editForm, modeDeposit: value })
+                  }
+                >
+                  <SelectTrigger id="edit-mode-deposit">
+                    <SelectValue placeholder="Sélectionner un mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="virement">Virement</SelectItem>
+                    <SelectItem value="espece">Espèce</SelectItem>
+                    <SelectItem value="cheque">Chèque</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-date-av-reg">Date AV/REG</Label>
+                <Input
+                  id="edit-date-av-reg"
+                  type="date"
+                  value={editForm.dateAvReg}
+                  onChange={e =>
+                    setEditForm({ ...editForm, dateAvReg: e.target.value })
+                  }
+                />
               </div>
 
               <div className="space-y-2">

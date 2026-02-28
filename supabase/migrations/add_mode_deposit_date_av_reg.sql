@@ -1,0 +1,3 @@
+ALTER TABLE restaurant_reservations
+  ADD COLUMN IF NOT EXISTS mode_deposit VARCHAR(20) DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS date_av_reg DATE DEFAULT NULL;
