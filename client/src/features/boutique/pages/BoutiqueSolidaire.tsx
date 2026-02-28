@@ -3,22 +3,12 @@ import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useI18n } from "@/i18n";
-import { ShoppingBag, Utensils, ArrowRight, Heart, Package } from "lucide-react";
+import { ShoppingBag, Utensils, ArrowRight, Heart } from "lucide-react";
 
 export default function BoutiqueSolidaire() {
   const { t, dir, lang } = useI18n();
 
   const categories = [
-    {
-      key: "terroir" as const,
-      href: `/${lang}/terroir`,
-      icon: Package,
-      color: "#7AA67A",
-      title: t.boutique.terroirTitle,
-      description: t.boutique.terroirDesc,
-      cta: t.boutique.terroirCta,
-      desktopClassName: "lg:col-span-2 lg:mx-auto lg:w-full lg:max-w-xl",
-    },
     {
       key: "goodies" as const,
       href: `/${lang}/goodies`,
