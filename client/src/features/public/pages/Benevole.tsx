@@ -1160,7 +1160,6 @@ export default function Benevole() {
                                   <SelectItem
                                     key={`group-${day.id}`}
                                     value={day.id.toString()}
-                                    disabled={!day.isOpen}
                                   >
                                     {new Date(day.date).toLocaleDateString(
                                       dateLocale,
@@ -1170,7 +1169,7 @@ export default function Benevole() {
                                         month: "long",
                                       }
                                     )}
-                                    {!day.isOpen ? ` - ${formTexts.dayFull}` : ""}
+                                    {!day.isOpen ? " - Fermé en individuel" : ""}
                                   </SelectItem>
                                 ))
                               ) : (
@@ -1579,7 +1578,8 @@ export default function Benevole() {
                         disabled={
                           registerMutation.isPending ||
                           groupRegisterMutation.isPending ||
-                          availableDays.length === 0
+                          (!isGroup && availableDays.length === 0) ||
+                          (isGroup && (!days || days.length === 0))
                         }
                       >
                         {registerMutation.isPending ||
