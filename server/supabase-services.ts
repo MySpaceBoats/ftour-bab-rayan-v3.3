@@ -1536,6 +1536,38 @@ export async function deleteVolunteerSupabase(volunteerId: number) {
   if (error) throw error;
 }
 
+/**
+ * Annule l'inscription d'un bénévole via son qrToken.
+ * Passe le statut à "cancelled" et le qrStatus à "expired".
+ * Retourne les infos du bénévole pour afficher la confirmation.
+ */
+export async function cancelVolunteerByTokenSupabase(token: string) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  // Récupérer le bénévole
+  const volunteer = await getVolunteerByTokenSupabase(token);
+  if (!volunteer) return null;
+
+  // Vérifier que l'inscription n'est pas déjà annulée ou validée
+  if (volunteer.status === 'cancelled') {
+    return { alreadyCancelled: true, volunteer };
+  }
+  if (volunteer.status === 'present' || volunteer.qrStatus === 'validated') {
+    return { alreadyValidated: true, volunteer };
+  }
+
+  // Annuler l'inscription
+  const { error } = await client
+    .from('volunteers')
+    .update({ status: 'cancelled', qr_status: 'expired' })
+    .eq('id', volunteer.id);
+
+  if (error) throw error;
+
+  return { success: true, volunteer };
+}
+
 // ============================================
 // GOODIES SERVICES
 // ============================================

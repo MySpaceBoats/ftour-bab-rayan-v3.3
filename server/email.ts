@@ -318,20 +318,15 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
       </p>
     </div>
 
-    <!-- Lien annulation -->
-    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fef2f2; border-radius: 8px; margin: 20px 0; border: 1px solid #fecaca;">
-      <tr>
-        <td style="padding: 20px; text-align: center;">
-          <h3 style="color: #b91c1c; margin: 0 0 10px 0; font-size: 18px;">❌ Vous ne pouvez plus venir ?</h3>
-          <p style="margin: 0 0 12px 0; color: #7f1d1d; font-size: 14px; line-height: 1.6;">
-            Si vous devez annuler votre inscription, cliquez sur le lien ci-dessous pour annuler automatiquement votre place.
-          </p>
-          <a href="${cancellationUrl}" style="display: inline-block; background-color: #dc2626; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 6px; font-weight: 600;">
-            Annuler mon inscription
-          </a>
-        </td>
-      </tr>
-    </table>
+    <!-- Lien d'annulation -->
+    <div style="text-align: center; margin: 20px 0; padding: 15px; background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;">
+      <p style="color: #991b1b; font-size: 14px; margin: 0 0 10px 0;">
+        En cas d'empêchement, vous pouvez annuler votre inscription en cliquant sur le lien ci-dessous :
+      </p>
+      <a href="${data.baseUrl}/cancel-volunteer/${data.qrToken}" style="display: inline-block; background-color: #dc2626; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 6px; font-size: 14px; font-weight: 600;">
+        Annuler mon inscription
+      </a>
+    </div>
 
     <!-- Consignes importantes (obligatoires) -->
     <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fef3c7; border-radius: 8px; margin: 20px 0;">
