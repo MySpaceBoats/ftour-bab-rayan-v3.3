@@ -1450,9 +1450,14 @@ export async function updateVolunteerStatusSupabase(volunteerId: number, status:
     throw volunteerBeforeUpdateError || new Error('Volunteer not found');
   }
 
+  const updatePayload: Record<string, unknown> = { status };
+  if (status === 'cancelled') {
+    updatePayload.qr_status = 'expired';
+  }
+
   const { error } = await client
     .from('volunteers')
-    .update({ status })
+    .update(updatePayload)
     .eq('id', volunteerId);
 
   if (error) throw error;
