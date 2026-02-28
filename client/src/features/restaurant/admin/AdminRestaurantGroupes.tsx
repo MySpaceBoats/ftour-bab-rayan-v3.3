@@ -461,6 +461,48 @@ export default function AdminRestaurantGroupes() {
     });
   };
 
+  const savePriceColumnValue = (
+    reservation: any,
+    field: "adultAmount" | "kidsAmount",
+    rawValue: string
+  ) => {
+    const parsedValue = Math.max(0, Number.parseFloat(rawValue || "0") || 0);
+    const currentAdultAmount =
+      field === "adultAmount"
+        ? parsedValue
+        : Math.max(
+            0,
+            Number(
+              getInlineValue(
+                reservation,
+                "adultAmount",
+                Number(getInlineValue(reservation, "nbAdult", Number(reservation.nbAdult || 0))) *
+                  ADULT_PRICE
+              )
+            ) || 0
+          );
+    const currentKidsAmount =
+      field === "kidsAmount"
+        ? parsedValue
+        : Math.max(
+            0,
+            Number(
+              getInlineValue(
+                reservation,
+                "kidsAmount",
+                Number(getInlineValue(reservation, "nbKids", Number(reservation.nbKids || 0))) *
+                  KIDS_PRICE
+              )
+            ) || 0
+          );
+
+    const nextTotal = currentAdultAmount + currentKidsAmount;
+
+    updateInlineValue(reservation, field, parsedValue);
+    updateInlineValue(reservation, "totalAmount", nextTotal);
+    saveInlineValue(reservation, "totalAmount", nextTotal);
+  };
+
   const getSortValue = (reservation: any, key: SortKey) => {
     switch (key) {
       case "reference":
@@ -990,10 +1032,48 @@ export default function AdminRestaurantGroupes() {
                           />
                         </TableCell>
                         <TableCell>
-                          {formatAmount(Number(r.nbAdult || 0) * ADULT_PRICE)}
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            className="h-8 min-w-[120px]"
+                            value={String(
+                              getInlineValue(
+                                r,
+                                "adultAmount",
+                                Number(getInlineValue(r, "nbAdult", Number(r.nbAdult || 0))) *
+                                  ADULT_PRICE
+                              )
+                            )}
+                            onChange={e =>
+                              updateInlineValue(r, "adultAmount", e.target.value)
+                            }
+                            onBlur={e =>
+                              savePriceColumnValue(r, "adultAmount", e.target.value)
+                            }
+                          />
                         </TableCell>
                         <TableCell>
-                          {formatAmount(Number(r.nbKids || 0) * KIDS_PRICE)}
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            className="h-8 min-w-[120px]"
+                            value={String(
+                              getInlineValue(
+                                r,
+                                "kidsAmount",
+                                Number(getInlineValue(r, "nbKids", Number(r.nbKids || 0))) *
+                                  KIDS_PRICE
+                              )
+                            )}
+                            onChange={e =>
+                              updateInlineValue(r, "kidsAmount", e.target.value)
+                            }
+                            onBlur={e =>
+                              savePriceColumnValue(r, "kidsAmount", e.target.value)
+                            }
+                          />
                         </TableCell>
                         <TableCell>
                           <Input
