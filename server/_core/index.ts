@@ -13,6 +13,7 @@ import { getSupabaseAdminClient } from "../supabase";
 import {
   getAllGoodiesSupabase,
   getPastriesSupabase,
+  initializeAllStocks,
 } from "../supabase-services";
 import { DONATION_SUGGESTED_AMOUNTS_MAD } from "../../shared/const";
 
@@ -45,6 +46,9 @@ async function startServer() {
   // Ensure database schema is up to date
   await ensureVolunteerSlotsColumn();
   await ensurePastriesTable();
+
+  // Initialize all product stocks to 60
+  await initializeAllStocks(60);
 
   app.post("/api/auth/refresh", async (req, res) => {
     const refreshToken =

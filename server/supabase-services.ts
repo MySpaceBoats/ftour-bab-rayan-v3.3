@@ -14,6 +14,77 @@ export function isVolunteerDuplicateEmailExempt(email: string): boolean {
   return VOLUNTEER_DUPLICATE_EMAIL_EXCEPTIONS.has(email.toLowerCase().trim());
 }
 
+// ============================================
+// STOCK INITIALIZATION - Set all stocks to 60
+// ============================================
+
+let _stockInitDone = false;
+
+export async function initializeAllStocks(defaultStock = 60): Promise<void> {
+  if (_stockInitDone) return;
+  _stockInitDone = true;
+
+  const client = getSupabaseAdminClient();
+  if (!client) {
+    console.warn('[StockInit] Supabase not configured, skipping stock initialization');
+    return;
+  }
+
+  try {
+    // Update goodies stock
+    const { error: goodiesError } = await client
+      .from('goodies')
+      .update({ stock: defaultStock })
+      .gte('id', 0);
+
+    if (goodiesError) {
+      console.warn('[StockInit] Failed to update goodies stock:', goodiesError.message);
+    } else {
+      console.log(`[StockInit] All goodies stock set to ${defaultStock}`);
+    }
+
+    // Update goodie_variants stock
+    const { error: variantsError } = await client
+      .from('goodie_variants')
+      .update({ stock: defaultStock })
+      .gte('id', 0);
+
+    if (variantsError) {
+      console.warn('[StockInit] Failed to update goodie_variants stock:', variantsError.message);
+    } else {
+      console.log(`[StockInit] All goodie variants stock set to ${defaultStock}`);
+    }
+
+    // Update pastries stock
+    const { error: pastriesError } = await client
+      .from('pastries')
+      .update({ stock: defaultStock })
+      .gte('id', 0);
+
+    if (pastriesError) {
+      console.warn('[StockInit] Failed to update pastries stock:', pastriesError.message);
+    } else {
+      console.log(`[StockInit] All pastries stock set to ${defaultStock}`);
+    }
+
+    // Update terroir product variants stock
+    const { error: terroirError } = await client
+      .from('terroir_product_variants')
+      .update({ stock_total: defaultStock, stock_reserved: 0 })
+      .gte('id', 0);
+
+    if (terroirError) {
+      console.warn('[StockInit] Failed to update terroir variants stock:', terroirError.message);
+    } else {
+      console.log(`[StockInit] All terroir product variants stock set to ${defaultStock}`);
+    }
+
+    console.log('[StockInit] Stock initialization complete');
+  } catch (err) {
+    console.error('[StockInit] Unexpected error during stock initialization:', err);
+  }
+}
+
 export function computeMaxConsecutiveDays(dayNumbers: number[]): number {
   if (dayNumbers.length === 0) return 0;
 

@@ -213,13 +213,13 @@ export default function ProduitsTerroir() {
                                 <div>
                                   <p className="text-sm font-medium">{variant.label}</p>
                                   <p className="text-xs text-muted-foreground">{Number(variant.price_unit)} DH</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Stock: {hasStockTracking ? availableStock : 'Disponible'}
+                                  <p className={`text-xs font-medium ${isOutOfStock ? 'text-red-500' : 'text-green-600'}`}>
+                                    {isOutOfStock ? (t.terroir.outOfStock || 'Rupture de stock') : `${t.terroir.inStock || 'En stock'} (${availableStock})`}
                                   </p>
                                 </div>
                                 <Button size="sm" disabled={isOutOfStock} onClick={() => handleAddToCart(product, variant)}>
                                   <Plus className="h-4 w-4 mr-1" />
-                                  {isOutOfStock ? 'Indisponible' : t.terroir.addToCart}
+                                  {isOutOfStock ? (t.terroir.outOfStock || 'Rupture de stock') : t.terroir.addToCart}
                                 </Button>
                               </div>
                               );

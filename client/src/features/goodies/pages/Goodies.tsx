@@ -222,8 +222,10 @@ export default function Goodies() {
                         <span className="text-xl font-bold text-[#CDBB8A]">
                           {goodie.price.toFixed(0)} DH
                         </span>
-                        <span className="text-xs text-[#E6DCC3]">Stock: {availableStock}</span>
-                        <Button 
+                        <span className={`text-xs font-medium ${isOutOfStock ? 'text-red-400' : 'text-green-400'}`}>
+                          {isOutOfStock ? (t.goodies.outOfStock || 'Rupture de stock') : `${t.goodies.inStock || 'En stock'} (${availableStock})`}
+                        </span>
+                        <Button
                           size="sm"
                           className="bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]"
                           disabled={isOutOfStock}
@@ -236,7 +238,7 @@ export default function Goodies() {
                           }}
                         >
                           <Plus className="h-4 w-4 mr-1" />
-                          {isOutOfStock ? "Indisponible" : t.goodies.addToCart}
+                          {isOutOfStock ? (t.goodies.outOfStock || 'Rupture de stock') : t.goodies.addToCart}
                         </Button>
                       </div>
                     </CardContent>
