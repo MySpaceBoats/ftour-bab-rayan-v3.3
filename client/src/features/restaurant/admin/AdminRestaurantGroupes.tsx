@@ -578,21 +578,21 @@ export default function AdminRestaurantGroupes() {
                     <TableHead>
                       <button
                         type="button"
-                        onClick={() => toggleSort("reference")}
-                        className="inline-flex items-center gap-1 hover:text-foreground"
-                      >
-                        Référence
-                        {renderSortIcon("reference")}
-                      </button>
-                    </TableHead>
-                    <TableHead>
-                      <button
-                        type="button"
                         onClick={() => toggleSort("type")}
                         className="inline-flex items-center gap-1 hover:text-foreground"
                       >
                         Type
                         {renderSortIcon("type")}
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button
+                        type="button"
+                        onClick={() => toggleSort("reference")}
+                        className="inline-flex items-center gap-1 hover:text-foreground"
+                      >
+                        Référence
+                        {renderSortIcon("reference")}
                       </button>
                     </TableHead>
                     <TableHead>
@@ -683,9 +683,6 @@ export default function AdminRestaurantGroupes() {
                   ) : (
                     filteredReservations?.map((r: any) => (
                       <TableRow key={`${r.type}-${r.id}`}>
-                        <TableCell className="font-mono text-sm">
-                          {r.reference}
-                        </TableCell>
                         <TableCell>
                           <Badge
                             variant="outline"
@@ -697,6 +694,9 @@ export default function AdminRestaurantGroupes() {
                           >
                             {r.type === "groupe" ? "Groupe" : "Entreprise"}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {r.reference}
                         </TableCell>
                         <TableCell>
                           <div className="font-medium">
