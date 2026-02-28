@@ -326,6 +326,14 @@ export function generateGoodiesOrderEmail(data: GoodiesOrderEmailData): { subjec
     <!-- Paiement -->
     ${paymentInstructions}
     
+    <!-- QR Code de retrait -->
+    <div style="text-align: center; margin: 30px 0; padding: 20px; background-color: #ffffff; border: 2px dashed #166534; border-radius: 8px;">
+      <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">🔲 Votre QR Code de retrait</h3>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${data.baseUrl}/qr/goodies/${data.orderId}`)}" alt="QR Code commande ${data.orderId}" style="width: 200px; height: 200px; margin: 10px 0;" />
+      <p style="color: #6b7280; font-size: 14px; margin: 10px 0 0 0;">Présentez ce QR code lors du retrait de votre commande</p>
+      <p style="color: #374151; font-size: 13px; margin: 6px 0 0 0; font-family: monospace; font-weight: bold;">${data.orderId}</p>
+    </div>
+
     <!-- Prochaines étapes -->
     <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f0fdf4; border-radius: 8px; margin: 20px 0;">
       <tr>
@@ -334,7 +342,7 @@ export function generateGoodiesOrderEmail(data: GoodiesOrderEmailData): { subjec
           <ol style="margin: 0; padding-left: 20px; color: #374151;">
             <li style="margin-bottom: 8px;">Nous vous contactons pour confirmer la date/heure de ${data.deliveryMode === 'pickup' ? 'retrait' : 'livraison'}</li>
             <li style="margin-bottom: 8px;">Effectuez le paiement selon la méthode choisie</li>
-            <li style="margin-bottom: 8px;">Recevez votre commande</li>
+            <li style="margin-bottom: 8px;">Présentez votre QR code ci-dessus lors du retrait</li>
             <li>Merci de votre soutien ! 🙏</li>
           </ol>
         </td>
