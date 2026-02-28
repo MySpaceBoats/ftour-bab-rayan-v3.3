@@ -10,7 +10,7 @@ export const fr = {
     home: 'Accueil',
     event: "L'événement",
     volunteer: 'Bénévolat',
-    restaurant: "L'asso' Resto Solidaire",
+    restaurant: "Asso' Resto Solidaire",
     goodies: 'Goodies solidaires',
     association: 'Association',
     contact: 'Contact',
