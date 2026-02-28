@@ -33,6 +33,11 @@ import { scannerRouter } from "./scanner-router";
 import * as galleryServices from "./gallery-services";
 import * as volunteerProfileServices from "./volunteer-profile-services";
 import * as XLSX from "xlsx";
+import {
+  ALL_DASHBOARD_ITEM_KEYS,
+  DASHBOARD_ITEMS,
+  DEFAULT_DASHBOARD_KEYS,
+} from "@shared/dashboard/dashboardItems";
 
 type ParsedGroupVolunteerRow = {
   firstName: string;
@@ -740,6 +745,36 @@ const adminTerroirProcedure = protectedProcedure.use(({ ctx, next }) => {
   }
   return next({ ctx });
 });
+
+const withDashboardAccess = (itemKey: string) =>
+  protectedProcedure.use(async ({ ctx, next }) => {
+    if (!ctx.user) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Authentification requise" });
+    }
+
+    if (["admin", "super_admin"].includes(ctx.user.role)) {
+      return next({ ctx });
+    }
+
+    const hasAccess = await supabaseServices.userHasDashboardItemAccessSupabase(
+      ctx.user.openId,
+      itemKey
+    );
+
+    if (!hasAccess) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: `Accès dashboard refusé (${itemKey})`,
+      });
+    }
+
+    return next({ ctx });
+  });
+
+const dashboardOpsProcedure = withDashboardAccess("dash.volunteers.table");
+const dashboardOrdersProcedure = withDashboardAccess("dash.orders.goodies");
+const dashboardDonationsProcedure = withDashboardAccess("dash.donations.kpis");
+const dashboardReservationsProcedure = withDashboardAccess("dash.reservations.table");
 
 const gallerySchema = z.object({
   title: z.string().max(200).optional(),
@@ -1519,13 +1554,13 @@ const volunteersRouter = router({
       return { success: true };
     }),
 
-  listByDay: adminOpsProcedure
+  listByDay: dashboardOpsProcedure
     .input(z.object({ dayId: z.number().optional() }))
     .query(async ({ input }) => {
       return supabaseServices.getVolunteersByDaySupabase(input.dayId);
     }),
 
-  updateStatus: adminOpsProcedure
+  updateStatus: dashboardOpsProcedure
     .input(
       z.object({
         volunteerId: z.number(),
@@ -1546,7 +1581,7 @@ const volunteersRouter = router({
       return { success: true };
     }),
 
-  stats: adminOpsProcedure.query(async () => {
+  stats: dashboardOpsProcedure.query(async () => {
     return supabaseServices.getVolunteerStatsSupabase();
   }),
 
@@ -2347,7 +2382,7 @@ const ordersRouter = router({
       return order;
     }),
 
-  listAll: adminBoutiqueProcedure.query(async () => {
+  listAll: dashboardOrdersProcedure.query(async () => {
     return supabaseServices.getAllOrdersSupabase();
   }),
 
@@ -2418,7 +2453,7 @@ const ordersRouter = router({
       return supabaseServices.deleteGoodieOrderSupabase(input.orderId);
     }),
 
-  stats: adminBoutiqueProcedure.query(async () => {
+  stats: dashboardOrdersProcedure.query(async () => {
     return supabaseServices.getOrderStatsSupabase();
   }),
 
@@ -2488,7 +2523,7 @@ const donationsRouter = router({
       return donation;
     }),
 
-  listAll: adminDonsProcedure.query(async () => {
+  listAll: dashboardDonationsProcedure.query(async () => {
     return supabaseServices.getAllDonationsSupabase();
   }),
 
@@ -2518,7 +2553,7 @@ const donationsRouter = router({
       return { success: true };
     }),
 
-  stats: adminDonsProcedure.query(async () => {
+  stats: dashboardDonationsProcedure.query(async () => {
     return supabaseServices.getDonationStatsSupabase();
   }),
 });
@@ -2654,8 +2689,52 @@ const usersRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      return supabaseServices.createRamadanConfigSupabase(input);
+      await supabaseServices.updateUserRoleSupabase(input.userId, input.role);
+      return { success: true };
     }),
+
+  dashboardRegistry: superAdminProcedure.query(async () => DASHBOARD_ITEMS),
+
+  dashboardKeys: superAdminProcedure
+    .input(z.object({ userOpenId: z.string().uuid() }))
+    .query(async ({ input }) => {
+      return supabaseServices.getUserDashboardKeysSupabase(input.userOpenId);
+    }),
+
+  replaceDashboardKeys: superAdminProcedure
+    .input(
+      z.object({
+        userOpenId: z.string().uuid(),
+        itemKeys: z.array(z.enum(ALL_DASHBOARD_ITEM_KEYS as [string, ...string[]])),
+      })
+    )
+    .mutation(async ({ input }) => {
+      await supabaseServices.replaceUserDashboardKeysSupabase(
+        input.userOpenId,
+        input.itemKeys
+      );
+      return { success: true };
+    }),
+
+  myDashboardKeys: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) return [];
+
+    if (["admin", "super_admin"].includes(ctx.user.role)) {
+      return ALL_DASHBOARD_ITEM_KEYS;
+    }
+
+    const keys = await supabaseServices.getUserDashboardKeysSupabase(ctx.user.openId);
+
+    if (keys.length === 0) {
+      const fallback = DEFAULT_DASHBOARD_KEYS.filter(key =>
+        ALL_DASHBOARD_ITEM_KEYS.includes(key)
+      );
+      await supabaseServices.replaceUserDashboardKeysSupabase(ctx.user.openId, fallback);
+      return fallback;
+    }
+
+    return keys;
+  }),
 
   updateConfig: adminOpsProcedure
     .input(

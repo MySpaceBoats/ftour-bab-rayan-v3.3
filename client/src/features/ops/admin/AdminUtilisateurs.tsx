@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Search, Users, Loader2, Shield, UserCog, Mail, Plus
 } from "lucide-react";
+import DashboardVisibilityEditor from "./DashboardVisibilityEditor";
 
 const roleLabels: Record<string, string> = {
   user: "Utilisateur",
@@ -366,6 +367,8 @@ export default function AdminUtilisateurs() {
             )}
           </CardContent>
         </Card>
+
+        <DashboardVisibilityEditor users={(users ?? []).map((u: any) => ({ openId: u.openId, name: u.name, email: u.email }))} />
 
         {/* Role Legend */}
         <Card className="mt-6">

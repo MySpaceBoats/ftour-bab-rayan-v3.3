@@ -290,6 +290,84 @@ export async function updateUserRoleByOpenIdSupabase(openId: string, role: strin
   if (error) throw error;
 }
 
+export async function getUserDashboardKeysSupabase(userOpenId: string): Promise<string[]> {
+  const client = getSupabaseAdminClient();
+  if (!client) return [];
+
+  const { data, error } = await client
+    .from('user_dashboard_items')
+    .select('item_key')
+    .eq('user_id', userOpenId);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map(row => row.item_key as string);
+}
+
+export async function replaceUserDashboardKeysSupabase(
+  userOpenId: string,
+  itemKeys: string[]
+) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const uniqueKeys = Array.from(new Set(itemKeys));
+
+  if (uniqueKeys.length === 0) {
+    const { error } = await client
+      .from('user_dashboard_items')
+      .delete()
+      .eq('user_id', userOpenId);
+    if (error) throw error;
+    return;
+  }
+
+  const { error: deleteError } = await client
+    .from('user_dashboard_items')
+    .delete()
+    .eq('user_id', userOpenId)
+    .not('item_key', 'in', `(${uniqueKeys.map(key => `"${key}"`).join(',')})`);
+
+  if (deleteError) throw deleteError;
+
+  const { data: currentRows, error: listError } = await client
+    .from('user_dashboard_items')
+    .select('item_key')
+    .eq('user_id', userOpenId);
+
+  if (listError) throw listError;
+
+  const currentSet = new Set((currentRows ?? []).map(row => row.item_key as string));
+  const missing = uniqueKeys.filter(key => !currentSet.has(key));
+
+  if (missing.length > 0) {
+    const { error: insertError } = await client
+      .from('user_dashboard_items')
+      .insert(missing.map(itemKey => ({ user_id: userOpenId, item_key: itemKey })));
+
+    if (insertError) throw insertError;
+  }
+}
+
+export async function userHasDashboardItemAccessSupabase(userOpenId: string, itemKey: string): Promise<boolean> {
+  const client = getSupabaseAdminClient();
+  if (!client) return false;
+
+  const { data, error } = await client
+    .from('user_dashboard_items')
+    .select('item_key')
+    .eq('user_id', userOpenId)
+    .eq('item_key', itemKey)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return Boolean(data);
+}
+
 // ============================================
 // RAMADAN DAYS SERVICES
 // ============================================
