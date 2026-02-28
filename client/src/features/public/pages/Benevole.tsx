@@ -1151,7 +1151,7 @@ export default function Benevole() {
                                       }
                                     )}
                                     {isDayFull(day) && !isPastDay(day.date)
-                                      ? ` - ${isFutureDay(day.date) ? formTexts.upcomingOpenSoon : formTexts.dayFull}`
+                                      ? ` - ${isFutureDay(day.date) && !day.isOpen ? formTexts.upcomingOpenSoon : formTexts.dayFull}`
                                       : ""}
                                   </SelectItem>
                                 ))
