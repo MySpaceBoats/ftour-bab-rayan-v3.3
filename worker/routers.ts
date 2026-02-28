@@ -6916,6 +6916,67 @@ const ramadanRouter = router({
     }),
 });
 
+
+
+const partnerLeadsRouter = router({
+  create: publicProcedure
+    .input(
+      z.object({
+        companyName: z.string().min(2),
+        contactName: z.string().min(2),
+        email: z.string().email(),
+        phone: z.string().optional(),
+        city: z.string().optional(),
+        partnershipType: z.string().optional(),
+        budgetRange: z.string().optional(),
+        message: z.string().optional(),
+        source: z.string().optional(),
+        locale: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const { data, error } = await supabase
+        .from("partner_leads")
+        .insert({
+          company_name: input.companyName,
+          contact_name: input.contactName,
+          email: input.email,
+          phone: input.phone,
+          city: input.city,
+          partnership_type: input.partnershipType,
+          budget_range: input.budgetRange,
+          message: input.message,
+          source: input.source ?? "website",
+          locale: input.locale,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      }
+
+      try {
+        const { sendEmail, generatePartnerLeadAdminNotificationEmail } =
+          await import("./email");
+
+        const adminEmailData = generatePartnerLeadAdminNotificationEmail(input);
+        await sendEmail({
+          to: "admin@ftourbabrayan.ma",
+          subject: adminEmailData.subject,
+          html: adminEmailData.html,
+          apiKey: ctx.env.RESEND_API_KEY,
+        });
+      } catch (emailError) {
+        console.error("[Worker] Error sending partner lead email:", emailError);
+      }
+
+      return { success: true, id: data.id };
+    }),
+});
+
 // ============================================
 // MAIN APP ROUTER
 // ============================================
@@ -6932,6 +6993,7 @@ export const appRouter = router({
   pastries: pastriesRouter,
   pastryOrders: pastryOrdersRouter,
   contact: contactRouter,
+  partnerLeads: partnerLeadsRouter,
   users: usersRouter,
   public: publicRouter,
   gallery: galleryRouter,
