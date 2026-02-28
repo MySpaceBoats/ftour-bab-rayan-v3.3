@@ -2182,6 +2182,48 @@ export async function deleteContactMessageSupabase(id: number) {
 }
 
 // ============================================
+// PARTNER LEADS SERVICES
+// ============================================
+
+export interface PartnerLeadData {
+  companyName: string;
+  contactName: string;
+  email: string;
+  phone?: string;
+  city?: string;
+  partnershipType?: string;
+  budgetRange?: string;
+  message?: string;
+  source?: string;
+  locale?: string;
+}
+
+export async function createPartnerLeadSupabase(data: PartnerLeadData) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const { data: lead, error } = await client
+    .from('partner_leads')
+    .insert({
+      company_name: data.companyName,
+      contact_name: data.contactName,
+      email: data.email,
+      phone: data.phone,
+      city: data.city,
+      partnership_type: data.partnershipType,
+      budget_range: data.budgetRange,
+      message: data.message,
+      source: data.source ?? 'website',
+      locale: data.locale,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return lead;
+}
+
+// ============================================
 // PUBLIC DATA SERVICES
 // ============================================
 
