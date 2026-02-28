@@ -1162,7 +1162,7 @@ export default function Benevole() {
                             }
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder={`${formTexts.selectDay} (groupe)`} />
+                              <SelectValue placeholder={formTexts.selectDay} />
                             </SelectTrigger>
                             <SelectContent>
                               {daysLoading ? (
@@ -1174,6 +1174,7 @@ export default function Benevole() {
                                   <SelectItem
                                     key={`group-${day.id}`}
                                     value={day.id.toString()}
+                                    disabled={isDayFull(day) && !isFutureDay(day.date)}
                                   >
                                     {new Date(day.date).toLocaleDateString(
                                       dateLocale,
@@ -1183,7 +1184,6 @@ export default function Benevole() {
                                         month: "long",
                                       }
                                     )}
-                                    {!day.isOpen ? " - Fermé en individuel" : ""}
                                   </SelectItem>
                                 ))
                               ) : (
