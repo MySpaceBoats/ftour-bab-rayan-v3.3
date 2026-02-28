@@ -92,6 +92,8 @@ export default function AdminRestaurantGroupes() {
     date: string;
     seatsTotal: number;
     notes: string;
+    totalAmount: number;
+    amountReceived: number;
     companyName: string;
     groupName: string;
     type: string;
@@ -227,6 +229,8 @@ export default function AdminRestaurantGroupes() {
         : "",
       seatsTotal: reservation.seatsTotal || 0,
       notes: reservation.notes || "",
+      totalAmount: Number(reservation.totalAmount || 0),
+      amountReceived: Number(reservation.amountReceived || 0),
       companyName: reservation.companyName || "",
       groupName: reservation.groupName || "",
       type: reservation.type || "",
@@ -244,6 +248,8 @@ export default function AdminRestaurantGroupes() {
       date: editForm.date,
       seatsTotal: editForm.seatsTotal,
       notes: editForm.notes,
+      totalAmount: editForm.totalAmount,
+      amountReceived: editForm.amountReceived,
       companyName: editForm.companyName || undefined,
       groupName: editForm.groupName || undefined,
     });
@@ -455,6 +461,14 @@ export default function AdminRestaurantGroupes() {
     return new Date(date).toLocaleDateString("fr-FR");
   };
 
+  const formatAmount = (value: number) => `${value.toFixed(2)} DH`;
+
+  const getRemainingAmount = (reservation: any) => {
+    const total = Number(reservation.totalAmount || 0);
+    const received = Number(reservation.amountReceived || 0);
+    return Math.max(0, total - received);
+  };
+
   return (
     <div className="min-h-screen bg-muted/30">
       <header className="sticky top-0 z-50 bg-background border-b">
@@ -620,6 +634,9 @@ export default function AdminRestaurantGroupes() {
                         {renderSortIcon("createdAt")}
                       </button>
                     </TableHead>
+                    <TableHead>Montant total</TableHead>
+                    <TableHead>Montant reçu</TableHead>
+                    <TableHead>Montant restant</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -627,7 +644,7 @@ export default function AdminRestaurantGroupes() {
                   {filteredReservations?.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={9}
+                        colSpan={12}
                         className="text-center py-8 text-muted-foreground"
                       >
                         Aucune réservation trouvée
@@ -667,6 +684,13 @@ export default function AdminRestaurantGroupes() {
                         </TableCell>
                         <TableCell>{r.seatsTotal}</TableCell>
                         <TableCell>{formatDate(r.date)}</TableCell>
+                        <TableCell>
+                          {formatAmount(Number(r.totalAmount || 0))}
+                        </TableCell>
+                        <TableCell>
+                          {formatAmount(Number(r.amountReceived || 0))}
+                        </TableCell>
+                        <TableCell>{formatAmount(getRemainingAmount(r))}</TableCell>
                         <TableCell>{getStatusBadge(r.status)}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {formatDate(r.createdAt)}
@@ -825,6 +849,59 @@ export default function AdminRestaurantGroupes() {
                       ),
                     })
                   }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-total-amount">Montant total (DH)</Label>
+                <Input
+                  id="edit-total-amount"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={editForm.totalAmount}
+                  onChange={e =>
+                    setEditForm({
+                      ...editForm,
+                      totalAmount: Math.max(
+                        0,
+                        Number.parseFloat(e.target.value || "0") || 0
+                      ),
+                    })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-amount-received">Montant reçu (DH)</Label>
+                <Input
+                  id="edit-amount-received"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={editForm.amountReceived}
+                  onChange={e =>
+                    setEditForm({
+                      ...editForm,
+                      amountReceived: Math.max(
+                        0,
+                        Number.parseFloat(e.target.value || "0") || 0
+                      ),
+                    })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Montant restant (DH)</Label>
+                <Input
+                  value={Math.max(
+                    0,
+                    Number(editForm.totalAmount || 0) -
+                      Number(editForm.amountReceived || 0)
+                  ).toFixed(2)}
+                  readOnly
+                  disabled
                 />
               </div>
 

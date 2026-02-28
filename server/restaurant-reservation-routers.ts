@@ -751,6 +751,8 @@ export const restaurantReservationsRouter = router({
           .optional(),
         seatsTotal: z.number().int().min(1).optional(),
         notes: z.string().optional(),
+        totalAmount: z.number().min(0).optional(),
+        amountReceived: z.number().min(0).optional(),
         companyName: z.string().optional(),
         groupName: z.string().optional(),
         displayChoice: z.string().optional(),

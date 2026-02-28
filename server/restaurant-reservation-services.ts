@@ -57,6 +57,8 @@ function mapReservation(r: any) {
     processedBy: r.processed_by ?? r.processedBy ?? null,
     processedAt: rawProcessedAt ? new Date(rawProcessedAt) : null,
     notes: r.notes,
+    totalAmount: Number(r.total_amount ?? r.totalAmount ?? 0),
+    amountReceived: Number(r.amount_received ?? r.amountReceived ?? 0),
     createdAt: rawCreatedAt ? new Date(rawCreatedAt) : new Date(),
     updatedAt: rawUpdatedAt ? new Date(rawUpdatedAt) : new Date(),
   };
@@ -83,6 +85,8 @@ export async function createRestaurantReservation(data: {
   groupType?: string;
   notes?: string;
   displayChoice?: string;
+  totalAmount?: number;
+  amountReceived?: number;
 }) {
   try {
     const client = getClient();
@@ -102,6 +106,8 @@ export async function createRestaurantReservation(data: {
         group_name: data.groupName || null,
         group_type: data.groupType || null,
         notes: data.notes || null,
+        total_amount: data.totalAmount ?? 0,
+        amount_received: data.amountReceived ?? 0,
         display_choice: data.displayChoice || null,
         status: "pending_validation",
         payment_status: "not_requested",
@@ -387,6 +393,8 @@ export async function updateRestaurantReservation(
     companyName?: string;
     groupName?: string;
     displayChoice?: string;
+    totalAmount?: number;
+    amountReceived?: number;
   }
 ) {
   try {
@@ -409,6 +417,9 @@ export async function updateRestaurantReservation(
       updateData.group_name = data.groupName || null;
     if (data.displayChoice !== undefined)
       updateData.display_choice = data.displayChoice || null;
+    if (data.totalAmount !== undefined) updateData.total_amount = data.totalAmount;
+    if (data.amountReceived !== undefined)
+      updateData.amount_received = data.amountReceived;
 
     const { error } = await client
       .from("restaurant_reservations")

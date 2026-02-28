@@ -429,6 +429,8 @@ CREATE TABLE IF NOT EXISTS restaurant_reservations (
   processed_by INTEGER,
   processed_at TIMESTAMPTZ,
   notes TEXT,
+  total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  amount_received DECIMAL(10,2) NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
