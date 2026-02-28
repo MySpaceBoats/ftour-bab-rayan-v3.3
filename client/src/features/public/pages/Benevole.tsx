@@ -39,7 +39,6 @@ import {
   Mail,
   Phone,
   MapPin,
-  ArrowRight,
   Loader2,
   QrCode,
   Clock,
@@ -411,12 +410,6 @@ export default function Benevole() {
         : lang === "en"
           ? "New registration"
           : "Nouvelle inscription",
-    viewProgram:
-      lang === "ar"
-        ? "عرض البرنامج"
-        : lang === "en"
-          ? "View program"
-          : "Voir le programme",
     confirmationEmail:
       lang === "ar"
         ? "بريد التأكيد"
@@ -797,23 +790,16 @@ export default function Benevole() {
                     {groupSuccessTexts.emailSent}
                   </p>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                <div className="pt-4">
                   <Button
                     onClick={() => {
                       setGroupSuccess(false);
                       setIsGroup(false);
                     }}
                     variant="outline"
-                    className="flex-1"
+                    className="w-full"
                   >
                     {successTexts.newRegistration}
-                  </Button>
-                  <Button
-                    onClick={() => navigate(`/${lang}/programme`)}
-                    className="flex-1"
-                  >
-                    {successTexts.viewProgram}
-                    <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
               </CardContent>
@@ -913,20 +899,13 @@ export default function Benevole() {
                   </p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                <div className="pt-4">
                   <Button
                     onClick={() => setRegistrationSuccess(null)}
                     variant="outline"
-                    className="flex-1"
+                    className="w-full"
                   >
                     {successTexts.newRegistration}
-                  </Button>
-                  <Button
-                    onClick={() => navigate(`/${lang}/programme`)}
-                    className="flex-1"
-                  >
-                    {successTexts.viewProgram}
-                    <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
               </CardContent>
