@@ -617,6 +617,45 @@ export function generateContactNotificationEmail(data: ContactEmailData): { subj
 
 
 
+
+export interface PartnerLeadEmailData {
+  companyName: string;
+  contactName: string;
+  email: string;
+  phone?: string;
+  city?: string;
+  partnershipType?: string;
+  budgetRange?: string;
+  message?: string;
+  locale?: string;
+  source?: string;
+}
+
+export function generatePartnerLeadNotificationEmail(data: PartnerLeadEmailData): { subject: string; html: string } {
+  const content = `
+    <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">Nouveau lead partenaire</h2>
+
+    <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+      <tr><td style="padding: 10px; background-color: #f3f4f6; font-weight: bold; width: 160px;">Entreprise</td><td style="padding: 10px; background-color: #f9fafb;">${escapeHtml(data.companyName)}</td></tr>
+      <tr><td style="padding: 10px; background-color: #f3f4f6; font-weight: bold;">Contact</td><td style="padding: 10px; background-color: #f9fafb;">${escapeHtml(data.contactName)}</td></tr>
+      <tr><td style="padding: 10px; background-color: #f3f4f6; font-weight: bold;">Email</td><td style="padding: 10px; background-color: #f9fafb;"><a href="mailto:${escapeHtml(data.email)}">${escapeHtml(data.email)}</a></td></tr>
+      ${data.phone ? `<tr><td style="padding: 10px; background-color: #f3f4f6; font-weight: bold;">Téléphone</td><td style="padding: 10px; background-color: #f9fafb;">${escapeHtml(data.phone)}</td></tr>` : ''}
+      ${data.city ? `<tr><td style="padding: 10px; background-color: #f3f4f6; font-weight: bold;">Ville</td><td style="padding: 10px; background-color: #f9fafb;">${escapeHtml(data.city)}</td></tr>` : ''}
+      ${data.partnershipType ? `<tr><td style="padding: 10px; background-color: #f3f4f6; font-weight: bold;">Type partenariat</td><td style="padding: 10px; background-color: #f9fafb;">${escapeHtml(data.partnershipType)}</td></tr>` : ''}
+      ${data.budgetRange ? `<tr><td style="padding: 10px; background-color: #f3f4f6; font-weight: bold;">Budget</td><td style="padding: 10px; background-color: #f9fafb;">${escapeHtml(data.budgetRange)}</td></tr>` : ''}
+      ${data.locale ? `<tr><td style="padding: 10px; background-color: #f3f4f6; font-weight: bold;">Locale</td><td style="padding: 10px; background-color: #f9fafb;">${escapeHtml(data.locale)}</td></tr>` : ''}
+      ${data.source ? `<tr><td style="padding: 10px; background-color: #f3f4f6; font-weight: bold;">Source</td><td style="padding: 10px; background-color: #f9fafb;">${escapeHtml(data.source)}</td></tr>` : ''}
+    </table>
+
+    ${data.message ? `<div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;"><h3 style="color: #374151; margin: 0 0 10px 0; font-size: 16px;">Message :</h3><p style="margin: 0; color: #374151; white-space: pre-wrap;">${escapeHtml(data.message)}</p></div>` : ''}
+  `;
+
+  return {
+    subject: `🤝 Nouveau lead partenaire - ${data.companyName}`,
+    html: baseTemplate(content),
+  };
+}
+
 // ============================================
 // RESTAURANT RESERVATION EMAIL LAYOUT + TEMPLATES
 // ============================================

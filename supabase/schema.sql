@@ -4,6 +4,7 @@
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ============================================
 -- USERS TABLE
@@ -222,6 +223,24 @@ CREATE TABLE IF NOT EXISTS contact_messages (
 CREATE INDEX idx_contact_messages_is_read ON contact_messages(is_read);
 
 -- ============================================
+-- PARTNER LEADS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS partner_leads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  company_name TEXT NOT NULL,
+  contact_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT,
+  city TEXT,
+  partnership_type TEXT,
+  budget_range TEXT,
+  message TEXT,
+  source TEXT NOT NULL DEFAULT 'website',
+  locale TEXT
+);
+
+-- ============================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- ============================================
 
@@ -236,6 +255,7 @@ ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE donations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contact_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE partner_leads ENABLE ROW LEVEL SECURITY;
 
 -- Public read access for ramadan_days and goodies (for public pages)
 CREATE POLICY "Public can read open ramadan days" ON ramadan_days
@@ -279,6 +299,10 @@ CREATE POLICY "Public can read donations" ON donations
 CREATE POLICY "Public can send contact messages" ON contact_messages
   FOR INSERT WITH CHECK (true);
 
+-- Public can create partner leads
+CREATE POLICY "Public can create partner leads" ON partner_leads
+  FOR INSERT WITH CHECK (true);
+
 -- Service role (admin) has full access - these policies allow service_role to bypass RLS
 -- Note: service_role key automatically bypasses RLS, but we add explicit policies for clarity
 
@@ -292,6 +316,7 @@ CREATE POLICY "Service role full access orders" ON orders FOR ALL USING (true) W
 CREATE POLICY "Service role full access order_items" ON order_items FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Service role full access donations" ON donations FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Service role full access contact_messages" ON contact_messages FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access partner_leads" ON partner_leads FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================
 -- TRIGGERS FOR updated_at

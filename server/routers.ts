@@ -11,6 +11,7 @@ import {
   generateDonationConfirmationEmail,
   generateContactNotificationEmail,
   generateGroupRegistrationEmail,
+  generatePartnerLeadNotificationEmail,
 } from "./email";
 import {
   signInUser,
@@ -2604,6 +2605,41 @@ const contactRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       return supabaseServices.deleteContactMessageSupabase(input.id);
+    }),
+});
+
+
+const partnerLeadsRouter = router({
+  create: publicProcedure
+    .input(
+      z.object({
+        companyName: z.string().min(2),
+        contactName: z.string().min(2),
+        email: z.string().email(),
+        phone: z.string().optional(),
+        city: z.string().optional(),
+        partnershipType: z.string().optional(),
+        budgetRange: z.string().optional(),
+        message: z.string().optional(),
+        source: z.string().optional(),
+        locale: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const lead = await supabaseServices.createPartnerLeadSupabase(input);
+
+      try {
+        const emailData = generatePartnerLeadNotificationEmail(input);
+        await sendEmail({
+          to: "admin@ftourbabrayan.ma",
+          subject: emailData.subject,
+          html: emailData.html,
+        });
+      } catch (error) {
+        console.error("[Partner Leads] Email send failed:", error);
+      }
+
+      return { success: true, id: lead.id };
     }),
 });
 
@@ -5475,6 +5511,7 @@ export const appRouter = router({
   orders: ordersRouter,
   donations: donationsRouter,
   contact: contactRouter,
+  partnerLeads: partnerLeadsRouter,
   users: usersRouter,
   public: publicRouter,
   upload: uploadRouter,
@@ -6130,6 +6167,7 @@ export const appRouterUpdated = router({
   orders: ordersRouter,
   donations: donationsRouter,
   contact: contactRouter,
+  partnerLeads: partnerLeadsRouter,
   users: usersRouter,
   public: publicRouter,
   upload: uploadRouter,
