@@ -378,27 +378,6 @@ export default function AdminRestaurantGroupes() {
     });
   };
 
-  if (!hasAccess) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="p-8 text-center space-y-4">
-            <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">
-              <Users className="h-8 w-8 text-red-600" />
-            </div>
-            <h1 className="text-xl font-bold">Accès non autorisé</h1>
-            <p className="text-muted-foreground">
-              Vous n'avez pas les droits pour accéder aux réservations groupes.
-            </p>
-            <Link href="/admin">
-              <Button variant="outline">Retour au dashboard</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   const getSortValue = (reservation: any, key: SortKey) => {
     switch (key) {
       case "reference":
@@ -477,6 +456,27 @@ export default function AdminRestaurantGroupes() {
       <ArrowDown className="h-3.5 w-3.5" />
     );
   };
+
+  if (!hasAccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="p-8 text-center space-y-4">
+            <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">
+              <Users className="h-8 w-8 text-red-600" />
+            </div>
+            <h1 className="text-xl font-bold">Accès non autorisé</h1>
+            <p className="text-muted-foreground">
+              Vous n'avez pas les droits pour accéder aux réservations groupes.
+            </p>
+            <Link href="/admin">
+              <Button variant="outline">Retour au dashboard</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
