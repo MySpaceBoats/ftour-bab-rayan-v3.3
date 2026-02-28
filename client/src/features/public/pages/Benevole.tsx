@@ -405,12 +405,6 @@ export default function Benevole() {
         : lang === "en"
           ? "An email with your QR code and instructions has been sent."
           : "Un email contenant votre QR code et les consignes vous a été envoyé.",
-    newRegistration:
-      lang === "ar"
-        ? "تسجيل جديد"
-        : lang === "en"
-          ? "New registration"
-          : "Nouvelle inscription",
     viewProgram:
       lang === "ar"
         ? "عرض البرنامج"
@@ -799,16 +793,6 @@ export default function Benevole() {
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   <Button
-                    onClick={() => {
-                      setGroupSuccess(false);
-                      setIsGroup(false);
-                    }}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    {successTexts.newRegistration}
-                  </Button>
-                  <Button
                     onClick={() => navigate(`/${lang}/programme`)}
                     className="flex-1"
                   >
@@ -914,13 +898,6 @@ export default function Benevole() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                  <Button
-                    onClick={() => setRegistrationSuccess(null)}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    {successTexts.newRegistration}
-                  </Button>
                   <Button
                     onClick={() => navigate(`/${lang}/programme`)}
                     className="flex-1"
