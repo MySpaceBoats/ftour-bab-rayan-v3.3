@@ -11,6 +11,7 @@ import {
   generateDonationConfirmationEmail,
   generateContactNotificationEmail,
   generateGroupRegistrationEmail,
+  generateGroupRefusalEmail,
   generatePartnerLeadNotificationEmail,
 } from "./email";
 import {
@@ -1994,10 +1995,16 @@ const volunteersRouter = router({
             }
           }
         } else {
+          const refusalEmailData = generateGroupRefusalEmail({
+            responsibleName: String(request.responsible_name ?? request.responsibleName),
+            groupName: String(request.group_name ?? request.groupName),
+            dayNumber: day.dayNumber,
+            rejectionReason: input.rejectionReason,
+          });
           await sendEmail({
             to: normalizedResponsibleEmail,
-            subject: "Votre demande groupe bénévole est refusée",
-            html: `<p>Bonjour ${request.responsible_name ?? request.responsibleName},</p><p>Votre demande d'inscription groupe <strong>${request.group_name ?? request.groupName}</strong> n'a pas pu être validée.</p>${input.rejectionReason ? `<p>Motif: ${input.rejectionReason}</p>` : ""}`,
+            subject: refusalEmailData.subject,
+            html: refusalEmailData.html,
           });
         }
       } catch (error) {

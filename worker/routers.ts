@@ -2747,6 +2747,8 @@ const volunteersRouter = router({
       }
 
       const dayId = request.day_id;
+      let validationQrToken: string | null = null;
+      let validationDay: any = null;
 
       if (input.action === "validate") {
         const { data: day, error: dayError } = await supabase
@@ -2758,6 +2760,8 @@ const volunteersRouter = router({
         if (dayError || !day) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
         }
+
+        validationDay = day;
 
         const estimatedSize = Number(request.estimated_size ?? 1);
         const normalizedEstimatedSize =
@@ -2795,6 +2799,7 @@ const volunteersRouter = router({
         }
 
         const qrToken = crypto.randomUUID();
+        validationQrToken = qrToken;
         const responsibleName = String(request.responsible_name || "").trim();
         const nameParts = responsibleName.split(/\s+/).filter(Boolean);
 
@@ -2855,23 +2860,52 @@ const volunteersRouter = router({
           .trim();
 
         if (normalizedResponsibleEmail) {
-          const { sendEmail } = await import("./email");
+          const { sendEmail, generateVolunteerConfirmationEmail, generateGroupRefusalEmail } = await import("./email");
           const responsibleName = String(request.responsible_name || "").trim();
           const groupName = String(request.group_name || "").trim();
-          const dayNumber = request.ramadan_days?.day_number || "";
 
           if (input.action === "validate") {
+            let subject = "Votre demande groupe bénévole est validée";
+            let html = `<p>Bonjour ${responsibleName},</p><p>Votre demande d'inscription groupe <strong>${groupName}</strong>${validationDay ? ` pour le jour ${validationDay.day_number} du Ramadan` : ""} a été validée.</p>`;
+
+            if (validationQrToken && validationDay) {
+              const nameParts = responsibleName.split(/\s+/).filter(Boolean);
+              const emailData = generateVolunteerConfirmationEmail({
+                firstName: nameParts[0] || groupName,
+                lastName: nameParts.slice(1).join(" ") || groupName,
+                email: normalizedResponsibleEmail,
+                dayNumber: validationDay.day_number,
+                dayDate: new Date(validationDay.date).toLocaleDateString("fr-FR", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                }),
+                location: validationDay.location || "Association Bab Rayan, Casablanca",
+                startTime: validationDay.iftar_time || "18h00",
+                volunteerSlots: (request.volunteer_slots || []) as string[],
+                qrToken: validationQrToken,
+                baseUrl: "https://www.ftourbabrayan.ma",
+              });
+              subject = emailData.subject;
+              html = emailData.html;
+            }
+
             await sendEmail({
               to: normalizedResponsibleEmail,
-              subject: "Votre demande groupe bénévole est validée",
-              html: `<p>Bonjour ${responsibleName},</p><p>Votre demande d'inscription groupe <strong>${groupName}</strong>${dayNumber ? ` pour le jour ${dayNumber} du Ramadan` : ""} a été validée.</p>`,
+              subject,
+              html,
               apiKey: ctx.env.RESEND_API_KEY,
             });
           } else {
+            const refusalEmailData = generateGroupRefusalEmail({
+              responsibleName,
+              groupName,
+              rejectionReason: input.rejectionReason,
+            });
             await sendEmail({
               to: normalizedResponsibleEmail,
-              subject: "Votre demande groupe bénévole est refusée",
-              html: `<p>Bonjour ${responsibleName},</p><p>Votre demande d'inscription groupe <strong>${groupName}</strong> n'a pas pu être validée.</p>${input.rejectionReason ? `<p>Motif: ${input.rejectionReason}</p>` : ""}`,
+              subject: refusalEmailData.subject,
+              html: refusalEmailData.html,
               apiKey: ctx.env.RESEND_API_KEY,
             });
           }
