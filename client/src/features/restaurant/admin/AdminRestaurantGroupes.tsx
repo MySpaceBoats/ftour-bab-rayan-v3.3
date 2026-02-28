@@ -72,6 +72,9 @@ export default function AdminRestaurantGroupes() {
   });
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [inlineEdits, setInlineEdits] = useState<
+    Record<string, Record<string, string | number>>
+  >({});
   const [createForm, setCreateForm] = useState({
     type: "groupe",
     groupOrCompanyName: "",
@@ -201,6 +204,16 @@ export default function AdminRestaurantGroupes() {
     },
   });
 
+  const inlineEditMutation = trpc.restaurantReservations.adminEdit.useMutation({
+    onSuccess: () => {
+      toast.success("Mise à jour enregistrée");
+      refetch();
+    },
+    onError: error => {
+      toast.error(error.message || "Erreur lors de la mise à jour");
+    },
+  });
+
   const createManualMutation =
     trpc.restaurantReservations.adminCreateManual.useMutation({
       onSuccess: () => {
@@ -311,6 +324,57 @@ export default function AdminRestaurantGroupes() {
         | "pending_validation"
         | "validated_pending_payment"
         | "paid_confirmed",
+    });
+  };
+
+  const getRowKey = (reservation: any) =>
+    `${reservation.type}-${reservation.id}`;
+
+  const toDateInputValue = (value: string | Date | null | undefined) => {
+    if (!value) return "";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return "";
+    return parsed.toISOString().split("T")[0];
+  };
+
+  const getInlineValue = (
+    reservation: any,
+    field: string,
+    fallback?: string | number
+  ) => {
+    const rowKey = getRowKey(reservation);
+    const editedValue = inlineEdits[rowKey]?.[field];
+    if (editedValue !== undefined) return editedValue;
+    if (fallback !== undefined) return fallback;
+    return reservation[field] ?? "";
+  };
+
+  const updateInlineValue = (
+    reservation: any,
+    field: string,
+    value: string | number
+  ) => {
+    const rowKey = getRowKey(reservation);
+    setInlineEdits(current => ({
+      ...current,
+      [rowKey]: {
+        ...(current[rowKey] || {}),
+        [field]: value,
+      },
+    }));
+  };
+
+  const saveInlineValue = (
+    reservation: any,
+    field: string,
+    value: string | number | null
+  ) => {
+    const originalValue = reservation[field] ?? "";
+    if (String(originalValue) === String(value)) return;
+
+    inlineEditMutation.mutate({
+      id: reservation.id,
+      [field]: value,
     });
   };
 
@@ -652,18 +716,180 @@ export default function AdminRestaurantGroupes() {
                   ) : (
                     filteredReservations?.map((r: any) => (
                       <TableRow key={`${r.type}-${r.id}`}>
-                        <TableCell>{formatDate(r.date)}</TableCell>
-                        <TableCell>{r.respResa || "-"}</TableCell>
-                        <TableCell>{Number(r.nbAdult || 0)}</TableCell>
-                        <TableCell>{Number(r.nbKids || 0)}</TableCell>
                         <TableCell>
-                          <div className="font-medium">
-                            {r.groupName || r.companyName || "-"}
-                          </div>
+                          <Input
+                            type="date"
+                            className="h-8 min-w-[145px]"
+                            value={String(
+                              getInlineValue(
+                                r,
+                                "date",
+                                toDateInputValue(r.date)
+                              )
+                            )}
+                            onChange={e =>
+                              updateInlineValue(r, "date", e.target.value)
+                            }
+                            onBlur={e =>
+                              saveInlineValue(r, "date", e.target.value)
+                            }
+                          />
                         </TableCell>
-                        <TableCell>{r.name || "-"}</TableCell>
-                        <TableCell>{r.phone || "-"}</TableCell>
-                        <TableCell>{r.email || "-"}</TableCell>
+                        <TableCell>
+                          <Select
+                            value={String(
+                              getInlineValue(
+                                r,
+                                "respResa",
+                                r.respResa || "Nayla"
+                              )
+                            )}
+                            onValueChange={value => {
+                              updateInlineValue(r, "respResa", value);
+                              saveInlineValue(r, "respResa", value);
+                            }}
+                          >
+                            <SelectTrigger className="h-8 min-w-[120px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Nayla">Nayla</SelectItem>
+                              <SelectItem value="Hind">Hind</SelectItem>
+                              <SelectItem value="Kamal">Kamal</SelectItem>
+                              <SelectItem value="Rita">Rita</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min={0}
+                            className="h-8 w-20"
+                            value={String(
+                              getInlineValue(
+                                r,
+                                "nbAdult",
+                                Number(r.nbAdult || 0)
+                              )
+                            )}
+                            onChange={e =>
+                              updateInlineValue(r, "nbAdult", e.target.value)
+                            }
+                            onBlur={e =>
+                              saveInlineValue(
+                                r,
+                                "nbAdult",
+                                Math.max(
+                                  0,
+                                  Number.parseInt(e.target.value || "0", 10) ||
+                                    0
+                                )
+                              )
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min={0}
+                            className="h-8 w-20"
+                            value={String(
+                              getInlineValue(r, "nbKids", Number(r.nbKids || 0))
+                            )}
+                            onChange={e =>
+                              updateInlineValue(r, "nbKids", e.target.value)
+                            }
+                            onBlur={e =>
+                              saveInlineValue(
+                                r,
+                                "nbKids",
+                                Math.max(
+                                  0,
+                                  Number.parseInt(e.target.value || "0", 10) ||
+                                    0
+                                )
+                              )
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            className="h-8 min-w-[200px] font-medium"
+                            value={String(
+                              r.type === "groupe"
+                                ? getInlineValue(
+                                    r,
+                                    "groupName",
+                                    r.groupName || ""
+                                  )
+                                : getInlineValue(
+                                    r,
+                                    "companyName",
+                                    r.companyName || ""
+                                  )
+                            )}
+                            onChange={e =>
+                              updateInlineValue(
+                                r,
+                                r.type === "groupe"
+                                  ? "groupName"
+                                  : "companyName",
+                                e.target.value
+                              )
+                            }
+                            onBlur={e =>
+                              saveInlineValue(
+                                r,
+                                r.type === "groupe"
+                                  ? "groupName"
+                                  : "companyName",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            className="h-8 min-w-[170px]"
+                            value={String(
+                              getInlineValue(r, "name", r.name || "")
+                            )}
+                            onChange={e =>
+                              updateInlineValue(r, "name", e.target.value)
+                            }
+                            onBlur={e =>
+                              saveInlineValue(r, "name", e.target.value)
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            className="h-8 min-w-[135px]"
+                            value={String(
+                              getInlineValue(r, "phone", r.phone || "")
+                            )}
+                            onChange={e =>
+                              updateInlineValue(r, "phone", e.target.value)
+                            }
+                            onBlur={e =>
+                              saveInlineValue(r, "phone", e.target.value)
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            className="h-8 min-w-[210px]"
+                            value={String(
+                              getInlineValue(r, "email", r.email || "")
+                            )}
+                            onChange={e =>
+                              updateInlineValue(r, "email", e.target.value)
+                            }
+                            onBlur={e =>
+                              saveInlineValue(r, "email", e.target.value)
+                            }
+                          />
+                        </TableCell>
                         <TableCell>
                           {formatAmount(Number(r.nbAdult || 0) * ADULT_PRICE)}
                         </TableCell>
@@ -671,16 +897,169 @@ export default function AdminRestaurantGroupes() {
                           {formatAmount(Number(r.nbKids || 0) * KIDS_PRICE)}
                         </TableCell>
                         <TableCell>
-                          {formatAmount(Number(r.totalAmount || 0))}
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            className="h-8 min-w-[120px]"
+                            value={String(
+                              getInlineValue(
+                                r,
+                                "totalAmount",
+                                Number(r.totalAmount || 0)
+                              )
+                            )}
+                            onChange={e =>
+                              updateInlineValue(
+                                r,
+                                "totalAmount",
+                                e.target.value
+                              )
+                            }
+                            onBlur={e =>
+                              saveInlineValue(
+                                r,
+                                "totalAmount",
+                                Math.max(
+                                  0,
+                                  Number.parseFloat(e.target.value || "0") || 0
+                                )
+                              )
+                            }
+                          />
                         </TableCell>
-                        <TableCell>{formatAmount(Number(r.deposit || 0))}</TableCell>
-                        <TableCell>{r.modeDeposit || "-"}</TableCell>
                         <TableCell>
-                          {formatAmount(Number(r.amountReceived || 0))}
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            className="h-8 min-w-[110px]"
+                            value={String(
+                              getInlineValue(
+                                r,
+                                "deposit",
+                                Number(r.deposit || 0)
+                              )
+                            )}
+                            onChange={e =>
+                              updateInlineValue(r, "deposit", e.target.value)
+                            }
+                            onBlur={e =>
+                              saveInlineValue(
+                                r,
+                                "deposit",
+                                Math.max(
+                                  0,
+                                  Number.parseFloat(e.target.value || "0") || 0
+                                )
+                              )
+                            }
+                          />
                         </TableCell>
-                        <TableCell>{r.paymentMode || "-"}</TableCell>
-                        <TableCell>{r.dateAvReg ? formatDate(r.dateAvReg) : "-"}</TableCell>
-                        <TableCell>{formatAmount(getRemainingAmount(r))}</TableCell>
+                        <TableCell>
+                          <Input
+                            className="h-8 min-w-[135px]"
+                            value={String(
+                              getInlineValue(
+                                r,
+                                "modeDeposit",
+                                r.modeDeposit || ""
+                              )
+                            )}
+                            onChange={e =>
+                              updateInlineValue(
+                                r,
+                                "modeDeposit",
+                                e.target.value
+                              )
+                            }
+                            onBlur={e =>
+                              saveInlineValue(r, "modeDeposit", e.target.value)
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            className="h-8 min-w-[120px]"
+                            value={String(
+                              getInlineValue(
+                                r,
+                                "amountReceived",
+                                Number(r.amountReceived || 0)
+                              )
+                            )}
+                            onChange={e =>
+                              updateInlineValue(
+                                r,
+                                "amountReceived",
+                                e.target.value
+                              )
+                            }
+                            onBlur={e =>
+                              saveInlineValue(
+                                r,
+                                "amountReceived",
+                                Math.max(
+                                  0,
+                                  Number.parseFloat(e.target.value || "0") || 0
+                                )
+                              )
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={String(
+                              getInlineValue(
+                                r,
+                                "paymentMode",
+                                r.paymentMode || "cash"
+                              )
+                            )}
+                            onValueChange={value => {
+                              updateInlineValue(r, "paymentMode", value);
+                              saveInlineValue(r, "paymentMode", value);
+                            }}
+                          >
+                            <SelectTrigger className="h-8 min-w-[130px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="cash">Cash</SelectItem>
+                              <SelectItem value="virement">Virement</SelectItem>
+                              <SelectItem value="espece">Espèce</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="date"
+                            className="h-8 min-w-[145px]"
+                            value={String(
+                              getInlineValue(
+                                r,
+                                "dateAvReg",
+                                toDateInputValue(r.dateAvReg)
+                              )
+                            )}
+                            onChange={e =>
+                              updateInlineValue(r, "dateAvReg", e.target.value)
+                            }
+                            onBlur={e =>
+                              saveInlineValue(
+                                r,
+                                "dateAvReg",
+                                e.target.value || null
+                              )
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {formatAmount(getRemainingAmount(r))}
+                        </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
                             {(r.status === "pending_validation" ||
@@ -918,7 +1297,10 @@ export default function AdminRestaurantGroupes() {
                       setEditForm({
                         ...editForm,
                         nbAdult,
-                        totalAmount: computeTotalFromGuests(nbAdult, editForm.nbKids),
+                        totalAmount: computeTotalFromGuests(
+                          nbAdult,
+                          editForm.nbKids
+                        ),
                       });
                     }}
                   />
@@ -938,7 +1320,10 @@ export default function AdminRestaurantGroupes() {
                       setEditForm({
                         ...editForm,
                         nbKids,
-                        totalAmount: computeTotalFromGuests(editForm.nbAdult, nbKids),
+                        totalAmount: computeTotalFromGuests(
+                          editForm.nbAdult,
+                          nbKids
+                        ),
                       });
                     }}
                   />
