@@ -638,6 +638,12 @@ export default function AdminRestaurantGroupes() {
                     <TableHead>Montant total</TableHead>
                     <TableHead>Montant reçu</TableHead>
                     <TableHead>Montant restant</TableHead>
+                    <TableHead>Deposit</TableHead>
+                    <TableHead>NB ADULT</TableHead>
+                    <TableHead>NB KIDS</TableHead>
+                    <TableHead>Mode règlement</TableHead>
+                    <TableHead>RESP RESA</TableHead>
+                    <TableHead>Notes</TableHead>
                     <TableHead>
                       <button
                         type="button"
@@ -668,7 +674,7 @@ export default function AdminRestaurantGroupes() {
                   {filteredReservations?.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={12}
+                        colSpan={18}
                         className="text-center py-8 text-muted-foreground"
                       >
                         Aucune réservation trouvée
@@ -715,6 +721,14 @@ export default function AdminRestaurantGroupes() {
                           {formatAmount(Number(r.amountReceived || 0))}
                         </TableCell>
                         <TableCell>{formatAmount(getRemainingAmount(r))}</TableCell>
+                        <TableCell>{formatAmount(Number(r.deposit || 0))}</TableCell>
+                        <TableCell>{Number(r.nbAdult || 0)}</TableCell>
+                        <TableCell>{Number(r.nbKids || 0)}</TableCell>
+                        <TableCell>{r.paymentMode || "-"}</TableCell>
+                        <TableCell>{r.respResa || "-"}</TableCell>
+                        <TableCell className="max-w-[220px] truncate" title={r.notes || ""}>
+                          {r.notes || "-"}
+                        </TableCell>
                         <TableCell>{getStatusBadge(r.status)}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {formatDate(r.createdAt)}
@@ -725,9 +739,10 @@ export default function AdminRestaurantGroupes() {
                               r.status === "submitted") && (
                               <>
                                 <Button
-                                  size="sm"
+                                  size="icon"
                                   variant="outline"
-                                  className="text-green-600"
+                                  className="h-8 w-8 text-green-600"
+                                  title="Valider"
                                   onClick={() =>
                                     validateMutation.mutate({
                                       reference: r.reference,
@@ -736,13 +751,13 @@ export default function AdminRestaurantGroupes() {
                                   }
                                   disabled={validateMutation.isPending}
                                 >
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Valider
+                                  <CheckCircle className="h-4 w-4" />
                                 </Button>
                                 <Button
-                                  size="sm"
+                                  size="icon"
                                   variant="outline"
-                                  className="text-red-600"
+                                  className="h-8 w-8 text-red-600"
+                                  title="Refuser"
                                   onClick={() =>
                                     refuseMutation.mutate({
                                       reference: r.reference,
@@ -750,8 +765,7 @@ export default function AdminRestaurantGroupes() {
                                   }
                                   disabled={refuseMutation.isPending}
                                 >
-                                  <XCircle className="h-3 w-3 mr-1" />
-                                  Refuser
+                                  <XCircle className="h-4 w-4" />
                                 </Button>
                               </>
                             )}
@@ -762,8 +776,10 @@ export default function AdminRestaurantGroupes() {
                               "confirmed",
                             ].includes(r.status) && (
                               <Button
-                                size="sm"
+                                size="icon"
                                 variant="outline"
+                                className="h-8 w-8"
+                                title="Terminer"
                                 onClick={() =>
                                   updateStatusMutation.mutate({
                                     id: r.id,
@@ -771,25 +787,27 @@ export default function AdminRestaurantGroupes() {
                                   })
                                 }
                               >
-                                Terminer
+                                <CheckCircle className="h-4 w-4" />
                               </Button>
                             )}
                             <Button
-                              size="sm"
+                              size="icon"
                               variant="outline"
+                              className="h-8 w-8"
+                              title="Modifier"
                               onClick={() => openEditDialog(r)}
                             >
-                              <Pencil className="h-3 w-3 mr-1" />
-                              Modifier
+                              <Pencil className="h-4 w-4" />
                             </Button>
                             <Button
-                              size="sm"
+                              size="icon"
                               variant="destructive"
+                              className="h-8 w-8"
+                              title="Supprimer"
                               onClick={() => handleDeleteReservation(r)}
                               disabled={deleteMutation.isPending}
                             >
-                              <Trash2 className="h-3 w-3 mr-1" />
-                              Effacer
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
