@@ -761,6 +761,8 @@ export const restaurantReservationsRouter = router({
         companyName: z.string().optional(),
         groupName: z.string().optional(),
         displayChoice: z.string().optional(),
+        modeDeposit: z.string().nullable().optional(),
+        dateAvReg: z.string().nullable().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
