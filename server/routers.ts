@@ -5551,7 +5551,7 @@ const pastriesRouter = router({
     }
   }),
 
-  create: adminBoutiqueProcedure
+  create: adminPatisserieProcedure
     .input(
       z.object({
         name: z.string(),
@@ -5604,7 +5604,7 @@ const pastriesRouter = router({
       return data;
     }),
 
-  update: adminBoutiqueProcedure
+  update: adminPatisserieProcedure
     .input(
       z.object({
         id: z.number(),
@@ -5662,7 +5662,7 @@ const pastriesRouter = router({
       return data;
     }),
 
-  delete: adminBoutiqueProcedure
+  delete: adminPatisserieProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const client = getSupabaseAdminClient();
