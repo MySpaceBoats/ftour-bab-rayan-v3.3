@@ -39,7 +39,6 @@ import {
   Mail,
   Phone,
   MapPin,
-  ArrowRight,
   Loader2,
   QrCode,
   Clock,
@@ -405,12 +404,12 @@ export default function Benevole() {
         : lang === "en"
           ? "An email with your QR code and instructions has been sent."
           : "Un email contenant votre QR code et les consignes vous a été envoyé.",
-    viewProgram:
+    newRegistration:
       lang === "ar"
-        ? "عرض البرنامج"
+        ? "تسجيل جديد"
         : lang === "en"
-          ? "View program"
-          : "Voir le programme",
+          ? "New registration"
+          : "Nouvelle inscription",
     confirmationEmail:
       lang === "ar"
         ? "بريد التأكيد"
@@ -791,13 +790,16 @@ export default function Benevole() {
                     {groupSuccessTexts.emailSent}
                   </p>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                <div className="pt-4">
                   <Button
-                    onClick={() => navigate(`/${lang}/programme`)}
-                    className="flex-1"
+                    onClick={() => {
+                      setGroupSuccess(false);
+                      setIsGroup(false);
+                    }}
+                    variant="outline"
+                    className="w-full"
                   >
-                    {successTexts.viewProgram}
-                    <ArrowRight className="h-4 w-4 ml-2" />
+                    {successTexts.newRegistration}
                   </Button>
                 </div>
               </CardContent>
@@ -897,13 +899,13 @@ export default function Benevole() {
                   </p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                <div className="pt-4">
                   <Button
-                    onClick={() => navigate(`/${lang}/programme`)}
-                    className="flex-1"
+                    onClick={() => setRegistrationSuccess(null)}
+                    variant="outline"
+                    className="w-full"
                   >
-                    {successTexts.viewProgram}
-                    <ArrowRight className="h-4 w-4 ml-2" />
+                    {successTexts.newRegistration}
                   </Button>
                 </div>
               </CardContent>
