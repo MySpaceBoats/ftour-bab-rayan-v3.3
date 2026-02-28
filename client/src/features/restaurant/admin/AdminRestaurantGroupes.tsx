@@ -657,6 +657,7 @@ export default function AdminRestaurantGroupes() {
                         {renderSortIcon("date")}
                       </button>
                     </TableHead>
+                    <TableHead>REF RÉSERVATION</TableHead>
                     <TableHead>RESP. RÉSA</TableHead>
                     <TableHead>
                       <button
@@ -700,6 +701,16 @@ export default function AdminRestaurantGroupes() {
                     <TableHead>MODE RÈGLEMENT</TableHead>
                     <TableHead>DATE AV/REG</TableHead>
                     <TableHead>RESTE À PAYER</TableHead>
+                    <TableHead>
+                      <button
+                        type="button"
+                        onClick={() => toggleSort("status")}
+                        className="inline-flex items-center gap-1 hover:text-foreground"
+                      >
+                        STATUT
+                        {renderSortIcon("status")}
+                      </button>
+                    </TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -707,7 +718,7 @@ export default function AdminRestaurantGroupes() {
                   {filteredReservations?.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={18}
+                        colSpan={20}
                         className="text-center py-8 text-muted-foreground"
                       >
                         Aucune réservation trouvée
@@ -734,6 +745,11 @@ export default function AdminRestaurantGroupes() {
                               saveInlineValue(r, "date", e.target.value)
                             }
                           />
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-mono text-xs min-w-[130px] inline-block">
+                            {r.reference || "-"}
+                          </span>
                         </TableCell>
                         <TableCell>
                           <Select
@@ -957,26 +973,28 @@ export default function AdminRestaurantGroupes() {
                           />
                         </TableCell>
                         <TableCell>
-                          <Input
-                            className="h-8 min-w-[135px]"
+                          <Select
                             value={String(
                               getInlineValue(
                                 r,
                                 "modeDeposit",
-                                r.modeDeposit || ""
+                                r.modeDeposit || "cash"
                               )
                             )}
-                            onChange={e =>
-                              updateInlineValue(
-                                r,
-                                "modeDeposit",
-                                e.target.value
-                              )
-                            }
-                            onBlur={e =>
-                              saveInlineValue(r, "modeDeposit", e.target.value)
-                            }
-                          />
+                            onValueChange={value => {
+                              updateInlineValue(r, "modeDeposit", value);
+                              saveInlineValue(r, "modeDeposit", value);
+                            }}
+                          >
+                            <SelectTrigger className="h-8 min-w-[130px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="cash">Cash</SelectItem>
+                              <SelectItem value="virement">Virement</SelectItem>
+                              <SelectItem value="espece">Espèce</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                         <TableCell>
                           <Input
@@ -1060,6 +1078,7 @@ export default function AdminRestaurantGroupes() {
                         <TableCell>
                           {formatAmount(getRemainingAmount(r))}
                         </TableCell>
+                        <TableCell>{getStatusBadge(r.status)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
                             {(r.status === "pending_validation" ||
