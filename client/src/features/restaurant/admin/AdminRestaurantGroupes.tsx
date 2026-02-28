@@ -647,6 +647,7 @@ export default function AdminRestaurantGroupes() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>REF RÉSERVATION</TableHead>
                     <TableHead>
                       <button
                         type="button"
@@ -657,7 +658,6 @@ export default function AdminRestaurantGroupes() {
                         {renderSortIcon("date")}
                       </button>
                     </TableHead>
-                    <TableHead>REF RÉSERVATION</TableHead>
                     <TableHead>RESP. RÉSA</TableHead>
                     <TableHead>
                       <button
@@ -728,6 +728,11 @@ export default function AdminRestaurantGroupes() {
                     filteredReservations?.map((r: any) => (
                       <TableRow key={`${r.type}-${r.id}`}>
                         <TableCell>
+                          <span className="font-mono text-xs min-w-[130px] inline-block">
+                            {r.reference || "-"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
                           <Input
                             type="date"
                             className="h-8 min-w-[145px]"
@@ -745,11 +750,6 @@ export default function AdminRestaurantGroupes() {
                               saveInlineValue(r, "date", e.target.value)
                             }
                           />
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-mono text-xs min-w-[130px] inline-block">
-                            {r.reference || "-"}
-                          </span>
                         </TableCell>
                         <TableCell>
                           <Select
