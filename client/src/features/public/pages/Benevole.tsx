@@ -350,6 +350,14 @@ export default function Benevole() {
     (!day.isOpen || (day.registeredCount ?? 0) >= day.capacity) &&
     !isAutoReopenedForServiceOnly(day);
 
+  const isFutureDay = (date: string) => {
+    const dayDate = new Date(date);
+    const today = new Date();
+    dayDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    return dayDate > today;
+  };
+
   const availableDays = days?.filter(day => !isDayFull(day)) || [];
   const selectedDay = days?.find(day => day.id.toString() === formData.dayId);
   const selectedDayIsFull = selectedDay ? isDayFull(selectedDay) : false;
@@ -537,6 +545,12 @@ export default function Benevole() {
           ? "No date available"
           : "Aucune date disponible",
     dayFull: lang === "ar" ? "اليوم مكتمل" : lang === "en" ? "Full" : "Complet",
+    upcomingOpenSoon:
+      lang === "ar"
+        ? "فتح التسجيل قريبًا"
+        : lang === "en"
+          ? "Registrations opening soon"
+          : "Inscriptions ouvertes bientôt",
     places: lang === "ar" ? "أماكن" : lang === "en" ? "places" : "places",
     day: lang === "ar" ? "اليوم" : lang === "en" ? "Day" : "Jour",
     firstName:
@@ -1129,7 +1143,7 @@ export default function Benevole() {
                                       }
                                     )}
                                     {isDayFull(day)
-                                      ? ` - ${formTexts.dayFull}`
+                                      ? ` - ${isFutureDay(day.date) ? formTexts.upcomingOpenSoon : formTexts.dayFull}`
                                       : ""}
                                   </SelectItem>
                                 ))
