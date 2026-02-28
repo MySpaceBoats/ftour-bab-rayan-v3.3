@@ -430,7 +430,11 @@ export default function AdminBenevoles() {
                   <SelectItem value="all">Tous les jours</SelectItem>
                   {days?.map(day => (
                     <SelectItem key={day.id} value={day.id.toString()}>
-                      Jour {day.dayNumber}
+                      Jour {day.dayNumber} –{" "}
+                      {new Date(day.date).toLocaleDateString("fr-FR", {
+                        day: "numeric",
+                        month: "long",
+                      })}
                     </SelectItem>
                   ))}
                 </SelectContent>
