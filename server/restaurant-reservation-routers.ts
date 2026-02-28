@@ -631,6 +631,18 @@ export const restaurantReservationsRouter = router({
         phone: z.string().min(1, "Téléphone requis"),
         date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide"),
         seatsTotal: z.number().int().min(2),
+        totalAmount: z.number().min(0).optional(),
+        amountReceived: z.number().min(0).optional(),
+        deposit: z.number().min(0).optional(),
+        nbAdult: z.number().int().min(0).optional(),
+        nbKids: z.number().int().min(0).optional(),
+        paymentMode: z.enum(["cash", "virement", "espece"]).optional(),
+        respResa: z.enum(["Nayla", "Hind", "Kamal", "Rita"]).optional(),
+        modeDeposit: z.string().optional(),
+        dateAvReg: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide")
+          .optional(),
         notes: z.string().optional(),
         displayChoice: z.enum(["jardin", "brasserie"]).optional(),
         status: z
@@ -673,6 +685,15 @@ export const restaurantReservationsRouter = router({
                 : undefined,
             groupName:
               input.type === "groupe" ? input.groupOrCompanyName : undefined,
+            totalAmount: input.totalAmount,
+            amountReceived: input.amountReceived,
+            deposit: input.deposit,
+            nbAdult: input.nbAdult,
+            nbKids: input.nbKids,
+            paymentMode: input.paymentMode,
+            respResa: input.respResa,
+            modeDeposit: input.modeDeposit,
+            dateAvReg: input.dateAvReg,
           });
 
         if (input.status !== "pending_validation") {
