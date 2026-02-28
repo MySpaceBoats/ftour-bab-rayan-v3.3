@@ -92,6 +92,13 @@ export default function AdminRestaurantGroupes() {
     date: string;
     seatsTotal: number;
     notes: string;
+    totalAmount: number;
+    amountReceived: number;
+    deposit: number;
+    nbAdult: number;
+    nbKids: number;
+    paymentMode: "cash" | "virement" | "espece";
+    respResa: "Nayla" | "Hind" | "Kamal" | "Rita";
     companyName: string;
     groupName: string;
     type: string;
@@ -227,6 +234,13 @@ export default function AdminRestaurantGroupes() {
         : "",
       seatsTotal: reservation.seatsTotal || 0,
       notes: reservation.notes || "",
+      totalAmount: Number(reservation.totalAmount || 0),
+      amountReceived: Number(reservation.amountReceived || 0),
+      deposit: Number(reservation.deposit || 0),
+      nbAdult: Number(reservation.nbAdult || 0),
+      nbKids: Number(reservation.nbKids || 0),
+      paymentMode: reservation.paymentMode || "cash",
+      respResa: reservation.respResa || "Nayla",
       companyName: reservation.companyName || "",
       groupName: reservation.groupName || "",
       type: reservation.type || "",
@@ -244,6 +258,13 @@ export default function AdminRestaurantGroupes() {
       date: editForm.date,
       seatsTotal: editForm.seatsTotal,
       notes: editForm.notes,
+      totalAmount: editForm.totalAmount,
+      amountReceived: editForm.amountReceived,
+      deposit: editForm.deposit,
+      nbAdult: editForm.nbAdult,
+      nbKids: editForm.nbKids,
+      paymentMode: editForm.paymentMode,
+      respResa: editForm.respResa,
       companyName: editForm.companyName || undefined,
       groupName: editForm.groupName || undefined,
     });
@@ -455,6 +476,20 @@ export default function AdminRestaurantGroupes() {
     return new Date(date).toLocaleDateString("fr-FR");
   };
 
+  const formatAmount = (value: number) => `${value.toFixed(2)} DH`;
+
+  const getRemainingAmount = (reservation: any) => {
+    const total = Number(reservation.totalAmount || 0);
+    const received = Number(reservation.amountReceived || 0);
+    return Math.max(0, total - received);
+  };
+
+  const ADULT_PRICE = 290;
+  const KIDS_PRICE = 190;
+
+  const computeTotalFromGuests = (nbAdult: number, nbKids: number) =>
+    nbAdult * ADULT_PRICE + nbKids * KIDS_PRICE;
+
   return (
     <div className="min-h-screen bg-muted/30">
       <header className="sticky top-0 z-50 bg-background border-b">
@@ -600,6 +635,15 @@ export default function AdminRestaurantGroupes() {
                         {renderSortIcon("date")}
                       </button>
                     </TableHead>
+                    <TableHead>Montant total</TableHead>
+                    <TableHead>Montant reçu</TableHead>
+                    <TableHead>Montant restant</TableHead>
+                    <TableHead>Deposit</TableHead>
+                    <TableHead>NB ADULT</TableHead>
+                    <TableHead>NB KIDS</TableHead>
+                    <TableHead>Mode règlement</TableHead>
+                    <TableHead>RESP RESA</TableHead>
+                    <TableHead>Notes</TableHead>
                     <TableHead>
                       <button
                         type="button"
@@ -627,7 +671,7 @@ export default function AdminRestaurantGroupes() {
                   {filteredReservations?.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={9}
+                        colSpan={18}
                         className="text-center py-8 text-muted-foreground"
                       >
                         Aucune réservation trouvée
@@ -667,6 +711,21 @@ export default function AdminRestaurantGroupes() {
                         </TableCell>
                         <TableCell>{r.seatsTotal}</TableCell>
                         <TableCell>{formatDate(r.date)}</TableCell>
+                        <TableCell>
+                          {formatAmount(Number(r.totalAmount || 0))}
+                        </TableCell>
+                        <TableCell>
+                          {formatAmount(Number(r.amountReceived || 0))}
+                        </TableCell>
+                        <TableCell>{formatAmount(getRemainingAmount(r))}</TableCell>
+                        <TableCell>{formatAmount(Number(r.deposit || 0))}</TableCell>
+                        <TableCell>{Number(r.nbAdult || 0)}</TableCell>
+                        <TableCell>{Number(r.nbKids || 0)}</TableCell>
+                        <TableCell>{r.paymentMode || "-"}</TableCell>
+                        <TableCell>{r.respResa || "-"}</TableCell>
+                        <TableCell className="max-w-[220px] truncate" title={r.notes || ""}>
+                          {r.notes || "-"}
+                        </TableCell>
                         <TableCell>{getStatusBadge(r.status)}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {formatDate(r.createdAt)}
@@ -677,9 +736,10 @@ export default function AdminRestaurantGroupes() {
                               r.status === "submitted") && (
                               <>
                                 <Button
-                                  size="sm"
+                                  size="icon"
                                   variant="outline"
-                                  className="text-green-600"
+                                  className="h-8 w-8 text-green-600"
+                                  title="Valider"
                                   onClick={() =>
                                     validateMutation.mutate({
                                       reference: r.reference,
@@ -688,13 +748,13 @@ export default function AdminRestaurantGroupes() {
                                   }
                                   disabled={validateMutation.isPending}
                                 >
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Valider
+                                  <CheckCircle className="h-4 w-4" />
                                 </Button>
                                 <Button
-                                  size="sm"
+                                  size="icon"
                                   variant="outline"
-                                  className="text-red-600"
+                                  className="h-8 w-8 text-red-600"
+                                  title="Refuser"
                                   onClick={() =>
                                     refuseMutation.mutate({
                                       reference: r.reference,
@@ -702,8 +762,7 @@ export default function AdminRestaurantGroupes() {
                                   }
                                   disabled={refuseMutation.isPending}
                                 >
-                                  <XCircle className="h-3 w-3 mr-1" />
-                                  Refuser
+                                  <XCircle className="h-4 w-4" />
                                 </Button>
                               </>
                             )}
@@ -714,8 +773,10 @@ export default function AdminRestaurantGroupes() {
                               "confirmed",
                             ].includes(r.status) && (
                               <Button
-                                size="sm"
+                                size="icon"
                                 variant="outline"
+                                className="h-8 w-8"
+                                title="Terminer"
                                 onClick={() =>
                                   updateStatusMutation.mutate({
                                     id: r.id,
@@ -723,25 +784,27 @@ export default function AdminRestaurantGroupes() {
                                   })
                                 }
                               >
-                                Terminer
+                                <CheckCircle className="h-4 w-4" />
                               </Button>
                             )}
                             <Button
-                              size="sm"
+                              size="icon"
                               variant="outline"
+                              className="h-8 w-8"
+                              title="Modifier"
                               onClick={() => openEditDialog(r)}
                             >
-                              <Pencil className="h-3 w-3 mr-1" />
-                              Modifier
+                              <Pencil className="h-4 w-4" />
                             </Button>
                             <Button
-                              size="sm"
+                              size="icon"
                               variant="destructive"
+                              className="h-8 w-8"
+                              title="Supprimer"
                               onClick={() => handleDeleteReservation(r)}
                               disabled={deleteMutation.isPending}
                             >
-                              <Trash2 className="h-3 w-3 mr-1" />
-                              Effacer
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -825,6 +888,167 @@ export default function AdminRestaurantGroupes() {
                       ),
                     })
                   }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-total-amount">Montant total (DH)</Label>
+                <Input
+                  id="edit-total-amount"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={editForm.totalAmount}
+                  onChange={e =>
+                    setEditForm({
+                      ...editForm,
+                      totalAmount: Math.max(
+                        0,
+                        Number.parseFloat(e.target.value || "0") || 0
+                      ),
+                    })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-amount-received">Montant reçu (DH)</Label>
+                <Input
+                  id="edit-amount-received"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={editForm.amountReceived}
+                  onChange={e =>
+                    setEditForm({
+                      ...editForm,
+                      amountReceived: Math.max(
+                        0,
+                        Number.parseFloat(e.target.value || "0") || 0
+                      ),
+                    })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-deposit">Deposit (DH)</Label>
+                <Input
+                  id="edit-deposit"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={editForm.deposit}
+                  onChange={e =>
+                    setEditForm({
+                      ...editForm,
+                      deposit: Math.max(
+                        0,
+                        Number.parseFloat(e.target.value || "0") || 0
+                      ),
+                    })
+                  }
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-nb-adult">NB ADULT</Label>
+                  <Input
+                    id="edit-nb-adult"
+                    type="number"
+                    min={0}
+                    value={editForm.nbAdult}
+                    onChange={e => {
+                      const nbAdult = Math.max(
+                        0,
+                        Number.parseInt(e.target.value || "0", 10) || 0
+                      );
+                      setEditForm({
+                        ...editForm,
+                        nbAdult,
+                        totalAmount: computeTotalFromGuests(nbAdult, editForm.nbKids),
+                      });
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-nb-kids">NB KIDS</Label>
+                  <Input
+                    id="edit-nb-kids"
+                    type="number"
+                    min={0}
+                    value={editForm.nbKids}
+                    onChange={e => {
+                      const nbKids = Math.max(
+                        0,
+                        Number.parseInt(e.target.value || "0", 10) || 0
+                      );
+                      setEditForm({
+                        ...editForm,
+                        nbKids,
+                        totalAmount: computeTotalFromGuests(editForm.nbAdult, nbKids),
+                      });
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-payment-mode">Mode de règlement</Label>
+                <Select
+                  value={editForm.paymentMode}
+                  onValueChange={value =>
+                    setEditForm({
+                      ...editForm,
+                      paymentMode: value as "cash" | "virement" | "espece",
+                    })
+                  }
+                >
+                  <SelectTrigger id="edit-payment-mode">
+                    <SelectValue placeholder="Sélectionner un mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="virement">Virement</SelectItem>
+                    <SelectItem value="espece">Espèce</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-resp-resa">RESP RESA</Label>
+                <Select
+                  value={editForm.respResa}
+                  onValueChange={value =>
+                    setEditForm({
+                      ...editForm,
+                      respResa: value as "Nayla" | "Hind" | "Kamal" | "Rita",
+                    })
+                  }
+                >
+                  <SelectTrigger id="edit-resp-resa">
+                    <SelectValue placeholder="Sélectionner un responsable" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Nayla">Nayla</SelectItem>
+                    <SelectItem value="Hind">Hind</SelectItem>
+                    <SelectItem value="Kamal">Kamal</SelectItem>
+                    <SelectItem value="Rita">Rita</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Montant restant (DH)</Label>
+                <Input
+                  value={Math.max(
+                    0,
+                    Number(editForm.totalAmount || 0) -
+                      Number(editForm.amountReceived || 0)
+                  ).toFixed(2)}
+                  readOnly
+                  disabled
                 />
               </div>
 
