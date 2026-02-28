@@ -59,6 +59,30 @@ type SortKey =
   | "status"
   | "createdAt";
 
+
+const GROUPES_FALLBACK_RESERVATIONS = [
+  { ref: "RES-G-51881B", date_ftour: "2026-02-24", responsable: "Rita", nb_adultes: 15, nb_enfants: 0, entreprise: "CONSULAT USA", prenom: "Fatima Zahra", nom: "Bentayebi", telephone: "0666969308", email: "bentayebif@stat.gov", total: 4350, deposit: 0, complement: 4500, mode_paiement: "CASH", date_paiement: "2026-02-24", reste_a_payer: -150, validation: true, observations: null },
+  { ref: "RES-G-42646F", date_ftour: "2026-02-24", responsable: "Rita", nb_adultes: 29, nb_enfants: 0, entreprise: "Particulier/parrain", prenom: "Nawfal", nom: "Sabik", telephone: "33685797898", email: "sabiknawfal@gmail.com", total: 8410, deposit: 0, complement: 5690, mode_paiement: "CASH/TPE", date_paiement: "2026-02-24", reste_a_payer: 2720, validation: true, observations: null },
+  { ref: "RES-G-116D81", date_ftour: "2026-02-24", responsable: "Rita", nb_adultes: 2, nb_enfants: 0, entreprise: "Particulier/parrain", prenom: "Mounji", nom: "Sefrioui", telephone: "0661135106", email: "mounji64@gmail.com", total: 580, deposit: 0, complement: 600, mode_paiement: "CASH", date_paiement: "2026-02-24", reste_a_payer: -20, validation: true, observations: null },
+  { ref: "RES-G-4BAC05", date_ftour: "2026-02-24", responsable: "Kamal", nb_adultes: 4, nb_enfants: 0, entreprise: "Particulier/parrain", prenom: "Zineb", nom: "Ibnabdeljalil", telephone: "212666391647", email: "Zinebibn@gmail.com", total: 1160, deposit: 0, complement: 1160, mode_paiement: "VIREMENT", date_paiement: "2026-02-24", reste_a_payer: 0, validation: true, observations: null },
+  { ref: "RES-G-27B7DE", date_ftour: "2026-02-25", responsable: "Hind", nb_adultes: 32, nb_enfants: 0, entreprise: "Particulier/parrain", prenom: "Amina", nom: "Benghalem", telephone: "0661329263", email: "aminabenghalem@yahoo.fr", total: 9280, deposit: 3500, complement: 5780, mode_paiement: "VIREMENT/TPE", date_paiement: "2026-02-23", reste_a_payer: 0, validation: true, observations: null },
+  { ref: "RES-G-1F22C8", date_ftour: "2026-02-26", responsable: "Rita", nb_adultes: 23, nb_enfants: 9, entreprise: "Particulier/parrain", prenom: "Saad", nom: "Meddoun", telephone: "0667070786", email: "saad.meddoun@gmail.com", total: 8380, deposit: 7420, complement: 960, mode_paiement: "VIREMENT/TPE", date_paiement: "2026-02-24", reste_a_payer: 0, validation: true, observations: null },
+  { ref: "RES-G-A4FE32", date_ftour: "2026-02-26", responsable: "Kamal", nb_adultes: 2, nb_enfants: 0, entreprise: "Particulier", prenom: "Rachel", nom: "Wong", telephone: "14048349386", email: "beingrachely@gmail.com", total: 580, deposit: 0, complement: 580, mode_paiement: "TPE", date_paiement: "2026-02-26", reste_a_payer: 0, validation: true, observations: null },
+  { ref: "RES-G-6CBF34", date_ftour: "2026-02-27", responsable: "Nayla", nb_adultes: 6, nb_enfants: 0, entreprise: "Particulier", prenom: "Maha", nom: "Bennani", telephone: "212661260230", email: "maha.bennani1@gmail.com", total: 1740, deposit: 870, complement: 800, mode_paiement: "VIREMENT", date_paiement: null, reste_a_payer: 70, validation: true, observations: null },
+  { ref: "RES-G-76509E", date_ftour: "2026-02-27", responsable: "Hind", nb_adultes: 7, nb_enfants: 0, entreprise: "Think ONE GROUP", prenom: "Mariam", nom: "Lahlou", telephone: "666889434", email: "mariem.lahlou@thinkonegroup.com", total: 2030, deposit: 1015, complement: 1015, mode_paiement: "TPE", date_paiement: null, reste_a_payer: 0, validation: true, observations: null },
+  { ref: "RES-G-EC2D5E", date_ftour: "2026-02-27", responsable: "Rita", nb_adultes: 33, nb_enfants: 0, entreprise: "NUMU", prenom: "Myriem", nom: "Kadmiri", telephone: "212661403303", email: "Myriamk@numu.ma", total: 9570, deposit: 6000, complement: 3570, mode_paiement: null, date_paiement: null, reste_a_payer: 0, validation: true, observations: null },
+  { ref: "RES-G-8C0128", date_ftour: "2026-02-28", responsable: "Rita", nb_adultes: 14, nb_enfants: 0, entreprise: "CHEF STEPHANE", prenom: "Stephane", nom: "Pierre", telephone: "0636081741", email: "stephane.pierre60@yahoo.com", total: 4060, deposit: 7250, complement: null, mode_paiement: "VIREMENT", date_paiement: null, reste_a_payer: 3990, validation: true, observations: "devait être 25" },
+  { ref: "RES-G-4A1CCF", date_ftour: "2026-03-03", responsable: "Rita", nb_adultes: 10, nb_enfants: 0, entreprise: "WEBRAND", prenom: "Réda", nom: "Essakali", telephone: "0665100181", email: "reda.essakalli@we-brand.ma", total: 2900, deposit: null, complement: null, mode_paiement: null, date_paiement: null, reste_a_payer: null, validation: null, observations: null },
+  { ref: "RES-G-34890F", date_ftour: "2026-03-04", responsable: "Rita", nb_adultes: 23, nb_enfants: 0, entreprise: "STANLEY FIELD", prenom: "Louloi", nom: "Bargach", telephone: "0679330972", email: "lbargach@stanleyfield.com", total: 6670, deposit: null, complement: null, mode_paiement: null, date_paiement: null, reste_a_payer: null, validation: null, observations: null },
+  { ref: "RES-G-FBF46B", date_ftour: "2026-03-05", responsable: "Hind", nb_adultes: 40, nb_enfants: 0, entreprise: "MONTESSORI", prenom: "Hind", nom: "Ratibe", telephone: null, email: "ratibehind3@gmail.com", total: 11600, deposit: null, complement: null, mode_paiement: null, date_paiement: null, reste_a_payer: null, validation: null, observations: null },
+  { ref: "RES-G-528B61", date_ftour: "2026-03-06", responsable: "Hind", nb_adultes: 50, nb_enfants: 0, entreprise: "APG", prenom: null, nom: "JAIDI", telephone: "212661196435", email: "Jaidi.abdou@gmail.com", total: 14500, deposit: 7250, complement: null, mode_paiement: "VIREMENT", date_paiement: "2026-02-19", reste_a_payer: 7250, validation: true, observations: null },
+  { ref: "RES-G-291031", date_ftour: "2026-03-06", responsable: "Kamal", nb_adultes: 20, nb_enfants: 0, entreprise: "Fatine Chafai", prenom: "Fatine", nom: "Chafai", telephone: "212684969618", email: "Fatine.chafai@gmail.com", total: 5800, deposit: null, complement: null, mode_paiement: null, date_paiement: null, reste_a_payer: null, validation: null, observations: null },
+  { ref: "RES-G-2DBDB8", date_ftour: "2026-03-07", responsable: "Rita", nb_adultes: 103, nb_enfants: 0, entreprise: "CRÉDIT AGRICOLE", prenom: "Jihane", nom: "LoukilI", telephone: "0629069735", email: "jihane.loukili@creditagricole.ma", total: 30900, deposit: 30000, complement: null, mode_paiement: null, date_paiement: null, reste_a_payer: 900, validation: true, observations: null },
+  { ref: "RES-G-ADD271", date_ftour: "2026-03-10", responsable: "Kamal", nb_adultes: 15, nb_enfants: 0, entreprise: "CARE MAROC", prenom: "Fatima Zahra", nom: null, telephone: "0661675860", email: "baaoud@caremaroc.org", total: 4350, deposit: null, complement: null, mode_paiement: null, date_paiement: null, reste_a_payer: null, validation: null, observations: null },
+  { ref: "RES-G-6B0C7E", date_ftour: "2026-03-11", responsable: "Hind", nb_adultes: 15, nb_enfants: 0, entreprise: "LAFARGE", prenom: "Lamia", nom: "Joundy", telephone: "0608892936", email: null, total: 4350, deposit: null, complement: null, mode_paiement: "PENDING", date_paiement: null, reste_a_payer: null, validation: null, observations: "Paiement prévu mercredi prochain" },
+  { ref: "RES-G-E590FF", date_ftour: "2026-03-11", responsable: "Hind", nb_adultes: 35, nb_enfants: 0, entreprise: "Wavestone", prenom: "Hajar", nom: "Riane", telephone: "212665647713", email: "farah.berrada@wavestone.com", total: 10150, deposit: null, complement: null, mode_paiement: null, date_paiement: null, reste_a_payer: null, validation: null, observations: null },
+] as const;
+
 export default function AdminRestaurantGroupes() {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
@@ -135,13 +159,51 @@ export default function AdminRestaurantGroupes() {
   const isError = errorG || errorE;
   const error = errorGroupes || errorEntreprises;
 
-  const reservations = [
+  const fallbackReservations = GROUPES_FALLBACK_RESERVATIONS.map((r, index) => {
+    const fullName = [r.prenom, r.nom].filter(Boolean).join(" ");
+    const status =
+      r.validation === true
+        ? Number(r.reste_a_payer ?? 0) > 0
+          ? "validated_pending_payment"
+          : "paid_confirmed"
+        : r.mode_paiement === "PENDING"
+          ? "pending_confirmation"
+          : "pending_validation";
+
+    return {
+      id: index + 1,
+      type: "groupe",
+      reference: r.ref,
+      groupName: r.entreprise,
+      name: fullName,
+      email: r.email || "",
+      phone: r.telephone || "",
+      date: r.date_ftour,
+      createdAt: r.date_ftour,
+      seatsTotal: Number(r.nb_adultes) + Number(r.nb_enfants),
+      nbAdult: Number(r.nb_adultes),
+      nbKids: Number(r.nb_enfants),
+      totalAmount: Number(r.total || 0),
+      deposit: Number(r.deposit || 0),
+      amountReceived: Number(r.complement || 0),
+      paymentMode: (r.mode_paiement || "").includes("VIREMENT") ? "virement" : "cash",
+      dateAvReg: r.date_paiement,
+      respResa: r.responsable,
+      status,
+      notes: r.observations || "",
+      modeDeposit: r.mode_paiement || "",
+    };
+  });
+
+  const apiReservations = [
     ...(groupes || []).map((r: any) => ({ ...r, type: r.type || "groupe" })),
     ...(entreprises || []).map((r: any) => ({
       ...r,
       type: r.type || "entreprise",
     })),
   ];
+
+  const reservations = apiReservations.length > 0 ? apiReservations : fallbackReservations;
 
   const refetch = () => {
     refetchG();
