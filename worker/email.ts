@@ -707,6 +707,50 @@ export interface GroupRegistrationEmailData {
   fileName: string;
 }
 
+export interface GroupRefusalEmailData {
+  responsibleName: string;
+  groupName: string;
+  dayNumber?: number;
+  rejectionReason?: string;
+}
+
+export function generateGroupRefusalEmail(data: GroupRefusalEmailData): { subject: string; html: string } {
+  const content = `
+    <h2 style="color: #991b1b; margin: 0 0 20px 0; font-size: 24px;">
+      Demande groupe bénévole non retenue
+    </h2>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Cher(e) <strong>${data.responsibleName}</strong>,
+    </p>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Nous avons bien étudié votre demande d'inscription groupe <strong>${data.groupName}</strong>${data.dayNumber ? ` pour le jour ${data.dayNumber} du Ramadan` : ''}.
+      Malheureusement, nous ne pouvons pas y donner suite.
+    </p>
+
+    ${data.rejectionReason ? `
+    <div style="background-color: #fef2f2; border-radius: 8px; padding: 20px; margin: 20px 0; border: 1px solid #fca5a5;">
+      <h3 style="color: #991b1b; margin: 0 0 10px 0; font-size: 16px;">Motif</h3>
+      <p style="margin: 0; color: #374151; font-size: 15px; line-height: 1.6;">${data.rejectionReason}</p>
+    </div>` : ''}
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
+      Pour toute question, n'hésitez pas à nous contacter à <a href="mailto:contact@ftourbabrayan.ma" style="color: #166534;">contact@ftourbabrayan.ma</a>.
+    </p>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">
+      Cordialement,<br>
+      <strong>L'équipe Ftour Bab Rayan</strong>
+    </p>
+  `;
+
+  return {
+    subject: `Votre demande groupe bénévole – ${data.groupName}`,
+    html: baseTemplate(content, 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)'),
+  };
+}
+
 export function generateGroupRegistrationEmail(data: GroupRegistrationEmailData): { subject: string; html: string } {
   const times = computeSlotTimes(data.startTime || '18h00');
   const slotLabels: Record<string, string> = {
