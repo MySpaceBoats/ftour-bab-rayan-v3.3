@@ -52,6 +52,8 @@ describe("Email Templates", () => {
     expect(email.html).toContain("QR Code");
     expect(email.html).toContain("api.qrserver.com");
     expect(email.html).toContain(data.qrToken);
+    expect(email.html).toContain("Annuler mon inscription");
+    expect(email.html).toContain(`/benevole-annulation/${data.qrToken}`);
   });
 
   it("generates order confirmation email with items", () => {

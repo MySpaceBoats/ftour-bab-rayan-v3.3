@@ -1525,6 +1525,32 @@ const volunteersRouter = router({
       return supabaseServices.getVolunteersByDaySupabase(input.dayId);
     }),
 
+  cancelByToken: publicProcedure
+    .input(z.object({ token: z.string().min(10) }))
+    .mutation(async ({ input }) => {
+      const volunteer = await supabaseServices.getVolunteerByTokenSupabase(
+        input.token
+      );
+
+      if (!volunteer) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Lien d'annulation invalide ou expiré",
+        });
+      }
+
+      if (volunteer.status === "cancelled") {
+        return { success: true, alreadyCancelled: true };
+      }
+
+      await supabaseServices.updateVolunteerStatusSupabase(
+        volunteer.id,
+        "cancelled"
+      );
+
+      return { success: true, alreadyCancelled: false };
+    }),
+
   updateStatus: adminOpsProcedure
     .input(
       z.object({

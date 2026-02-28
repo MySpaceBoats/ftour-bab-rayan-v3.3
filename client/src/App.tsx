@@ -118,6 +118,7 @@ import AdminContenu from "@/features/contenu/admin/AdminContenu";
 // ============================================
 import AdminMessages from "@/features/messages/admin/AdminMessages";
 import MenuSolidaire from "@/features/menu/pages/MenuSolidaire";
+import VolunteerCancellation from "@/features/volunteer/pages/VolunteerCancellation";
 import MenuCheckout from "@/features/menu/pages/MenuCheckout";
 import MenuProof from "@/features/menu/pages/MenuProof";
 import AdminCashOrders from "@/features/menu/admin/AdminCashOrders";
@@ -271,6 +272,7 @@ function LocalizedRoutes() {
           PUBLIC CHECK-IN — sans :lang
           ================================================ */}
       <Route path="/checkin/:token" component={Checkin} />
+      <Route path="/benevole-annulation/:token" component={VolunteerCancellation} />
       <Route
         path="/checkin-reservation/:token"
         component={CheckinReservation}

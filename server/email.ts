@@ -247,6 +247,7 @@ export interface VolunteerEmailData {
 export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { subject: string; html: string } {
   const qrCodeUrl = getQrCodeUrl(data.qrToken, data.baseUrl);
   const checkinUrl = `${data.baseUrl}/checkin/${data.qrToken}`;
+  const cancellationUrl = `${data.baseUrl}/benevole-annulation/${data.qrToken}`;
 
   // Build slots display with dynamic times based on iftar time
   const times = computeSlotTimes(data.startTime);
@@ -316,6 +317,21 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
         Présentez ce QR code à l'entrée le jour de votre participation
       </p>
     </div>
+
+    <!-- Lien annulation -->
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fef2f2; border-radius: 8px; margin: 20px 0; border: 1px solid #fecaca;">
+      <tr>
+        <td style="padding: 20px; text-align: center;">
+          <h3 style="color: #b91c1c; margin: 0 0 10px 0; font-size: 18px;">❌ Vous ne pouvez plus venir ?</h3>
+          <p style="margin: 0 0 12px 0; color: #7f1d1d; font-size: 14px; line-height: 1.6;">
+            Si vous devez annuler votre inscription, cliquez sur le lien ci-dessous pour annuler automatiquement votre place.
+          </p>
+          <a href="${cancellationUrl}" style="display: inline-block; background-color: #dc2626; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 6px; font-weight: 600;">
+            Annuler mon inscription
+          </a>
+        </td>
+      </tr>
+    </table>
 
     <!-- Consignes importantes (obligatoires) -->
     <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fef3c7; border-radius: 8px; margin: 20px 0;">
