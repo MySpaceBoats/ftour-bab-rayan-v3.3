@@ -588,16 +588,6 @@ export default function AdminRestaurantGroupes() {
                     <TableHead>
                       <button
                         type="button"
-                        onClick={() => toggleSort("type")}
-                        className="inline-flex items-center gap-1 hover:text-foreground"
-                      >
-                        Type
-                        {renderSortIcon("type")}
-                      </button>
-                    </TableHead>
-                    <TableHead>
-                      <button
-                        type="button"
                         onClick={() => toggleSort("groupOrCompany")}
                         className="inline-flex items-center gap-1 hover:text-foreground"
                       >
@@ -685,18 +675,6 @@ export default function AdminRestaurantGroupes() {
                       <TableRow key={`${r.type}-${r.id}`}>
                         <TableCell className="font-mono text-sm">
                           {r.reference}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={
-                              r.type === "groupe"
-                                ? "bg-orange-50 text-orange-700 border-orange-200"
-                                : "bg-purple-50 text-purple-700 border-purple-200"
-                            }
-                          >
-                            {r.type === "groupe" ? "Groupe" : "Entreprise"}
-                          </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="font-medium">
