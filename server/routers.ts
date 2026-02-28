@@ -2631,7 +2631,7 @@ const partnerLeadsRouter = router({
       try {
         const emailData = generatePartnerLeadNotificationEmail(input);
         await sendEmail({
-          to: "admin@ftourbabrayan.ma",
+          to: "contact@ftourbabrayan.ma",
           subject: emailData.subject,
           html: emailData.html,
         });
