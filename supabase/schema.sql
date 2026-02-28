@@ -431,6 +431,11 @@ CREATE TABLE IF NOT EXISTS restaurant_reservations (
   notes TEXT,
   total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
   amount_received DECIMAL(10,2) NOT NULL DEFAULT 0,
+  deposit DECIMAL(10,2) NOT NULL DEFAULT 0,
+  nb_adult INTEGER NOT NULL DEFAULT 0,
+  nb_kids INTEGER NOT NULL DEFAULT 0,
+  payment_mode VARCHAR(20) NOT NULL DEFAULT 'cash' CHECK (payment_mode IN ('cash', 'virement', 'espece')),
+  resp_resa VARCHAR(20) NOT NULL DEFAULT 'Nayla' CHECK (resp_resa IN ('Nayla', 'Hind', 'Kamal', 'Rita')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

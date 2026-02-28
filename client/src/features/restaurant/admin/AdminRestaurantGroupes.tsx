@@ -94,6 +94,11 @@ export default function AdminRestaurantGroupes() {
     notes: string;
     totalAmount: number;
     amountReceived: number;
+    deposit: number;
+    nbAdult: number;
+    nbKids: number;
+    paymentMode: "cash" | "virement" | "espece";
+    respResa: "Nayla" | "Hind" | "Kamal" | "Rita";
     companyName: string;
     groupName: string;
     type: string;
@@ -231,6 +236,11 @@ export default function AdminRestaurantGroupes() {
       notes: reservation.notes || "",
       totalAmount: Number(reservation.totalAmount || 0),
       amountReceived: Number(reservation.amountReceived || 0),
+      deposit: Number(reservation.deposit || 0),
+      nbAdult: Number(reservation.nbAdult || 0),
+      nbKids: Number(reservation.nbKids || 0),
+      paymentMode: reservation.paymentMode || "cash",
+      respResa: reservation.respResa || "Nayla",
       companyName: reservation.companyName || "",
       groupName: reservation.groupName || "",
       type: reservation.type || "",
@@ -250,6 +260,11 @@ export default function AdminRestaurantGroupes() {
       notes: editForm.notes,
       totalAmount: editForm.totalAmount,
       amountReceived: editForm.amountReceived,
+      deposit: editForm.deposit,
+      nbAdult: editForm.nbAdult,
+      nbKids: editForm.nbKids,
+      paymentMode: editForm.paymentMode,
+      respResa: editForm.respResa,
       companyName: editForm.companyName || undefined,
       groupName: editForm.groupName || undefined,
     });
@@ -468,6 +483,12 @@ export default function AdminRestaurantGroupes() {
     const received = Number(reservation.amountReceived || 0);
     return Math.max(0, total - received);
   };
+
+  const ADULT_PRICE = 290;
+  const KIDS_PRICE = 190;
+
+  const computeTotalFromGuests = (nbAdult: number, nbKids: number) =>
+    nbAdult * ADULT_PRICE + nbKids * KIDS_PRICE;
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -890,6 +911,114 @@ export default function AdminRestaurantGroupes() {
                     })
                   }
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-deposit">Deposit (DH)</Label>
+                <Input
+                  id="edit-deposit"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={editForm.deposit}
+                  onChange={e =>
+                    setEditForm({
+                      ...editForm,
+                      deposit: Math.max(
+                        0,
+                        Number.parseFloat(e.target.value || "0") || 0
+                      ),
+                    })
+                  }
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-nb-adult">NB ADULT</Label>
+                  <Input
+                    id="edit-nb-adult"
+                    type="number"
+                    min={0}
+                    value={editForm.nbAdult}
+                    onChange={e => {
+                      const nbAdult = Math.max(
+                        0,
+                        Number.parseInt(e.target.value || "0", 10) || 0
+                      );
+                      setEditForm({
+                        ...editForm,
+                        nbAdult,
+                        totalAmount: computeTotalFromGuests(nbAdult, editForm.nbKids),
+                      });
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-nb-kids">NB KIDS</Label>
+                  <Input
+                    id="edit-nb-kids"
+                    type="number"
+                    min={0}
+                    value={editForm.nbKids}
+                    onChange={e => {
+                      const nbKids = Math.max(
+                        0,
+                        Number.parseInt(e.target.value || "0", 10) || 0
+                      );
+                      setEditForm({
+                        ...editForm,
+                        nbKids,
+                        totalAmount: computeTotalFromGuests(editForm.nbAdult, nbKids),
+                      });
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-payment-mode">Mode de règlement</Label>
+                <Select
+                  value={editForm.paymentMode}
+                  onValueChange={value =>
+                    setEditForm({
+                      ...editForm,
+                      paymentMode: value as "cash" | "virement" | "espece",
+                    })
+                  }
+                >
+                  <SelectTrigger id="edit-payment-mode">
+                    <SelectValue placeholder="Sélectionner un mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="virement">Virement</SelectItem>
+                    <SelectItem value="espece">Espèce</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-resp-resa">RESP RESA</Label>
+                <Select
+                  value={editForm.respResa}
+                  onValueChange={value =>
+                    setEditForm({
+                      ...editForm,
+                      respResa: value as "Nayla" | "Hind" | "Kamal" | "Rita",
+                    })
+                  }
+                >
+                  <SelectTrigger id="edit-resp-resa">
+                    <SelectValue placeholder="Sélectionner un responsable" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Nayla">Nayla</SelectItem>
+                    <SelectItem value="Hind">Hind</SelectItem>
+                    <SelectItem value="Kamal">Kamal</SelectItem>
+                    <SelectItem value="Rita">Rita</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
