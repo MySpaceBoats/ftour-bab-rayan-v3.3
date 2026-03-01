@@ -353,7 +353,7 @@ export default function AdminRestaurantGroupes() {
       email: editForm.email,
       phone: editForm.phone,
       date: editForm.date,
-      seatsTotal: editForm.seatsTotal,
+      seatsTotal: editForm.nbAdult + editForm.nbKids || editForm.seatsTotal,
       notes: editForm.notes,
       totalAmount: editForm.totalAmount,
       amountReceived: editForm.amountReceived,
@@ -703,27 +703,19 @@ export default function AdminRestaurantGroupes() {
         </div>
 
         {/* Table */}
+        {isError && (
+          <div className="mb-4 flex items-center gap-2 rounded-md border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm text-yellow-800">
+            <XCircle className="h-4 w-4 shrink-0" />
+            <span>Chargement API échoué — données de secours affichées.</span>
+            <Button variant="outline" size="sm" className="ml-auto" onClick={() => refetch()}>
+              Réessayer
+            </Button>
+          </div>
+        )}
         {isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-        ) : isError ? (
-          <Card>
-            <CardContent className="p-8 text-center space-y-4">
-              <div className="w-12 h-12 mx-auto rounded-full bg-red-100 flex items-center justify-center">
-                <XCircle className="h-6 w-6 text-red-600" />
-              </div>
-              <p className="text-red-600 font-medium">
-                Erreur lors du chargement des réservations
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {error?.message || "Erreur inconnue"}
-              </p>
-              <Button variant="outline" onClick={() => refetch()}>
-                Réessayer
-              </Button>
-            </CardContent>
-          </Card>
         ) : (
           <Card>
             <CardContent className="p-0">
@@ -868,7 +860,7 @@ export default function AdminRestaurantGroupes() {
                               getInlineValue(
                                 r,
                                 "nbAdult",
-                                Number(r.nbAdult || 0)
+                                Number(r.nbAdult || r.seatsTotal || 0)
                               )
                             )}
                             onChange={e =>
