@@ -28,6 +28,71 @@ export interface Env {
   CASH_ORDER_ADMIN_CC_EMAIL?: string;
 }
 
+/**
+ * Ensure exactly OPEN_WINDOW_SIZE Ramadan days are open for volunteer registration
+ * at all times, starting from today, until the end of Ramadan.
+ *
+ * Logic:
+ *   1. Fetch all ramadan_days ordered by date ascending.
+ *   2. Determine today's date in the Ramadan timezone (Africa/Casablanca).
+ *   3. Select the first OPEN_WINDOW_SIZE days whose date >= today and that are
+ *      not yet passed.  These are the "target open" days.
+ *   4. For every other day (past or beyond the window) ensure is_open = false.
+ *   5. For the target days ensure is_open = true.
+ */
+const OPEN_WINDOW_SIZE = 3;
+
+async function ensureRollingOpenDays(env: Env): Promise<void> {
+  const supabase = createSupabaseAdmin(env);
+
+  const { data: days, error } = await supabase
+    .from('ramadan_days')
+    .select('id, date, is_open')
+    .order('date', { ascending: true });
+
+  if (error || !days) {
+    console.error('[cron] Failed to fetch ramadan_days:', error?.message);
+    return;
+  }
+
+  const todayStr = getDateStringInTimeZone(new Date(), DEFAULT_RAMADAN_TIMEZONE);
+
+  // Days whose date >= today, in chronological order
+  const upcomingDays = days.filter((d: any) => String(d.date).slice(0, 10) >= todayStr);
+  const targetOpenIds = new Set(
+    upcomingDays.slice(0, OPEN_WINDOW_SIZE).map((d: any) => d.id)
+  );
+
+  const toOpen: number[] = [];
+  const toClose: number[] = [];
+
+  for (const day of days as any[]) {
+    const shouldBeOpen = targetOpenIds.has(day.id);
+    if (shouldBeOpen && !day.is_open) toOpen.push(day.id);
+    if (!shouldBeOpen && day.is_open) toClose.push(day.id);
+  }
+
+  if (toOpen.length > 0) {
+    const { error: openErr } = await supabase
+      .from('ramadan_days')
+      .update({ is_open: true })
+      .in('id', toOpen);
+    if (openErr) console.error('[cron] Failed to open days:', openErr.message);
+    else console.log('[cron] Opened days:', toOpen);
+  }
+
+  if (toClose.length > 0) {
+    const { error: closeErr } = await supabase
+      .from('ramadan_days')
+      .update({ is_open: false })
+      .in('id', toClose);
+    if (closeErr) console.error('[cron] Failed to close days:', closeErr.message);
+    else console.log('[cron] Closed days:', toClose);
+  }
+
+  console.log(`[cron] Rolling window done. Today=${todayStr}, open=${[...targetOpenIds]}`);
+}
+
 export default {
   async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
     const supabase = createSupabaseAdmin(env);
