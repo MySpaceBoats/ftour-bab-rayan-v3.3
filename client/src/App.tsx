@@ -74,6 +74,7 @@ import BoutiqueSolidaire from "@/features/boutique/pages/BoutiqueSolidaire";
 import Goodies from "@/features/goodies/pages/Goodies";
 import Cart from "@/features/goodies/pages/Cart";
 import { Checkout as UnifiedCheckout } from "@/features/goodies/pages/Checkout";
+import GoodiesQRPage from "@/features/goodies/pages/GoodiesQRPage";
 import AdminGoodies from "@/features/goodies/admin/AdminGoodies";
 import AdminCommandes from "@/features/goodies/admin/AdminCommandes";
 
@@ -269,6 +270,9 @@ function LocalizedRoutes() {
       <Route path="/scanner/benevoles" component={ScannerBenevoles} />
       <Route path="/scanner/ftours" component={ScannerFtours} />
       <Route path="/scanner" component={Scanner} />
+
+      {/* QR Code commande goodies */}
+      <Route path="/qr/goodies/:reference" component={GoodiesQRPage} />
 
       {/* ================================================
           PUBLIC CHECK-IN — sans :lang
