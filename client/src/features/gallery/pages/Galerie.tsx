@@ -26,7 +26,7 @@ export default function Galerie() {
     tag: tag === "all" ? undefined : tag,
     sort,
     page: 1,
-    pageSize: 60,
+    pageSize: 50,
   });
 
   const allTags = useMemo(() => {
@@ -95,7 +95,7 @@ export default function Galerie() {
               className="overflow-hidden rounded-xl bg-muted"
             >
               <img
-                src={photo.image_thumb_url}
+                src={photo.image_thumb_url || photo.image_medium_url || photo.image_original_url}
                 alt={`${photo.title || "Photo"} ${photo.description || ""}`.trim()}
                 loading="lazy"
                 className="h-44 md:h-56 w-full object-cover transition-transform hover:scale-105"
