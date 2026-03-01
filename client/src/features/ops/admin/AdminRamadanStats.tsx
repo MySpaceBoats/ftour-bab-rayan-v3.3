@@ -96,7 +96,7 @@ export default function AdminRamadanStats() {
   };
 
   const onSave = () => {
-    if (!activeConfigId) return toast.error('Créer/activer une configuration Ramadan d'abord');
+    if (!activeConfigId) return toast.error("Créer/activer une configuration Ramadan d'abord");
     upsert.mutate({ configId: activeConfigId, ...form });
   };
 
