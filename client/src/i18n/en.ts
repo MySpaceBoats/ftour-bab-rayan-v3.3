@@ -163,7 +163,7 @@ export const en: Translations = {
     howItWorksSubtitle: 'A well-organized system for successful Ftours every evening',
     step1Title: 'Preparation (3:00pm - 4:45pm)',
     step1Desc: 'Volunteers arrive to prepare the venue, set up tables and chairs, and begin meal preparation.',
-    step2Title: 'Service (5:00pm - 7:15pm)',
+    step2Title: 'Service (5:30pm - 7:15pm)',
     step2Desc: 'Beneficiaries are welcomed with a smile. Thanks to everyone\'s generosity, each person finds their place around the set tables.',
     step3Title: 'Breaking the Fast (6:20pm - 7:15pm)',
     step3Desc: 'At the call to prayer, everyone breaks their fast together. Dates, milk, harira, and a complete meal are served.',

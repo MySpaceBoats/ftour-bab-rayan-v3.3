@@ -8,14 +8,14 @@ import { ENV } from "./_core/env";
 const RESEND_API_URL = "https://api.resend.com/emails";
 
 /**
- * Calcule les horaires des créneaux bénévoles à partir de l'heure d'iftar.
+ * Calcule les horaires des créneaux bénévoles.
  * Préparation : iftarTime - 3h → iftarTime - 1h15
- * Service : iftarTime → iftarTime + 1h30
+ * Service : plage fixe 17:30 → 19:15
  */
 function computeSlotTimes(iftarTimeStr: string): { prepStart: string; prepEnd: string; serviceStart: string; serviceEnd: string } {
   const match = iftarTimeStr.match(/(\d{1,2})[h:](\d{2})/);
   if (!match) {
-    return { prepStart: '15:00', prepEnd: '16:45', serviceStart: '18:00', serviceEnd: '19:30' };
+    return { prepStart: '15:00', prepEnd: '16:45', serviceStart: '17:30', serviceEnd: '19:15' };
   }
   const iftarHour = parseInt(match[1]);
   const iftarMin = parseInt(match[2]);
@@ -30,8 +30,8 @@ function computeSlotTimes(iftarTimeStr: string): { prepStart: string; prepEnd: s
   return {
     prepStart: formatTime(iftarTotalMin - 180),
     prepEnd: formatTime(iftarTotalMin - 75),
-    serviceStart: formatTime(iftarTotalMin),
-    serviceEnd: formatTime(iftarTotalMin + 90),
+    serviceStart: '17:30',
+    serviceEnd: '19:15',
   };
 }
 
