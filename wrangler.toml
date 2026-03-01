@@ -5,6 +5,11 @@ compatibility_date = "2026-02-13"
 [assets]
 directory = "dist/public"
 
+[triggers]
+# Runs every day at 22:00 UTC (23:00 Morocco UTC+1 / midnight in winter)
+# Automatically activates any pre-configured Ramadan config whose gregorian_start_date matches today
+crons = ["0 22 * * *"]
+
 [observability]
 [observability.logs]
 enabled = false
