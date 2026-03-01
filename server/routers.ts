@@ -2114,6 +2114,9 @@ const checkinRouter = router({
         volunteer.email,
         volunteer.notes
       );
+      const isServiceOnlyQr =
+        volunteer.volunteerSlots.length > 0 &&
+        volunteer.volunteerSlots.every(slot => slot === "service_ftour");
 
       const today = getDateStringInTimeZone(
         new Date(),
@@ -2122,7 +2125,7 @@ const checkinRouter = router({
       const volunteerDate = volunteer.day?.date
         ? String(volunteer.day.date).slice(0, 10)
         : null;
-      if (volunteerDate !== today && !isGroupLeaderQr) {
+      if (volunteerDate !== today && !isGroupLeaderQr && !isServiceOnlyQr) {
         return {
           valid: false,
           error: "Ce QR code n'est pas valide pour aujourd'hui",
