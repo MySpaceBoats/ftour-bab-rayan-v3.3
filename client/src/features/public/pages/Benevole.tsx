@@ -113,7 +113,6 @@ export default function Benevole() {
     lastName: "",
     email: "",
     phone: "",
-    city: "",
     comment: "",
     dayId: preselectedDay || "",
     slots: {
@@ -331,7 +330,6 @@ export default function Benevole() {
         lastName: formData.lastName,
         email: formData.email,
         phone: formData.phone,
-        city: formData.city || undefined,
         comment: formData.comment || undefined,
         dayId: parseInt(resolvedDayId),
         volunteerSlots: volunteerSlots as (
@@ -599,14 +597,6 @@ export default function Benevole() {
           : "Email *",
     phone:
       lang === "ar" ? "الهاتف *" : lang === "en" ? "Phone *" : "Téléphone *",
-    city:
-      lang === "ar"
-        ? "المدينة (اختياري)"
-        : lang === "en"
-          ? "City (optional)"
-          : "Ville (optionnel)",
-    cityPlaceholder:
-      lang === "ar" ? "مدينتك" : lang === "en" ? "Your city" : "Votre ville",
     terms:
       lang === "ar"
         ? "أوافق على شروط المشاركة وسياسة الخصوصية. أتعهد باحترام التعليمات والحضور في اليوم المختار."
@@ -1453,6 +1443,22 @@ export default function Benevole() {
                               </label>
                             </div>
                           </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="comment">Commentaire</Label>
+                            <Textarea
+                              id="comment"
+                              value={formData.comment}
+                              onChange={e =>
+                                setFormData(prev => ({
+                                  ...prev,
+                                  comment: e.target.value,
+                                }))
+                              }
+                              placeholder="Ajoutez un commentaire (optionnel)"
+                              rows={3}
+                            />
+                          </div>
                         </>
                       ) : (
                         <>
@@ -1528,38 +1534,6 @@ export default function Benevole() {
                                 required
                               />
                             </div>
-                          </div>
-
-                          {/* City */}
-                          <div className="space-y-2">
-                            <Label htmlFor="city">{formTexts.city}</Label>
-                            <Input
-                              id="city"
-                              value={formData.city}
-                              onChange={e =>
-                                setFormData(prev => ({
-                                  ...prev,
-                                  city: e.target.value,
-                                }))
-                              }
-                              placeholder={formTexts.cityPlaceholder}
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="comment">Commentaire</Label>
-                            <Textarea
-                              id="comment"
-                              value={formData.comment}
-                              onChange={e =>
-                                setFormData(prev => ({
-                                  ...prev,
-                                  comment: e.target.value,
-                                }))
-                              }
-                              placeholder="Ajoutez un commentaire (optionnel)"
-                              rows={3}
-                            />
                           </div>
                         </>
                       )}
