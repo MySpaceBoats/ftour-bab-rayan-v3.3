@@ -7005,6 +7005,37 @@ const ramadanRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
       return { success: true };
     }),
+
+  activateConfig: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      await supabase
+        .from("ramadan_config")
+        .update({ is_active: false })
+        .eq("is_active", true)
+        .neq("id", input.id);
+      const { data, error } = await supabase
+        .from("ramadan_config")
+        .update({ is_active: true })
+        .eq("id", input.id)
+        .select("*")
+        .single();
+      if (error)
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      return data;
+    }),
+
+  deactivateAll: adminProcedure.mutation(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+    const { error } = await supabase
+      .from("ramadan_config")
+      .update({ is_active: false })
+      .eq("is_active", true);
+    if (error)
+      throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+    return { success: true };
+  }),
 });
 
 

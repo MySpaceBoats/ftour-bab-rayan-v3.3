@@ -29,6 +29,25 @@ export interface Env {
 }
 
 export default {
+  async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
+    const supabase = createSupabaseAdmin(env);
+    const todayDate = getDateStringInTimeZone(new Date(), DEFAULT_RAMADAN_TIMEZONE);
+
+    // Auto-activate a pre-configured Ramadan config whose start date matches today
+    const { data: configToActivate } = await supabase
+      .from('ramadan_config')
+      .select('*')
+      .eq('gregorian_start_date', todayDate)
+      .eq('is_active', false)
+      .maybeSingle();
+
+    if (configToActivate) {
+      await supabase.from('ramadan_config').update({ is_active: false }).eq('is_active', true);
+      await supabase.from('ramadan_config').update({ is_active: true }).eq('id', configToActivate.id);
+      console.log(`[Ramadan Cron] Auto-activated config id=${configToActivate.id} (${configToActivate.hijri_year}) starting ${todayDate}`);
+    }
+  },
+
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 

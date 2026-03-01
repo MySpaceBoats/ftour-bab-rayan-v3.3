@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Loader2, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, Clock, Loader2, Pencil, Power, PowerOff, Trash2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 function formatNumber(value: number) {
@@ -26,6 +27,7 @@ export default function AdminRamadanStats() {
   const summaryQuery = trpc.ramadan.publicSummary.useQuery();
 
   const activeConfig = configQuery.data?.active;
+  const allConfigs: any[] = configQuery.data?.configs ?? [];
   const activeConfigId = activeConfig?.id;
   const activeStartDate = (activeConfig as any)?.gregorianStartDate ?? (activeConfig as any)?.gregorian_start_date;
 
@@ -64,6 +66,16 @@ export default function AdminRamadanStats() {
     onError: (e) => toast.error(e.message),
   });
 
+  const activateConfig = trpc.ramadan.activateConfig.useMutation({
+    onSuccess: () => { toast.success('Ramadan activé'); refresh(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const deactivateAll = trpc.ramadan.deactivateAll.useMutation({
+    onSuccess: () => { toast.success('Ramadan désactivé'); refresh(); },
+    onError: (e) => toast.error(e.message),
+  });
+
   const upsert = trpc.ramadan.upsertStat.useMutation({
     onSuccess: () => {
       toast.success(editingRowId ? 'Statistiques modifiées' : 'Statistiques enregistrées');
@@ -84,7 +96,7 @@ export default function AdminRamadanStats() {
   };
 
   const onSave = () => {
-    if (!activeConfigId) return toast.error('Créer/activer une configuration Ramadan d’abord');
+    if (!activeConfigId) return toast.error('Créer/activer une configuration Ramadan d'abord');
     upsert.mutate({ configId: activeConfigId, ...form });
   };
 
@@ -104,6 +116,8 @@ export default function AdminRamadanStats() {
     setForm({ ramadanDay: 1, beneficiariesServed: 0, mealsDistributed: 0, volunteersPresent: 0, notes: '' });
   };
 
+  const isRamadanActive = summaryQuery.data?.isInRamadan;
+
   return (
     <div className="min-h-screen bg-muted/30">
       <header className="sticky top-0 z-50 bg-background border-b">
@@ -115,23 +129,100 @@ export default function AdminRamadanStats() {
               <p className="text-xs text-muted-foreground">Données saisies quotidiennement + cumul et périodes</p>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            {isRamadanActive ? (
+              <Badge className="bg-green-600 text-white gap-1"><CheckCircle className="h-3 w-3" />Ramadan actif</Badge>
+            ) : (
+              <Badge variant="outline" className="gap-1 text-muted-foreground"><Clock className="h-3 w-3" />Ramadan inactif</Badge>
+            )}
+          </div>
         </div>
       </header>
 
       <main className="container py-6 space-y-6">
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Jour Ramadan (aujourd’hui)</CardTitle></CardHeader><CardContent className="text-3xl font-bold">{summaryQuery.data?.todayRamadanDay ?? '—'}</CardContent></Card>
+          <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Jour Ramadan (aujourd'hui)</CardTitle></CardHeader><CardContent className="text-3xl font-bold">{summaryQuery.data?.todayRamadanDay ?? '—'}</CardContent></Card>
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Total repas (à date)</CardTitle></CardHeader><CardContent className="text-3xl font-bold">{formatNumber(summaryQuery.data?.totalsToDate.meals || 0)}</CardContent></Card>
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Bénévoles (présences cumulées)</CardTitle></CardHeader><CardContent className="text-3xl font-bold">{formatNumber(summaryQuery.data?.totalsToDate.volunteersPresence || 0)}</CardContent></Card>
         </div>
 
+        {/* Config list – manual trigger */}
+        {allConfigs.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Toutes les configurations Ramadan</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Le cron automatique active chaque jour la config dont la date de début correspond à aujourd'hui.
+                Utilisez les boutons ci-dessous pour forcer l'activation manuellement.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Année hijri</TableHead>
+                    <TableHead>1er jour (grégorien)</TableHead>
+                    <TableHead>Timezone</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allConfigs.map((cfg: any) => {
+                    const isActive = cfg.is_active;
+                    const startDate = cfg.gregorian_start_date;
+                    return (
+                      <TableRow key={cfg.id}>
+                        <TableCell className="font-medium">{cfg.hijri_year}</TableCell>
+                        <TableCell>{startDate}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">{cfg.timezone}</TableCell>
+                        <TableCell>
+                          {isActive ? (
+                            <Badge className="bg-green-600 text-white gap-1"><CheckCircle className="h-3 w-3" />Actif</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground gap-1"><Clock className="h-3 w-3" />Inactif</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isActive ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-destructive border-destructive hover:bg-destructive/10"
+                              disabled={deactivateAll.isPending}
+                              onClick={() => deactivateAll.mutate()}
+                            >
+                              {deactivateAll.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <PowerOff className="h-3 w-3 mr-1" />}
+                              Désactiver
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                              disabled={activateConfig.isPending}
+                              onClick={() => activateConfig.mutate({ id: cfg.id })}
+                            >
+                              {activateConfig.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Power className="h-3 w-3 mr-1" />}
+                              Activer
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
-          <CardHeader><CardTitle>Configuration Ramadan active</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Nouvelle configuration Ramadan</CardTitle></CardHeader>
           <CardContent className="grid md:grid-cols-4 gap-4">
             <div><Label>Année hijri</Label><Input value={configForm.hijriYear} onChange={(e)=>setConfigForm(v=>({...v,hijriYear:e.target.value}))} /></div>
             <div><Label>1er jour (grégorien)</Label><Input type="date" value={configForm.gregorianStartDate} onChange={(e)=>setConfigForm(v=>({...v,gregorianStartDate:e.target.value}))} /></div>
             <div><Label>Timezone</Label><Input value={configForm.timezone} onChange={(e)=>setConfigForm(v=>({...v,timezone:e.target.value}))} /></div>
-            <div className="flex items-end"><Button onClick={onCreateConfig} disabled={createConfig.isPending}>{createConfig.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Créer / Activer</Button></div>
+            <div className="flex items-end"><Button onClick={onCreateConfig} disabled={createConfig.isPending}>{createConfig.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Créer &amp; Activer</Button></div>
           </CardContent>
         </Card>
 
