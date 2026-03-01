@@ -9,7 +9,6 @@ import {
   generateRestaurantReservationConfirmedEmail,
   formatReservationDateLong,
   generateRestaurantReservationAutoCancelledEmail,
-  formatReservationDateLong,
   formatCasablancaDateTimeLong,
 } from "./email";
 import * as reservationServices from "./restaurant-reservation-services";
@@ -332,6 +331,7 @@ export const restaurantReservationsRouter = router({
               phone: input.phone,
               date: new Date(input.date),
               seatsTotal: input.participantsCount,
+              nbAdult: input.participantsCount,
               qrToken,
               groupName: input.groupName,
               groupType: input.groupType,
