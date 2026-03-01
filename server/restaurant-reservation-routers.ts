@@ -637,7 +637,7 @@ export const restaurantReservationsRouter = router({
         nbAdult: z.number().int().min(0).optional(),
         nbKids: z.number().int().min(0).optional(),
         paymentMode: z.enum(["cash", "virement", "espece"]).optional(),
-        respResa: z.enum(["Nayla", "Hind", "Kamal", "Rita"]).optional(),
+        respResa: z.enum(["Nayla", "Hind", "Kamal", "Rita", "Réda", "Souad"]).optional(),
         modeDeposit: z.string().optional(),
         dateAvReg: z
           .string()
@@ -778,7 +778,7 @@ export const restaurantReservationsRouter = router({
         nbAdult: z.number().int().min(0).optional(),
         nbKids: z.number().int().min(0).optional(),
         paymentMode: z.enum(["cash", "virement", "espece"]).optional(),
-        respResa: z.enum(["Nayla", "Hind", "Kamal", "Rita"]).optional(),
+        respResa: z.enum(["Nayla", "Hind", "Kamal", "Rita", "Réda", "Souad"]).optional(),
         companyName: z.string().optional(),
         groupName: z.string().optional(),
         displayChoice: z.string().optional(),
