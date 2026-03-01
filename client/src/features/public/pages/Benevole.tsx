@@ -474,7 +474,7 @@ export default function Benevole() {
         ? "ستتلقى رمز QR فريدًا لتقديمه عند الدخول يوم المشاركة."
         : lang === "en"
           ? "You will receive a unique QR code to present at the entrance on the day."
-          : "Vous recevrez un QR code unique à présenter à l'entrée le jour J.",
+          : "Un QR code personnel vous sera envoyé ; il devra être présenté à l’entrée le jour de l’événement.",
     important:
       lang === "ar" ? "مهم" : lang === "en" ? "Important" : "Important",
     dress:
