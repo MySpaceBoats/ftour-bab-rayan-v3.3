@@ -1564,9 +1564,6 @@ export default function Benevole() {
                         </>
                       )}
 
-                      {/* Consignes importantes */}
-                      {renderConsignesBox()}
-
                       {/* Terms */}
                       <div className="flex items-start space-x-3">
                         <Checkbox
