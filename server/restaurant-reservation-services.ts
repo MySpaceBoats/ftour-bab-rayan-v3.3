@@ -98,7 +98,7 @@ export async function createRestaurantReservation(data: {
   nbAdult?: number;
   nbKids?: number;
   paymentMode?: "cash" | "virement" | "espece";
-  respResa?: "Nayla" | "Hind" | "Kamal" | "Rita";
+  respResa?: "Nayla" | "Hind" | "Kamal" | "Rita" | "Réda" | "Souad";
   modeDeposit?: string;
   dateAvReg?: string;
 }) {
@@ -420,7 +420,7 @@ export async function updateRestaurantReservation(
     nbAdult?: number;
     nbKids?: number;
     paymentMode?: "cash" | "virement" | "espece";
-    respResa?: "Nayla" | "Hind" | "Kamal" | "Rita";
+    respResa?: "Nayla" | "Hind" | "Kamal" | "Rita" | "Réda" | "Souad";
     modeDeposit?: string | null;
     dateAvReg?: string | null;
   }

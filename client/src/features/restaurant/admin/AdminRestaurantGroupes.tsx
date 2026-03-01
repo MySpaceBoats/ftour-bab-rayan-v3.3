@@ -59,6 +59,8 @@ type SortKey =
   | "status"
   | "createdAt";
 
+const RESERVATION_RESPONSABLES = ["Nayla", "Hind", "Kamal", "Rita", "Réda", "Souad"] as const;
+type ReservationResponsable = (typeof RESERVATION_RESPONSABLES)[number];
 
 const GROUPES_FALLBACK_RESERVATIONS = [
   { ref: "RES-G-51881B", date_ftour: "2026-02-24", responsable: "Rita", nb_adultes: 15, nb_enfants: 0, entreprise: "CONSULAT USA", prenom: "Fatima Zahra", nom: "Bentayebi", telephone: "0666969308", email: "bentayebif@stat.gov", total: 4350, deposit: 0, complement: 4500, mode_paiement: "CASH", date_paiement: "2026-02-24", reste_a_payer: -150, validation: true, observations: null },
@@ -112,7 +114,7 @@ export default function AdminRestaurantGroupes() {
     amountReceived: 0,
     deposit: 0,
     paymentMode: "cash",
-    respResa: "Nayla",
+    respResa: "Nayla" as ReservationResponsable,
     modeDeposit: "",
     dateAvReg: "",
     notes: "",
@@ -133,7 +135,7 @@ export default function AdminRestaurantGroupes() {
     nbAdult: number;
     nbKids: number;
     paymentMode: "cash" | "virement" | "espece";
-    respResa: "Nayla" | "Hind" | "Kamal" | "Rita";
+    respResa: ReservationResponsable;
     companyName: string;
     groupName: string;
     type: string;
@@ -302,7 +304,7 @@ export default function AdminRestaurantGroupes() {
           amountReceived: 0,
           deposit: 0,
           paymentMode: "cash",
-          respResa: "Nayla",
+          respResa: "Nayla" as ReservationResponsable,
           modeDeposit: "",
           dateAvReg: "",
           notes: "",
@@ -400,7 +402,7 @@ export default function AdminRestaurantGroupes() {
       type: createForm.type as "groupe" | "entreprise",
       displayChoice: createForm.displayChoice as "jardin" | "brasserie",
       paymentMode: createForm.paymentMode as "cash" | "virement" | "espece",
-      respResa: createForm.respResa as "Nayla" | "Hind" | "Kamal" | "Rita",
+      respResa: createForm.respResa as ReservationResponsable,
       modeDeposit: createForm.modeDeposit || undefined,
       dateAvReg: createForm.dateAvReg || undefined,
       status: createForm.status as
@@ -458,6 +460,41 @@ export default function AdminRestaurantGroupes() {
     inlineEditMutation.mutate({
       id: reservation.id,
       [field]: value,
+    });
+  };
+
+  const saveGuestCountValue = (
+    reservation: any,
+    field: "nbAdult" | "nbKids",
+    rawValue: string
+  ) => {
+    const parsedValue = Math.max(0, Number.parseInt(rawValue || "0", 10) || 0);
+    const nextNbAdult =
+      field === "nbAdult"
+        ? parsedValue
+        : Math.max(
+            0,
+            Number(getInlineValue(reservation, "nbAdult", Number(reservation.nbAdult || 0))) || 0
+          );
+    const nextNbKids =
+      field === "nbKids"
+        ? parsedValue
+        : Math.max(
+            0,
+            Number(getInlineValue(reservation, "nbKids", Number(reservation.nbKids || 0))) || 0
+          );
+    const nextSeatsTotal = nextNbAdult + nextNbKids;
+    const nextTotal = computeTotalFromGuests(nextNbAdult, nextNbKids);
+
+    updateInlineValue(reservation, field, parsedValue);
+    updateInlineValue(reservation, "seatsTotal", nextSeatsTotal);
+    updateInlineValue(reservation, "totalAmount", nextTotal);
+
+    inlineEditMutation.mutate({
+      id: reservation.id,
+      [field]: parsedValue,
+      seatsTotal: nextSeatsTotal,
+      totalAmount: nextTotal,
     });
   };
 
@@ -676,8 +713,12 @@ export default function AdminRestaurantGroupes() {
   const formatAmount = (value: number) => `${value.toFixed(2)} DH`;
 
   const getRemainingAmount = (reservation: any) => {
-    const total = Number(reservation.totalAmount || 0);
-    const received = Number(reservation.amountReceived || 0);
+    const total = Number(
+      getInlineValue(reservation, "totalAmount", Number(reservation.totalAmount || 0))
+    );
+    const received = Number(
+      getInlineValue(reservation, "amountReceived", Number(reservation.amountReceived || 0))
+    );
     return Math.max(0, total - received);
   };
 
@@ -886,10 +927,11 @@ export default function AdminRestaurantGroupes() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Nayla">Nayla</SelectItem>
-                              <SelectItem value="Hind">Hind</SelectItem>
-                              <SelectItem value="Kamal">Kamal</SelectItem>
-                              <SelectItem value="Rita">Rita</SelectItem>
+                              {RESERVATION_RESPONSABLES.map(name => (
+                                <SelectItem key={name} value={name}>
+                                  {name}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </TableCell>
@@ -909,15 +951,7 @@ export default function AdminRestaurantGroupes() {
                               updateInlineValue(r, "nbAdult", e.target.value)
                             }
                             onBlur={e =>
-                              saveInlineValue(
-                                r,
-                                "nbAdult",
-                                Math.max(
-                                  0,
-                                  Number.parseInt(e.target.value || "0", 10) ||
-                                    0
-                                )
-                              )
+                              saveGuestCountValue(r, "nbAdult", e.target.value)
                             }
                           />
                         </TableCell>
@@ -933,15 +967,7 @@ export default function AdminRestaurantGroupes() {
                               updateInlineValue(r, "nbKids", e.target.value)
                             }
                             onBlur={e =>
-                              saveInlineValue(
-                                r,
-                                "nbKids",
-                                Math.max(
-                                  0,
-                                  Number.parseInt(e.target.value || "0", 10) ||
-                                    0
-                                )
-                              )
+                              saveGuestCountValue(r, "nbKids", e.target.value)
                             }
                           />
                         </TableCell>
@@ -1565,7 +1591,7 @@ export default function AdminRestaurantGroupes() {
                   onValueChange={value =>
                     setEditForm({
                       ...editForm,
-                      respResa: value as "Nayla" | "Hind" | "Kamal" | "Rita",
+                      respResa: value as ReservationResponsable,
                     })
                   }
                 >
@@ -1573,10 +1599,11 @@ export default function AdminRestaurantGroupes() {
                     <SelectValue placeholder="Sélectionner un responsable" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Nayla">Nayla</SelectItem>
-                    <SelectItem value="Hind">Hind</SelectItem>
-                    <SelectItem value="Kamal">Kamal</SelectItem>
-                    <SelectItem value="Rita">Rita</SelectItem>
+                    {RESERVATION_RESPONSABLES.map(name => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1852,17 +1879,18 @@ export default function AdminRestaurantGroupes() {
               <Select
                 value={createForm.respResa}
                 onValueChange={value =>
-                  setCreateForm({ ...createForm, respResa: value })
+                  setCreateForm({ ...createForm, respResa: value as ReservationResponsable })
                 }
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Nayla">Nayla</SelectItem>
-                  <SelectItem value="Hind">Hind</SelectItem>
-                  <SelectItem value="Kamal">Kamal</SelectItem>
-                  <SelectItem value="Rita">Rita</SelectItem>
+                  {RESERVATION_RESPONSABLES.map(name => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
