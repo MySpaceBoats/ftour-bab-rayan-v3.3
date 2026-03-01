@@ -118,7 +118,7 @@ export default function Benevole() {
     dayId: preselectedDay || "",
     slots: {
       preparation_ftour: false, // Préparation ftour : 15h00 – 16h45
-      service_ftour: false, // Service ftour : 17h00 – 19h15
+      service_ftour: false, // Service ftour : 17h30 – 19h15
     },
     acceptedTerms: false,
   });
@@ -639,10 +639,10 @@ export default function Benevole() {
           : "Préparation ftour (15:00 – 16:45)",
     serviceSlot:
       lang === "ar"
-        ? "خدمة الفطور (17:00 – 19:15)"
+        ? "خدمة الفطور (17:30 – 19:15)"
         : lang === "en"
-          ? "Ftour service (17:00 – 19:15)"
-          : "Service ftour (17:00 – 19:15)",
+          ? "Ftour service (17:30 – 19:15)"
+          : "Service ftour (17:30 – 19:15)",
     slotsError:
       lang === "ar"
         ? "يرجى اختيار فترة واحدة على الأقل"
@@ -1056,7 +1056,7 @@ export default function Benevole() {
                           </span>
                         </div>
                         <p className="text-sm text-muted-foreground ml-4">
-                          17h00 – 19h15
+                          17h30 – 19h15
                         </p>
                       </div>
                     </div>
