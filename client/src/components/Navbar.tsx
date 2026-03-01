@@ -43,6 +43,12 @@ export default function Navbar() {
       "admin_boutique",
       "admin_dons",
       "scanner",
+      "admin_restaurant",
+      "vue_restaurant",
+      "admin_patisserie",
+      "admin_terroir",
+      "admin_contenu",
+      "admin_messages",
     ].includes(user.role);
 
   // Fonction pour générer les URLs localisées

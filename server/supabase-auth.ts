@@ -15,7 +15,7 @@ const getAdminClient = () => {
 export interface AuthUser {
   id: string;
   email: string;
-  role: 'user' | 'admin' | 'super_admin' | 'scanner' | 'admin_ops' | 'admin_boutique' | 'admin_dons' | 'admin_restaurant' | 'admin_patisserie' | 'admin_terroir' | 'admin_contenu' | 'admin_messages';
+  role: 'user' | 'admin' | 'super_admin' | 'scanner' | 'admin_ops' | 'admin_boutique' | 'admin_dons' | 'admin_restaurant' | 'vue_restaurant' | 'admin_patisserie' | 'admin_terroir' | 'admin_contenu' | 'admin_messages';
   name?: string;
   phone?: string;
   createdAt: Date;
