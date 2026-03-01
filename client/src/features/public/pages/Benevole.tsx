@@ -960,7 +960,7 @@ export default function Benevole() {
                   ? "عدد المشاركين محدود لأسباب داخل المؤسسة."
                   : lang === "en"
                     ? "The number of participants is limited for reasons inside the establishment."
-                    : "Le nombre de participants est limité durant l'évènement pour des raisons de sécurité mais également pour que votre expérience en tant que bénévole et le service assuré pour les bénéficiaires soit d'un niveau appréciable."}
+                    : "Le nombre de participants est limité durant l'évènement pour des raisons de sécurité mais également pour que ton expérience en tant que bénévole et le service assuré pour les bénéficiaires soit excellent."}
               </p>
             </div>
           </div>
