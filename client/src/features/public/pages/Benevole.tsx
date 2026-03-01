@@ -50,7 +50,6 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/i18n";
 
-
 const RAMADAN_TIMEZONE = "Africa/Casablanca";
 
 const getTimeInMinutesInRamadanTimezone = (date: Date): number => {
@@ -62,7 +61,9 @@ const getTimeInMinutesInRamadanTimezone = (date: Date): number => {
   });
   const parts = formatter.formatToParts(date);
   const hour = Number(parts.find(part => part.type === "hour")?.value ?? "0");
-  const minute = Number(parts.find(part => part.type === "minute")?.value ?? "0");
+  const minute = Number(
+    parts.find(part => part.type === "minute")?.value ?? "0"
+  );
   return hour * 60 + minute;
 };
 
@@ -92,7 +93,8 @@ const isAutoReopenedForServiceOnly = (day: {
   const isSameRamadanDate = getDateStringInRamadanTimezone(now) === day.date;
   if (!isSameRamadanDate) return false;
 
-  const isAfterReopenTime = getTimeInMinutesInRamadanTimezone(now) >= 17 * 60 + 30;
+  const isAfterReopenTime =
+    getTimeInMinutesInRamadanTimezone(now) >= 17 * 60 + 30;
   if (!isAfterReopenTime) return false;
 
   return !day.isOpen || (day.registeredCount ?? 0) >= day.capacity;
@@ -766,6 +768,24 @@ export default function Benevole() {
           : "Inscription du groupe en cours...",
   };
 
+  const renderConsignesBox = (className = "") => (
+    <div
+      className={`bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2 ${className}`.trim()}
+    >
+      <h4 className="font-semibold text-amber-700 flex items-center gap-2">
+        <AlertCircle className="h-4 w-4" />
+        {formTexts.consignesTitle}
+      </h4>
+      <ul className="text-sm text-amber-900 space-y-1">
+        <li>• {formTexts.dress}</li>
+        <li>• {formTexts.punctuality}</li>
+        <li>• {formTexts.consigneNoBags}</li>
+        <li>• {formTexts.consigneVest}</li>
+        <li>• {formTexts.consigneNoPhotos}</li>
+      </ul>
+    </div>
+  );
+
   // Group success screen
   if (groupSuccess) {
     const groupSuccessTexts = {
@@ -924,6 +944,8 @@ export default function Benevole() {
                   </p>
                 </div>
 
+                {renderConsignesBox("text-left")}
+
                 <div className="pt-4">
                   <Button
                     onClick={() => setRegistrationSuccess(null)}
@@ -988,6 +1010,7 @@ export default function Benevole() {
                     : "Le nombre de participants est limité durant l'évènement pour des raisons de sécurité mais également pour que ton expérience en tant que bénévole et le service assuré pour les bénéficiaires soit excellent."}
               </p>
             </div>
+            {renderConsignesBox()}
           </div>
         </section>
 
@@ -1246,7 +1269,9 @@ export default function Benevole() {
                                   <SelectItem
                                     key={`group-${day.id}`}
                                     value={day.id.toString()}
-                                    disabled={isDayFull(day) && !isFutureDay(day.date)}
+                                    disabled={
+                                      isDayFull(day) && !isFutureDay(day.date)
+                                    }
                                   >
                                     {new Date(day.date).toLocaleDateString(
                                       dateLocale,
@@ -1277,7 +1302,8 @@ export default function Benevole() {
                           isAutoReopenedForServiceOnly(selectedDay) && (
                             <p className="text-sm text-amber-700 flex items-center gap-2">
                               <Info className="h-4 w-4" />
-                              Après 17h30, seul le créneau service est ouvert pour ce jour.
+                              Après 17h30, seul le créneau service est ouvert
+                              pour ce jour.
                             </p>
                           )}
                         {selectedGroupDayInsufficientCapacity && (
@@ -1565,19 +1591,7 @@ export default function Benevole() {
                       )}
 
                       {/* Consignes importantes */}
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
-                        <h4 className="font-semibold text-amber-700 flex items-center gap-2">
-                          <AlertCircle className="h-4 w-4" />
-                          {formTexts.consignesTitle}
-                        </h4>
-                        <ul className="text-sm text-amber-900 space-y-1">
-                          <li>• {formTexts.dress}</li>
-                          <li>• {formTexts.punctuality}</li>
-                          <li>• {formTexts.consigneNoBags}</li>
-                          <li>• {formTexts.consigneVest}</li>
-                          <li>• {formTexts.consigneNoPhotos}</li>
-                        </ul>
-                      </div>
+                      {renderConsignesBox()}
 
                       {/* Terms */}
                       <div className="flex items-start space-x-3">
