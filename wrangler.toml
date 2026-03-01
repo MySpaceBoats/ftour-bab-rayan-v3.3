@@ -10,3 +10,8 @@ directory = "dist/public"
 enabled = false
 invocation_logs = true
 
+# Cron trigger: ensure 3 Ramadan days are always open for registration
+# Runs every day at 00:05 Casablanca time (UTC+1 during Ramadan = 23:05 UTC)
+[[triggers.crons]]
+cron = "5 23 * * *"
+
