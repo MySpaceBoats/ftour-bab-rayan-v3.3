@@ -109,7 +109,7 @@ export default function AdminReservationsCalendar() {
   const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+  const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
   const hasAccess = user?.role && allowedRoles.includes(user.role);
 
   // Fetch all reservation types

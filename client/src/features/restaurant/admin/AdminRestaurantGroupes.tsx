@@ -143,7 +143,7 @@ export default function AdminRestaurantGroupes() {
     dateAvReg: string;
   } | null>(null);
 
-  const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+  const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
   const hasAccess = user?.role && allowedRoles.includes(user.role);
 
   const {
