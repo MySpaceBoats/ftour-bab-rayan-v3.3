@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +17,23 @@ export default function Programme() {
   const weeks = days ? Math.ceil(days.length / 7) : 4;
   const weekDays = days?.slice((selectedWeek - 1) * 7, selectedWeek * 7) || [];
 
+  // Auto-navigate to the week containing the first open day
+  useEffect(() => {
+    if (!days || days.length === 0) return;
+    const firstOpenIdx = days.findIndex(d => d.isOpen);
+    if (firstOpenIdx !== -1) {
+      setSelectedWeek(Math.floor(firstOpenIdx / 7) + 1);
+    }
+  }, [days]);
+
+  const isFutureDay = (dateStr: string) => {
+    const dayDate = new Date(dateStr);
+    const today = new Date();
+    dayDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    return dayDate > today;
+  };
+
   const formatDate = (date: Date | string) => {
     const d = new Date(date);
     return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -25,12 +42,18 @@ export default function Programme() {
   type DayType = NonNullable<typeof days>[number];
 
   const getAvailabilityColor = (day: DayType) => {
-    if (!day.isOpen) return "bg-red-100 text-red-800 border-red-200";
+    if (!day.isOpen) {
+      if (isFutureDay(day.date)) return "bg-amber-100 text-amber-800 border-amber-200";
+      return "bg-red-100 text-red-800 border-red-200";
+    }
     return "bg-green-100 text-green-800 border-green-200";
   };
 
   const getAvailabilityText = (day: DayType) => {
-    if (!day.isOpen) return "Fermé";
+    if (!day.isOpen) {
+      if (isFutureDay(day.date)) return "Bientôt";
+      return "Fermé";
+    }
     return "Disponible";
   };
 
@@ -94,7 +117,7 @@ export default function Programme() {
               <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {weekDays.map((day) => (
                   <Card key={day.id} className={`card-hover overflow-hidden ${!day.isOpen ? 'opacity-75' : ''}`}>
-                    <div className={`h-1 ${!day.isOpen ? 'bg-red-500' : 'bg-primary'}`} />
+                    <div className={`h-1 ${!day.isOpen ? (isFutureDay(day.date) ? 'bg-amber-400' : 'bg-red-500') : 'bg-primary'}`} />
                     <CardContent className="p-6 space-y-4">
                       {/* Header */}
                       <div className="flex items-start justify-between">
@@ -106,7 +129,7 @@ export default function Programme() {
                         </div>
                         <Badge variant="outline" className={getAvailabilityColor(day)}>
                           {!day.isOpen ? (
-                            <XCircle className="h-3 w-3 mr-1" />
+                            isFutureDay(day.date) ? <Clock className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />
                           ) : (
                             <CheckCircle className="h-3 w-3 mr-1" />
                           )}
@@ -137,12 +160,14 @@ export default function Programme() {
 
                       {/* Action */}
                       <Link href={`/${lang}/benevole?day=${day.id}`}>
-                        <Button 
-                          className="w-full" 
+                        <Button
+                          className="w-full"
                           disabled={!day.isOpen}
                           variant={!day.isOpen ? "outline" : "default"}
                         >
-                          {!day.isOpen ? "Complet" : "S'inscrire"}
+                          {!day.isOpen
+                            ? (isFutureDay(day.date) ? "Bientôt disponible" : "Complet")
+                            : "S'inscrire"}
                           {day.isOpen && <ArrowRight className="h-4 w-4 ml-2" />}
                         </Button>
                       </Link>
