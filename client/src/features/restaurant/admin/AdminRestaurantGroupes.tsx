@@ -871,9 +871,12 @@ export default function AdminRestaurantGroupes() {
                                 Number(r.nbAdult || 0)
                               )
                             )}
-                            onChange={e =>
-                              updateInlineValue(r, "nbAdult", e.target.value)
-                            }
+                            onChange={e => {
+                              updateInlineValue(r, "nbAdult", e.target.value);
+                              const newAdult = Number(e.target.value || 0);
+                              const currentKids = Number(getInlineValue(r, "nbKids", Number(r.nbKids || 0)));
+                              updateInlineValue(r, "totalAmount", computeTotalFromGuests(newAdult, currentKids));
+                            }}
                             onBlur={e =>
                               saveInlineValue(
                                 r,
@@ -895,9 +898,12 @@ export default function AdminRestaurantGroupes() {
                             value={String(
                               getInlineValue(r, "nbKids", Number(r.nbKids || 0))
                             )}
-                            onChange={e =>
-                              updateInlineValue(r, "nbKids", e.target.value)
-                            }
+                            onChange={e => {
+                              updateInlineValue(r, "nbKids", e.target.value);
+                              const newKids = Number(e.target.value || 0);
+                              const currentAdult = Number(getInlineValue(r, "nbAdult", Number(r.nbAdult || 0)));
+                              updateInlineValue(r, "totalAmount", computeTotalFromGuests(currentAdult, newKids));
+                            }}
                             onBlur={e =>
                               saveInlineValue(
                                 r,
@@ -990,10 +996,10 @@ export default function AdminRestaurantGroupes() {
                           />
                         </TableCell>
                         <TableCell>
-                          {formatAmount(Number(r.nbAdult || 0) * ADULT_PRICE)}
+                          {formatAmount(Number(getInlineValue(r, "nbAdult", Number(r.nbAdult || 0))) * ADULT_PRICE)}
                         </TableCell>
                         <TableCell>
-                          {formatAmount(Number(r.nbKids || 0) * KIDS_PRICE)}
+                          {formatAmount(Number(getInlineValue(r, "nbKids", Number(r.nbKids || 0))) * KIDS_PRICE)}
                         </TableCell>
                         <TableCell>
                           <Input
