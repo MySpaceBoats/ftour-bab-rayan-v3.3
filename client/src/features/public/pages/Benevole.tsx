@@ -193,6 +193,9 @@ export default function Benevole() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const fallbackDayId = availableDays[0]?.id?.toString() ?? "";
+    const resolvedDayId = formData.dayId || fallbackDayId;
+
     if (!formData.acceptedTerms) {
       toast.error(
         lang === "ar"
@@ -204,7 +207,7 @@ export default function Benevole() {
       return;
     }
 
-    if (!formData.dayId) {
+    if (!resolvedDayId) {
       toast.error(
         lang === "ar"
           ? "يرجى اختيار تاريخ"
@@ -312,7 +315,7 @@ export default function Benevole() {
         estimatedSize: groupData.estimatedSize
           ? parseInt(groupData.estimatedSize)
           : undefined,
-        dayId: parseInt(formData.dayId),
+        dayId: parseInt(resolvedDayId),
         volunteerSlots: volunteerSlots as (
           | "preparation_ftour"
           | "service_ftour"
@@ -330,7 +333,7 @@ export default function Benevole() {
         phone: formData.phone,
         city: formData.city || undefined,
         comment: formData.comment || undefined,
-        dayId: parseInt(formData.dayId),
+        dayId: parseInt(resolvedDayId),
         volunteerSlots: volunteerSlots as (
           | "preparation_ftour"
           | "service_ftour"
@@ -358,6 +361,11 @@ export default function Benevole() {
   };
 
   const availableDays = days?.filter(day => !isDayFull(day)) || [];
+  const serviceOnlyDefaultDayId = availableDays[0]?.id?.toString() ?? "";
+  const isServiceOnlyWithoutPreparation =
+    !isGroup &&
+    !formData.slots.preparation_ftour &&
+    formData.slots.service_ftour;
   const selectedDay = days?.find(day => day.id.toString() === formData.dayId);
   const selectedDayIsFull = selectedDay ? isDayFull(selectedDay) : false;
   const selectedGroupSize = Number(groupData.estimatedSize || 0);
@@ -371,6 +379,23 @@ export default function Benevole() {
     selectedGroupSize > selectedDayRemainingSeats;
   const dateLocale =
     lang === "ar" ? "ar-MA" : lang === "en" ? "en-US" : "fr-FR";
+
+  useEffect(() => {
+    if (!isServiceOnlyWithoutPreparation) return;
+
+    const selectedDayStillAvailable = availableDays.some(
+      day => day.id.toString() === formData.dayId
+    );
+
+    if (!selectedDayStillAvailable && serviceOnlyDefaultDayId) {
+      setFormData(prev => ({ ...prev, dayId: serviceOnlyDefaultDayId }));
+    }
+  }, [
+    availableDays,
+    formData.dayId,
+    isServiceOnlyWithoutPreparation,
+    serviceOnlyDefaultDayId,
+  ]);
 
   // Success screen translations
   const successTexts = {
@@ -1088,15 +1113,73 @@ export default function Benevole() {
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-6">
+                      {/* Volunteer Slots */}
+                      <div className="space-y-3">
+                        <Label>{formTexts.slotsLabel}</Label>
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-3">
+                            <Checkbox
+                              id="slot-preparation"
+                              checked={formData.slots.preparation_ftour}
+                              onCheckedChange={checked => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  slots: {
+                                    ...prev.slots,
+                                    preparation_ftour: checked as boolean,
+                                  },
+                                }));
+                                setSlotsError(false);
+                              }}
+                            />
+                            <label
+                              htmlFor="slot-preparation"
+                              className="text-sm cursor-pointer"
+                            >
+                              {formTexts.preparationSlot}
+                            </label>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            <Checkbox
+                              id="slot-service"
+                              checked={formData.slots.service_ftour}
+                              onCheckedChange={checked => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  slots: {
+                                    ...prev.slots,
+                                    service_ftour: checked as boolean,
+                                  },
+                                }));
+                                setSlotsError(false);
+                              }}
+                            />
+                            <label
+                              htmlFor="slot-service"
+                              className="text-sm cursor-pointer"
+                            >
+                              {formTexts.serviceSlot}
+                            </label>
+                          </div>
+                        </div>
+                        {slotsError && (
+                          <p className="text-sm text-red-500">
+                            {formTexts.slotsError}
+                          </p>
+                        )}
+                      </div>
+
                       {/* Day Selection */}
                       <div className="space-y-2">
                         <Label htmlFor="day">{formTexts.dayLabel}</Label>
                         {!isGroup ? (
-                          <Select
+                          <>
+                            <Select
                             value={formData.dayId}
                             onValueChange={value =>
                               setFormData(prev => ({ ...prev, dayId: value }))
                             }
+                            disabled={isServiceOnlyWithoutPreparation}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder={formTexts.selectDay} />
@@ -1133,6 +1216,16 @@ export default function Benevole() {
                               )}
                             </SelectContent>
                           </Select>
+                          {isServiceOnlyWithoutPreparation && (
+                            <p className="text-xs text-muted-foreground">
+                              {lang === "ar"
+                                ? "في حالة اختيار خدمة الفطور فقط، لا حاجة لاختيار تاريخ. رمز QR صالح لدخول واحد في أي يوم للخدمة."
+                                : lang === "en"
+                                  ? "When only the service slot is selected, no date selection is required. The QR code remains valid for a single service entry on any day."
+                                  : "Si seul le créneau service est coché, la date est désactivée. Le QR code reste valable une seule fois pour le service, quel que soit le jour."}
+                            </p>
+                          )}
+                          </>
                         ) : (
                           <Select
                             value={formData.dayId}
@@ -1470,62 +1563,6 @@ export default function Benevole() {
                           </div>
                         </>
                       )}
-
-                      {/* Volunteer Slots */}
-                      <div className="space-y-3">
-                        <Label>{formTexts.slotsLabel}</Label>
-                        <div className="space-y-3">
-                          <div className="flex items-center space-x-3">
-                            <Checkbox
-                              id="slot-preparation"
-                              checked={formData.slots.preparation_ftour}
-                              onCheckedChange={checked => {
-                                setFormData(prev => ({
-                                  ...prev,
-                                  slots: {
-                                    ...prev.slots,
-                                    preparation_ftour: checked as boolean,
-                                  },
-                                }));
-                                setSlotsError(false);
-                              }}
-                            />
-                            <label
-                              htmlFor="slot-preparation"
-                              className="text-sm cursor-pointer"
-                            >
-                              {formTexts.preparationSlot}
-                            </label>
-                          </div>
-                          <div className="flex items-center space-x-3">
-                            <Checkbox
-                              id="slot-service"
-                              checked={formData.slots.service_ftour}
-                              onCheckedChange={checked => {
-                                setFormData(prev => ({
-                                  ...prev,
-                                  slots: {
-                                    ...prev.slots,
-                                    service_ftour: checked as boolean,
-                                  },
-                                }));
-                                setSlotsError(false);
-                              }}
-                            />
-                            <label
-                              htmlFor="slot-service"
-                              className="text-sm cursor-pointer"
-                            >
-                              {formTexts.serviceSlot}
-                            </label>
-                          </div>
-                        </div>
-                        {slotsError && (
-                          <p className="text-sm text-red-500">
-                            {formTexts.slotsError}
-                          </p>
-                        )}
-                      </div>
 
                       {/* Consignes importantes */}
                       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
