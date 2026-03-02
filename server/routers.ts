@@ -926,6 +926,35 @@ const galleryRouter = router({
             "admin_terroir",
           ].includes(ctx.user.role)
       );
+      const client = getSupabaseAdminClient();
+      if (!client)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+
+      const albumIds = Array.from(
+        new Set(input.photos.map(photo => photo.albumId).filter(Boolean))
+      ) as string[];
+      const albumNameById = new Map<string, string>();
+      if (albumIds.length > 0) {
+        const { data: albumRows, error: albumError } = await client
+          .from("gallery_albums")
+          .select("id,name")
+          .in("id", albumIds);
+        if (albumError) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: albumError.message,
+          });
+        }
+        for (const albumRow of albumRows ?? []) {
+          if (albumRow?.id && albumRow?.name) {
+            albumNameById.set(albumRow.id, albumRow.name);
+          }
+        }
+      }
+
       const results = [];
       for (const photo of input.photos) {
         if (
@@ -966,11 +995,18 @@ const galleryRouter = router({
           photo.fileType
         );
 
+        const defaultAlbumTag = photo.albumId
+          ? albumNameById.get(photo.albumId)
+          : undefined;
+        const mergedTags = Array.from(
+          new Set([...(photo.tags ?? []), ...(defaultAlbumTag ? [defaultAlbumTag] : [])])
+        );
+
         const created = await galleryServices.createGalleryPhoto({
           title: photo.title,
           description: photo.description,
           eventDate: photo.eventDate,
-          tags: photo.tags,
+          tags: mergedTags,
           albumId: photo.albumId,
           sortOrder: photo.sortOrder,
           isFeatured: canManageGallery ? photo.isFeatured : false,
