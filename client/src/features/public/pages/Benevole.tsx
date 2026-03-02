@@ -100,15 +100,18 @@ const isAutoReopenedForServiceOnly = (day: {
   return !day.isOpen || (day.registeredCount ?? 0) >= day.capacity;
 };
 
+const toUtcDayNumber = (dateString: string): number => {
+  const [year, month, day] = dateString.split("-").map(Number);
+  return Math.floor(Date.UTC(year, month - 1, day) / (1000 * 60 * 60 * 24));
+};
+
+const getRamadanTodayDayNumber = (): number =>
+  toUtcDayNumber(getDateStringInRamadanTimezone(new Date()));
+
 const isWithinIndividualRegistrationWindow = (date: string): boolean => {
-  const target = new Date(date);
-  const now = new Date();
-
-  target.setHours(0, 0, 0, 0);
-  now.setHours(0, 0, 0, 0);
-
-  const diffMs = target.getTime() - now.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const targetDayNumber = toUtcDayNumber(date);
+  const todayDayNumber = getRamadanTodayDayNumber();
+  const diffDays = targetDayNumber - todayDayNumber;
 
   return diffDays >= 0 && diffDays <= 2;
 };
@@ -365,17 +368,19 @@ export default function Benevole() {
     (!day.isOpen || (day.registeredCount ?? 0) >= day.capacity) &&
     !isAutoReopenedForServiceOnly(day);
 
-  const isFutureDay = (date: string) => {
-    const dayDate = new Date(date);
-    const today = new Date();
-    dayDate.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
-    return dayDate > today;
-  };
+  const isFutureDay = (date: string) =>
+    toUtcDayNumber(date) > getRamadanTodayDayNumber();
 
-  const individualDays =
-    days?.filter(day => isWithinIndividualRegistrationWindow(day.date)) || [];
-  const availableDays = individualDays.filter(day => !isDayFull(day));
+  const isIndividualDayOpenSoon = (day: { date: string }) =>
+    isFutureDay(day.date) && !isWithinIndividualRegistrationWindow(day.date);
+
+  const individualDays = days || [];
+  const availableDays = individualDays.filter(
+    day =>
+      isWithinIndividualRegistrationWindow(day.date) &&
+      !isIndividualDayOpenSoon(day) &&
+      !isDayFull(day)
+  );
   const serviceOnlyDefaultDayId = availableDays[0]?.id?.toString() ?? "";
   const isServiceOnlyWithoutPreparation =
     !isGroup &&
@@ -1224,7 +1229,10 @@ export default function Benevole() {
                                     <SelectItem
                                       key={day.id}
                                       value={day.id.toString()}
-                                      disabled={isDayFull(day)}
+                                      disabled={
+                                        isDayFull(day) ||
+                                        isIndividualDayOpenSoon(day)
+                                      }
                                     >
                                       {new Date(day.date).toLocaleDateString(
                                         dateLocale,
@@ -1234,9 +1242,11 @@ export default function Benevole() {
                                           month: "long",
                                         }
                                       )}
-                                      {isDayFull(day)
-                                        ? ` - ${isFutureDay(day.date) ? formTexts.upcomingOpenSoon : formTexts.dayFull}`
-                                        : ""}
+                                      {isIndividualDayOpenSoon(day)
+                                        ? ` - ${formTexts.upcomingOpenSoon}`
+                                        : isDayFull(day)
+                                          ? ` - ${formTexts.dayFull}`
+                                          : ""}
                                     </SelectItem>
                                   ))
                                 ) : (
