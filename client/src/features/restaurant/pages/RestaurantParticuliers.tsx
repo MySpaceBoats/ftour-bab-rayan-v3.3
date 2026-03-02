@@ -19,7 +19,7 @@ export default function RestaurantParticuliers() {
   const [confirmed, setConfirmed] = useState(false);
   const [formData, setFormData] = useState({
     date: '',
-    seats: 1,
+    seats: '1',
     salle: '' as '' | 'jardin' | 'brasserie',
     fullName: '',
     phone: '',
@@ -33,6 +33,7 @@ export default function RestaurantParticuliers() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const seatsCount = Number.parseInt(formData.seats, 10);
     
     if (!formData.date || !formData.salle || !formData.fullName || !formData.phone || !formData.email) {
       toast.error('Merci de compléter tous les champs requis');
@@ -40,7 +41,7 @@ export default function RestaurantParticuliers() {
     }
 
 
-    if (formData.seats < 1 || formData.seats > 120) {
+    if (!Number.isFinite(seatsCount) || seatsCount < 1 || seatsCount > 120) {
       toast.error('Le nombre de couverts doit être entre 1 et 120');
       return;
     }
@@ -52,7 +53,7 @@ export default function RestaurantParticuliers() {
         email: formData.email,
         phone: formData.phone,
         date: formData.date,
-        participantsCount: formData.seats,
+        participantsCount: seatsCount,
         displayChoice: formData.salle as 'jardin' | 'brasserie',
       });
       
@@ -162,7 +163,7 @@ export default function RestaurantParticuliers() {
                   min="1"
                   max="120"
                   value={formData.seats}
-                  onChange={(e) => setFormData((p) => ({ ...p, seats: Math.max(1, Math.min(120, parseInt(e.target.value) || 1)) }))}
+                  onChange={(e) => setFormData((p) => ({ ...p, seats: e.target.value }))}
                   required
                 />
               </div>
