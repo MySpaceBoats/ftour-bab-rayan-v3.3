@@ -36,8 +36,8 @@ export default function Reservation() {
       return;
     }
 
-    if (formData.seats < 1 || formData.seats > 12) {
-      toast.error('Le nombre de couverts doit être entre 1 et 12');
+    if (formData.seats < 1 || formData.seats > 120) {
+      toast.error('Le nombre de couverts doit être entre 1 et 120');
       return;
     }
 
@@ -253,17 +253,17 @@ export default function Reservation() {
                       id="seats"
                       type="number"
                       min="1"
-                      max="12"
+                      max="120"
                       value={formData.seats}
                       onChange={(e) =>
                         setFormData((p) => ({
                           ...p,
-                          seats: Math.max(1, Math.min(12, parseInt(e.target.value) || 1)),
+                          seats: Math.max(1, Math.min(120, parseInt(e.target.value) || 1)),
                         }))
                       }
                       required
                     />
-                    <p className="text-xs text-[#8b8b7a] mt-1">De 1 à 12 couverts</p>
+                    <p className="text-xs text-[#8b8b7a] mt-1">De 1 à 120 couverts</p>
                   </div>
 
                   {/* Espace */}
