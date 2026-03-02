@@ -9,6 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { ArrowLeft, Upload, X } from "lucide-react";
 import { useI18n } from "@/i18n";
@@ -26,6 +33,8 @@ export default function BenevoleGalerieUpload() {
     redirectPath: `/${lang}/connexion`,
   });
   const [items, setItems] = useState<UploadItem[]>([]);
+  const [albumId, setAlbumId] = useState<string>("none");
+  const albums = trpc.public.galleryAlbums.useQuery();
 
   const upload = trpc.gallery.uploadPhotos.useMutation({
     onSuccess: () => {
@@ -67,6 +76,10 @@ export default function BenevoleGalerieUpload() {
       toast.error("Vous devez être connecté pour uploader des photos.");
       return;
     }
+    if (albumId === "none") {
+      toast.error("Merci de choisir l'édition (album) avant l'envoi.");
+      return;
+    }
     if (items.length === 0) return;
     const photos: any[] = [];
 
@@ -91,7 +104,7 @@ export default function BenevoleGalerieUpload() {
         fileName: item.file.name,
         fileType: item.file.type,
         fileData: dataUrl,
-        albumId: null,
+        albumId,
         sortOrder: 0,
         status: "draft",
         isFeatured: false,
@@ -166,6 +179,23 @@ export default function BenevoleGalerieUpload() {
             <div className="text-sm text-muted-foreground">
               {items.length} fichier(s) ·{" "}
               {(totalSize / (1024 * 1024)).toFixed(2)} MB
+            </div>
+
+            <div className="space-y-2">
+              <Label>Édition (album)</Label>
+              <Select value={albumId} onValueChange={setAlbumId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir une édition" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Choisir une édition</SelectItem>
+                  {(albums.data ?? []).map((album: any) => (
+                    <SelectItem key={album.id} value={album.id}>
+                      {album.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
