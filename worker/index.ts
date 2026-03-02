@@ -9,6 +9,7 @@ import { handleCMSRequest } from './cms-handlers';
 import { createSupabaseAdmin } from './supabase';
 import { DEFAULT_RAMADAN_TIMEZONE, getDateStringInTimeZone, getRamadanDay } from '../shared/ramadan';
 import { handleCashOrderRequest } from './cash-orders';
+import { handleMemberCardRequest } from './member-cards';
 
 export interface Env {
   SUPABASE_URL: string;
@@ -209,6 +210,19 @@ export default {
           headers: newHeaders,
         });
       }
+    }
+
+    const memberCardResponse = await handleMemberCardRequest(request, env);
+    if (memberCardResponse) {
+      const newHeaders = new Headers(memberCardResponse.headers);
+      Object.entries(baseCorsHeaders).forEach(([key, value]) => {
+        newHeaders.set(key, value);
+      });
+      return new Response(memberCardResponse.body, {
+        status: memberCardResponse.status,
+        statusText: memberCardResponse.statusText,
+        headers: newHeaders,
+      });
     }
 
     // Handle tRPC API requests

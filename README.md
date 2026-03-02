@@ -165,6 +165,42 @@ Nouveau flux "Menu Solidaire" via QR unique:
 - `ORDER_PROOF_SECRET` (recommandé): secret HMAC pour proof token
 - `PUBLIC_APP_URL` (recommandé): URL publique utilisée dans les emails
 - `CASH_ORDER_ADMIN_CC_EMAIL` (optionnel): copie email admin
+- `SUPABASE_URL` (obligatoire): URL projet Supabase
+- `SUPABASE_SERVICE_ROLE_KEY` (obligatoire côté Worker): clé service role pour opérations admin/tokens/storage
+- `EMAIL_PROVIDER_KEY` ou `RESEND_API_KEY` (obligatoire pour emails): clé fournisseur email
+- `BASE_URL` ou `PUBLIC_APP_URL` (obligatoire): URL publique pour construire les liens signés
+
+## Carte Membre Bab Rayan
+
+Implémentation livrée:
+
+- Migration SQL: `supabase/migrations/add_member_cards.sql`
+  - Tables: `members`, `member_card_orders`, `member_card_events`, `member_card_tokens`
+  - Fonction serveur: `transition_member_card_status(old_status, new_status)` + trigger anti-régression
+  - RLS activé sur les tables cartes membres
+  - Bucket storage privé `member-card-proofs` (10MB, pdf/jpg/png)
+- Worker API: `worker/member-cards.ts`
+  - `POST /api/admin/card/send-order-email`
+  - `GET /card/confirm-order?token=...`
+  - `GET /card/payment?token=...`
+  - `POST /api/card/confirm-payment` (multipart, upload preuve serveur)
+  - `POST /api/admin/card/mark-printed`
+  - `POST /api/admin/card/mark-delivered`
+  - + utilitaires admin: renvoi email paiement, marquer payé, signed URL preuve
+- Templates emails: `worker/member-card-emails.ts`
+  - Email commande + CTA confirmation
+  - Email paiement + infos paiement + CTA validation
+- Dashboard admin: `client/src/features/ops/admin/AdminMemberCards.tsx`
+  - Route `/admin/cards`
+  - Liste, recherche, filtre statut, actions workflow
+  - Téléchargement preuve via signed URL
+  - Timeline des événements
+
+Notes sécurité:
+
+- Endpoints admin protégés via JWT Supabase + rôle admin (`users.role`).
+- Endpoints publics limités au token opaque hashé en DB + expiration.
+- Toutes les actions écrivent dans `member_card_events`.
 
 ### E2E rapide
 
