@@ -639,7 +639,8 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
     "admin_ops",
     "admin_boutique",
     "admin_dons",
-    "admin_restaurant", "vue_restaurant",
+    "admin_restaurant",
+            "vue_restaurant",
     "admin_patisserie",
     "admin_terroir",
   ];
@@ -913,7 +914,8 @@ const galleryRouter = router({
             "admin_ops",
             "admin_boutique",
             "admin_dons",
-            "admin_restaurant", "vue_restaurant",
+            "admin_restaurant",
+            "vue_restaurant",
             "admin_patisserie",
             "admin_terroir",
           ].includes(ctx.user.role)
@@ -2720,7 +2722,8 @@ const usersRouter = router({
             "admin_boutique",
             "admin_dons",
             "scanner",
-            "admin_restaurant", "vue_restaurant",
+            "admin_restaurant",
+            "vue_restaurant",
             "admin_patisserie",
             "admin_terroir",
             "admin_contenu",
@@ -2761,9 +2764,12 @@ const usersRouter = router({
           "admin_boutique",
           "admin_dons",
           "scanner",
-          "admin_restaurant", "vue_restaurant",
+          "admin_restaurant",
+          "vue_restaurant",
           "admin_patisserie",
           "admin_terroir",
+          "admin_contenu",
+          "admin_messages",
         ]),
       })
     )
