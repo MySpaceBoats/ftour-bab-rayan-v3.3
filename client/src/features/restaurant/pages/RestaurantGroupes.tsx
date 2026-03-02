@@ -140,7 +140,7 @@ export default function RestaurantGroupes() {
         
         <div className="mb-8 mt-6">
           <h1 className="text-3xl font-bold text-[#5d5a3c] italic">Réservation Ftour – Groupes</h1>
-          <p className="text-[#8b8b7a] mt-2">Demande de réservation pour le ftour solidaire (réservation en ligne à partir de 2 couverts). Confirmation sous 48 heures.</p>
+          <p className="text-[#8b8b7a] mt-2">Demande de réservation pour le ftour solidaire — La Table du Jardin by Bab Rayan.</p>
           <p className="text-[#8b8b7a] text-sm mt-1">Service unique à partir de 18h45.</p>
           <p className="text-[#8b8b7a] text-sm mt-1">Les demandes sont ouvertes pour toutes les dates.</p>
         </div>
