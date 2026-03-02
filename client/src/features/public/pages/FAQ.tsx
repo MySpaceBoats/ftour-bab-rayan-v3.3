@@ -17,7 +17,7 @@ const defaultFaqs = [
   {
     category: "benevole",
     question: "Quels sont les horaires des bénévoles ?",
-    answer: "Les bénévoles sont attendus à partir de 15h pour la préparation. Le Ftour a lieu au moment du Maghreb, et le rangement se termine généralement vers 21h-22h. Vous pouvez participer à tout ou partie de ces créneaux."
+    answer: "Les bénévoles sont attendus à partir de 15h pour la préparation. L'entrée pour participer au service est entre 17h00 et 17h45 — il est interdit aux bénévoles d'entrer au-delà de 17h45. Le Ftour a lieu au moment du Maghreb, et le rangement se termine généralement vers 21h-22h. Vous pouvez participer à tout ou partie de ces créneaux."
   },
   {
     category: "benevole",

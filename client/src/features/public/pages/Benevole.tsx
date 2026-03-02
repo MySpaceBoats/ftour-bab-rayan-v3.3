@@ -685,6 +685,12 @@ export default function Benevole() {
         : lang === "en"
           ? "Taking photos of beneficiaries is prohibited."
           : "Il est interdit de prendre des photos des bénéficiaires.",
+    consigneEntryTime:
+      lang === "ar"
+        ? "الدخول للمشاركة في الخدمة بين الساعة 17h00 و17h45. يُمنع على المتطوعين الدخول بعد الساعة 17h45."
+        : lang === "en"
+          ? "Entry to participate in the service is between 5:00 PM and 5:45 PM. Volunteers are not allowed to enter after 5:45 PM."
+          : "L'entrée pour participer au service est entre 17h00 et 17h45. Il est interdit aux bénévoles d'entrer au-delà de 17h45.",
     // Group registration
     groupToggle:
       lang === "ar"
@@ -787,6 +793,7 @@ export default function Benevole() {
         {formTexts.consignesTitle}
       </h4>
       <ul className="text-sm text-amber-900 space-y-1">
+        <li className="font-bold text-red-700">⚠ {formTexts.consigneEntryTime}</li>
         <li>• {formTexts.dress}</li>
         <li>• {formTexts.punctuality}</li>
         <li>• {formTexts.consigneNoBags}</li>
@@ -1000,6 +1007,16 @@ export default function Benevole() {
         {/* Registration Notices */}
         <section className="pb-0 pt-2">
           <div className="container max-w-3xl space-y-3">
+            <div className="flex items-start gap-3 rounded-lg border border-red-300 bg-red-50 p-4">
+              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+              <p className="text-sm text-red-900 font-bold">
+                {lang === "ar"
+                  ? "الدخول للمشاركة في الخدمة بين الساعة 17h00 و17h45. يُمنع على المتطوعين الدخول بعد الساعة 17h45."
+                  : lang === "en"
+                    ? "⚠ Entry to participate in the service is between 5:00 PM and 5:45 PM. Volunteers will not be admitted after 5:45 PM."
+                    : "⚠ L'entrée pour participer au service est entre 17h00 et 17h45. Il est interdit aux bénévoles d'entrer au-delà de 17h45."}
+              </p>
+            </div>
             <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
               <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
               <p className="text-sm text-blue-900 font-medium">
