@@ -373,9 +373,16 @@ export default function Benevole() {
     return dayDate > today;
   };
 
-  const individualDays =
-    days?.filter(day => isWithinIndividualRegistrationWindow(day.date)) || [];
-  const availableDays = individualDays.filter(day => !isDayFull(day));
+  const isIndividualDayOpenSoon = (day: { date: string }) =>
+    isFutureDay(day.date) && !isWithinIndividualRegistrationWindow(day.date);
+
+  const individualDays = days || [];
+  const availableDays = individualDays.filter(
+    day =>
+      isWithinIndividualRegistrationWindow(day.date) &&
+      !isIndividualDayOpenSoon(day) &&
+      !isDayFull(day)
+  );
   const serviceOnlyDefaultDayId = availableDays[0]?.id?.toString() ?? "";
   const isServiceOnlyWithoutPreparation =
     !isGroup &&
@@ -1224,7 +1231,10 @@ export default function Benevole() {
                                     <SelectItem
                                       key={day.id}
                                       value={day.id.toString()}
-                                      disabled={isDayFull(day)}
+                                      disabled={
+                                        isDayFull(day) ||
+                                        isIndividualDayOpenSoon(day)
+                                      }
                                     >
                                       {new Date(day.date).toLocaleDateString(
                                         dateLocale,
@@ -1234,9 +1244,11 @@ export default function Benevole() {
                                           month: "long",
                                         }
                                       )}
-                                      {isDayFull(day)
-                                        ? ` - ${isFutureDay(day.date) ? formTexts.upcomingOpenSoon : formTexts.dayFull}`
-                                        : ""}
+                                      {isIndividualDayOpenSoon(day)
+                                        ? ` - ${formTexts.upcomingOpenSoon}`
+                                        : isDayFull(day)
+                                          ? ` - ${formTexts.dayFull}`
+                                          : ""}
                                     </SelectItem>
                                   ))
                                 ) : (
