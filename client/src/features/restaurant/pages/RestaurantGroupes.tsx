@@ -72,7 +72,7 @@ export default function RestaurantGroupes() {
 
       if (result.success && result.reservation) {
         setReference(result.reservation.reference);
-        toast.success('Demande envoyée avec succès!');
+        toast.success('Demande envoyée. Vérifiez votre email pour confirmer la réservation.');
         setConfirmed(true);
       }
     } catch (error) {
@@ -95,8 +95,8 @@ export default function RestaurantGroupes() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <p className="font-medium">Merci pour votre demande.</p>
-                <p className="text-sm">Notre équipe organisatrice l'étudiera dans les plus brefs délais.</p>
-                <p className="text-sm">Vous recevrez une confirmation par email sous 48 heures avec les instructions de paiement et votre QR d'accès.</p>
+                <p className="text-sm">Merci ! Un email de vérification vous a été envoyé.</p>
+                <p className="text-sm">Votre demande ne sera transmise à l'administration qu'après clic sur le lien de confirmation reçu par email.</p>
               </div>
               <div className="bg-[#4a4830] p-3 rounded">
                 <p className="text-sm font-medium">Référence de votre demande</p>
@@ -263,7 +263,7 @@ export default function RestaurantGroupes() {
               {/* Bloc informatif */}
               <div className="bg-[#f9f9f5] p-4 rounded border border-[#d4a574]">
                 <p className="text-sm text-[#5d5a3c]">
-                  Après validation de votre demande, vous recevrez un email de confirmation avec les instructions de paiement et votre QR d'accès.
+                  Après envoi, vous recevrez un email de vérification. Votre demande sera prise en compte uniquement après clic sur le lien de confirmation.
                 </p>
                 <div className="mt-3 border-t border-[#d4a574]/40 pt-3">
                   <p className="text-sm font-semibold text-[#5d5a3c]">Conditions d'annulation :</p>
