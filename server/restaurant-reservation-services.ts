@@ -1,4 +1,5 @@
 import { getSupabaseAdminClient } from "./supabase";
+import crypto from "crypto";
 
 // ============================================
 // HELPERS
@@ -620,4 +621,35 @@ export async function autoCancelExpiredPendingDeposits() {
     console.error("[autoCancelExpiredPendingDeposits] Error:", error);
     throw error;
   }
+}
+
+export function hashOpaqueToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+export function generateOpaqueToken(): string {
+  return crypto.randomBytes(32).toString("base64url");
+}
+
+export async function createReservationPaymentToken(input: {
+  reservationId: number;
+  ttlDays?: number;
+}) {
+  const client = getClient();
+  const rawToken = generateOpaqueToken();
+  const tokenHash = hashOpaqueToken(rawToken);
+  const ttlDays = Math.max(1, Math.min(input.ttlDays ?? 7, 30));
+  const expiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000);
+
+  const { error } = await client.from("reservation_payment_tokens").insert({
+    reservation_id: input.reservationId,
+    token_hash: tokenHash,
+    expires_at: expiresAt.toISOString(),
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return { rawToken, expiresAt };
 }

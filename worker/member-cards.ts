@@ -25,17 +25,7 @@ const STATUS_ORDER: CardStatus[] = [
 ];
 
 const ALLOWED_ROLES = new Set([
-  'admin',
-  'super_admin',
-  'admin_ops',
-  'admin_operations',
-  'admin_boutique',
-  'admin_dons',
-  'admin_restaurant',
-  'admin_patisserie',
-  'admin_terroir',
-  'scanner',
-  'vue_restaurant',
+  'admin','super_admin','admin_ops','admin_operations','admin_boutique','admin_dons','admin_restaurant','admin_patisserie','admin_terroir'
 ]);
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -76,19 +66,8 @@ async function requireAdmin(request: Request, env: Env): Promise<{ok: true} | {o
   const { data: userRes, error: userErr } = await supabase.auth.getUser(token);
   if (userErr || !userRes.user) return { ok: false, response: json({ error: 'unauthorized' }, 401) };
 
-  const { data: dbUserSnake } = await supabase.from('users').select('role').eq('open_id', userRes.user.id).maybeSingle();
-  const { data: dbUserCamel } = dbUserSnake?.role
-    ? { data: null }
-    : await supabase.from('users').select('role').eq('openId', userRes.user.id).maybeSingle();
-
-  const roleFromDb = dbUserSnake?.role || dbUserCamel?.role;
-  const roleFromJwt = (userRes.user.user_metadata as Record<string, unknown> | undefined)?.role;
-  const effectiveRole = typeof roleFromDb === 'string' ? roleFromDb : (typeof roleFromJwt === 'string' ? roleFromJwt : null);
-
-  if (!effectiveRole || !ALLOWED_ROLES.has(effectiveRole)) {
-    return { ok: false, response: json({ error: 'forbidden' }, 403) };
-  }
-
+  const { data: dbUser } = await supabase.from('users').select('role').eq('open_id', userRes.user.id).maybeSingle();
+  if (!dbUser || !ALLOWED_ROLES.has(dbUser.role)) return { ok: false, response: json({ error: 'forbidden' }, 403) };
   return { ok: true };
 }
 
