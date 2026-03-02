@@ -278,12 +278,27 @@ export async function handleMemberCardRequest(request: Request, env: Env): Promi
     const page = Math.max(1, Number(url.searchParams.get('page') || '1'));
     const pageSize = 20;
 
-    let query = supabase.from('member_card_orders').select('id,status,payment_method,payment_proof_path,updated_at,amount,currency,members(id,first_name,last_name,address,phone,email)', { count: 'exact' }).order('updated_at', { ascending: false }).range((page - 1) * pageSize, page * pageSize - 1);
+    let query = supabase
+      .from('member_card_orders')
+      .select('id,status,payment_method,payment_proof_path,updated_at,amount,currency,members(id,first_name,last_name,address,phone,email)', { count: 'exact' })
+      .order('updated_at', { ascending: false });
+
     if (status) query = query.eq('status', status);
-    if (search) query = query.or(`members.first_name.ilike.%${search}%,members.last_name.ilike.%${search}%,members.email.ilike.%${search}%,members.phone.ilike.%${search}%`);
+
     const { data, count, error } = await query;
     if (error) return json({ error: error.message }, 500);
-    return json({ items: data || [], count: count || 0, page, pageSize });
+
+    const normalizedSearch = search.toLowerCase();
+    const filtered = (data || []).filter((item: any) => {
+      if (!normalizedSearch) return true;
+      const member = item.members || {};
+      return [member.first_name, member.last_name, member.email, member.phone]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(normalizedSearch));
+    });
+
+    const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+    return json({ items: paginated, count: normalizedSearch ? filtered.length : (count || 0), page, pageSize });
   }
 
   if (url.pathname.match(/^\/api\/admin\/cards\/\d+\/events$/) && request.method === 'GET') {
