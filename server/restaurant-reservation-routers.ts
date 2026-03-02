@@ -774,10 +774,10 @@ export const restaurantReservationsRouter = router({
   adminCreateManual: protectedProcedure
     .input(
       z.object({
-        type: z.enum(["groupe", "entreprise"]),
+        type: z.literal("groupe"),
         groupOrCompanyName: z
           .string()
-          .min(1, "Nom du groupe ou de l'entreprise requis"),
+          .min(1, "Nom du groupe requis"),
         contactName: z.string().min(1, "Nom du contact requis"),
         email: z.string().email("Email invalide"),
         phone: z.string().min(1, "Téléphone requis"),
@@ -831,12 +831,7 @@ export const restaurantReservationsRouter = router({
             qrToken,
             notes: input.notes,
             displayChoice: input.displayChoice,
-            companyName:
-              input.type === "entreprise"
-                ? input.groupOrCompanyName
-                : undefined,
-            groupName:
-              input.type === "groupe" ? input.groupOrCompanyName : undefined,
+            groupName: input.groupOrCompanyName,
             totalAmount: input.totalAmount,
             amountReceived: input.amountReceived,
             deposit: input.deposit,
