@@ -87,6 +87,8 @@ export default function AdminBenevoles() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [slotFilter, setSlotFilter] = useState<string>("all");
+  const [attendanceFrequencyFilter, setAttendanceFrequencyFilter] =
+    useState<string>("all");
   const [selectedVolunteer, setSelectedVolunteer] = useState<number | null>(
     null
   );
@@ -258,6 +260,13 @@ export default function AdminBenevoles() {
 
     const matchesStatus = statusFilter === "all" || v.status === statusFilter;
 
+    const frequency = Number(v.attendanceFrequency ?? 0);
+    const matchesAttendanceFrequency =
+      attendanceFrequencyFilter === "all" ||
+      (attendanceFrequencyFilter === "4+"
+        ? frequency >= 4
+        : frequency === Number(attendanceFrequencyFilter));
+
     const slots: string[] = normalizeSlots(v.volunteerSlots);
     let matchesSlot = true;
     if (slotFilter === "preparation_ftour") {
@@ -269,7 +278,12 @@ export default function AdminBenevoles() {
         slots.includes("preparation_ftour") && slots.includes("service_ftour");
     }
 
-    return matchesSearch && matchesStatus && matchesSlot;
+    return (
+      matchesSearch &&
+      matchesStatus &&
+      matchesSlot &&
+      matchesAttendanceFrequency
+    );
   });
 
   // Les indicateurs doivent refléter l'ensemble des bénévoles du jour sélectionné,
@@ -465,6 +479,22 @@ export default function AdminBenevoles() {
                   <SelectItem value="both">Les deux</SelectItem>
                 </SelectContent>
               </Select>
+              <Select
+                value={attendanceFrequencyFilter}
+                onValueChange={setAttendanceFrequencyFilter}
+              >
+                <SelectTrigger className="w-full md:w-[230px]">
+                  <SelectValue placeholder="Fréquence de présence" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes les fréquences</SelectItem>
+                  <SelectItem value="0">0 fois</SelectItem>
+                  <SelectItem value="1">1 fois</SelectItem>
+                  <SelectItem value="2">2 fois</SelectItem>
+                  <SelectItem value="3">3 fois</SelectItem>
+                  <SelectItem value="4+">4 fois et +</SelectItem>
+                </SelectContent>
+              </Select>
               <Button variant="outline" onClick={handleExportCSV}>
                 <Download className="h-4 w-4 mr-2" />
                 Export CSV
@@ -539,6 +569,7 @@ export default function AdminBenevoles() {
                       <TableHead>Contact</TableHead>
                       <TableHead>Jour / Date</TableHead>
                       <TableHead>Créneaux</TableHead>
+                      <TableHead>Fréquence présence</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -614,6 +645,11 @@ export default function AdminBenevoles() {
                               </span>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {Number(volunteer.attendanceFrequency ?? 0)} fois
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           {getStatusBadge(volunteer.status)}
