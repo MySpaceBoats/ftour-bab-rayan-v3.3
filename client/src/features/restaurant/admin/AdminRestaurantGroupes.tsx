@@ -62,15 +62,10 @@ type SortKey =
 const RESERVATION_RESPONSABLES = ["Nayla", "Hind", "Kamal", "Rita", "Réda", "Souad"] as const;
 type ReservationResponsable = (typeof RESERVATION_RESPONSABLES)[number];
 
-const getManualDisplayChoiceOptions = (type: string) => {
-  const baseOptions = [{ value: "jardin", label: "Pavillon du Jardin" }];
-
-  if (type === "entreprise") {
-    return [...baseOptions, { value: "corpo", label: "Salon Palmier" }];
-  }
-
-  return [...baseOptions, { value: "brasserie", label: "Brasserie" }];
-};
+const manualDisplayChoiceOptions = [
+  { value: "jardin", label: "Salle Pavillon du Jardin" },
+  { value: "brasserie", label: "Salle Palmier" },
+] as const;
 
 const GROUPES_FALLBACK_RESERVATIONS = [
   { ref: "RES-G-51881B", date_ftour: "2026-02-24", responsable: "Rita", nb_adultes: 15, nb_enfants: 0, entreprise: "CONSULAT USA", prenom: "Fatima Zahra", nom: "Bentayebi", telephone: "0666969308", email: "bentayebif@stat.gov", total: 4350, deposit: 0, complement: 4500, mode_paiement: "CASH", date_paiement: "2026-02-24", reste_a_payer: -150, validation: true, observations: null },
@@ -131,10 +126,6 @@ export default function AdminRestaurantGroupes() {
     displayChoice: "jardin",
     status: "pending_validation",
   });
-
-  const manualDisplayChoiceOptions = getManualDisplayChoiceOptions(
-    createForm.type
-  );
   const [editForm, setEditForm] = useState<{
     id: number;
     name: string;
@@ -413,8 +404,8 @@ export default function AdminRestaurantGroupes() {
     createManualMutation.mutate({
       ...createForm,
       seatsTotal: createForm.nbAdult + createForm.nbKids,
-      type: createForm.type as "groupe" | "entreprise",
-      displayChoice: createForm.displayChoice as "jardin" | "brasserie" | "corpo",
+      type: "groupe",
+      displayChoice: createForm.displayChoice as "jardin" | "brasserie",
       paymentMode: createForm.paymentMode as "cash" | "virement" | "espece",
       respResa: createForm.respResa as ReservationResponsable,
       modeDeposit: createForm.modeDeposit || undefined,
@@ -1709,33 +1700,7 @@ export default function AdminRestaurantGroupes() {
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Type</Label>
-              <Select
-                value={createForm.type}
-                onValueChange={value =>
-                  setCreateForm({
-                    ...createForm,
-                    type: value,
-                    displayChoice: value === "entreprise" ? "corpo" : "brasserie",
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="groupe">Groupe</SelectItem>
-                  <SelectItem value="entreprise">Entreprise</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>
-                {createForm.type === "groupe"
-                  ? "Nom du groupe"
-                  : "Nom de l'entreprise"}
-              </Label>
+              <Label>Nom du groupe</Label>
               <Input
                 value={createForm.groupOrCompanyName}
                 onChange={e =>
