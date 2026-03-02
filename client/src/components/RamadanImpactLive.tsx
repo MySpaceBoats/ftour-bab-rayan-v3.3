@@ -51,7 +51,7 @@ export default function RamadanImpactLive({ className = "" }: { className?: stri
               <CardContent><div className="text-3xl font-bold">{formatNumber(data.totalsToDate.meals)}</div></CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Bénévoles (présents)</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Participants Bénévoles</CardTitle></CardHeader>
               <CardContent><div className="text-3xl font-bold">{formatNumber(data.totalsToDate.volunteersPresence)}</div></CardContent>
             </Card>
           </div>
