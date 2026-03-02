@@ -926,6 +926,149 @@ export async function countVolunteerAbsencesByEmail(email: string): Promise<numb
   return count ?? 0;
 }
 
+export interface FrequentVolunteerAccountResult {
+  email: string;
+  presentCount: number;
+  status: 'created' | 'existing' | 'error';
+  message?: string;
+}
+
+export async function createAccountsForFrequentPresentVolunteers(minPresences = 4) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const threshold = Math.max(1, Math.floor(minPresences));
+  const { data: presentRows, error: presentError } = await client
+    .from('volunteers')
+    .select('first_name,last_name,email,phone,status,created_at')
+    .eq('status', 'present')
+    .order('created_at', { ascending: false });
+
+  if (presentError) throw presentError;
+
+  const grouped = new Map<string, {
+    count: number;
+    firstName: string;
+    lastName: string;
+    phone: string;
+  }>();
+
+  for (const row of presentRows ?? []) {
+    const email = String(row.email ?? '').toLowerCase().trim();
+    const phone = String(row.phone ?? '').trim();
+    if (!email || !phone) continue;
+
+    const existing = grouped.get(email);
+    if (existing) {
+      existing.count += 1;
+      if (!existing.phone && phone) existing.phone = phone;
+      if (!existing.firstName && row.first_name) existing.firstName = row.first_name;
+      if (!existing.lastName && row.last_name) existing.lastName = row.last_name;
+      continue;
+    }
+
+    grouped.set(email, {
+      count: 1,
+      firstName: String(row.first_name ?? '').trim(),
+      lastName: String(row.last_name ?? '').trim(),
+      phone,
+    });
+  }
+
+  const eligible = Array.from(grouped.entries())
+    .filter(([, value]) => value.count >= threshold)
+    .sort((a, b) => b[1].count - a[1].count);
+
+  const results: FrequentVolunteerAccountResult[] = [];
+
+  for (const [email, info] of eligible) {
+    const { data: existingUser } = await client
+      .from('users')
+      .select('open_id,email')
+      .eq('email', email)
+      .maybeSingle();
+
+    let authUserId = existingUser?.open_id ?? null;
+
+    if (!authUserId) {
+      const { data: createdAuth, error: createAuthError } = await client.auth.admin.createUser({
+        email,
+        password: info.phone,
+        email_confirm: true,
+        user_metadata: {
+          name: `${info.firstName} ${info.lastName}`.trim() || null,
+          phone: info.phone,
+        },
+      });
+
+      if (createAuthError) {
+        const isAlreadyRegistered = /already|registered|exists/i.test(createAuthError.message ?? '');
+        if (isAlreadyRegistered) {
+          results.push({
+            email,
+            presentCount: info.count,
+            status: 'existing',
+            message: createAuthError.message,
+          });
+          continue;
+        }
+
+        results.push({
+          email,
+          presentCount: info.count,
+          status: 'error',
+          message: createAuthError.message,
+        });
+        continue;
+      }
+
+      authUserId = createdAuth.user?.id ?? null;
+    }
+
+    if (!authUserId) {
+      results.push({
+        email,
+        presentCount: info.count,
+        status: 'error',
+        message: 'Utilisateur auth introuvable après création',
+      });
+      continue;
+    }
+
+    await client
+      .from('users')
+      .upsert({
+        open_id: authUserId,
+        email,
+        phone: info.phone,
+        name: `${info.firstName} ${info.lastName}`.trim() || null,
+        role: 'user',
+      }, { onConflict: 'open_id' });
+
+    await client.rpc('ensure_volunteer_profile', {
+      p_user_id: authUserId,
+      p_email: email,
+      p_name: `${info.firstName} ${info.lastName}`.trim() || null,
+      p_phone: info.phone,
+    });
+
+    results.push({
+      email,
+      presentCount: info.count,
+      status: existingUser ? 'existing' : 'created',
+    });
+  }
+
+  return {
+    minPresences: threshold,
+    eligibleCount: eligible.length,
+    createdCount: results.filter(item => item.status === 'created').length,
+    existingCount: results.filter(item => item.status === 'existing').length,
+    errorCount: results.filter(item => item.status === 'error').length,
+    results,
+  };
+}
+
 export async function createVolunteerShiftSupabase(data: VolunteerData) {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error('Supabase not configured');
