@@ -180,6 +180,15 @@ const sections: SectionDefinition[] = [
         ],
       },
       {
+        label: "Cartes membres",
+        description: "Suivre les statuts, paiements et livraisons des cartes membres",
+        route: "/admin/cards",
+        icon: FileText,
+        iconColor: "text-teal-700",
+        iconBg: "bg-teal-100",
+        allowedRoles: ALL_ADMIN_ROLES,
+      },
+      {
         label: "QR Codes Catalogue",
         description:
           "Tous les QR codes produits (goodies, pâtisserie, terroir, dons)",
