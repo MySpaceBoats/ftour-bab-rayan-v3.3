@@ -38,13 +38,24 @@ type ReservationStatus =
   | "all"
   | "pending_validation"
   | "validated_pending_payment"
+  | "pending_deposit"
+  | "deposit_submitted"
+  | "deposit_received"
   | "paid_confirmed"
+  | "confirmed"
   | "refused"
   | "cancelled"
   | "completed"
   | "no_show";
 
-type ManualStatus = "validated_pending_payment" | "refused" | "completed";
+type ManualStatus =
+  | "validated_pending_payment"
+  | "pending_deposit"
+  | "deposit_submitted"
+  | "deposit_received"
+  | "paid_confirmed"
+  | "refused"
+  | "completed";
 
 const getDisplayChoiceOptions = (type: string) => {
   const baseOptions = [{ value: 'jardin', label: 'Pavillon du Jardin' }];
@@ -66,6 +77,7 @@ export default function AdminRestaurantReservations() {
     "validated_pending_payment"
   );
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [downloadingProofId, setDownloadingProofId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<{
     id: number;
     name: string;
@@ -79,6 +91,8 @@ export default function AdminRestaurantReservations() {
     displayChoice: string;
     type: string;
   } | null>(null);
+
+  const trpcUtils = trpc.useUtils();
 
   // Fetch reservations via restaurantReservations router
   const {
@@ -161,6 +175,10 @@ export default function AdminRestaurantReservations() {
 
     if (
       selectedReservation.status === "validated_pending_payment" ||
+      selectedReservation.status === "pending_deposit" ||
+      selectedReservation.status === "deposit_submitted" ||
+      selectedReservation.status === "deposit_received" ||
+      selectedReservation.status === "paid_confirmed" ||
       selectedReservation.status === "refused" ||
       selectedReservation.status === "completed"
     ) {
@@ -311,6 +329,26 @@ export default function AdminRestaurantReservations() {
     deleteMutation.mutate({ id: reservation.id });
   };
 
+  const handleDownloadProof = async (reservationId: number) => {
+    try {
+      setDownloadingProofId(reservationId);
+      const result = await trpcUtils.client.restaurantReservations.adminGetLatestProofUrl.query({
+        reservationId,
+      });
+
+      if (!result?.signedUrl) {
+        toast.error("Aucune preuve de virement trouvée");
+        return;
+      }
+
+      window.open(result.signedUrl, "_blank", "noopener,noreferrer");
+    } catch (error: any) {
+      toast.error(error?.message || "Impossible de récupérer la preuve de virement");
+    } finally {
+      setDownloadingProofId(null);
+    }
+  };
+
   const exportCsv = () => {
     if (filteredReservations.length === 0) {
       toast.error("Aucune réservation à exporter");
@@ -366,7 +404,12 @@ export default function AdminRestaurantReservations() {
         return <Badge variant="outline">En attente</Badge>;
       case "validated_pending_payment":
       case "pending_confirmation":
+      case "pending_deposit":
         return <Badge variant="secondary">Paiement attendu</Badge>;
+      case "deposit_submitted":
+        return <Badge className="bg-amber-600">Preuve déposée</Badge>;
+      case "deposit_received":
+        return <Badge className="bg-emerald-600">Acompte reçu</Badge>;
       case "paid_confirmed":
       case "confirmed":
         return <Badge className="bg-green-600">Confirmée</Badge>;
@@ -494,6 +537,24 @@ export default function AdminRestaurantReservations() {
                   size="sm"
                 >
                   Paiement attendu
+                </Button>
+                <Button
+                  variant={
+                    statusFilter === "deposit_submitted" ? "default" : "outline"
+                  }
+                  onClick={() => setStatusFilter("deposit_submitted")}
+                  size="sm"
+                >
+                  Preuve déposée
+                </Button>
+                <Button
+                  variant={
+                    statusFilter === "deposit_received" ? "default" : "outline"
+                  }
+                  onClick={() => setStatusFilter("deposit_received")}
+                  size="sm"
+                >
+                  Acompte reçu
                 </Button>
                 <Button
                   variant={
@@ -687,6 +748,24 @@ export default function AdminRestaurantReservations() {
                   Effacer la réservation
                 </Button>
 
+                {(selectedReservation.latestPaymentProofPath ||
+                  selectedReservation.status === "deposit_submitted" ||
+                  selectedReservation.status === "deposit_received") && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => handleDownloadProof(selectedReservation.id)}
+                    disabled={downloadingProofId === selectedReservation.id}
+                  >
+                    {downloadingProofId === selectedReservation.id ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4 mr-2" />
+                    )}
+                    Télécharger preuve de virement
+                  </Button>
+                )}
+
                 {/* Deposit percentage section */}
                 {!["refused", "cancelled"].includes(
                   selectedReservation.status
@@ -780,6 +859,9 @@ export default function AdminRestaurantReservations() {
                 {[
                   "validated_pending_payment",
                   "pending_confirmation",
+                  "pending_deposit",
+                  "deposit_submitted",
+                  "deposit_received",
                   "paid_confirmed",
                   "confirmed",
                 ].includes(selectedReservation.status) && (
@@ -816,6 +898,16 @@ export default function AdminRestaurantReservations() {
                         <SelectItem value="validated_pending_payment">
                           Paiement attendu
                         </SelectItem>
+                        <SelectItem value="pending_deposit">
+                          En attente acompte
+                        </SelectItem>
+                        <SelectItem value="deposit_submitted">
+                          Preuve déposée
+                        </SelectItem>
+                        <SelectItem value="deposit_received">
+                          Acompte reçu
+                        </SelectItem>
+                        <SelectItem value="paid_confirmed">Confirmée</SelectItem>
                         <SelectItem value="refused">Refusée</SelectItem>
                         <SelectItem value="completed">Terminée</SelectItem>
                       </SelectContent>

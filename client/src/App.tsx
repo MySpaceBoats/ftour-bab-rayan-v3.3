@@ -44,6 +44,7 @@ import CompanyBookingSpace from "@/features/restaurant/pages/CompanyBookingSpace
 import Reservation from "@/features/restaurant/pages/Reservation";
 import CheckinReservation from "@/features/restaurant/pages/CheckinReservation";
 import GroupReservationEmailConfirmation from "@/features/restaurant/pages/GroupReservationEmailConfirmation";
+import ReservationProofUpload from "@/features/restaurant/pages/ReservationProofUpload";
 import AdminRestaurantGroupes from "@/features/restaurant/admin/AdminRestaurantGroupes";
 import AdminRestaurantEntreprises from "@/features/restaurant/admin/AdminRestaurantEntreprises";
 import AdminRestaurants from "@/features/restaurant/admin/AdminRestaurants";
@@ -290,6 +291,7 @@ function LocalizedRoutes() {
         path="/reservation-groupe/confirmation-email/:token"
         component={GroupReservationEmailConfirmation}
       />
+      <Route path="/reservations/preuve" component={ReservationProofUpload} />
 
       {/* ================================================
           REDIRECT ROOT → default locale

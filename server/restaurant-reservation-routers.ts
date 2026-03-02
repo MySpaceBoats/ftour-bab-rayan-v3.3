@@ -35,6 +35,32 @@ function generateQrToken(): string {
 
 const GROUP_RESERVATION_CONFIRMATION_TTL_MS = 1000 * 60 * 60 * 24 * 2; // 48h
 
+
+function getPublicAppBaseUrl(): string {
+  return (
+    process.env.PUBLIC_APP_URL ||
+    process.env.APP_BASE_URL ||
+    process.env.FRONTEND_URL ||
+    "https://www.ftourbabrayan.ma"
+  ).replace(/\/$/, "");
+}
+
+async function createProofUploadUrl(reservationId: number): Promise<string | undefined> {
+  try {
+    const { rawToken } = await reservationServices.createReservationPaymentToken({
+      reservationId,
+      ttlDays: Number(process.env.RESERVATION_PROOF_TOKEN_TTL_DAYS || 7),
+    });
+    return `${getPublicAppBaseUrl()}/reservations/preuve?token=${encodeURIComponent(rawToken)}`;
+  } catch (error) {
+    console.error("[createProofUploadUrl] Failed to create token", {
+      reservationId,
+      error,
+    });
+    return undefined;
+  }
+}
+
 function getReservationConfirmationSecret() {
   return process.env.RESERVATION_CONFIRMATION_SECRET || process.env.SESSION_SECRET || "restaurant-confirmation-secret";
 }
@@ -165,6 +191,7 @@ export const restaurantReservationsRouter = router({
               displayChoice: input.displayChoice,
             });
 
+          const proofUploadUrl = await createProofUploadUrl(reservation.id);
           const requestEmail =
             generateRestaurantReservationDepositRequiredEmail({
               firstName: input.firstName,
@@ -176,6 +203,7 @@ export const restaurantReservationsRouter = router({
                     reservation.depositDeadline.toISOString()
                   )
                 : undefined,
+              proofUploadUrl,
             });
 
           await sendEmail({
@@ -278,6 +306,7 @@ export const restaurantReservationsRouter = router({
               displayChoice: input.displayChoice,
             });
 
+          const proofUploadUrl = await createProofUploadUrl(reservation.id);
           const customerRequestEmail =
             generateRestaurantReservationDepositRequiredEmail({
               firstName: input.contactName,
@@ -289,6 +318,7 @@ export const restaurantReservationsRouter = router({
                     reservation.depositDeadline.toISOString()
                   )
                 : undefined,
+              proofUploadUrl,
             });
 
           const customerEmailResult = await sendEmail({
@@ -493,6 +523,7 @@ export const restaurantReservationsRouter = router({
           "pending_validation"
         );
 
+        const proofUploadUrl = await createProofUploadUrl(reservation.id);
         const customerRequestEmail =
           generateRestaurantReservationDepositRequiredEmail({
             firstName: reservation.name,
@@ -506,6 +537,7 @@ export const restaurantReservationsRouter = router({
                   reservation.depositDeadline.toISOString()
                 )
               : undefined,
+            proofUploadUrl,
           });
 
         await sendEmail({
@@ -1003,6 +1035,33 @@ export const restaurantReservationsRouter = router({
         });
       }
     }),
+  adminGetLatestProofUrl: protectedProcedure
+    .input(
+      z.object({
+        reservationId: z.number(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
+      if (!allowedRoles.includes(ctx.user?.role || "")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
+      }
+
+      const proof = await reservationServices.createReservationPaymentProofSignedUrl({
+        reservationId: input.reservationId,
+        expiresInSeconds: 60 * 60,
+      });
+
+      if (!proof?.signedUrl) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Aucune preuve de virement trouvée",
+        });
+      }
+
+      return proof;
+    }),
+
   adminUpdateStatus: protectedProcedure
     .input(
       z.object({
@@ -1010,7 +1069,11 @@ export const restaurantReservationsRouter = router({
         status: z.enum([
           "pending_validation",
           "validated_pending_payment",
+          "pending_deposit",
+          "deposit_submitted",
+          "deposit_received",
           "paid_confirmed",
+          "confirmed",
           "refused",
           "cancelled",
           "cancelled_auto",
