@@ -796,7 +796,7 @@ export const restaurantReservationsRouter = router({
           .regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide")
           .optional(),
         notes: z.string().optional(),
-        displayChoice: z.enum(["jardin", "brasserie"]).optional(),
+        displayChoice: z.enum(["jardin", "brasserie", "corpo"]).optional(),
         status: z
           .enum([
             "pending_validation",

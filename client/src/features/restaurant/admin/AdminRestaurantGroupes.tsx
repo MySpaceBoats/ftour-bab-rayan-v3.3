@@ -62,6 +62,16 @@ type SortKey =
 const RESERVATION_RESPONSABLES = ["Nayla", "Hind", "Kamal", "Rita", "Réda", "Souad"] as const;
 type ReservationResponsable = (typeof RESERVATION_RESPONSABLES)[number];
 
+const getManualDisplayChoiceOptions = (type: string) => {
+  const baseOptions = [{ value: "jardin", label: "Pavillon du Jardin" }];
+
+  if (type === "entreprise") {
+    return [...baseOptions, { value: "corpo", label: "Salon Palmier" }];
+  }
+
+  return [...baseOptions, { value: "brasserie", label: "Brasserie" }];
+};
+
 const GROUPES_FALLBACK_RESERVATIONS = [
   { ref: "RES-G-51881B", date_ftour: "2026-02-24", responsable: "Rita", nb_adultes: 15, nb_enfants: 0, entreprise: "CONSULAT USA", prenom: "Fatima Zahra", nom: "Bentayebi", telephone: "0666969308", email: "bentayebif@stat.gov", total: 4350, deposit: 0, complement: 4500, mode_paiement: "CASH", date_paiement: "2026-02-24", reste_a_payer: -150, validation: true, observations: null },
   { ref: "RES-G-42646F", date_ftour: "2026-02-24", responsable: "Rita", nb_adultes: 29, nb_enfants: 0, entreprise: "Particulier/parrain", prenom: "Nawfal", nom: "Sabik", telephone: "33685797898", email: "sabiknawfal@gmail.com", total: 8410, deposit: 0, complement: 5690, mode_paiement: "CASH/TPE", date_paiement: "2026-02-24", reste_a_payer: 2720, validation: true, observations: null },
@@ -121,6 +131,10 @@ export default function AdminRestaurantGroupes() {
     displayChoice: "jardin",
     status: "pending_validation",
   });
+
+  const manualDisplayChoiceOptions = getManualDisplayChoiceOptions(
+    createForm.type
+  );
   const [editForm, setEditForm] = useState<{
     id: number;
     name: string;
@@ -400,7 +414,7 @@ export default function AdminRestaurantGroupes() {
       ...createForm,
       seatsTotal: createForm.nbAdult + createForm.nbKids,
       type: createForm.type as "groupe" | "entreprise",
-      displayChoice: createForm.displayChoice as "jardin" | "brasserie",
+      displayChoice: createForm.displayChoice as "jardin" | "brasserie" | "corpo",
       paymentMode: createForm.paymentMode as "cash" | "virement" | "espece",
       respResa: createForm.respResa as ReservationResponsable,
       modeDeposit: createForm.modeDeposit || undefined,
@@ -1699,7 +1713,11 @@ export default function AdminRestaurantGroupes() {
               <Select
                 value={createForm.type}
                 onValueChange={value =>
-                  setCreateForm({ ...createForm, type: value })
+                  setCreateForm({
+                    ...createForm,
+                    type: value,
+                    displayChoice: value === "entreprise" ? "corpo" : "brasserie",
+                  })
                 }
               >
                 <SelectTrigger>
@@ -1928,8 +1946,11 @@ export default function AdminRestaurantGroupes() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="jardin">Jardin</SelectItem>
-                  <SelectItem value="brasserie">Brasserie</SelectItem>
+                  {manualDisplayChoiceOptions.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
