@@ -1030,6 +1030,33 @@ export const restaurantReservationsRouter = router({
         });
       }
     }),
+  adminGetLatestProofUrl: protectedProcedure
+    .input(
+      z.object({
+        reservationId: z.number(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
+      if (!allowedRoles.includes(ctx.user?.role || "")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
+      }
+
+      const proof = await reservationServices.createReservationPaymentProofSignedUrl({
+        reservationId: input.reservationId,
+        expiresInSeconds: 60 * 60,
+      });
+
+      if (!proof?.signedUrl) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Aucune preuve de virement trouvée",
+        });
+      }
+
+      return proof;
+    }),
+
   adminUpdateStatus: protectedProcedure
     .input(
       z.object({
@@ -1037,7 +1064,11 @@ export const restaurantReservationsRouter = router({
         status: z.enum([
           "pending_validation",
           "validated_pending_payment",
+          "pending_deposit",
+          "deposit_submitted",
+          "deposit_received",
           "paid_confirmed",
+          "confirmed",
           "refused",
           "cancelled",
           "cancelled_auto",

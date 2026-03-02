@@ -46,6 +46,7 @@ import {
   ArrowUp,
   ArrowDown,
   Plus,
+  Download,
 } from "lucide-react";
 
 type SortDirection = "asc" | "desc";
@@ -106,6 +107,8 @@ export default function AdminRestaurantGroupes() {
   const [inlineEdits, setInlineEdits] = useState<
     Record<string, Record<string, string | number>>
   >({});
+  const [downloadingProofId, setDownloadingProofId] = useState<number | null>(null);
+  const trpcUtils = trpc.useUtils();
   const [createForm, setCreateForm] = useState({
     type: "groupe",
     groupOrCompanyName: "",
@@ -660,6 +663,7 @@ export default function AdminRestaurantGroupes() {
         );
       case "validated_pending_payment":
       case "pending_confirmation":
+      case "pending_deposit":
         return (
           <Badge
             variant="outline"
@@ -667,6 +671,20 @@ export default function AdminRestaurantGroupes() {
           >
             <CreditCard className="h-3 w-3 mr-1" />
             Paiement attendu
+          </Badge>
+        );
+      case "deposit_submitted":
+        return (
+          <Badge className="bg-amber-600">
+            <Clock className="h-3 w-3 mr-1" />
+            Preuve déposée
+          </Badge>
+        );
+      case "deposit_received":
+        return (
+          <Badge className="bg-emerald-600">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Acompte reçu
           </Badge>
         );
       case "paid_confirmed":
@@ -733,6 +751,26 @@ export default function AdminRestaurantGroupes() {
   const computeTotalFromGuests = (nbAdult: number, nbKids: number) =>
     nbAdult * ADULT_PRICE + nbKids * KIDS_PRICE;
 
+  const handleDownloadProof = async (reservationId: number) => {
+    try {
+      setDownloadingProofId(reservationId);
+      const result = await trpcUtils.client.restaurantReservations.adminGetLatestProofUrl.query({
+        reservationId,
+      });
+
+      if (!result?.signedUrl) {
+        toast.error("Aucune preuve de virement trouvée");
+        return;
+      }
+
+      window.open(result.signedUrl, "_blank", "noopener,noreferrer");
+    } catch (error: any) {
+      toast.error(error?.message || "Impossible de récupérer la preuve de virement");
+    } finally {
+      setDownloadingProofId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-muted/30">
       <header className="sticky top-0 z-50 bg-background border-b">
@@ -777,6 +815,8 @@ export default function AdminRestaurantGroupes() {
               <SelectItem value="validated_pending_payment">
                 Paiement attendu
               </SelectItem>
+              <SelectItem value="deposit_submitted">Preuve déposée</SelectItem>
+              <SelectItem value="deposit_received">Acompte reçu</SelectItem>
               <SelectItem value="paid_confirmed">Confirmée</SelectItem>
               <SelectItem value="refused">Refusée</SelectItem>
               <SelectItem value="cancelled">Annulée</SelectItem>
@@ -1304,6 +1344,9 @@ export default function AdminRestaurantGroupes() {
                             {[
                               "validated_pending_payment",
                               "pending_confirmation",
+                              "pending_deposit",
+                              "deposit_submitted",
+                              "deposit_received",
                               "paid_confirmed",
                               "confirmed",
                             ].includes(r.status) && (
@@ -1320,6 +1363,24 @@ export default function AdminRestaurantGroupes() {
                                 }
                               >
                                 <CheckCircle className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {(r.latestPaymentProofPath ||
+                              r.status === "deposit_submitted" ||
+                              r.status === "deposit_received") && (
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-8 w-8"
+                                title="Télécharger preuve de virement"
+                                onClick={() => handleDownloadProof(r.id)}
+                                disabled={downloadingProofId === r.id}
+                              >
+                                {downloadingProofId === r.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Download className="h-4 w-4" />
+                                )}
                               </Button>
                             )}
                             <Button

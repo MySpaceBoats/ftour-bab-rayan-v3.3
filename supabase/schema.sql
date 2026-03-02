@@ -413,7 +413,7 @@ CREATE TABLE IF NOT EXISTS restaurant_reservations (
   -- Room choice
   display_choice VARCHAR(20),
   -- Status
-  status VARCHAR(30) NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted', 'pending_confirmation', 'pending_validation', 'validated_pending_payment', 'confirmed', 'paid_confirmed', 'rejected', 'refused', 'cancelled', 'cancelled_auto', 'completed', 'no_show', 'checked_in')),
+  status VARCHAR(30) NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted', 'pending_confirmation', 'pending_validation', 'validated_pending_payment', 'pending_deposit', 'deposit_submitted', 'deposit_received', 'confirmed', 'paid_confirmed', 'rejected', 'refused', 'cancelled', 'cancelled_auto', 'completed', 'no_show', 'checked_in')),
   payment_status VARCHAR(20) NOT NULL DEFAULT 'not_applicable' CHECK (payment_status IN ('not_applicable', 'not_requested', 'pending', 'pending_payment', 'paid', 'failed', 'refunded')),
   payment_amount DECIMAL(10,2),
   payment_provider VARCHAR(50),
@@ -458,6 +458,40 @@ CREATE TABLE IF NOT EXISTS restaurant_reservation_allocations (
 );
 
 CREATE INDEX idx_restaurant_allocations_reservation ON restaurant_reservation_allocations(reservation_id);
+
+
+CREATE TABLE IF NOT EXISTS reservation_payment_tokens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  reservation_id INTEGER NOT NULL REFERENCES restaurant_reservations(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_reservation_payment_tokens_reservation_id ON reservation_payment_tokens(reservation_id);
+CREATE INDEX IF NOT EXISTS idx_reservation_payment_tokens_token_hash ON reservation_payment_tokens(token_hash);
+
+CREATE TABLE IF NOT EXISTS reservation_payment_proofs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  reservation_id INTEGER NOT NULL REFERENCES restaurant_reservations(id) ON DELETE CASCADE,
+  storage_path TEXT NOT NULL,
+  uploaded_by_email TEXT,
+  uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  status TEXT NOT NULL DEFAULT 'submitted',
+  admin_note TEXT
+);
+
+CREATE TABLE IF NOT EXISTS reservation_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  reservation_id INTEGER NOT NULL REFERENCES restaurant_reservations(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  payload JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_reservation_events_reservation_id ON reservation_events(reservation_id);
+CREATE INDEX IF NOT EXISTS idx_reservation_events_event_type ON reservation_events(event_type);
 
 -- RLS for restaurant tables
 ALTER TABLE restaurant_slots ENABLE ROW LEVEL SECURITY;

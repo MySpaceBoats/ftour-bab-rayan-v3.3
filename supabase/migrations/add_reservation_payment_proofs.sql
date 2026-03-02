@@ -125,3 +125,15 @@ BEFORE UPDATE OF status ON restaurant_reservations
 FOR EACH ROW
 EXECUTE FUNCTION prevent_restaurant_reservation_status_regression();
 
+
+
+-- Private storage bucket for transfer proofs (run with privileged role)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'reservation-payment-proofs',
+  'reservation-payment-proofs',
+  false,
+  10485760,
+  ARRAY['application/pdf', 'image/jpeg', 'image/png']
+)
+ON CONFLICT (id) DO NOTHING;

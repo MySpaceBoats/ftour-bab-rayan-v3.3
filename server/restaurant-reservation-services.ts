@@ -69,6 +69,10 @@ function mapReservation(r: any) {
     dateAvReg: r.date_av_reg ?? r.dateAvReg ?? null,
     createdAt: rawCreatedAt ? new Date(rawCreatedAt) : new Date(),
     updatedAt: rawUpdatedAt ? new Date(rawUpdatedAt) : new Date(),
+    latestPaymentProofPath: r.latest_payment_proof_path ?? r.latestPaymentProofPath ?? null,
+    latestPaymentProofUploadedAt: (r.latest_payment_proof_uploaded_at ?? r.latestPaymentProofUploadedAt)
+      ? new Date(r.latest_payment_proof_uploaded_at ?? r.latestPaymentProofUploadedAt)
+      : null,
   };
 }
 
@@ -250,7 +254,46 @@ export async function listRestaurantReservations(filters?: {
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data || []).map(mapReservation);
+
+    const rows = data || [];
+    if (!rows.length) {
+      return [];
+    }
+
+    const reservationIds = rows
+      .map((row: any) => row.id)
+      .filter((id: unknown): id is number => typeof id === "number");
+
+    let proofMap = new Map<number, { path: string; uploadedAt: string | null }>();
+
+    if (reservationIds.length > 0) {
+      const { data: proofs, error: proofsError } = await client
+        .from("reservation_payment_proofs")
+        .select("reservation_id, storage_path, uploaded_at")
+        .in("reservation_id", reservationIds)
+        .order("uploaded_at", { ascending: false });
+
+      if (!proofsError && proofs) {
+        for (const proof of proofs) {
+          const reservationId = Number((proof as any).reservation_id);
+          if (!proofMap.has(reservationId)) {
+            proofMap.set(reservationId, {
+              path: String((proof as any).storage_path || ""),
+              uploadedAt: (proof as any).uploaded_at || null,
+            });
+          }
+        }
+      }
+    }
+
+    return rows.map((row: any) => {
+      const latestProof = proofMap.get(Number(row.id));
+      return mapReservation({
+        ...row,
+        latest_payment_proof_path: latestProof?.path ?? null,
+        latest_payment_proof_uploaded_at: latestProof?.uploadedAt ?? null,
+      });
+    });
   } catch (error) {
     console.error("[listRestaurantReservations] Error:", error);
     throw error;
@@ -266,6 +309,10 @@ export async function updateRestaurantReservationStatus(
     | "pending_confirmation"
     | "pending_validation"
     | "validated_pending_payment"
+    | "pending_deposit"
+    | "deposit_submitted"
+    | "deposit_received"
+    | "confirmed"
     | "paid_confirmed"
     | "refused"
     | "cancelled"
@@ -652,4 +699,43 @@ export async function createReservationPaymentToken(input: {
   }
 
   return { rawToken, expiresAt };
+}
+
+
+export async function createReservationPaymentProofSignedUrl(input: {
+  reservationId: number;
+  expiresInSeconds?: number;
+  bucket?: string;
+}) {
+  const client = getClient();
+  const { data: proof, error } = await client
+    .from("reservation_payment_proofs")
+    .select("storage_path")
+    .eq("reservation_id", input.reservationId)
+    .order("uploaded_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!proof?.storage_path) {
+    return null;
+  }
+
+  const bucket = input.bucket || process.env.RESERVATION_PAYMENT_PROOF_BUCKET || "reservation-payment-proofs";
+  const expiresIn = Math.max(60, Math.min(input.expiresInSeconds ?? 3600, 86400));
+  const { data: signedData, error: signedError } = await client.storage
+    .from(bucket)
+    .createSignedUrl(proof.storage_path, expiresIn);
+
+  if (signedError) {
+    throw signedError;
+  }
+
+  return {
+    storagePath: proof.storage_path,
+    signedUrl: signedData?.signedUrl || null,
+  };
 }
