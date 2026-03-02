@@ -5548,7 +5548,7 @@ const restaurantReservationsRouter = router({
           email: z.string().email(),
           phone: z.string().min(1),
           date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-          participantsCount: z.number().int().min(1).max(12),
+          participantsCount: z.number().int().min(1).max(120),
         })
       )
       .mutation(async ({ input, ctx }) => {

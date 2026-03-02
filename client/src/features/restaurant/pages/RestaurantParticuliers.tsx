@@ -40,8 +40,8 @@ export default function RestaurantParticuliers() {
     }
 
 
-    if (formData.seats < 1 || formData.seats > 12) {
-      toast.error('Le nombre de couverts doit être entre 1 et 12');
+    if (formData.seats < 1 || formData.seats > 120) {
+      toast.error('Le nombre de couverts doit être entre 1 et 120');
       return;
     }
 
@@ -155,14 +155,14 @@ export default function RestaurantParticuliers() {
 
               {/* Nombre de places */}
               <div>
-                <Label htmlFor="seats">Nombre de couverts (1 à 12) *</Label>
+                <Label htmlFor="seats">Nombre de couverts (1 à 120) *</Label>
                 <Input
                   id="seats"
                   type="number"
                   min="1"
-                  max="12"
+                  max="120"
                   value={formData.seats}
-                  onChange={(e) => setFormData((p) => ({ ...p, seats: Math.max(1, Math.min(12, parseInt(e.target.value) || 1)) }))}
+                  onChange={(e) => setFormData((p) => ({ ...p, seats: Math.max(1, Math.min(120, parseInt(e.target.value) || 1)) }))}
                   required
                 />
               </div>
