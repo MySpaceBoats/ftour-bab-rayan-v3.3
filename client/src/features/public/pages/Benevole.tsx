@@ -100,6 +100,19 @@ const isAutoReopenedForServiceOnly = (day: {
   return !day.isOpen || (day.registeredCount ?? 0) >= day.capacity;
 };
 
+const isWithinIndividualRegistrationWindow = (date: string): boolean => {
+  const target = new Date(date);
+  const now = new Date();
+
+  target.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+
+  const diffMs = target.getTime() - now.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  return diffDays >= 0 && diffDays <= 2;
+};
+
 export default function Benevole() {
   const { t, lang } = useI18n();
   const search = useSearch();
@@ -360,7 +373,9 @@ export default function Benevole() {
     return dayDate > today;
   };
 
-  const availableDays = days?.filter(day => !isDayFull(day)) || [];
+  const individualDays =
+    days?.filter(day => isWithinIndividualRegistrationWindow(day.date)) || [];
+  const availableDays = individualDays.filter(day => !isDayFull(day));
   const serviceOnlyDefaultDayId = availableDays[0]?.id?.toString() ?? "";
   const isServiceOnlyWithoutPreparation =
     !isGroup &&
@@ -1188,56 +1203,58 @@ export default function Benevole() {
                         {!isGroup ? (
                           <>
                             <Select
-                            value={formData.dayId}
-                            onValueChange={value =>
-                              setFormData(prev => ({ ...prev, dayId: value }))
-                            }
-                            disabled={isServiceOnlyWithoutPreparation}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder={formTexts.selectDay} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {daysLoading ? (
-                                <SelectItem value="loading" disabled>
-                                  {formTexts.loading}
-                                </SelectItem>
-                              ) : days && days.length > 0 ? (
-                                days.map(day => (
-                                  <SelectItem
-                                    key={day.id}
-                                    value={day.id.toString()}
-                                    disabled={isDayFull(day)}
-                                  >
-                                    {new Date(day.date).toLocaleDateString(
-                                      dateLocale,
-                                      {
-                                        weekday: "long",
-                                        day: "numeric",
-                                        month: "long",
-                                      }
-                                    )}
-                                    {isDayFull(day)
-                                      ? ` - ${isFutureDay(day.date) ? formTexts.upcomingOpenSoon : formTexts.dayFull}`
-                                      : ""}
+                              value={formData.dayId}
+                              onValueChange={value =>
+                                setFormData(prev => ({ ...prev, dayId: value }))
+                              }
+                              disabled={isServiceOnlyWithoutPreparation}
+                            >
+                              <SelectTrigger>
+                                <SelectValue
+                                  placeholder={formTexts.selectDay}
+                                />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {daysLoading ? (
+                                  <SelectItem value="loading" disabled>
+                                    {formTexts.loading}
                                   </SelectItem>
-                                ))
-                              ) : (
-                                <SelectItem value="none" disabled>
-                                  {formTexts.noDay}
-                                </SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                          {isServiceOnlyWithoutPreparation && (
-                            <p className="text-xs text-muted-foreground">
-                              {lang === "ar"
-                                ? "في حالة اختيار خدمة الفطور فقط، لا حاجة لاختيار تاريخ. رمز QR صالح لدخول واحد في أي يوم للخدمة."
-                                : lang === "en"
-                                  ? "When only the service slot is selected, no date selection is required. The QR code remains valid for a single service entry on any day."
-                                  : "Si seul le créneau service est coché, la date est désactivée. Le QR code reste valable une seule fois pour le service, quel que soit le jour."}
-                            </p>
-                          )}
+                                ) : individualDays.length > 0 ? (
+                                  individualDays.map(day => (
+                                    <SelectItem
+                                      key={day.id}
+                                      value={day.id.toString()}
+                                      disabled={isDayFull(day)}
+                                    >
+                                      {new Date(day.date).toLocaleDateString(
+                                        dateLocale,
+                                        {
+                                          weekday: "long",
+                                          day: "numeric",
+                                          month: "long",
+                                        }
+                                      )}
+                                      {isDayFull(day)
+                                        ? ` - ${isFutureDay(day.date) ? formTexts.upcomingOpenSoon : formTexts.dayFull}`
+                                        : ""}
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  <SelectItem value="none" disabled>
+                                    {formTexts.noDay}
+                                  </SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                            {isServiceOnlyWithoutPreparation && (
+                              <p className="text-xs text-muted-foreground">
+                                {lang === "ar"
+                                  ? "في حالة اختيار خدمة الفطور فقط، لا حاجة لاختيار تاريخ. رمز QR صالح لدخول واحد في أي يوم للخدمة."
+                                  : lang === "en"
+                                    ? "When only the service slot is selected, no date selection is required. The QR code remains valid for a single service entry on any day."
+                                    : "Si seul le créneau service est coché, la date est désactivée. Le QR code reste valable une seule fois pour le service, quel que soit le jour."}
+                              </p>
+                            )}
                           </>
                         ) : (
                           <Select
