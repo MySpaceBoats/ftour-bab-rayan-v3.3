@@ -19,7 +19,7 @@ export default function RestaurantParticuliers() {
   const [confirmed, setConfirmed] = useState(false);
   const [formData, setFormData] = useState({
     date: '',
-    seats: 2,
+    seats: 1,
     salle: '' as '' | 'jardin' | 'brasserie',
     fullName: '',
     phone: '',
@@ -40,8 +40,8 @@ export default function RestaurantParticuliers() {
     }
 
 
-    if (formData.seats < 2 || formData.seats > 12) {
-      toast.error('Le nombre de couverts doit être entre 2 et 12');
+    if (formData.seats < 1 || formData.seats > 12) {
+      toast.error('Le nombre de couverts doit être entre 1 et 12');
       return;
     }
 
@@ -82,7 +82,7 @@ export default function RestaurantParticuliers() {
               <div className="space-y-2">
                 <p className="font-medium">Merci pour votre demande.</p>
                 <p className="text-sm">Notre équipe organisatrice l'étudiera dans les plus brefs délais.</p>
-                <p className="text-sm">Vous recevrez une confirmation par email sous 48 heures.</p>
+                <p className="text-sm">Vous recevrez une confirmation par email dans les plus brefs délais.</p>
               </div>
               <div className="bg-[#4a4830] p-3 rounded">
                 <p className="text-sm font-medium">Référence de votre demande</p>
@@ -126,7 +126,7 @@ export default function RestaurantParticuliers() {
           <Link href={`/${lang}/reservation`} className="text-sm text-[#5d5a3c] underline">← Retour</Link>
           <h1 className="text-3xl font-bold text-[#5d5a3c] mt-2 italic">Réservation Ftour</h1>
           <p className="text-[#8b8b7a] mt-2">
-            Demande de réservation pour le ftour solidaire (réservation en ligne à partir de 2 couverts). Confirmation sous 48 heures.
+            Demande de réservation pour le ftour solidaire — La Table du Jardin by Bab Rayan.
           </p>
           <p className="text-sm text-[#8b8b7a] mt-3">
             Service unique à partir de 18h45.<br />
@@ -155,14 +155,14 @@ export default function RestaurantParticuliers() {
 
               {/* Nombre de places */}
               <div>
-                <Label htmlFor="seats">Nombre de couverts (2 à 12) *</Label>
+                <Label htmlFor="seats">Nombre de couverts (1 à 12) *</Label>
                 <Input
                   id="seats"
                   type="number"
-                  min="2"
+                  min="1"
                   max="12"
                   value={formData.seats}
-                  onChange={(e) => setFormData((p) => ({ ...p, seats: Math.max(2, Math.min(12, parseInt(e.target.value) || 2)) }))}
+                  onChange={(e) => setFormData((p) => ({ ...p, seats: Math.max(1, Math.min(12, parseInt(e.target.value) || 1)) }))}
                   required
                 />
               </div>
