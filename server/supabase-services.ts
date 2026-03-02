@@ -227,7 +227,7 @@ export interface UserData {
   email?: string | null;
   phone?: string | null;
   loginMethod?: string | null;
-  role?: 'user' | 'admin' | 'super_admin' | 'admin_ops' | 'admin_boutique' | 'admin_dons' | 'scanner' | 'admin_restaurant' | 'admin_patisserie' | 'admin_terroir' | 'admin_operations';
+  role?: 'user' | 'admin' | 'super_admin' | 'admin_ops' | 'admin_boutique' | 'admin_dons' | 'scanner' | 'admin_restaurant' | 'vue_restaurant' | 'admin_patisserie' | 'admin_terroir' | 'admin_contenu' | 'admin_messages' | 'admin_operations';
 }
 
 export function normalizeUserRole(role?: UserData['role'] | string | null): string | undefined {

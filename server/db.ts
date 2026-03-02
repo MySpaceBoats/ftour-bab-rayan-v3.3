@@ -11,7 +11,7 @@ export interface InsertUser {
   email?: string | null;
   phone?: string | null;
   loginMethod?: string | null;
-  role?: 'user' | 'admin' | 'super_admin' | 'admin_ops' | 'admin_boutique' | 'admin_dons' | 'scanner';
+  role?: 'user' | 'admin' | 'super_admin' | 'admin_ops' | 'admin_boutique' | 'admin_dons' | 'scanner' | 'admin_restaurant' | 'vue_restaurant' | 'admin_patisserie' | 'admin_terroir' | 'admin_contenu' | 'admin_messages';
   lastSignedIn?: Date;
 }
 

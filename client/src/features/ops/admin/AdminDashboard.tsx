@@ -53,7 +53,7 @@ type SectionDefinition = {
   borderClass?: string;
 };
 
-const ALL_ADMIN_ROLES = ['admin', 'super_admin', 'admin_ops', 'admin_operations', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'admin_patisserie', 'admin_terroir'];
+const ALL_ADMIN_ROLES = ['admin', 'super_admin', 'admin_ops', 'admin_operations', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'vue_restaurant', 'admin_patisserie', 'admin_terroir'];
 
 const sections: SectionDefinition[] = [
   {
@@ -70,7 +70,7 @@ const sections: SectionDefinition[] = [
         icon: UsersRound,
         iconColor: "text-[#5d5a3c]",
         iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ["admin", "super_admin", "admin_restaurant"],
+        allowedRoles: ["admin", "super_admin", "admin_restaurant", "vue_restaurant"],
         buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
       },
       {
@@ -81,7 +81,7 @@ const sections: SectionDefinition[] = [
         icon: CalendarDays,
         iconColor: "text-[#5d5a3c]",
         iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ["admin", "super_admin", "admin_restaurant"],
+        allowedRoles: ["admin", "super_admin", "admin_restaurant", "vue_restaurant"],
         buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
       },
       {
@@ -344,7 +344,7 @@ export default function Admin() {
   const canManageVolunteers = user?.role && ['admin', 'super_admin', 'admin_ops', 'admin_operations'].includes(user.role);
   const canManageOrders = user?.role && ['admin', 'super_admin', 'admin_boutique'].includes(user.role);
   const canManageDonations = user?.role && ['admin', 'super_admin', 'admin_dons'].includes(user.role);
-  const canManageRestaurant = user?.role && ['admin', 'super_admin', 'admin_restaurant', 'admin_ops', 'admin_operations'].includes(user.role);
+  const canManageRestaurant = user?.role && ['admin', 'super_admin', 'admin_restaurant', 'vue_restaurant', 'admin_ops', 'admin_operations'].includes(user.role);
 
   const { data: volunteerStats } = trpc.volunteers.stats.useQuery(undefined, {
     enabled: isAuthenticated && !!canManageVolunteers,
