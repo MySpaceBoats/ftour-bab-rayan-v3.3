@@ -33,8 +33,33 @@ export default function BenevoleGalerieUpload() {
     redirectPath: `/${lang}/connexion`,
   });
   const [items, setItems] = useState<UploadItem[]>([]);
-  const [albumId, setAlbumId] = useState<string>("none");
+  const [selectedEdition, setSelectedEdition] = useState<string>("none");
   const albums = trpc.public.galleryAlbums.useQuery();
+  const editionOptions = useMemo(
+    () =>
+      Array.from(
+        { length: 2030 - 2015 + 1 },
+        (_, index) => String(2015 + index)
+      ),
+    []
+  );
+
+  const albumIdByEdition = useMemo(() => {
+    const map = new Map<string, string>();
+
+    for (const album of albums.data ?? []) {
+      const name = typeof album.name === "string" ? album.name : "";
+      const slug = typeof album.slug === "string" ? album.slug : "";
+
+      for (const edition of editionOptions) {
+        if (name.includes(edition) || slug.includes(edition)) {
+          map.set(edition, album.id);
+        }
+      }
+    }
+
+    return map;
+  }, [albums.data, editionOptions]);
 
   const upload = trpc.gallery.uploadPhotos.useMutation({
     onSuccess: () => {
@@ -76,7 +101,7 @@ export default function BenevoleGalerieUpload() {
       toast.error("Vous devez être connecté pour uploader des photos.");
       return;
     }
-    if (albumId === "none") {
+    if (selectedEdition === "none") {
       toast.error("Merci de choisir l'édition (album) avant l'envoi.");
       return;
     }
@@ -104,7 +129,8 @@ export default function BenevoleGalerieUpload() {
         fileName: item.file.name,
         fileType: item.file.type,
         fileData: dataUrl,
-        albumId,
+        eventDate: selectedEdition,
+        albumId: albumIdByEdition.get(selectedEdition),
         sortOrder: 0,
         status: "draft",
         isFeatured: false,
@@ -183,15 +209,15 @@ export default function BenevoleGalerieUpload() {
 
             <div className="space-y-2">
               <Label>Édition (album)</Label>
-              <Select value={albumId} onValueChange={setAlbumId}>
+              <Select value={selectedEdition} onValueChange={setSelectedEdition}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choisir une édition" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Choisir une édition</SelectItem>
-                  {(albums.data ?? []).map((album: any) => (
-                    <SelectItem key={album.id} value={album.id}>
-                      {album.name}
+                  {editionOptions.map(edition => (
+                    <SelectItem key={edition} value={edition}>
+                      Édition {edition}
                     </SelectItem>
                   ))}
                 </SelectContent>
