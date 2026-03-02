@@ -10,6 +10,7 @@ import { createSupabaseAdmin } from './supabase';
 import { DEFAULT_RAMADAN_TIMEZONE, getDateStringInTimeZone, getRamadanDay } from '../shared/ramadan';
 import { handleCashOrderRequest } from './cash-orders';
 import { handleMemberCardRequest } from './member-cards';
+import { sendEmail } from './email';
 
 export interface Env {
   SUPABASE_URL: string;
@@ -27,7 +28,24 @@ export interface Env {
   ORDER_PROOF_SECRET?: string;
   PUBLIC_APP_URL?: string;
   CASH_ORDER_ADMIN_CC_EMAIL?: string;
+  RESERVATION_PROOF_TOKEN_TTL_DAYS?: string;
+  RESERVATION_PAYMENT_PROOF_BUCKET?: string;
+  RESERVATION_ADMIN_DASHBOARD_URL?: string;
 }
+
+const MAX_PROOF_FILE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_PROOF_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
+
+async function sha256Hex(value: string): Promise<string> {
+  const encoded = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", encoded);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function jsonResponse(payload: unknown, status = 200): Response {
+  return new Response(JSON.stringify(payload), { status, headers: { "Content-Type": "application/json" } });
+}
+
 
 /**
  * Ensure exactly OPEN_WINDOW_SIZE Ramadan days are open for volunteer registration
@@ -125,6 +143,158 @@ export default {
       return new Response(null, { headers: baseCorsHeaders });
     }
 
+
+    if (url.pathname === '/api/reservations/proof/init' && request.method === 'POST') {
+      const supabase = createSupabaseAdmin(env);
+      const body = await request.json().catch(() => ({} as any));
+      const reservationId = body?.reservation_id ? Number(body.reservation_id) : null;
+      const reservationRef = typeof body?.reservation_ref === 'string' ? body.reservation_ref : null;
+
+      let query = supabase.from('restaurant_reservations').select('id, reference').limit(1);
+      if (reservationId) query = query.eq('id', reservationId);
+      else if (reservationRef) query = query.eq('reference', reservationRef);
+      else return jsonResponse({ success: false, message: 'reservation_id ou reservation_ref requis' }, 400);
+
+      const { data: reservation, error } = await query.single();
+      if (error || !reservation) return jsonResponse({ success: false, message: 'Réservation introuvable' }, 404);
+
+      const bytes = crypto.getRandomValues(new Uint8Array(32));
+      const rawToken = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/,'');
+      const tokenHash = await sha256Hex(rawToken);
+      const ttlDays = Math.max(1, Number(env.RESERVATION_PROOF_TOKEN_TTL_DAYS || '7'));
+      const expiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000).toISOString();
+
+      const { error: insertErr } = await supabase.from('reservation_payment_tokens').insert({
+        reservation_id: reservation.id,
+        token_hash: tokenHash,
+        expires_at: expiresAt,
+      });
+      if (insertErr) return jsonResponse({ success: false, message: 'Impossible de créer le token' }, 500);
+
+      const baseUrl = (env.PUBLIC_APP_URL || 'https://www.ftourbabrayan.ma').replace(/\/$/, '');
+      return jsonResponse({
+        success: true,
+        link: `${baseUrl}/reservations/preuve?token=${encodeURIComponent(rawToken)}`,
+        expires_at: expiresAt,
+      });
+    }
+
+    // Reservation payment proof public API
+    if (url.pathname === '/api/reservations/proof/verify' && request.method === 'GET') {
+      const token = url.searchParams.get('token')?.trim();
+      if (!token) {
+        return jsonResponse({ valid: false, message: 'Lien invalide' }, 400);
+      }
+      const supabase = createSupabaseAdmin(env);
+      const tokenHash = await sha256Hex(token);
+      const { data: tokenRow, error: tokenErr } = await supabase
+        .from('reservation_payment_tokens')
+        .select('id, reservation_id, expires_at, used_at')
+        .eq('token_hash', tokenHash)
+        .maybeSingle();
+      if (tokenErr || !tokenRow) {
+        return jsonResponse({ valid: false, message: 'Lien invalide ou expiré' }, 404);
+      }
+      const isExpired = new Date(tokenRow.expires_at).getTime() < Date.now();
+      if (tokenRow.used_at || isExpired) {
+        return jsonResponse({ valid: false, message: 'Lien invalide ou expiré' }, 400);
+      }
+
+      const { data: reservation } = await supabase
+        .from('restaurant_reservations')
+        .select('reference, deposit_deadline, deposit, email')
+        .eq('id', tokenRow.reservation_id)
+        .single();
+
+      return jsonResponse({
+        valid: true,
+        reservation_ref: reservation?.reference,
+        due_date: reservation?.deposit_deadline ?? null,
+        amount: reservation?.deposit ?? null,
+        email: reservation?.email ?? null,
+      });
+    }
+
+    if (url.pathname === '/api/reservations/proof/upload' && request.method === 'POST') {
+      const supabase = createSupabaseAdmin(env);
+      const form = await request.formData();
+      const token = String(form.get('token') || '').trim();
+      const note = String(form.get('note') || '').trim();
+      const file = form.get('file');
+
+      if (!token || !(file instanceof File)) {
+        return jsonResponse({ success: false, message: 'Token ou fichier manquant' }, 400);
+      }
+
+      if (!ALLOWED_PROOF_TYPES.has(file.type)) {
+        return jsonResponse({ success: false, message: 'Format fichier non autorisé (pdf/jpg/png)' }, 400);
+      }
+      if (file.size > MAX_PROOF_FILE_BYTES) {
+        return jsonResponse({ success: false, message: 'Fichier trop volumineux (max 10MB)' }, 400);
+      }
+
+      const tokenHash = await sha256Hex(token);
+      const { data: tokenRow, error: tokenErr } = await supabase
+        .from('reservation_payment_tokens')
+        .select('id, reservation_id, expires_at, used_at')
+        .eq('token_hash', tokenHash)
+        .maybeSingle();
+
+      if (tokenErr || !tokenRow) return jsonResponse({ success: false, message: 'Lien invalide ou expiré' }, 404);
+      if (tokenRow.used_at || new Date(tokenRow.expires_at).getTime() < Date.now()) {
+        return jsonResponse({ success: false, message: 'Lien invalide ou expiré' }, 400);
+      }
+
+      const { data: reservation, error: reservationError } = await supabase
+        .from('restaurant_reservations')
+        .select('id, reference, name, email')
+        .eq('id', tokenRow.reservation_id)
+        .single();
+      if (reservationError || !reservation) return jsonResponse({ success: false, message: 'Réservation introuvable' }, 404);
+
+      const ext = file.type === 'application/pdf' ? 'pdf' : file.type === 'image/png' ? 'png' : 'jpg';
+      const bucket = env.RESERVATION_PAYMENT_PROOF_BUCKET || 'reservation-payment-proofs';
+      const path = `reservation/${reservation.reference}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+
+      const { error: uploadErr } = await supabase.storage
+        .from(bucket)
+        .upload(path, await file.arrayBuffer(), {
+          contentType: file.type,
+          upsert: false,
+        });
+      if (uploadErr) return jsonResponse({ success: false, message: 'Échec upload fichier' }, 500);
+
+      await supabase.from('reservation_payment_proofs').insert({
+        reservation_id: reservation.id,
+        storage_path: path,
+        uploaded_by_email: reservation.email,
+        admin_note: note || null,
+      });
+
+      await supabase.from('reservation_payment_tokens').update({ used_at: new Date().toISOString() }).eq('id', tokenRow.id);
+
+      await supabase.from('restaurant_reservations').update({
+        status: 'deposit_submitted',
+        updated_at: new Date().toISOString(),
+      }).eq('id', reservation.id);
+
+      await supabase.from('reservation_events').insert({
+        reservation_id: reservation.id,
+        event_type: 'deposit_proof_submitted',
+        payload: { storage_path: path },
+      });
+
+      const signed = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 60 * 24);
+      const dashboardUrl = env.RESERVATION_ADMIN_DASHBOARD_URL || `${(env.PUBLIC_APP_URL || 'https://www.ftourbabrayan.ma').replace(/\/$/, '')}/admin/restaurant-reservations`;
+      await sendEmail({
+        to: 'admin@ftourbabrayan.ma',
+        apiKey: env.RESEND_API_KEY,
+        subject: `Acompte reçu – [${reservation.reference}]`,
+        html: `<p>Une preuve d'acompte a été déposée.</p><p><strong>Réf:</strong> ${reservation.reference}<br/><strong>Nom:</strong> ${reservation.name}<br/><strong>Email:</strong> ${reservation.email}<br/><strong>Date:</strong> ${new Date().toISOString()}</p><p><a href="${dashboardUrl}">Ouvrir le dashboard</a></p>${signed.data?.signedUrl ? `<p><a href="${signed.data.signedUrl}">Consulter la preuve (URL signée)</a></p>` : ''}`,
+      });
+
+      return jsonResponse({ success: true });
+    }
 
     if (url.pathname === '/api/public/ramadan/summary' && request.method === 'GET') {
       const supabase = createSupabaseAdmin(env);

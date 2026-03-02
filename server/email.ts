@@ -676,6 +676,8 @@ interface RestaurantEmailLayoutData {
   sections: RestaurantEmailSection[];
   ctaLabel?: string;
   ctaUrl?: string;
+  secondaryCtaLabel?: string;
+  secondaryCtaUrl?: string;
   contactEmail?: string;
   contactPhone?: string;
   signatureLines?: string[];
@@ -803,7 +805,7 @@ function renderRestaurantEmailLayout(data: RestaurantEmailLayoutData): string {
               ${intro}
               ${(data.sections || []).map((section) => renderRestaurantSection(section, headerColor)).join("")}
               ${data.ctaLabel && data.ctaUrl ? `
-                <table role="presentation" style="border-collapse: collapse; margin: 26px auto 20px auto;">
+                <table role="presentation" style="border-collapse: collapse; margin: 26px auto 12px auto;">
                   <tr>
                     <td style="border-radius: 6px; background-color: ${headerColor}; text-align: center;">
                       <a href="${data.ctaUrl}" style="display: inline-block; padding: 12px 22px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px;">${data.ctaLabel}</a>
@@ -811,6 +813,14 @@ function renderRestaurantEmailLayout(data: RestaurantEmailLayoutData): string {
                   </tr>
                 </table>
               ` : ""}
+              ${data.secondaryCtaLabel && data.secondaryCtaUrl ? `<p style="margin: 0 0 10px 0; color: #374151; font-size: 14px; text-align: center;">Une fois votre virement effectué, cliquez ici pour déposer votre preuve de virement.</p>
+                <table role="presentation" style="border-collapse: collapse; margin: 0 auto 20px auto;">
+                  <tr>
+                    <td style="border-radius: 6px; background-color: #0f766e; text-align: center;">
+                      <a href="${data.secondaryCtaUrl}" style="display: inline-block; padding: 12px 22px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px;">${data.secondaryCtaLabel}</a>
+                    </td>
+                  </tr>
+                </table>` : ""}
               ${data.contactEmail || data.contactPhone ? `<p style="margin: 0 0 20px 0; color: #6b7280; font-size: 14px;">Une question ? Contactez-nous : ${data.contactEmail || ""}${data.contactEmail && data.contactPhone ? " / " : ""}${data.contactPhone || ""}</p>` : ""}
               ${signature}
             </td>
@@ -836,6 +846,8 @@ function renderRestaurantEmailText(data: {
   sections: RestaurantEmailSection[];
   ctaLabel?: string;
   ctaUrl?: string;
+  secondaryCtaLabel?: string;
+  secondaryCtaUrl?: string;
   contactEmail?: string;
   contactPhone?: string;
   signatureLines?: string[];
@@ -860,6 +872,7 @@ function renderRestaurantEmailText(data: {
     "",
     sections,
     data.ctaLabel && data.ctaUrl ? `${data.ctaLabel}: ${data.ctaUrl}` : "",
+    data.secondaryCtaLabel && data.secondaryCtaUrl ? `${data.secondaryCtaLabel}: ${data.secondaryCtaUrl}` : "",
     data.contactEmail || data.contactPhone
       ? `Une question ? Contactez-nous: ${data.contactEmail || ""}${data.contactEmail && data.contactPhone ? " / " : ""}${data.contactPhone || ""}`
       : "",
@@ -884,6 +897,7 @@ interface RestaurantReservationEmailData {
   estimatedTotal?: number;
   depositDeadlineFormatted?: string;
   ribUrl?: string;
+  proofUploadUrl?: string;
   brandName?: string;
   headerColor?: string;
   contactEmail?: string;
@@ -973,6 +987,8 @@ export function generateRestaurantReservationDepositRequiredEmail(data: Restaura
     sections,
     ctaLabel: "Télécharger le RIB",
     ctaUrl: branding.ribUrl,
+    secondaryCtaLabel: data.proofUploadUrl ? "Déposer ma preuve de virement" : undefined,
+    secondaryCtaUrl: data.proofUploadUrl,
     contactEmail: branding.contactEmail,
     contactPhone: branding.contactPhone,
     signatureLines: [

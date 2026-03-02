@@ -18,6 +18,7 @@ describe("Restaurant reservation transactional emails", () => {
       estimatedTotal: 3000,
       depositDeadlineFormatted: "jeudi 27 février 2026 à 18:00",
       ribUrl: "https://example.com/rib.pdf",
+      proofUploadUrl: "https://example.com/reservations/preuve?token=abc",
     });
 
     expect(email.subject).toContain("Demande de réservation enregistrée");
@@ -30,6 +31,8 @@ describe("Restaurant reservation transactional emails", () => {
     expect(email.html).toContain("votre réservation sera automatiquement annulée");
     expect(email.text).toContain("Date limite de paiement");
     expect(email.text).toContain("https://example.com/rib.pdf");
+    expect(email.html).toContain("Déposer ma preuve de virement");
+    expect(email.text).toContain("https://example.com/reservations/preuve?token=abc");
   });
 
   it("hides optional time row in confirmed email when missing", () => {
