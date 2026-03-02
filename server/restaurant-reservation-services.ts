@@ -262,6 +262,7 @@ export async function listRestaurantReservations(filters?: {
 export async function updateRestaurantReservationStatus(
   id: number,
   status:
+    | "pending_confirmation"
     | "pending_validation"
     | "validated_pending_payment"
     | "paid_confirmed"
