@@ -168,7 +168,7 @@ export default function AdminGroupesBenevoles() {
                 <TableRow>
                   <TableHead>Groupe</TableHead>
                   <TableHead>Responsable</TableHead>
-                  <TableHead>Jour</TableHead>
+                  <TableHead>Jour / Date</TableHead>
                   <TableHead>Effectif</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead>Pièce jointe</TableHead>
@@ -192,7 +192,18 @@ export default function AdminGroupesBenevoles() {
                         {row.responsibleEmail}
                       </div>
                     </TableCell>
-                    <TableCell>{row.day ? `Jour ${row.day.dayNumber}` : "-"}</TableCell>
+                    <TableCell>
+                      {row.day
+                        ? `Jour ${row.day.dayNumber} — ${
+                            row.day.date
+                              ? new Date(row.day.date).toLocaleDateString("fr-FR", {
+                                  day: "numeric",
+                                  month: "long",
+                                })
+                              : "—"
+                          }`
+                        : "-"}
+                    </TableCell>
                     <TableCell>{row.estimatedSize || "-"}</TableCell>
                     <TableCell>
                       <Badge
