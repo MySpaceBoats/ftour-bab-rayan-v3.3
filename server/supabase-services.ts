@@ -1180,6 +1180,28 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
   const { data: volunteers, error } = await query.order('created_at', { ascending: false });
   if (error) throw error;
 
+  const { data: allVolunteerAttendances, error: attendanceError } = await client
+    .from('volunteers')
+    .select('email, status, qr_status, scanned_at');
+  if (attendanceError) throw attendanceError;
+
+  const attendanceFrequencyByEmail = new Map<string, number>();
+  for (const attendanceRow of allVolunteerAttendances ?? []) {
+    const email = String(attendanceRow.email ?? '').toLowerCase().trim();
+    if (!email) continue;
+
+    const isPresent =
+      attendanceRow.status === 'present' ||
+      attendanceRow.qr_status === 'validated' ||
+      !!attendanceRow.scanned_at;
+
+    if (!isPresent) continue;
+    attendanceFrequencyByEmail.set(
+      email,
+      (attendanceFrequencyByEmail.get(email) ?? 0) + 1
+    );
+  }
+
   const { data: days } = await client
     .from('ramadan_days')
     .select('*')
@@ -1193,6 +1215,9 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
         firstName: v.first_name ?? v.firstName,
         lastName: v.last_name ?? v.lastName,
         email: v.email,
+        attendanceFrequency: attendanceFrequencyByEmail.get(
+          String(v.email ?? '').toLowerCase().trim()
+        ) ?? 0,
         phone: v.phone,
         city: v.city,
         dayId: v.day_id ?? v.dayId,
