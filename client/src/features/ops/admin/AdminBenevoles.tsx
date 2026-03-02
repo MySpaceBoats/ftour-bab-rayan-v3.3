@@ -537,7 +537,7 @@ export default function AdminBenevoles() {
                     <TableRow>
                       <TableHead>Bénévole</TableHead>
                       <TableHead>Contact</TableHead>
-                      <TableHead>Jour</TableHead>
+                      <TableHead>Jour / Date</TableHead>
                       <TableHead>Créneaux</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Actions</TableHead>
@@ -571,7 +571,18 @@ export default function AdminBenevoles() {
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
-                            Jour {volunteer.day?.dayNumber}
+                            <span>
+                              Jour {volunteer.day?.dayNumber} —{" "}
+                              {volunteer.day?.date
+                                ? new Date(volunteer.day.date).toLocaleDateString(
+                                    "fr-FR",
+                                    {
+                                      day: "numeric",
+                                      month: "long",
+                                    }
+                                  )
+                                : "—"}
+                            </span>
                           </div>
                         </TableCell>
                         <TableCell>
