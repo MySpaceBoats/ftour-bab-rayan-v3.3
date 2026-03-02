@@ -221,7 +221,8 @@ export default function AdminRestaurantGroupes() {
     })),
   ];
 
-  const reservations = apiReservations.length > 0 ? apiReservations : fallbackReservations;
+  const isUsingFallbackData = apiReservations.length === 0;
+  const reservations = isUsingFallbackData ? fallbackReservations : apiReservations;
 
   const refetch = () => {
     refetchG();
@@ -459,6 +460,11 @@ export default function AdminRestaurantGroupes() {
     field: string,
     value: string | number | null
   ) => {
+    if (isUsingFallbackData) {
+      toast.error("Impossible d'enregistrer : données de démonstration affichées");
+      return;
+    }
+
     const originalValue = reservation[field] ?? "";
     if (String(originalValue) === String(value)) return;
 
@@ -473,6 +479,11 @@ export default function AdminRestaurantGroupes() {
     field: "nbAdult" | "nbKids",
     rawValue: string
   ) => {
+    if (isUsingFallbackData) {
+      toast.error("Impossible d'enregistrer : données de démonstration affichées");
+      return;
+    }
+
     const parsedValue = Math.max(0, Number.parseInt(rawValue || "0", 10) || 0);
     const nextNbAdult =
       field === "nbAdult"
@@ -508,6 +519,11 @@ export default function AdminRestaurantGroupes() {
     field: "adultAmount" | "kidsAmount",
     rawValue: string
   ) => {
+    if (isUsingFallbackData) {
+      toast.error("Impossible d'enregistrer : données de démonstration affichées");
+      return;
+    }
+
     const parsedValue = Math.max(0, Number.parseFloat(rawValue || "0") || 0);
     const currentAdultAmount =
       field === "adultAmount"
