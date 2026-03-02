@@ -891,6 +891,19 @@ interface RestaurantReservationEmailData {
   addressLines?: string[];
 }
 
+interface RestaurantGroupVerificationEmailData {
+  firstName: string;
+  reference: string;
+  reservationDateLong: string;
+  partySize: number;
+  verificationUrl: string;
+  brandName?: string;
+  headerColor?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  addressLines?: string[];
+}
+
 function normalizeRestaurantBranding(data: RestaurantReservationEmailData): RestaurantEmailBranding {
   const addressLines = data.addressLines?.length
     ? data.addressLines
@@ -1022,6 +1035,60 @@ export function generateRestaurantReservationConfirmedEmail(data: RestaurantRese
 
   return {
     subject: `Réservation confirmée — ${branding.brandName} (Réf. ${data.reference})`,
+    html: renderRestaurantEmailLayout(layout),
+    text: renderRestaurantEmailText(layout),
+  };
+}
+
+export function generateRestaurantGroupVerificationEmail(
+  data: RestaurantGroupVerificationEmailData
+): { subject: string; html: string; text: string } {
+  const branding = normalizeRestaurantBranding(data);
+
+  const layout: RestaurantEmailLayoutData = {
+    preheader:
+      "Confirmez votre email pour transmettre votre réservation groupe à l’administration.",
+    brandName: branding.brandName,
+    headerColor: branding.headerColor,
+    title: "Validez votre réservation groupe",
+    introText: [
+      `Bonjour ${data.firstName},`,
+      "Nous avons bien reçu votre demande de réservation groupe.",
+      "Pour finaliser la demande et la transmettre à l’équipe d’administration, merci de confirmer votre adresse email.",
+    ],
+    sections: [
+      {
+        title: "Récapitulatif de la demande",
+        kind: "info",
+        items: [
+          { label: "Date", value: data.reservationDateLong },
+          { label: "Nombre de personnes", value: String(data.partySize) },
+          { label: "Référence", value: data.reference },
+          { label: "Statut", value: "En attente de confirmation email" },
+        ],
+      },
+      {
+        title: "Action requise",
+        kind: "warning",
+        text: [
+          "Cliquez sur le bouton ci-dessous pour confirmer votre email.",
+          "Sans cette confirmation, votre réservation ne sera pas traitée et ne sera pas transmise au tableau d’administration.",
+        ],
+      },
+    ],
+    ctaLabel: "Confirmer ma réservation groupe",
+    ctaUrl: data.verificationUrl,
+    contactEmail: branding.contactEmail,
+    contactPhone: branding.contactPhone,
+    signatureLines: [
+      "Merci pour votre confiance.",
+      `L’équipe de ${branding.brandName}`,
+    ],
+    footerLines: branding.footerLines,
+  };
+
+  return {
+    subject: `Confirmation email requise — ${branding.brandName} (Réf. ${data.reference})`,
     html: renderRestaurantEmailLayout(layout),
     text: renderRestaurantEmailText(layout),
   };
