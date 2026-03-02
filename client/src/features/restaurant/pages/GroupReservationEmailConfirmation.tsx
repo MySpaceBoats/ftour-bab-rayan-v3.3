@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Link, useRoute } from "wouter";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -8,11 +8,20 @@ import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/i18n";
 
 export default function GroupReservationEmailConfirmation() {
-  const [match, params] = useRoute("/reservation-groupe/confirmation-email/:token");
+  const [match, params] = useRoute(
+    "/reservation-groupe/confirmation-email/:token"
+  );
   const { lang } = useI18n();
   const token = params?.token || "";
 
   const mutation = trpc.restaurantReservations.confirmGroupEmail.useMutation();
+  const hasTriggeredRef = useRef(false);
+
+  useEffect(() => {
+    if (!match || !token || hasTriggeredRef.current) return;
+    hasTriggeredRef.current = true;
+    mutation.mutate({ token });
+  }, [match, token, mutation]);
 
   const status = useMemo(() => {
     if (!match || !token) return "invalid";
@@ -37,18 +46,9 @@ export default function GroupReservationEmailConfirmation() {
             )}
 
             {status === "idle" && (
-              <>
-                <p className="text-sm text-[#5d5a3c]">
-                  Cliquez ci-dessous pour confirmer votre adresse email et transmettre votre demande à l&apos;administration.
-                </p>
-                <Button
-                  className="w-full bg-[#5d5a3c] text-white hover:bg-[#4a4830]"
-                  onClick={() => mutation.mutate({ token })}
-                  disabled={mutation.isPending}
-                >
-                  {mutation.isPending ? "Confirmation en cours..." : "Confirmer ma réservation"}
-                </Button>
-              </>
+              <p className="text-sm text-[#5d5a3c]">
+                Vérification de votre lien de confirmation en cours...
+              </p>
             )}
 
             {status === "success" && (
@@ -57,7 +57,8 @@ export default function GroupReservationEmailConfirmation() {
                   ✅ Votre email est confirmé.
                 </p>
                 <p className="text-sm text-[#5d5a3c]">
-                  Votre demande de réservation groupe a été transmise à l&apos;administration restaurant.
+                  Votre demande de réservation groupe a été transmise à
+                  l&apos;administration restaurant.
                 </p>
               </div>
             )}
