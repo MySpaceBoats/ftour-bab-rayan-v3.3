@@ -181,27 +181,12 @@ export default function Home() {
               </div>
               
               <div className="relative">
-                <div className="aspect-square rounded-2xl bg-[#4A4829] p-8 border border-[#F2E9D3]/10">
-                  <div className="w-full h-full rounded-xl bg-[#6F6C3F] flex items-center justify-center">
-                    <div className="text-center space-y-4">
-                      {/* Logo mains + cœur */}
-                      <svg viewBox="0 0 120 120" className="h-32 w-32 mx-auto">
-                        <path 
-                          d="M60 25c-6 0-12 3-15 9-3-6-9-9-15-9-12 0-21 9-21 21 0 24 36 48 36 48s36-24 36-48c0-12-9-21-21-21z" 
-                          fill="none" 
-                          stroke="#F2E9D3" 
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <line x1="36" y1="42" x2="48" y2="54" stroke="#F2E9D3" strokeWidth="1.5" opacity="0.5"/>
-                        <line x1="42" y1="36" x2="54" y2="48" stroke="#F2E9D3" strokeWidth="1.5" opacity="0.5"/>
-                        <line x1="48" y1="42" x2="60" y2="54" stroke="#F2E9D3" strokeWidth="1.5" opacity="0.5"/>
-                        <line x1="54" y1="36" x2="66" y2="48" stroke="#F2E9D3" strokeWidth="1.5" opacity="0.5"/>
-                      </svg>
-                      <p className="text-[#E6DCC3]" style={{ fontFamily: 'Caveat, cursive', fontSize: '1.5rem' }}>Ftour Bab Rayan</p>
-                    </div>
-                  </div>
+                <div className="aspect-square rounded-2xl overflow-hidden border border-[#F2E9D3]/10">
+                  <img
+                    src="https://jgnzhrlumlydmseusnbo.supabase.co/storage/v1/object/public/Images%20siteweb/WhatsApp%20Image%202026-02-16%20at%2010.17.55.jpeg"
+                    alt="Ftour Bab Rayan"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <div className="absolute -bottom-6 -left-6 bg-[#4A4829] rounded-xl shadow-lg p-4 border border-[#F2E9D3]/10">
                   <div className="flex items-center gap-3">

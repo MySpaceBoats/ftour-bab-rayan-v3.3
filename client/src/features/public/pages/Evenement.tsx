@@ -61,8 +61,12 @@ export default function Evenement() {
                 </div>
               </div>
               <div className="relative">
-                <div className="aspect-video rounded-2xl bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20 flex items-center justify-center">
-                  <Utensils className="h-24 w-24 text-primary/30" />
+                <div className="aspect-video rounded-2xl overflow-hidden">
+                  <img
+                    src="https://jgnzhrlumlydmseusnbo.supabase.co/storage/v1/object/public/Images%20siteweb/WhatsApp%20Image%202026-02-16%20at%2010.17.55.jpeg"
+                    alt="Ftour Bab Rayan"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <div className="absolute -bottom-6 -right-6 bg-card rounded-xl shadow-lg p-4 border">
                   <div className="text-center">
