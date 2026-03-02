@@ -337,6 +337,12 @@ const GROUP_MAIL_DISPATCH_CC = [
   "rsebbani@myspace.boats",
 ] as const;
 
+const VOLUNTEER_GROUP_REGISTRATION_NOTIFICATION_RECIPIENTS = [
+  "contact@ftourbabrayan.ma",
+  "naylabennani@hotmail.com",
+  "ratibhind3@gmail.com",
+] as const;
+
 const sendGroupMailDispatchSummary = async ({
   groupName,
   responsibleName,
@@ -1702,8 +1708,8 @@ const volunteersRouter = router({
 
       try {
         await sendEmail({
-          to: "contact@ftourbabrayan.ma",
-          cc: ["naylabennani@hotmail.com", "ratibhind3@gmail.com"],
+          to: VOLUNTEER_GROUP_REGISTRATION_NOTIFICATION_RECIPIENTS[0],
+          cc: VOLUNTEER_GROUP_REGISTRATION_NOTIFICATION_RECIPIENTS.slice(1),
           subject: adminEmailData.subject,
           html: adminEmailData.html,
           attachments: [
