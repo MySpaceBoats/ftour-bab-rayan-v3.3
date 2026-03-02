@@ -1622,6 +1622,22 @@ const volunteersRouter = router({
     return supabaseServices.getVolunteerStatsSupabase();
   }),
 
+  createFrequentVolunteerAccounts: adminOpsProcedure
+    .input(
+      z.object({
+        minPresences: z
+          .number()
+          .int()
+          .min(4, "Le minimum doit être supérieur à 3")
+          .default(4),
+      })
+    )
+    .mutation(async ({ input }) => {
+      return supabaseServices.createAccountsForFrequentPresentVolunteers(
+        input.minPresences
+      );
+    }),
+
   delete: adminOpsProcedure
     .input(z.object({ volunteerId: z.number() }))
     .mutation(async ({ input }) => {
