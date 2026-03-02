@@ -186,13 +186,7 @@ const sections: SectionDefinition[] = [
         icon: FileText,
         iconColor: "text-teal-700",
         iconBg: "bg-teal-100",
-        allowedRoles: [
-          "admin",
-          "super_admin",
-          "admin_boutique",
-          "admin_ops",
-          "admin_operations",
-        ],
+        allowedRoles: ALL_ADMIN_ROLES,
       },
       {
         label: "QR Codes Catalogue",
