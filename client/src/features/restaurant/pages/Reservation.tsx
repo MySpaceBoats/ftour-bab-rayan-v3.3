@@ -243,7 +243,7 @@ export default function Reservation() {
                       onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
                       required
                     />
-                    <p className="text-xs text-[#8b8b7a] mt-1">Service unique à partir de 18h45 — toutes dates disponibles</p>
+                    <p className="text-xs text-[#8b8b7a] mt-1">Service unique à partir de 18h30 — toutes dates disponibles</p>
                   </div>
 
                   {/* Nombre de couverts */}
