@@ -99,6 +99,7 @@ import AdminUtilisateurs from "@/features/ops/admin/AdminUtilisateurs";
 import AdminUnifiedDashboard from "@/features/ops/admin/AdminUnifiedDashboard";
 import AdminQRCodes from "@/features/ops/admin/AdminQRCodes";
 import AdminRamadanStats from "@/features/ops/admin/AdminRamadanStats";
+import AdminMemberCards from "@/features/ops/admin/AdminMemberCards";
 
 // ============================================
 // SCANNER — features/scanner
@@ -245,6 +246,7 @@ function LocalizedRoutes() {
       <Route path="/admin/benevoles-groupes" component={AdminGroupesBenevoles} />
       <Route path="/admin/jours" component={AdminJours} />
       <Route path="/admin/ramadan-stats" component={AdminRamadanStats} />
+      <Route path="/admin/cards" component={AdminMemberCards} />
       <Route path="/admin/scan-product" component={AdminScanProduct} />
       <Route path="/admin/payments" component={AdminPayments} />
       <Route path="/admin/utilisateurs" component={AdminUtilisateurs} />
