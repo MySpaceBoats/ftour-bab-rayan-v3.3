@@ -10,6 +10,7 @@ import {
   formatReservationDateLong,
   generateRestaurantReservationAutoCancelledEmail,
   formatCasablancaDateTimeLong,
+  generateRestaurantGroupVerificationEmail,
 } from "./email";
 import * as reservationServices from "./restaurant-reservation-services";
 import crypto from "crypto";
@@ -29,6 +30,62 @@ function generateReservationReference(
 
 function generateQrToken(): string {
   return crypto.randomBytes(16).toString("hex");
+}
+
+
+const GROUP_RESERVATION_CONFIRMATION_TTL_MS = 1000 * 60 * 60 * 24 * 2; // 48h
+
+function getReservationConfirmationSecret() {
+  return process.env.RESERVATION_CONFIRMATION_SECRET || process.env.SESSION_SECRET || "restaurant-confirmation-secret";
+}
+
+function createGroupReservationConfirmationToken(reference: string, email: string): string {
+  const issuedAt = Date.now();
+  const payload = `${reference}|${email}|${issuedAt}`;
+  const signature = crypto
+    .createHmac("sha256", getReservationConfirmationSecret())
+    .update(payload)
+    .digest("hex");
+
+  return Buffer.from(`${payload}|${signature}`, "utf-8").toString("base64url");
+}
+
+function verifyGroupReservationConfirmationToken(token: string): {
+  reference: string;
+  email: string;
+  issuedAt: number;
+} | null {
+  try {
+    const decoded = Buffer.from(token, "base64url").toString("utf-8");
+    const [reference, email, issuedAtRaw, signature] = decoded.split("|");
+
+    if (!reference || !email || !issuedAtRaw || !signature) {
+      return null;
+    }
+
+    const payload = `${reference}|${email}|${issuedAtRaw}`;
+    const expected = crypto
+      .createHmac("sha256", getReservationConfirmationSecret())
+      .update(payload)
+      .digest("hex");
+
+    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+      return null;
+    }
+
+    const issuedAt = Number(issuedAtRaw);
+    if (!Number.isFinite(issuedAt)) {
+      return null;
+    }
+
+    if (Date.now() - issuedAt > GROUP_RESERVATION_CONFIRMATION_TTL_MS) {
+      return null;
+    }
+
+    return { reference, email, issuedAt };
+  } catch {
+    return null;
+  }
 }
 
 async function runAutoCancellationAndNotify() {
@@ -86,7 +143,7 @@ export const restaurantReservationsRouter = router({
           email: z.string().email("Email invalide"),
           phone: z.string().min(1, "Téléphone requis"),
           date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide"),
-          participantsCount: z.number().int().min(2).max(12),
+          participantsCount: z.number().int().min(1).max(12),
           displayChoice: z.enum(["jardin", "brasserie"]),
         })
       )
@@ -338,45 +395,41 @@ export const restaurantReservationsRouter = router({
               displayChoice: input.displayChoice,
             });
 
-          const customerRequestEmail =
-            generateRestaurantReservationDepositRequiredEmail({
-              firstName: input.contactName,
-              reference,
-              reservationDateLong: formatReservationDateLong(input.date),
-              partySize: input.participantsCount,
-              depositDeadlineFormatted: reservation.depositDeadline
-                ? formatCasablancaDateTimeLong(
-                    reservation.depositDeadline.toISOString()
-                  )
-                : undefined,
-            });
+          await reservationServices.updateRestaurantReservationStatus(
+            reservation.id,
+            "pending_confirmation"
+          );
 
-          await sendEmail({
-            to: input.email,
-            subject: customerRequestEmail.subject,
-            html: customerRequestEmail.html,
-            text: customerRequestEmail.text,
+          const appBaseUrl =
+            process.env.APP_BASE_URL ||
+            process.env.PUBLIC_APP_URL ||
+            process.env.FRONTEND_URL ||
+            "https://ftourbabrayan.org";
+          const confirmationToken = createGroupReservationConfirmationToken(
+            reference,
+            input.email
+          );
+          const confirmationUrl = `${appBaseUrl}/reservation-groupe/confirmation-email/${confirmationToken}`;
+
+          const verificationEmail = generateRestaurantGroupVerificationEmail({
+            firstName: input.contactName,
+            reference,
+            reservationDateLong: formatReservationDateLong(input.date),
+            partySize: input.participantsCount,
+            verificationUrl: confirmationUrl,
           });
 
           await sendEmail({
-            to: "digital@myspace.boats",
-            subject: `📬 Nouvelle demande Groupe - ${input.date}`,
-            html: generateNewBookingNotificationEmail({
-              type: "groupe",
-              date: input.date,
-              participantsCount: input.participantsCount,
-              contactName: input.contactName,
-              contactEmail: input.email,
-              contactPhone: input.phone,
-              reference,
-              displayChoice: input.displayChoice,
-            }).html,
+            to: input.email,
+            subject: verificationEmail.subject,
+            html: verificationEmail.html,
+            text: verificationEmail.text,
           });
 
           return {
             success: true,
             reservation,
-            message: "Demande reçue. Vérifiez votre email.",
+            message: "Demande reçue. Confirmez votre email pour finaliser la réservation.",
           };
         } catch (error) {
           console.error("[Groupe Reservation] Error:", error);
@@ -399,6 +452,104 @@ export const restaurantReservationsRouter = router({
       }),
   }),
 
+
+  confirmGroupEmail: publicProcedure
+    .input(
+      z.object({
+        token: z.string().min(10, "Token invalide"),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const parsed = verifyGroupReservationConfirmationToken(input.token);
+      if (!parsed) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Lien de confirmation invalide ou expiré",
+        });
+      }
+
+      const reservation =
+        await reservationServices.getRestaurantReservationByReference(
+          parsed.reference
+        );
+
+      if (!reservation || reservation.type !== "groupe") {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Réservation introuvable",
+        });
+      }
+
+      if (reservation.email.toLowerCase() !== parsed.email.toLowerCase()) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Ce lien ne correspond pas à cette réservation",
+        });
+      }
+
+      if (reservation.status === "pending_confirmation") {
+        await reservationServices.updateRestaurantReservationStatus(
+          reservation.id,
+          "pending_validation"
+        );
+
+        const customerRequestEmail =
+          generateRestaurantReservationDepositRequiredEmail({
+            firstName: reservation.name,
+            reference: reservation.reference,
+            reservationDateLong: formatReservationDateLong(
+              reservation.date ? reservation.date.toISOString().split("T")[0] : ""
+            ),
+            partySize: reservation.seatsTotal,
+            depositDeadlineFormatted: reservation.depositDeadline
+              ? formatCasablancaDateTimeLong(
+                  reservation.depositDeadline.toISOString()
+                )
+              : undefined,
+          });
+
+        await sendEmail({
+          to: reservation.email,
+          subject: customerRequestEmail.subject,
+          html: customerRequestEmail.html,
+          text: customerRequestEmail.text,
+        });
+
+        await sendEmail({
+          to: "digital@myspace.boats",
+          subject: `📬 Nouvelle demande Groupe - ${
+            reservation.date
+              ? reservation.date.toISOString().split("T")[0]
+              : "date inconnue"
+          }`,
+          html: generateNewBookingNotificationEmail({
+            type: "groupe",
+            date: reservation.date
+              ? reservation.date.toISOString().split("T")[0]
+              : "",
+            participantsCount: reservation.seatsTotal,
+            contactName: reservation.name,
+            contactEmail: reservation.email,
+            contactPhone: reservation.phone,
+            reference: reservation.reference,
+            displayChoice:
+              reservation.displayChoice === "jardin"
+                ? "jardin"
+                : "brasserie",
+          }).html,
+        });
+      }
+
+      const refreshed = await reservationServices.getRestaurantReservationById(
+        reservation.id
+      );
+
+      return {
+        success: true,
+        status: refreshed?.status ?? reservation.status,
+      };
+    }),
+
   validate: protectedProcedure
     .input(
       z.object({
@@ -407,7 +558,7 @@ export const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
       if (!allowedRoles.includes(ctx.user?.role || "")) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -476,7 +627,7 @@ export const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
       if (!allowedRoles.includes(ctx.user?.role || "")) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -582,9 +733,10 @@ export const restaurantReservationsRouter = router({
     }
     try {
       await runAutoCancellationAndNotify();
-      return await reservationServices.listRestaurantReservations({
+      const reservations = await reservationServices.listRestaurantReservations({
         type: "groupe",
       });
+      return reservations.filter((reservation) => reservation.status !== "pending_confirmation");
     } catch (error) {
       console.error("[adminListGroupes] Error:", error);
       throw new TRPCError({
@@ -637,7 +789,7 @@ export const restaurantReservationsRouter = router({
         nbAdult: z.number().int().min(0).optional(),
         nbKids: z.number().int().min(0).optional(),
         paymentMode: z.enum(["cash", "virement", "espece"]).optional(),
-        respResa: z.enum(["Nayla", "Hind", "Kamal", "Rita"]).optional(),
+        respResa: z.enum(["Nayla", "Hind", "Kamal", "Rita", "Réda", "Souad"]).optional(),
         modeDeposit: z.string().optional(),
         dateAvReg: z
           .string()
@@ -655,7 +807,7 @@ export const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
       if (!allowedRoles.includes(ctx.user?.role || "")) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -736,7 +888,7 @@ export const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
       if (!allowedRoles.includes(ctx.user?.role || "")) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -778,7 +930,7 @@ export const restaurantReservationsRouter = router({
         nbAdult: z.number().int().min(0).optional(),
         nbKids: z.number().int().min(0).optional(),
         paymentMode: z.enum(["cash", "virement", "espece"]).optional(),
-        respResa: z.enum(["Nayla", "Hind", "Kamal", "Rita"]).optional(),
+        respResa: z.enum(["Nayla", "Hind", "Kamal", "Rita", "Réda", "Souad"]).optional(),
         companyName: z.string().optional(),
         groupName: z.string().optional(),
         displayChoice: z.string().optional(),
@@ -787,7 +939,7 @@ export const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
       if (!allowedRoles.includes(ctx.user?.role || "")) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -823,7 +975,7 @@ export const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
       if (!allowedRoles.includes(ctx.user?.role || "")) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -868,7 +1020,7 @@ export const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
       if (!allowedRoles.includes(ctx.user?.role || "")) {
         throw new TRPCError({
           code: "FORBIDDEN",

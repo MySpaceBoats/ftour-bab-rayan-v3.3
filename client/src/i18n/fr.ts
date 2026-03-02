@@ -161,7 +161,7 @@ export const fr = {
     howItWorksSubtitle: 'Une organisation rodée pour des Ftours réussis chaque soir',
     step1Title: 'Préparation (15h00 - 16h45)',
     step1Desc: 'Les bénévoles arrivent pour préparer le lieu, installer les tables et chaises, et commencer la préparation des repas.',
-    step2Title: 'Service (17h00 - 19h15)',
+    step2Title: 'Service (17h30 - 19h15)',
     step2Desc: 'Les bénéficiaires sont accueillis avec le sourire. Chacun trouve grâce à la générosité de tous sa place autour des tables dressées.',
     step3Title: 'Rupture du jeûne (18h20 - 19h15)',
     step3Desc: "À l'appel à la prière, tout le monde rompt le jeûne ensemble. Dattes, lait, harira, et un repas complet sont servis.",

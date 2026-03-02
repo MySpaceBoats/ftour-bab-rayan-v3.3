@@ -50,7 +50,6 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/i18n";
 
-
 const RAMADAN_TIMEZONE = "Africa/Casablanca";
 
 const getTimeInMinutesInRamadanTimezone = (date: Date): number => {
@@ -62,7 +61,9 @@ const getTimeInMinutesInRamadanTimezone = (date: Date): number => {
   });
   const parts = formatter.formatToParts(date);
   const hour = Number(parts.find(part => part.type === "hour")?.value ?? "0");
-  const minute = Number(parts.find(part => part.type === "minute")?.value ?? "0");
+  const minute = Number(
+    parts.find(part => part.type === "minute")?.value ?? "0"
+  );
   return hour * 60 + minute;
 };
 
@@ -92,7 +93,8 @@ const isAutoReopenedForServiceOnly = (day: {
   const isSameRamadanDate = getDateStringInRamadanTimezone(now) === day.date;
   if (!isSameRamadanDate) return false;
 
-  const isAfterReopenTime = getTimeInMinutesInRamadanTimezone(now) >= 17 * 60 + 30;
+  const isAfterReopenTime =
+    getTimeInMinutesInRamadanTimezone(now) >= 17 * 60 + 30;
   if (!isAfterReopenTime) return false;
 
   return !day.isOpen || (day.registeredCount ?? 0) >= day.capacity;
@@ -113,12 +115,11 @@ export default function Benevole() {
     lastName: "",
     email: "",
     phone: "",
-    city: "",
     comment: "",
     dayId: preselectedDay || "",
     slots: {
       preparation_ftour: false, // Préparation ftour : 15h00 – 16h45
-      service_ftour: false, // Service ftour : 17h00 – 19h15
+      service_ftour: false, // Service ftour : 17h30 – 19h15
     },
     acceptedTerms: false,
   });
@@ -193,6 +194,9 @@ export default function Benevole() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const fallbackDayId = availableDays[0]?.id?.toString() ?? "";
+    const resolvedDayId = formData.dayId || fallbackDayId;
+
     if (!formData.acceptedTerms) {
       toast.error(
         lang === "ar"
@@ -204,7 +208,7 @@ export default function Benevole() {
       return;
     }
 
-    if (!formData.dayId) {
+    if (!resolvedDayId) {
       toast.error(
         lang === "ar"
           ? "يرجى اختيار تاريخ"
@@ -312,7 +316,7 @@ export default function Benevole() {
         estimatedSize: groupData.estimatedSize
           ? parseInt(groupData.estimatedSize)
           : undefined,
-        dayId: parseInt(formData.dayId),
+        dayId: parseInt(resolvedDayId),
         volunteerSlots: volunteerSlots as (
           | "preparation_ftour"
           | "service_ftour"
@@ -328,9 +332,8 @@ export default function Benevole() {
         lastName: formData.lastName,
         email: formData.email,
         phone: formData.phone,
-        city: formData.city || undefined,
         comment: formData.comment || undefined,
-        dayId: parseInt(formData.dayId),
+        dayId: parseInt(resolvedDayId),
         volunteerSlots: volunteerSlots as (
           | "preparation_ftour"
           | "service_ftour"
@@ -358,6 +361,11 @@ export default function Benevole() {
   };
 
   const availableDays = days?.filter(day => !isDayFull(day)) || [];
+  const serviceOnlyDefaultDayId = availableDays[0]?.id?.toString() ?? "";
+  const isServiceOnlyWithoutPreparation =
+    !isGroup &&
+    !formData.slots.preparation_ftour &&
+    formData.slots.service_ftour;
   const selectedDay = days?.find(day => day.id.toString() === formData.dayId);
   const selectedDayIsFull = selectedDay ? isDayFull(selectedDay) : false;
   const selectedGroupSize = Number(groupData.estimatedSize || 0);
@@ -371,6 +379,23 @@ export default function Benevole() {
     selectedGroupSize > selectedDayRemainingSeats;
   const dateLocale =
     lang === "ar" ? "ar-MA" : lang === "en" ? "en-US" : "fr-FR";
+
+  useEffect(() => {
+    if (!isServiceOnlyWithoutPreparation) return;
+
+    const selectedDayStillAvailable = availableDays.some(
+      day => day.id.toString() === formData.dayId
+    );
+
+    if (!selectedDayStillAvailable && serviceOnlyDefaultDayId) {
+      setFormData(prev => ({ ...prev, dayId: serviceOnlyDefaultDayId }));
+    }
+  }, [
+    availableDays,
+    formData.dayId,
+    isServiceOnlyWithoutPreparation,
+    serviceOnlyDefaultDayId,
+  ]);
 
   // Success screen translations
   const successTexts = {
@@ -474,7 +499,7 @@ export default function Benevole() {
         ? "ستتلقى رمز QR فريدًا لتقديمه عند الدخول يوم المشاركة."
         : lang === "en"
           ? "You will receive a unique QR code to present at the entrance on the day."
-          : "Vous recevrez un QR code unique à présenter à l'entrée le jour J.",
+          : "Un QR code personnel vous sera envoyé ; il devra être présenté à l’entrée le jour de l’événement.",
     important:
       lang === "ar" ? "مهم" : lang === "en" ? "Important" : "Important",
     dress:
@@ -574,14 +599,6 @@ export default function Benevole() {
           : "Email *",
     phone:
       lang === "ar" ? "الهاتف *" : lang === "en" ? "Phone *" : "Téléphone *",
-    city:
-      lang === "ar"
-        ? "المدينة (اختياري)"
-        : lang === "en"
-          ? "City (optional)"
-          : "Ville (optionnel)",
-    cityPlaceholder:
-      lang === "ar" ? "مدينتك" : lang === "en" ? "Your city" : "Votre ville",
     terms:
       lang === "ar"
         ? "أوافق على شروط المشاركة وسياسة الخصوصية. أتعهد باحترام التعليمات والحضور في اليوم المختار."
@@ -614,10 +631,10 @@ export default function Benevole() {
           : "Préparation ftour (15:00 – 16:45)",
     serviceSlot:
       lang === "ar"
-        ? "خدمة الفطور (17:00 – 19:15)"
+        ? "خدمة الفطور (17:30 – 19:15)"
         : lang === "en"
-          ? "Ftour service (17:00 – 19:15)"
-          : "Service ftour (17:00 – 19:15)",
+          ? "Ftour service (17:30 – 19:15)"
+          : "Service ftour (17:30 – 19:15)",
     slotsError:
       lang === "ar"
         ? "يرجى اختيار فترة واحدة على الأقل"
@@ -740,6 +757,24 @@ export default function Benevole() {
           ? "Registering group..."
           : "Inscription du groupe en cours...",
   };
+
+  const renderConsignesBox = (className = "") => (
+    <div
+      className={`bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2 ${className}`.trim()}
+    >
+      <h4 className="font-semibold text-amber-700 flex items-center gap-2">
+        <AlertCircle className="h-4 w-4" />
+        {formTexts.consignesTitle}
+      </h4>
+      <ul className="text-sm text-amber-900 space-y-1">
+        <li>• {formTexts.dress}</li>
+        <li>• {formTexts.punctuality}</li>
+        <li>• {formTexts.consigneNoBags}</li>
+        <li>• {formTexts.consigneVest}</li>
+        <li>• {formTexts.consigneNoPhotos}</li>
+      </ul>
+    </div>
+  );
 
   // Group success screen
   if (groupSuccess) {
@@ -899,6 +934,8 @@ export default function Benevole() {
                   </p>
                 </div>
 
+                {renderConsignesBox("text-left")}
+
                 <div className="pt-4">
                   <Button
                     onClick={() => setRegistrationSuccess(null)}
@@ -960,9 +997,10 @@ export default function Benevole() {
                   ? "عدد المشاركين محدود لأسباب داخل المؤسسة."
                   : lang === "en"
                     ? "The number of participants is limited for reasons inside the establishment."
-                    : "Le nombre de participants est limité durant l'évènement pour des raisons de sécurité mais également pour que votre expérience en tant que bénévole et le service assuré pour les bénéficiaires soit d'un niveau appréciable."}
+                    : "Le nombre de participants est limité durant l'évènement pour des raisons de sécurité mais également pour que ton expérience en tant que bénévole et le service assuré pour les bénéficiaires soit excellent."}
               </p>
             </div>
+            {renderConsignesBox()}
           </div>
         </section>
 
@@ -1031,7 +1069,7 @@ export default function Benevole() {
                           </span>
                         </div>
                         <p className="text-sm text-muted-foreground ml-4">
-                          17h00 – 19h15
+                          17h30 – 19h15
                         </p>
                       </div>
                     </div>
@@ -1088,15 +1126,73 @@ export default function Benevole() {
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-6">
+                      {/* Volunteer Slots */}
+                      <div className="space-y-3">
+                        <Label>{formTexts.slotsLabel}</Label>
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-3">
+                            <Checkbox
+                              id="slot-preparation"
+                              checked={formData.slots.preparation_ftour}
+                              onCheckedChange={checked => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  slots: {
+                                    ...prev.slots,
+                                    preparation_ftour: checked as boolean,
+                                  },
+                                }));
+                                setSlotsError(false);
+                              }}
+                            />
+                            <label
+                              htmlFor="slot-preparation"
+                              className="text-sm cursor-pointer"
+                            >
+                              {formTexts.preparationSlot}
+                            </label>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            <Checkbox
+                              id="slot-service"
+                              checked={formData.slots.service_ftour}
+                              onCheckedChange={checked => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  slots: {
+                                    ...prev.slots,
+                                    service_ftour: checked as boolean,
+                                  },
+                                }));
+                                setSlotsError(false);
+                              }}
+                            />
+                            <label
+                              htmlFor="slot-service"
+                              className="text-sm cursor-pointer"
+                            >
+                              {formTexts.serviceSlot}
+                            </label>
+                          </div>
+                        </div>
+                        {slotsError && (
+                          <p className="text-sm text-red-500">
+                            {formTexts.slotsError}
+                          </p>
+                        )}
+                      </div>
+
                       {/* Day Selection */}
                       <div className="space-y-2">
                         <Label htmlFor="day">{formTexts.dayLabel}</Label>
                         {!isGroup ? (
-                          <Select
+                          <>
+                            <Select
                             value={formData.dayId}
                             onValueChange={value =>
                               setFormData(prev => ({ ...prev, dayId: value }))
                             }
+                            disabled={isServiceOnlyWithoutPreparation}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder={formTexts.selectDay} />
@@ -1133,6 +1229,16 @@ export default function Benevole() {
                               )}
                             </SelectContent>
                           </Select>
+                          {isServiceOnlyWithoutPreparation && (
+                            <p className="text-xs text-muted-foreground">
+                              {lang === "ar"
+                                ? "في حالة اختيار خدمة الفطور فقط، لا حاجة لاختيار تاريخ. رمز QR صالح لدخول واحد في أي يوم للخدمة."
+                                : lang === "en"
+                                  ? "When only the service slot is selected, no date selection is required. The QR code remains valid for a single service entry on any day."
+                                  : "Si seul le créneau service est coché, la date est désactivée. Le QR code reste valable une seule fois pour le service, quel que soit le jour."}
+                            </p>
+                          )}
+                          </>
                         ) : (
                           <Select
                             value={formData.dayId}
@@ -1153,7 +1259,9 @@ export default function Benevole() {
                                   <SelectItem
                                     key={`group-${day.id}`}
                                     value={day.id.toString()}
-                                    disabled={isDayFull(day) && !isFutureDay(day.date)}
+                                    disabled={
+                                      isDayFull(day) && !isFutureDay(day.date)
+                                    }
                                   >
                                     {new Date(day.date).toLocaleDateString(
                                       dateLocale,
@@ -1184,7 +1292,8 @@ export default function Benevole() {
                           isAutoReopenedForServiceOnly(selectedDay) && (
                             <p className="text-sm text-amber-700 flex items-center gap-2">
                               <Info className="h-4 w-4" />
-                              Après 17h30, seul le créneau service est ouvert pour ce jour.
+                              Après 17h30, seul le créneau service est ouvert
+                              pour ce jour.
                             </p>
                           )}
                         {selectedGroupDayInsufficientCapacity && (
@@ -1360,6 +1469,22 @@ export default function Benevole() {
                               </label>
                             </div>
                           </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="comment">Commentaire</Label>
+                            <Textarea
+                              id="comment"
+                              value={formData.comment}
+                              onChange={e =>
+                                setFormData(prev => ({
+                                  ...prev,
+                                  comment: e.target.value,
+                                }))
+                              }
+                              placeholder="Ajoutez un commentaire (optionnel)"
+                              rows={3}
+                            />
+                          </div>
                         </>
                       ) : (
                         <>
@@ -1436,111 +1561,8 @@ export default function Benevole() {
                               />
                             </div>
                           </div>
-
-                          {/* City */}
-                          <div className="space-y-2">
-                            <Label htmlFor="city">{formTexts.city}</Label>
-                            <Input
-                              id="city"
-                              value={formData.city}
-                              onChange={e =>
-                                setFormData(prev => ({
-                                  ...prev,
-                                  city: e.target.value,
-                                }))
-                              }
-                              placeholder={formTexts.cityPlaceholder}
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="comment">Commentaire</Label>
-                            <Textarea
-                              id="comment"
-                              value={formData.comment}
-                              onChange={e =>
-                                setFormData(prev => ({
-                                  ...prev,
-                                  comment: e.target.value,
-                                }))
-                              }
-                              placeholder="Ajoutez un commentaire (optionnel)"
-                              rows={3}
-                            />
-                          </div>
                         </>
                       )}
-
-                      {/* Volunteer Slots */}
-                      <div className="space-y-3">
-                        <Label>{formTexts.slotsLabel}</Label>
-                        <div className="space-y-3">
-                          <div className="flex items-center space-x-3">
-                            <Checkbox
-                              id="slot-preparation"
-                              checked={formData.slots.preparation_ftour}
-                              onCheckedChange={checked => {
-                                setFormData(prev => ({
-                                  ...prev,
-                                  slots: {
-                                    ...prev.slots,
-                                    preparation_ftour: checked as boolean,
-                                  },
-                                }));
-                                setSlotsError(false);
-                              }}
-                            />
-                            <label
-                              htmlFor="slot-preparation"
-                              className="text-sm cursor-pointer"
-                            >
-                              {formTexts.preparationSlot}
-                            </label>
-                          </div>
-                          <div className="flex items-center space-x-3">
-                            <Checkbox
-                              id="slot-service"
-                              checked={formData.slots.service_ftour}
-                              onCheckedChange={checked => {
-                                setFormData(prev => ({
-                                  ...prev,
-                                  slots: {
-                                    ...prev.slots,
-                                    service_ftour: checked as boolean,
-                                  },
-                                }));
-                                setSlotsError(false);
-                              }}
-                            />
-                            <label
-                              htmlFor="slot-service"
-                              className="text-sm cursor-pointer"
-                            >
-                              {formTexts.serviceSlot}
-                            </label>
-                          </div>
-                        </div>
-                        {slotsError && (
-                          <p className="text-sm text-red-500">
-                            {formTexts.slotsError}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Consignes importantes */}
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
-                        <h4 className="font-semibold text-amber-700 flex items-center gap-2">
-                          <AlertCircle className="h-4 w-4" />
-                          {formTexts.consignesTitle}
-                        </h4>
-                        <ul className="text-sm text-amber-900 space-y-1">
-                          <li>• {formTexts.dress}</li>
-                          <li>• {formTexts.punctuality}</li>
-                          <li>• {formTexts.consigneNoBags}</li>
-                          <li>• {formTexts.consigneVest}</li>
-                          <li>• {formTexts.consigneNoPhotos}</li>
-                        </ul>
-                      </div>
 
                       {/* Terms */}
                       <div className="flex items-start space-x-3">
