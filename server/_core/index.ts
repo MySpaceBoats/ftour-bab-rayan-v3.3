@@ -16,6 +16,7 @@ import {
   initializeAllStocks,
 } from "../supabase-services";
 import { DONATION_SUGGESTED_AMOUNTS_MAD } from "../../shared/const";
+import { handleMemberCardRequest } from "../../worker/member-cards";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -200,6 +201,64 @@ async function startServer() {
       donations: { presets },
     });
   });
+
+  // Member card routes (proxied to Cloudflare Worker handler for dev parity)
+  function buildWorkerEnv() {
+    return {
+      SUPABASE_URL: process.env.SUPABASE_URL ?? '',
+      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ?? '',
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
+      RESEND_API_KEY: process.env.RESEND_API_KEY ?? '',
+      JWT_SECRET: process.env.JWT_SECRET ?? '',
+      VITE_APP_ID: process.env.VITE_APP_ID ?? '',
+      NODE_ENV: process.env.NODE_ENV ?? 'development',
+      GITHUB_APP_ID: process.env.GITHUB_APP_ID ?? '',
+      GITHUB_APP_INSTALLATION_ID: process.env.GITHUB_APP_INSTALLATION_ID ?? '',
+      GITHUB_APP_PRIVATE_KEY: process.env.GITHUB_APP_PRIVATE_KEY ?? '',
+      PUBLIC_APP_URL: process.env.PUBLIC_APP_URL,
+      CASH_ORDER_ADMIN_CC_EMAIL: process.env.CASH_ORDER_ADMIN_CC_EMAIL,
+      RESERVATION_PROOF_TOKEN_TTL_DAYS: process.env.RESERVATION_PROOF_TOKEN_TTL_DAYS,
+      RESERVATION_PAYMENT_PROOF_BUCKET: process.env.RESERVATION_PAYMENT_PROOF_BUCKET,
+      RESERVATION_ADMIN_DASHBOARD_URL: process.env.RESERVATION_ADMIN_DASHBOARD_URL,
+    };
+  }
+
+  const memberCardMiddleware: express.RequestHandler = async (req, res, next) => {
+    const fullUrl = `http://localhost${req.originalUrl}`;
+    const headers = new Headers();
+    for (const [key, value] of Object.entries(req.headers)) {
+      if (typeof value === 'string') headers.set(key, value);
+      else if (Array.isArray(value)) headers.set(key, value.join(', '));
+    }
+
+    let bodyInit: BodyInit | null = null;
+    const contentType = req.headers['content-type'] ?? '';
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      if (contentType.includes('application/json') && req.body != null) {
+        bodyInit = JSON.stringify(req.body);
+      }
+    }
+
+    const webRequest = new Request(fullUrl, {
+      method: req.method,
+      headers,
+      body: bodyInit,
+    });
+
+    try {
+      const response = await handleMemberCardRequest(webRequest, buildWorkerEnv());
+      if (response === null) return next();
+      res.status(response.status);
+      response.headers.forEach((value: string, key: string) => {
+        if (key.toLowerCase() !== 'content-encoding') res.setHeader(key, value);
+      });
+      res.send(await response.text());
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  app.use(['/api/admin/cards', '/api/admin/card', '/api/card', '/card'], memberCardMiddleware);
 
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
