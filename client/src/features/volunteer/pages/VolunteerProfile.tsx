@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Camera } from "lucide-react";
 import PrivateRoute from "../components/PrivateRoute";
 import VolunteerBadge from "../components/VolunteerBadge";
+import VolunteerGalleryUploadModule from "@/features/gallery/components/VolunteerGalleryUploadModule";
 import {
   getMyAttendance,
   getMyVolunteerProfile,
@@ -187,6 +188,15 @@ export default function VolunteerProfilePage() {
                       ? "Enregistrement..."
                       : "Enregistrer"}
                   </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Mes photos pour la galerie</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <VolunteerGalleryUploadModule />
                 </CardContent>
               </Card>
 
