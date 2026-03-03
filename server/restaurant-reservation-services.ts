@@ -242,26 +242,47 @@ export async function listRestaurantReservations(filters?: {
 }) {
   try {
     const client = getClient();
-    const queryLimit = filters?.limit || 200;
+    const hasExplicitLimit =
+      typeof filters?.limit === "number" && filters.limit > 0;
+    const queryLimit = hasExplicitLimit ? filters!.limit! : 1000;
     const queryOffset = filters?.offset || 0;
 
-    let query = client
-      .from("restaurant_reservations")
-      .select("*")
-      .order("id", { ascending: false })
-      .range(queryOffset, queryOffset + queryLimit - 1);
+    const fetchBatch = async (offset: number, limit: number) => {
+      let query = client
+        .from("restaurant_reservations")
+        .select("*")
+        .order("id", { ascending: false })
+        .range(offset, offset + limit - 1);
 
-    if (filters?.type) {
-      query = query.eq("type", filters.type);
+      if (filters?.type) {
+        query = query.eq("type", filters.type);
+      }
+      if (filters?.status) {
+        query = query.eq("status", filters.status);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    };
+
+    let rows: any[] = [];
+    if (hasExplicitLimit) {
+      rows = await fetchBatch(queryOffset, queryLimit);
+    } else {
+      let currentOffset = queryOffset;
+      while (true) {
+        const batch = await fetchBatch(currentOffset, queryLimit);
+        rows = rows.concat(batch);
+
+        if (batch.length < queryLimit) {
+          break;
+        }
+
+        currentOffset += queryLimit;
+      }
     }
-    if (filters?.status) {
-      query = query.eq("status", filters.status);
-    }
 
-    const { data, error } = await query;
-    if (error) throw error;
-
-    const rows = data || [];
     if (!rows.length) {
       return [];
     }
