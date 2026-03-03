@@ -5462,16 +5462,22 @@ const paymentsRouter = router({
   }),
 });
 
+const getAccessTokenFromRequest = (ctx: any): string => {
+  const authHeader = ctx.req.headers.authorization;
+  const accessToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.substring(7)
+    : null;
+
+  if (!accessToken) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
+  }
+
+  return accessToken;
+};
+
 const volunteerProfileRouter = router({
   me: protectedProcedure.query(async ({ ctx }) => {
-    const authHeader = ctx.req.headers.authorization;
-    const accessToken = authHeader?.startsWith("Bearer ")
-      ? authHeader.substring(7)
-      : null;
-
-    if (!accessToken) {
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
-    }
+    const accessToken = getAccessTokenFromRequest(ctx);
 
     await volunteerProfileServices.ensureVolunteerProfile({
       id: String(ctx.user.id),
@@ -5492,14 +5498,7 @@ const volunteerProfileRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const authHeader = ctx.req.headers.authorization;
-      const accessToken = authHeader?.startsWith("Bearer ")
-        ? authHeader.substring(7)
-        : null;
-
-      if (!accessToken) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
-      }
+      const accessToken = getAccessTokenFromRequest(ctx);
 
       return volunteerProfileServices.updateMyVolunteerProfile(accessToken, {
         first_name: input.first_name,
@@ -5516,14 +5515,7 @@ const volunteerProfileRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      const authHeader = ctx.req.headers.authorization;
-      const accessToken = authHeader?.startsWith("Bearer ")
-        ? authHeader.substring(7)
-        : null;
-
-      if (!accessToken) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
-      }
+      const accessToken = getAccessTokenFromRequest(ctx);
 
       await volunteerProfileServices.ensureVolunteerProfile({
         id: String(ctx.user.id),
@@ -5540,14 +5532,7 @@ const volunteerProfileRouter = router({
     }),
 
   registrations: protectedProcedure.query(async ({ ctx }) => {
-    const authHeader = ctx.req.headers.authorization;
-    const accessToken = authHeader?.startsWith("Bearer ")
-      ? authHeader.substring(7)
-      : null;
-
-    if (!accessToken) {
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
-    }
+    const accessToken = getAccessTokenFromRequest(ctx);
 
     await volunteerProfileServices.ensureVolunteerProfile({
       id: String(ctx.user.id),
@@ -5560,14 +5545,7 @@ const volunteerProfileRouter = router({
   }),
 
   remainingDays: protectedProcedure.query(async ({ ctx }) => {
-    const authHeader = ctx.req.headers.authorization;
-    const accessToken = authHeader?.startsWith("Bearer ")
-      ? authHeader.substring(7)
-      : null;
-
-    if (!accessToken) {
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
-    }
+    const accessToken = getAccessTokenFromRequest(ctx);
 
     await volunteerProfileServices.ensureVolunteerProfile({
       id: String(ctx.user.id),
@@ -5582,14 +5560,7 @@ const volunteerProfileRouter = router({
   registerForDay: protectedProcedure
     .input(z.object({ dayId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      const authHeader = ctx.req.headers.authorization;
-      const accessToken = authHeader?.startsWith("Bearer ")
-        ? authHeader.substring(7)
-        : null;
-
-      if (!accessToken) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
-      }
+      const accessToken = getAccessTokenFromRequest(ctx);
 
       await volunteerProfileServices.ensureVolunteerProfile({
         id: String(ctx.user.id),
@@ -5611,6 +5582,14 @@ const volunteerProfileRouter = router({
       const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
       if (!day) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
+      }
+
+      const today = getDateStringInTimeZone(new Date(), DEFAULT_RAMADAN_TIMEZONE);
+      if (day.date < today) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Impossible de s'inscrire pour une date passée.",
+        });
       }
 
       if (!day.isOpen) {
