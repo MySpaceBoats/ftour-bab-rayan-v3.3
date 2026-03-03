@@ -21,34 +21,40 @@ type UploadItem = {
   progress: number;
 };
 
+type EditionAlbumOption = {
+  id: string;
+  label: string;
+  year: number;
+};
+
 export default function VolunteerGalleryUploadModule() {
   const [items, setItems] = useState<UploadItem[]>([]);
-  const [selectedEdition, setSelectedEdition] = useState<string>("none");
+  const [selectedAlbumId, setSelectedAlbumId] = useState<string>("none");
   const albums = trpc.public.galleryAlbums.useQuery();
-  const editionOptions = useMemo(
-    () =>
-      Array.from({ length: 2030 - 2015 + 1 }, (_, index) =>
-        String(2015 + index)
-      ),
-    []
-  );
 
-  const albumIdByEdition = useMemo(() => {
-    const map = new Map<string, string>();
+  const editionOptions = useMemo<EditionAlbumOption[]>(() => {
+    const parseYear = (album: any) => {
+      const fields = [
+        typeof album?.name === "string" ? album.name : "",
+        typeof album?.slug === "string" ? album.slug : "",
+      ];
+      const yearMatch = fields.join(" ").match(/\b(20\d{2}|19\d{2})\b/);
+      return yearMatch ? Number(yearMatch[1]) : null;
+    };
 
-    for (const album of albums.data ?? []) {
-      const name = typeof album.name === "string" ? album.name : "";
-      const slug = typeof album.slug === "string" ? album.slug : "";
-
-      for (const edition of editionOptions) {
-        if (name.includes(edition) || slug.includes(edition)) {
-          map.set(edition, album.id);
-        }
-      }
-    }
-
-    return map;
-  }, [albums.data, editionOptions]);
+    return (albums.data ?? [])
+      .map((album: any) => {
+        const year = parseYear(album);
+        if (!year) return null;
+        return {
+          id: album.id as string,
+          label: album.name as string,
+          year,
+        };
+      })
+      .filter((album): album is EditionAlbumOption => Boolean(album))
+      .sort((a, b) => b.year - a.year);
+  }, [albums.data]);
 
   const upload = trpc.gallery.uploadPhotos.useMutation({
     onSuccess: () => {
@@ -86,12 +92,16 @@ export default function VolunteerGalleryUploadModule() {
   };
 
   const submit = async () => {
-    if (selectedEdition === "none") {
+    if (selectedAlbumId === "none") {
       toast.error("Merci de choisir l'édition (album) avant l'envoi.");
       return;
     }
     if (items.length === 0) return;
     const photos: any[] = [];
+
+    const selectedEdition = editionOptions.find(
+      album => album.id === selectedAlbumId
+    );
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
@@ -114,8 +124,10 @@ export default function VolunteerGalleryUploadModule() {
         fileName: item.file.name,
         fileType: item.file.type,
         fileData: dataUrl,
-        eventDate: selectedEdition,
-        albumId: albumIdByEdition.get(selectedEdition),
+        eventDate: selectedEdition?.year
+          ? String(selectedEdition.year)
+          : undefined,
+        albumId: selectedAlbumId,
         sortOrder: 0,
         status: "draft",
         isFeatured: false,
@@ -161,15 +173,15 @@ export default function VolunteerGalleryUploadModule() {
 
           <div className="space-y-2">
             <Label>Édition (album)</Label>
-            <Select value={selectedEdition} onValueChange={setSelectedEdition}>
+            <Select value={selectedAlbumId} onValueChange={setSelectedAlbumId}>
               <SelectTrigger>
                 <SelectValue placeholder="Choisir une édition" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Choisir une édition</SelectItem>
                 {editionOptions.map(edition => (
-                  <SelectItem key={edition} value={edition}>
-                    Édition {edition}
+                  <SelectItem key={edition.id} value={edition.id}>
+                    {edition.label}
                   </SelectItem>
                 ))}
               </SelectContent>
