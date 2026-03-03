@@ -96,49 +96,27 @@ export default function AdminRestaurantReservations() {
 
   // Fetch reservations via restaurantReservations router
   const {
-    data: particuliers = [],
-    isLoading: loadingP,
-    isError: errorP,
-    refetch: refetchP,
-  } = trpc.restaurantReservations.adminListParticuliers.useQuery(undefined, {
+    data: reservations = [],
+    isLoading,
+    isError: hasError,
+    refetch: refetchReservations,
+  } = trpc.restaurantReservations.adminListAll.useQuery(undefined, {
     retry: 1,
   });
-  const {
-    data: entreprises = [],
-    isLoading: loadingE,
-    isError: errorE,
-    refetch: refetchE,
-  } = trpc.restaurantReservations.adminListEntreprises.useQuery(undefined, {
-    retry: 1,
-  });
-  const {
-    data: groupes = [],
-    isLoading: loadingG,
-    isError: errorG,
-    refetch: refetchG,
-  } = trpc.restaurantReservations.adminListGroupes.useQuery(undefined, {
-    retry: 1,
-  });
-
-  const isLoading = loadingP || loadingE || loadingG;
-  const hasError = errorP || errorE || errorG;
 
   const refetchAll = () => {
-    refetchP();
-    refetchE();
-    refetchG();
+    refetchReservations();
   };
 
   // Combine all reservations
   const allReservations = useMemo(() => {
-    const all = [
-      ...particuliers.map((r: any) => ({
-        ...r,
-        type: r.type || "particulier",
-      })),
-      ...entreprises.map((r: any) => ({ ...r, type: r.type || "entreprise" })),
-      ...groupes.map((r: any) => ({ ...r, type: r.type || "groupe" })),
-    ];
+    const all = reservations.map((r: any) => ({
+      ...r,
+      type:
+        r.type === "particulier" || r.type === "entreprise" || r.type === "groupe"
+          ? r.type
+          : "particulier",
+    }));
     return all.sort((a: any, b: any) => {
       const reservationDateA = a.date ? new Date(a.date).getTime() : 0;
       const reservationDateB = b.date ? new Date(b.date).getTime() : 0;
@@ -149,7 +127,7 @@ export default function AdminRestaurantReservations() {
 
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [particuliers, entreprises, groupes]);
+  }, [reservations]);
 
   // Filter reservations
   const filteredReservations = useMemo(() => {
