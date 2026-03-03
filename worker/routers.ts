@@ -7,6 +7,7 @@ import { z } from "zod";
 import superjson from "superjson";
 import type { WorkerContext, WorkerUser } from "./context";
 import { createSupabaseAdmin } from "./supabase";
+import { sendEmail, generateGalleryUploadValidationEmail } from "./email";
 import * as XLSX from "xlsx";
 import {
   addDaysToDateString,
@@ -1261,6 +1262,15 @@ const scannerRouter = router({
 // GALLERY ROUTER
 // ============================================
 
+function normalizeGalleryEventDate(eventDate?: string): string | null {
+  if (!eventDate) return null;
+  const value = eventDate.trim();
+  if (!value) return null;
+  if (/^\d{4}$/.test(value)) return `${value}-01-01`;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  return null;
+}
+
 const gallerySchema = z.object({
   title: z.string().max(200).optional(),
   description: z.string().max(2000).optional(),
@@ -1269,7 +1279,7 @@ const gallerySchema = z.object({
   albumId: z.string().uuid().nullable().optional(),
   sortOrder: z.number().int().default(0),
   isFeatured: z.boolean().default(false),
-  status: z.enum(["draft", "published"]).default("draft"),
+  status: z.enum(["draft", "published", "rejected"]).default("draft"),
 });
 
 const GALLERY_ALLOWED_MIME_TYPES = [
@@ -1314,7 +1324,7 @@ const galleryRouter = router({
           albumId: z.string().uuid().optional(),
           tag: z.string().optional(),
           featured: z.boolean().optional(),
-          status: z.enum(["draft", "published"]).optional(),
+          status: z.enum(["draft", "published", "rejected"]).optional(),
         })
         .optional()
     )
@@ -1362,9 +1372,10 @@ const galleryRouter = router({
       return data;
     }),
 
-  uploadPhotos: adminProcedure
+  uploadPhotos: protectedProcedure
     .input(
       z.object({
+        validationEmail: z.string().email("Adresse email invalide").optional(),
         photos: z
           .array(
             z.object({
@@ -1382,6 +1393,52 @@ const galleryRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
+
+      const canManageGallery = Boolean(
+        ctx.user &&
+          [
+            "admin",
+            "super_admin",
+            "admin_ops",
+            "admin_boutique",
+            "admin_dons",
+            "admin_restaurant",
+            "vue_restaurant",
+            "admin_patisserie",
+            "admin_terroir",
+          ].includes(ctx.user.role)
+      );
+
+      const validationEmail = input.validationEmail?.trim().toLowerCase() ?? "";
+      if (!canManageGallery && !validationEmail) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Adresse email requise",
+        });
+      }
+
+      const tokenBytes = new Uint8Array(32);
+      crypto.getRandomValues(tokenBytes);
+      const validationToken = Array.from(tokenBytes)
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join("");
+      const baseUrl = (ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma").replace(/\/$/, "");
+      const validationUrl = `${baseUrl}/galerie/validation/${validationToken}`;
+
+      const albumIds = Array.from(
+        new Set(input.photos.map(p => p.albumId).filter(Boolean))
+      ) as string[];
+      const albumNameById = new Map<string, string>();
+      if (albumIds.length > 0) {
+        const { data: albumRows } = await supabase
+          .from("gallery_albums")
+          .select("id,name")
+          .in("id", albumIds);
+        for (const row of albumRows ?? []) {
+          if (row?.id && row?.name) albumNameById.set(row.id, row.name);
+        }
+      }
+
       const results = [];
 
       for (const photo of input.photos) {
@@ -1441,17 +1498,22 @@ const galleryRouter = router({
         const thumbUrl = supabase.storage.from("images").getPublicUrl(thumbPath)
           .data.publicUrl;
 
+        const defaultAlbumTag = photo.albumId ? albumNameById.get(photo.albumId) : undefined;
+        const mergedTags = Array.from(
+          new Set([...(photo.tags ?? []), ...(defaultAlbumTag ? [defaultAlbumTag] : [])])
+        );
+
         const { data, error } = await supabase
           .from("gallery_photos")
           .insert({
             title: photo.title,
             description: photo.description,
-            event_date: photo.eventDate,
-            tags: photo.tags,
+            event_date: normalizeGalleryEventDate(photo.eventDate),
+            tags: mergedTags,
             album_id: photo.albumId,
             sort_order: photo.sortOrder,
-            is_featured: photo.isFeatured,
-            status: photo.status,
+            is_featured: canManageGallery ? photo.isFeatured : false,
+            status: canManageGallery ? photo.status : "draft",
             image_original_url: originalUrl,
             image_thumb_url: thumbUrl,
             storage_path: originalPath,
@@ -1461,6 +1523,10 @@ const galleryRouter = router({
             size_bytes: buffer.length,
             mime_type: photo.fileType,
             uploaded_by: ctx.user?.email,
+            validation_email: validationEmail || null,
+            validation_token: validationEmail ? validationToken : null,
+            validation_sent_at: validationEmail ? new Date().toISOString() : null,
+            validated_at: canManageGallery ? new Date().toISOString() : null,
           })
           .select("*")
           .single();
@@ -1470,7 +1536,177 @@ const galleryRouter = router({
         results.push(data);
       }
 
+      if (!canManageGallery && results.length > 0 && validationEmail) {
+        const emailPayload = generateGalleryUploadValidationEmail({
+          email: validationEmail,
+          validationUrl,
+        });
+        const emailResult = await sendEmail({
+          to: validationEmail,
+          subject: emailPayload.subject,
+          html: emailPayload.html,
+          apiKey: ctx.env.RESEND_API_KEY,
+        });
+        if (!emailResult.success) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Photos enregistrées, mais impossible d'envoyer l'email de validation. Réessayez.",
+          });
+        }
+      }
+
       return results;
+    }),
+
+  validateUploadByEmail: publicProcedure
+    .input(z.object({ token: z.string().min(20) }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const { data: rows, error: fetchError } = await supabase
+        .from("gallery_photos")
+        .select("id,status")
+        .eq("validation_token", input.token);
+
+      if (fetchError)
+        throw new TRPCError({ code: "BAD_REQUEST", message: fetchError.message });
+
+      if (!rows || rows.length === 0)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Lien de validation invalide ou expiré" });
+
+      const alreadyValidated = rows.every((r: any) => r.status === "published");
+      if (alreadyValidated)
+        return { success: true, alreadyValidated: true, updatedCount: 0 };
+
+      const idsToPublish = rows
+        .filter((r: any) => r.status !== "published")
+        .map((r: any) => r.id);
+
+      const { error: updateError } = await supabase
+        .from("gallery_photos")
+        .update({ status: "published", validated_at: new Date().toISOString(), validation_token: null })
+        .in("id", idsToPublish);
+
+      if (updateError)
+        throw new TRPCError({ code: "BAD_REQUEST", message: updateError.message });
+
+      return { success: true, alreadyValidated: false, updatedCount: idsToPublish.length };
+    }),
+
+  createAlbum: adminProcedure
+    .input(z.object({
+      name: z.string().min(1).max(120),
+      slug: z.string().min(1).max(120),
+      sortOrder: z.number().int().default(0),
+      status: z.enum(["draft", "published"]).default("published"),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from("gallery_albums")
+        .insert({ name: input.name, slug: input.slug, sort_order: input.sortOrder, status: input.status })
+        .select("*")
+        .single();
+      if (error) throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      return data;
+    }),
+
+  publish: adminProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { error } = await supabase
+        .from("gallery_photos")
+        .update({ status: "published" })
+        .eq("id", input.id);
+      if (error) throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      return { success: true };
+    }),
+
+  unpublish: adminProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { error } = await supabase
+        .from("gallery_photos")
+        .update({ status: "draft" })
+        .eq("id", input.id);
+      if (error) throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      return { success: true };
+    }),
+
+  reject: adminProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { error } = await supabase
+        .from("gallery_photos")
+        .update({ status: "rejected" })
+        .eq("id", input.id);
+      if (error) throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      return { success: true };
+    }),
+
+  updatePhoto: adminProcedure
+    .input(z.object({ id: z.string().uuid(), ...gallerySchema.partial().shape }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { id, eventDate, albumId, sortOrder, isFeatured, ...rest } = input;
+      const { data, error } = await supabase
+        .from("gallery_photos")
+        .update({
+          title: rest.title,
+          description: rest.description,
+          event_date: eventDate !== undefined ? normalizeGalleryEventDate(eventDate) : undefined,
+          tags: rest.tags,
+          album_id: albumId,
+          sort_order: sortOrder,
+          is_featured: isFeatured,
+          status: rest.status,
+        })
+        .eq("id", id)
+        .select("*")
+        .single();
+      if (error) throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      return data;
+    }),
+
+  reorderPhotos: adminProcedure
+    .input(z.object({ items: z.array(z.object({ id: z.string().uuid(), sortOrder: z.number().int() })) }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      for (const item of input.items) {
+        const { error } = await supabase
+          .from("gallery_photos")
+          .update({ sort_order: item.sortOrder })
+          .eq("id", item.id);
+        if (error) throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      }
+      return { success: true };
+    }),
+
+  deletePhoto: adminProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from("gallery_photos")
+        .select("storage_path,thumb_storage_path,medium_storage_path")
+        .eq("id", input.id)
+        .single();
+      if (error) throw new TRPCError({ code: "NOT_FOUND", message: error.message });
+
+      const pathsToDelete = [data.storage_path, data.thumb_storage_path, data.medium_storage_path].filter(Boolean) as string[];
+      if (pathsToDelete.length > 0) {
+        await supabase.storage.from("images").remove(pathsToDelete);
+      }
+
+      const { error: deleteError } = await supabase
+        .from("gallery_photos")
+        .delete()
+        .eq("id", input.id);
+      if (deleteError) throw new TRPCError({ code: "BAD_REQUEST", message: deleteError.message });
+      return { success: true };
     }),
 });
 
@@ -1796,6 +2032,81 @@ const publicRouter = router({
 
     return data || [];
   }),
+
+  galleryAlbums: publicProcedure.query(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+    const { data, error } = await supabase
+      .from("gallery_albums")
+      .select("*")
+      .eq("status", "published")
+      .order("sort_order", { ascending: true });
+    if (error) {
+      console.error("[Worker] Error fetching gallery albums:", error);
+      return [];
+    }
+    return data || [];
+  }),
+
+  galleryPhotos: publicProcedure
+    .input(
+      z
+        .object({
+          album: z.string().optional(),
+          tag: z.string().optional(),
+          page: z.number().int().min(1).default(1),
+          pageSize: z.number().int().min(1).max(50).default(18),
+          sort: z.enum(["recent", "oldest", "featured"]).default("recent"),
+        })
+        .optional()
+    )
+    .query(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const page = input?.page ?? 1;
+      const pageSize = input?.pageSize ?? 18;
+      const start = (page - 1) * pageSize;
+      const end = start + pageSize - 1;
+
+      let query = supabase
+        .from("gallery_photos")
+        .select("*, gallery_albums(name, slug)", { count: "exact" })
+        .eq("status", "published");
+
+      if (input?.album) {
+        if (input.album.includes("-")) {
+          const { data: album } = await supabase
+            .from("gallery_albums")
+            .select("id")
+            .eq("slug", input.album)
+            .maybeSingle();
+          if (album?.id) query = query.eq("album_id", album.id);
+        } else {
+          query = query.eq("album_id", input.album);
+        }
+      }
+
+      if (input?.tag) query = query.contains("tags", [input.tag]);
+
+      const sort = input?.sort ?? "recent";
+      if (sort === "featured") {
+        query = query
+          .order("is_featured", { ascending: false })
+          .order("event_date", { ascending: false, nullsFirst: false })
+          .order("created_at", { ascending: false });
+      } else if (sort === "oldest") {
+        query = query
+          .order("event_date", { ascending: true, nullsFirst: false })
+          .order("created_at", { ascending: true });
+      } else {
+        query = query
+          .order("event_date", { ascending: false, nullsFirst: false })
+          .order("created_at", { ascending: false });
+      }
+
+      const { data, error, count } = await query.range(start, end);
+      if (error)
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      return { items: data || [], total: count ?? 0, page, pageSize };
+    }),
 });
 
 // ============================================
