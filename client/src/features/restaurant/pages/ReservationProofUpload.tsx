@@ -4,10 +4,10 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME = new Set(["application/pdf", "image/jpeg", "image/png"]);
 
 export default function ReservationProofUpload() {
-  const token = useMemo(
-    () => new URLSearchParams(window.location.search).get("token") || "",
-    []
-  );
+  const token = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("token") || params.get("t") || "";
+  }, []);
   const [loading, setLoading] = useState(true);
   const [valid, setValid] = useState(false);
   const [info, setInfo] = useState<{
