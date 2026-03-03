@@ -47,6 +47,7 @@ import {
   UsersRound,
   Download,
   Info,
+  TriangleAlert,
 } from "lucide-react";
 import { useI18n } from "@/i18n";
 
@@ -667,6 +668,12 @@ export default function Benevole() {
         : lang === "en"
           ? "Important instructions"
           : "Consignes importantes",
+    entryRule:
+      lang === "ar"
+        ? "الدخول للمشاركة في الخدمة بين الساعة 17:00 و17:45. يُمنع على المتطوعين الدخول بعد الساعة 17:45."
+        : lang === "en"
+          ? "Entry to participate in the service is between 5:00pm and 5:45pm. Volunteers are not permitted to enter after 5:45pm."
+          : "L'entrée pour participer au service est entre 17h00 et 17h45. Il est interdit aux bénévoles d'entrer au-delà de 17h45.",
     consigneNoBags:
       lang === "ar"
         ? "الحقائب غير مسموح بها."
@@ -787,6 +794,7 @@ export default function Benevole() {
         {formTexts.consignesTitle}
       </h4>
       <ul className="text-sm text-amber-900 space-y-1">
+        <li className="font-bold text-red-700">• {formTexts.entryRule}</li>
         <li>• {formTexts.dress}</li>
         <li>• {formTexts.punctuality}</li>
         <li>• {formTexts.consigneNoBags}</li>
@@ -974,9 +982,24 @@ export default function Benevole() {
     );
   }
 
+  const entryRuleText =
+    lang === "ar"
+      ? "الدخول للمشاركة في الخدمة بين الساعة 17:00 و17:45. يُمنع على المتطوعين الدخول بعد الساعة 17:45."
+      : lang === "en"
+        ? "Entry to participate in the service is between 5:00pm and 5:45pm. Volunteers are not permitted to enter after 5:45pm."
+        : "L'entrée pour participer au service est entre 17h00 et 17h45. Il est interdit aux bénévoles d'entrer au-delà de 17h45.";
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
+
+      {/* Red alert banner */}
+      <div className="bg-red-600 text-white w-full py-3 px-4">
+        <div className="container max-w-3xl flex items-start gap-3">
+          <TriangleAlert className="h-5 w-5 mt-0.5 shrink-0" />
+          <p className="text-sm font-bold leading-snug">{entryRuleText}</p>
+        </div>
+      </div>
 
       <main className="flex-1">
         {/* Hero */}
