@@ -91,6 +91,24 @@ function apiFetch(path: string, init?: RequestInit) {
   return fetch(path, { ...init, headers });
 }
 
+async function parseApiResponse<T>(res: Response): Promise<T> {
+  const contentType = res.headers.get('content-type') || '';
+  const rawBody = await res.text();
+
+  if (!contentType.includes('application/json')) {
+    if (rawBody.trim().startsWith('<!doctype') || rawBody.trim().startsWith('<html')) {
+      throw new Error('Réponse invalide du serveur (HTML retourné au lieu de JSON)');
+    }
+    throw new Error('Réponse invalide du serveur (format JSON attendu)');
+  }
+
+  try {
+    return JSON.parse(rawBody) as T;
+  } catch {
+    throw new Error('Réponse JSON invalide reçue du serveur');
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Status badge component
 // ---------------------------------------------------------------------------
@@ -170,8 +188,8 @@ export default function AdminMemberCards() {
       if (search.trim()) params.set('search', search.trim());
       params.set('page', String(pageOverride ?? page));
       const res = await apiFetch(`/api/admin/cards?${params.toString()}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await parseApiResponse<{ items?: OrderItem[]; count?: number }>(res);
+      if (!res.ok) throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
       setItems(data.items ?? []);
       setTotalCount(data.count ?? 0);
     } catch (err: any) {
@@ -185,8 +203,8 @@ export default function AdminMemberCards() {
     setEventsLoading(true);
     try {
       const res = await apiFetch(`/api/admin/cards/${orderId}/events`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await parseApiResponse<{ items?: EventItem[] }>(res);
+      if (!res.ok) throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
       setEvents(data.items ?? []);
     } catch {
       setEvents([]);
@@ -229,7 +247,7 @@ export default function AdminMemberCards() {
     setActionLoading(orderId);
     try {
       const res = await apiFetch(path, { method: 'POST', body: JSON.stringify(payload) });
-      const data = await res.json();
+      const data = await parseApiResponse<{ error?: string }>(res);
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
       toast.success(`${label} — succès`);
       await load();
@@ -244,7 +262,7 @@ export default function AdminMemberCards() {
   const downloadProof = async (orderId: number) => {
     try {
       const res = await apiFetch(`/api/admin/card/proof-url?order_id=${orderId}`);
-      const data = await res.json();
+      const data = await parseApiResponse<{ error?: string; url?: string }>(res);
       if (!res.ok || !data.url) throw new Error(data.error ?? 'URL indisponible');
       window.open(data.url, '_blank', 'noopener,noreferrer');
     } catch (err: any) {
