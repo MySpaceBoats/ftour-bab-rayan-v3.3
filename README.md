@@ -172,35 +172,121 @@ Nouveau flux "Menu Solidaire" via QR unique:
 
 ## Carte Membre Bab Rayan
 
-Implémentation livrée:
+Système complet de gestion de cartes membres avec workflow email en 2 étapes (commande → paiement), upload de preuve de virement et tableau de bord admin.
 
-- Migration SQL: `supabase/migrations/add_member_cards.sql`
-  - Tables: `members`, `member_card_orders`, `member_card_events`, `member_card_tokens`
-  - Fonction serveur: `transition_member_card_status(old_status, new_status)` + trigger anti-régression
-  - RLS activé sur les tables cartes membres
-  - Bucket storage privé `member-card-proofs` (10MB, pdf/jpg/png)
-- Worker API: `worker/member-cards.ts`
-  - `POST /api/admin/card/send-order-email`
-  - `GET /card/confirm-order?token=...`
-  - `GET /card/payment?token=...`
-  - `POST /api/card/confirm-payment` (multipart, upload preuve serveur)
-  - `POST /api/admin/card/mark-printed`
-  - `POST /api/admin/card/mark-delivered`
-  - + utilitaires admin: renvoi email paiement, marquer payé, signed URL preuve
-- Templates emails: `worker/member-card-emails.ts`
-  - Email commande + CTA confirmation
-  - Email paiement + infos paiement + CTA validation
-- Dashboard admin: `client/src/features/ops/admin/AdminMemberCards.tsx`
-  - Route `/admin/cards`
-  - Liste, recherche, filtre statut, actions workflow
-  - Téléchargement preuve via signed URL
-  - Timeline des événements
+### Fichiers clés
 
-Notes sécurité:
+| Fichier | Rôle |
+|---------|------|
+| `supabase/migrations/add_member_cards.sql` | Schéma PostgreSQL + triggers + RLS + bucket storage |
+| `worker/member-cards.ts` | Routes Cloudflare Worker (API publique + admin) |
+| `worker/member-card-emails.ts` | Templates HTML emails (commande + paiement) |
+| `worker/member-cards.test.ts` | Tests unitaires (transitions, tokens, idempotence, upload) |
+| `client/src/features/ops/admin/AdminMemberCards.tsx` | Dashboard admin React (`/admin/cards`) |
 
-- Endpoints admin protégés via JWT Supabase + rôle admin (`users.role`).
-- Endpoints publics limités au token opaque hashé en DB + expiration.
-- Toutes les actions écrivent dans `member_card_events`.
+### Configuration des variables d'environnement
+
+#### Cloudflare Worker (production)
+
+Configurer dans le dashboard Cloudflare Workers → Settings → Variables, ou via `wrangler secret put <NOM>` :
+
+| Variable | Obligatoire | Description |
+|----------|-------------|-------------|
+| `SUPABASE_URL` | ✅ | URL du projet Supabase (ex. `https://xxxx.supabase.co`) |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Clé service role Supabase (**côté Worker uniquement — ne jamais exposer côté client**) |
+| `SUPABASE_ANON_KEY` | ✅ | Clé publique Supabase (validation JWT admin) |
+| `RESEND_API_KEY` | ✅ | Clé API [Resend](https://resend.com) pour l'envoi d'emails |
+| `PUBLIC_APP_URL` | ✅ | URL publique du site (ex. `https://www.ftourbabrayan.ma`) — utilisée dans les liens emails |
+| `JWT_SECRET` | ✅ | Secret JWT pour la validation des sessions |
+| `ORDER_PROOF_SECRET` | Recommandé | Secret HMAC pour les tokens de preuve (autres fonctionnalités) |
+| `CASH_ORDER_ADMIN_CC_EMAIL` | Optionnel | Email copie admin pour les commandes espèces |
+
+#### Développement local
+
+Créer un fichier `.dev.vars` à la racine (ignoré par git) pour `wrangler dev` :
+
+```ini
+SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+SUPABASE_ANON_KEY=eyJ...
+RESEND_API_KEY=re_...
+PUBLIC_APP_URL=http://localhost:5173
+JWT_SECRET=local-dev-secret
+```
+
+### Déploiement de la migration SQL
+
+Exécuter dans Supabase SQL Editor (rôle `postgres` ou `service_role`) :
+
+```sql
+-- Copier-coller le contenu de :
+-- supabase/migrations/add_member_cards.sql
+```
+
+La migration crée :
+- Tables : `members`, `member_card_orders`, `member_card_events`, `member_card_tokens`
+- Trigger `updated_at` sur `member_card_orders`
+- Trigger anti-régression de statut via `enforce_member_card_status_transition()`
+- Fonction `transition_member_card_status(old, new)` → `boolean`
+- RLS activé (accès service role uniquement)
+- Bucket storage privé `member-card-proofs` (max 10 Mo, PDF/JPG/PNG)
+
+### Workflow des statuts
+
+```
+INSCRIT
+  └─→ MAIL_COMMANDE_ENVOYE  (admin: send-order-email)
+        └─→ CARTE_DEMANDEE       (membre: clic lien email)
+              └─→ MAIL_PAIEMENT_ENVOYE (automatique)
+                    ├─→ PAIEMENT_RECU  (membre: sur place  OU  admin: mark-paid)
+                    └─→ A_IMPRIMER     (membre: virement + preuve)
+                          └─→ IMPRIMEE  (admin: mark-printed)
+                                └─→ LIVREE (admin: mark-delivered)
+```
+
+Les régressions sont bloquées au niveau DB (trigger) **et** Worker (`canAdvance`).
+
+### API Worker — endpoints
+
+#### Admin (JWT Supabase obligatoire)
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| `POST` | `/api/admin/card/send-order-email` | `{member_id}` → email commande avec lien signé |
+| `POST` | `/api/admin/card/resend-payment-email` | `{order_id}` → renvoie email paiement |
+| `POST` | `/api/admin/card/mark-paid` | `{order_id}` → `PAIEMENT_RECU` (sur place) |
+| `POST` | `/api/admin/card/mark-printed` | `{order_id}` → `IMPRIMEE` |
+| `POST` | `/api/admin/card/mark-delivered` | `{order_id}` → `LIVREE` |
+| `GET` | `/api/admin/cards` | `?status=&search=&page=` → liste paginée |
+| `GET` | `/api/admin/cards/:id/events` | Timeline d'une order |
+| `GET` | `/api/admin/card/proof-url` | `?order_id=` → signed URL 10 min |
+
+#### Publics (token opaque uniquement)
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| `GET` | `/card/confirm-order?token=` | Confirme la demande, envoie email paiement |
+| `GET` | `/card/payment?token=` | Formulaire de paiement (méthode + preuve) |
+| `POST` | `/api/card/confirm-payment` | `multipart {token, payment_method, file?}` |
+
+### Sécurité
+
+- Endpoints admin : JWT Supabase + rôle dans `users.role` (admin/super_admin/admin_ops…)
+- Endpoints publics : token opaque SHA-256 hashé en DB, expiration 72h, usage unique
+- Upload : validation MIME + extension + taille côté Worker (service role Supabase)
+- Signed URLs téléchargement : TTL 10 min, générées à la demande
+- Audit complet dans `member_card_events`
+
+### Tests
+
+```bash
+pnpm test
+```
+
+Couvre (`worker/member-cards.test.ts`) :
+- Transitions de statut (autorisées + bloquées + idempotence)
+- Expiration de tokens
+- Validation upload (MIME, extension, taille, limite exacte)
 
 ### E2E rapide
 
