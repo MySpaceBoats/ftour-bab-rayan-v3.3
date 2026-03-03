@@ -765,10 +765,9 @@ export const restaurantReservationsRouter = router({
     }
     try {
       await runAutoCancellationAndNotify();
-      const reservations = await reservationServices.listRestaurantReservations({
+      return await reservationServices.listRestaurantReservations({
         type: "groupe",
       });
-      return reservations.filter((reservation) => reservation.status !== "pending_confirmation");
     } catch (error) {
       console.error("[adminListGroupes] Error:", error);
       throw new TRPCError({
