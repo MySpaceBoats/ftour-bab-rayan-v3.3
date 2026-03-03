@@ -39,6 +39,16 @@ export interface AuthSession {
   expiresAt: number | null;
 }
 
+export interface RequestPasswordResetData {
+  email: string;
+  redirectTo: string;
+}
+
+export interface CompletePasswordResetData {
+  tokenHash: string;
+  newPassword: string;
+}
+
 // Inscription d'un nouvel utilisateur
 export async function signUpUser(data: SignUpData): Promise<{ user: AuthUser | null; error: string | null }> {
   try {
@@ -223,6 +233,58 @@ export async function refreshUserSession(refreshToken: string): Promise<{ sessio
   } catch (err) {
     console.error('[Supabase Auth] Refresh session error:', err);
     return { session: null, error: 'Erreur inattendue' };
+  }
+}
+
+export async function requestPasswordReset(data: RequestPasswordResetData): Promise<{ error: string | null }> {
+  try {
+    const supabaseAdmin = getAdminClient();
+    const { error } = await supabaseAdmin.auth.resetPasswordForEmail(data.email, {
+      redirectTo: data.redirectTo,
+    });
+
+    if (error) {
+      console.error('[Supabase Auth] Request password reset error:', error);
+      return { error: error.message };
+    }
+
+    return { error: null };
+  } catch (err) {
+    console.error('[Supabase Auth] Request password reset unexpected error:', err);
+    return { error: 'Erreur inattendue' };
+  }
+}
+
+export async function completePasswordReset(data: CompletePasswordResetData): Promise<{ error: string | null }> {
+  try {
+    const supabaseAdmin = getAdminClient();
+
+    const { data: otpData, error: otpError } = await supabaseAdmin.auth.verifyOtp({
+      token_hash: data.tokenHash,
+      type: 'recovery',
+    });
+
+    if (otpError || !otpData.user) {
+      console.error('[Supabase Auth] Verify recovery token error:', otpError);
+      return { error: 'Lien de réinitialisation invalide ou expiré' };
+    }
+
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+      otpData.user.id,
+      {
+        password: data.newPassword,
+      }
+    );
+
+    if (updateError) {
+      console.error('[Supabase Auth] Complete password reset error:', updateError);
+      return { error: updateError.message };
+    }
+
+    return { error: null };
+  } catch (err) {
+    console.error('[Supabase Auth] Complete password reset unexpected error:', err);
+    return { error: 'Erreur inattendue' };
   }
 }
 // Déconnexion

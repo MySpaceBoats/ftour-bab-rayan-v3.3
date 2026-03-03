@@ -63,6 +63,8 @@ function mapReservation(r: any) {
     deposit: Number(r.deposit ?? r.depositAmount ?? 0),
     nbAdult: Number(r.nb_adult ?? r.nbAdult ?? 0),
     nbKids: Number(r.nb_kids ?? r.nbKids ?? 0),
+    adultAmount: Number(r.adult_amount ?? r.adultAmount ?? 0),
+    kidsAmount: Number(r.kids_amount ?? r.kidsAmount ?? 0),
     paymentMode: r.payment_mode ?? r.paymentMode ?? "cash",
     respResa: r.resp_resa ?? r.respResa ?? "Nayla",
     modeDeposit: r.mode_deposit ?? r.modeDeposit ?? null,
@@ -102,6 +104,8 @@ export async function createRestaurantReservation(data: {
   deposit?: number;
   nbAdult?: number;
   nbKids?: number;
+  adultAmount?: number;
+  kidsAmount?: number;
   paymentMode?: "cash" | "virement" | "espece";
   respResa?: "Nayla" | "Hind" | "Kamal" | "Rita" | "Réda" | "Souad";
   modeDeposit?: string;
@@ -130,6 +134,8 @@ export async function createRestaurantReservation(data: {
         deposit: data.deposit ?? 0,
         nb_adult: data.nbAdult ?? 0,
         nb_kids: data.nbKids ?? 0,
+        adult_amount: data.adultAmount ?? 0,
+        kids_amount: data.kidsAmount ?? 0,
         payment_mode: data.paymentMode ?? "cash",
         resp_resa: data.respResa ?? "Nayla",
         mode_deposit: data.modeDeposit ?? null,
@@ -468,6 +474,8 @@ export async function updateRestaurantReservation(
     deposit?: number;
     nbAdult?: number;
     nbKids?: number;
+    adultAmount?: number;
+    kidsAmount?: number;
     paymentMode?: "cash" | "virement" | "espece";
     respResa?: "Nayla" | "Hind" | "Kamal" | "Rita" | "Réda" | "Souad";
     modeDeposit?: string | null;
@@ -500,6 +508,8 @@ export async function updateRestaurantReservation(
     if (data.deposit !== undefined) updateData.deposit = data.deposit;
     if (data.nbAdult !== undefined) updateData.nb_adult = data.nbAdult;
     if (data.nbKids !== undefined) updateData.nb_kids = data.nbKids;
+    if (data.adultAmount !== undefined) updateData.adult_amount = data.adultAmount;
+    if (data.kidsAmount !== undefined) updateData.kids_amount = data.kidsAmount;
     if (data.paymentMode !== undefined) updateData.payment_mode = data.paymentMode;
     if (data.respResa !== undefined) updateData.resp_resa = data.respResa;
     if (data.modeDeposit !== undefined) updateData.mode_deposit = data.modeDeposit;

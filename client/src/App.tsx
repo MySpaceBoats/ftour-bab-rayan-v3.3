@@ -23,6 +23,7 @@ import MentionsLegales from "@/features/public/pages/MentionsLegales";
 import RibDownload from "@/features/public/pages/RibDownload";
 import Galerie from "@/features/gallery/pages/Galerie";
 import BenevoleGalerieUpload from "@/features/gallery/pages/BenevoleGalerieUpload";
+import GalerieValidationUpload from "@/features/gallery/pages/GalerieValidationUpload";
 import AdminGalerie from "@/features/gallery/admin/AdminGalerie";
 import AdminGalerieNouveau from "@/features/gallery/admin/AdminGalerieNouveau";
 import AdminGalerieEdit from "@/features/gallery/admin/AdminGalerieEdit";
@@ -32,6 +33,7 @@ import AdminGalerieEdit from "@/features/gallery/admin/AdminGalerieEdit";
 // ============================================
 import Login from "@/features/auth/pages/Login";
 import Signup from "@/features/auth/pages/Signup";
+import ForgotPassword from "@/features/auth/pages/ForgotPassword";
 
 // ============================================
 // RESTAURANT — features/restaurant
@@ -292,6 +294,7 @@ function LocalizedRoutes() {
         component={GroupReservationEmailConfirmation}
       />
       <Route path="/reservations/preuve" component={ReservationProofUpload} />
+      <Route path="/galerie/validation/:token" component={GalerieValidationUpload} />
 
       {/* ================================================
           REDIRECT ROOT → default locale
@@ -321,6 +324,7 @@ function LocalizedRoutes() {
       <Route path="/:lang/galerie" component={Galerie} />
       <Route path="/:lang/connexion" component={Login} />
       <Route path="/:lang/inscription" component={Signup} />
+      <Route path="/:lang/reinitialiser-mot-de-passe" component={ForgotPassword} />
       <Route path="/:lang/profil-benevole" component={VolunteerProfilePage} />
 
       {/* Restaurant public */}
@@ -397,6 +401,9 @@ function LocalizedRoutes() {
       </Route>
       <Route path="/inscription">
         {() => <Redirect to={`/${lang}/inscription`} />}
+      </Route>
+      <Route path="/reinitialiser-mot-de-passe">
+        {() => <Redirect to={`/${lang}/reinitialiser-mot-de-passe`} />}
       </Route>
       <Route path="/profil-benevole">
         {() => <Redirect to={`/${lang}/profil-benevole`} />}

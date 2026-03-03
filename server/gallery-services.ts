@@ -30,6 +30,26 @@ export interface GalleryPhotoCreateInput {
   sizeBytes: number;
   mimeType: string;
   uploadedBy?: string;
+  validationEmail?: string;
+  validationToken?: string;
+  validationSentAt?: string;
+  validatedAt?: string;
+}
+
+function normalizeGalleryEventDate(eventDate?: string) {
+  if (!eventDate) return null;
+  const value = eventDate.trim();
+  if (!value) return null;
+
+  if (/^\d{4}$/.test(value)) {
+    return `${value}-01-01`;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  return null;
 }
 
 export async function uploadGalleryAsset(
@@ -67,7 +87,7 @@ export async function createGalleryPhoto(input: GalleryPhotoCreateInput) {
     .insert({
       title: input.title,
       description: input.description,
-      event_date: input.eventDate,
+      event_date: normalizeGalleryEventDate(input.eventDate),
       tags: input.tags ?? [],
       album_id: input.albumId,
       sort_order: input.sortOrder ?? 0,
@@ -84,6 +104,10 @@ export async function createGalleryPhoto(input: GalleryPhotoCreateInput) {
       size_bytes: input.sizeBytes,
       mime_type: input.mimeType,
       uploaded_by: input.uploadedBy,
+      validation_email: input.validationEmail,
+      validation_token: input.validationToken,
+      validation_sent_at: input.validationSentAt,
+      validated_at: input.validatedAt,
     })
     .select("*")
     .single();

@@ -816,6 +816,8 @@ export const restaurantReservationsRouter = router({
         date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide"),
         seatsTotal: z.number().int().min(2),
         totalAmount: z.number().min(0).optional(),
+        adultAmount: z.number().min(0).optional(),
+        kidsAmount: z.number().min(0).optional(),
         amountReceived: z.number().min(0).optional(),
         deposit: z.number().min(0).optional(),
         nbAdult: z.number().int().min(0).optional(),
@@ -869,6 +871,8 @@ export const restaurantReservationsRouter = router({
             deposit: input.deposit,
             nbAdult: input.nbAdult,
             nbKids: input.nbKids,
+            adultAmount: input.adultAmount,
+            kidsAmount: input.kidsAmount,
             paymentMode: input.paymentMode,
             respResa: input.respResa,
             modeDeposit: input.modeDeposit,
@@ -940,30 +944,40 @@ export const restaurantReservationsRouter = router({
 
   adminEdit: protectedProcedure
     .input(
-      z.object({
-        id: z.number(),
-        name: z.string().min(1).optional(),
-        email: z.string().email().optional(),
-        phone: z.string().min(1).optional(),
-        date: z
-          .string()
-          .regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide")
-          .optional(),
-        seatsTotal: z.number().int().min(1).optional(),
-        notes: z.string().optional(),
-        totalAmount: z.number().min(0).optional(),
-        amountReceived: z.number().min(0).optional(),
-        deposit: z.number().min(0).optional(),
-        nbAdult: z.number().int().min(0).optional(),
-        nbKids: z.number().int().min(0).optional(),
-        paymentMode: z.enum(["cash", "virement", "espece"]).optional(),
-        respResa: z.enum(["Nayla", "Hind", "Kamal", "Rita", "Réda", "Souad"]).optional(),
-        companyName: z.string().optional(),
-        groupName: z.string().optional(),
-        displayChoice: z.string().optional(),
-        modeDeposit: z.string().nullable().optional(),
-        dateAvReg: z.string().nullable().optional(),
-      })
+      z
+        .object({
+          id: z.number(),
+          name: z.string().min(1).optional(),
+          email: z.string().email().optional(),
+          phone: z.string().min(1).optional(),
+          date: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide")
+            .optional(),
+          seatsTotal: z.number().int().min(1).optional(),
+          notes: z.string().optional(),
+          totalAmount: z.number().min(0).optional(),
+          adultAmount: z.number().min(0).optional(),
+          kidsAmount: z.number().min(0).optional(),
+          amountReceived: z.number().min(0).optional(),
+          deposit: z.number().min(0).optional(),
+          nbAdult: z.number().int().min(0).optional(),
+          nbKids: z.number().int().min(0).optional(),
+          paymentMode: z.enum(["cash", "virement", "espece"]).optional(),
+          respResa: z.enum(["Nayla", "Hind", "Kamal", "Rita", "Réda", "Souad"]).optional(),
+          companyName: z.string().optional(),
+          groupName: z.string().optional(),
+          displayChoice: z.string().optional(),
+          modeDeposit: z.string().nullable().optional(),
+          dateAvReg: z.string().nullable().optional(),
+        })
+        .refine(
+          payload =>
+            Object.keys(payload).some(key => key !== "id" && payload[key as keyof typeof payload] !== undefined),
+          {
+            message: "Aucun champ valide à mettre à jour",
+          }
+        )
     )
     .mutation(async ({ input, ctx }) => {
       const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
