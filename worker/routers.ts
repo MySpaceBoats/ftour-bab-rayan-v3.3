@@ -5896,6 +5896,30 @@ function mapReservation(r: any) {
   };
 }
 
+function normalizeReservationType(value: unknown): "particulier" | "groupe" | "entreprise" | "unknown" {
+  if (typeof value !== "string") return "unknown";
+
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (["particulier", "particuliers", "individual", "individuel"].includes(normalized)) {
+    return "particulier";
+  }
+
+  if (["groupe", "groupes", "group", "groups", "association", "associations"].includes(normalized)) {
+    return "groupe";
+  }
+
+  if (["entreprise", "entreprises", "company", "companies", "corporate"].includes(normalized)) {
+    return "entreprise";
+  }
+
+  return "unknown";
+}
+
 const restaurantReservationsRouter = router({
   particulier: router({
     create: publicProcedure
@@ -6317,7 +6341,6 @@ const restaurantReservationsRouter = router({
     const { data, error } = await supabase
       .from("restaurant_reservations")
       .select("*")
-      .eq("type", "groupe")
       .order("created_at", { ascending: false });
     if (error) {
       console.error("[adminListGroupes] Error:", error);
@@ -6326,7 +6349,9 @@ const restaurantReservationsRouter = router({
         message: error.message,
       });
     }
-    return (data || []).map(mapReservation);
+    return (data || [])
+      .filter((reservation) => normalizeReservationType(reservation.type) === "groupe")
+      .map(mapReservation);
   }),
 
   adminListEntreprises: protectedProcedure.query(async ({ ctx }) => {
@@ -6338,7 +6363,6 @@ const restaurantReservationsRouter = router({
     const { data, error } = await supabase
       .from("restaurant_reservations")
       .select("*")
-      .eq("type", "entreprise")
       .order("created_at", { ascending: false });
     if (error) {
       console.error("[adminListEntreprises] Error:", error);
@@ -6347,7 +6371,9 @@ const restaurantReservationsRouter = router({
         message: error.message,
       });
     }
-    return (data || []).map(mapReservation);
+    return (data || [])
+      .filter((reservation) => normalizeReservationType(reservation.type) === "entreprise")
+      .map(mapReservation);
   }),
 
   adminCreateManual: protectedProcedure
