@@ -830,6 +830,33 @@ export const restaurantReservationsRouter = router({
     }
   }),
 
+  adminListAll: protectedProcedure.query(async ({ ctx }) => {
+    const allowedRoles = [
+      "admin",
+      "super_admin",
+      "admin_restaurant",
+      "vue_restaurant",
+      "admin_ops",
+      "admin_operations",
+    ];
+    if (!allowedRoles.includes(ctx.user?.role || "")) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
+    }
+    try {
+      await runAutoCancellationAndNotifySafely();
+      return await reservationServices.listRestaurantReservations();
+    } catch (error) {
+      console.error("[adminListAll] Error:", error);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Erreur lors du chargement des réservations",
+      });
+    }
+  }),
+
   adminCreateManual: protectedProcedure
     .input(
       z.object({
