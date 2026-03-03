@@ -4265,23 +4265,39 @@ const restaurantModuleRouter = router({
           code: "INTERNAL_SERVER_ERROR",
           message: "Supabase non configuré",
         });
-      let query = supabase
-        .from("restaurant_reservations")
-        .select("*")
-        .eq("type", "particulier")
-        .order("created_at", { ascending: false });
-      if (input?.status) query = query.eq("status", input.status);
-      if (input?.search)
-        query = query.or(
-          `name.ilike.%${input.search}%,phone.ilike.%${input.search}%,reference.ilike.%${input.search}%`
-        );
-      const { data, error } = await query;
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
-      return (data || []).map(mapRestaurantReservation);
+
+      const pageSize = 1000;
+      let offset = 0;
+      const rows: any[] = [];
+
+      while (true) {
+        let query = supabase
+          .from("restaurant_reservations")
+          .select("*")
+          .eq("type", "particulier")
+          .order("created_at", { ascending: false })
+          .range(offset, offset + pageSize - 1);
+
+        if (input?.status) query = query.eq("status", input.status);
+        if (input?.search)
+          query = query.or(
+            `name.ilike.%${input.search}%,phone.ilike.%${input.search}%,reference.ilike.%${input.search}%`
+          );
+
+        const { data, error } = await query;
+        if (error)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: error.message,
+          });
+
+        const batch = data || [];
+        rows.push(...batch);
+        if (batch.length < pageSize) break;
+        offset += pageSize;
+      }
+
+      return rows.map(mapRestaurantReservation);
     }),
 
   adminListEntreprises: adminRestaurantProcedure
@@ -4302,23 +4318,39 @@ const restaurantModuleRouter = router({
           code: "INTERNAL_SERVER_ERROR",
           message: "Supabase non configuré",
         });
-      let query = supabase
-        .from("restaurant_reservations")
-        .select("*")
-        .eq("type", "entreprise")
-        .order("created_at", { ascending: false });
-      if (input?.status) query = query.eq("status", input.status);
-      if (input?.search)
-        query = query.or(
-          `name.ilike.%${input.search}%,company_name.ilike.%${input.search}%,reference.ilike.%${input.search}%`
-        );
-      const { data, error } = await query;
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
-      return (data || []).map(mapRestaurantReservation);
+
+      const pageSize = 1000;
+      let offset = 0;
+      const rows: any[] = [];
+
+      while (true) {
+        let query = supabase
+          .from("restaurant_reservations")
+          .select("*")
+          .eq("type", "entreprise")
+          .order("created_at", { ascending: false })
+          .range(offset, offset + pageSize - 1);
+
+        if (input?.status) query = query.eq("status", input.status);
+        if (input?.search)
+          query = query.or(
+            `name.ilike.%${input.search}%,company_name.ilike.%${input.search}%,reference.ilike.%${input.search}%`
+          );
+
+        const { data, error } = await query;
+        if (error)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: error.message,
+          });
+
+        const batch = data || [];
+        rows.push(...batch);
+        if (batch.length < pageSize) break;
+        offset += pageSize;
+      }
+
+      return rows.map(mapRestaurantReservation);
     }),
 
   adminListGroupes: adminRestaurantProcedure
@@ -4339,23 +4371,39 @@ const restaurantModuleRouter = router({
           code: "INTERNAL_SERVER_ERROR",
           message: "Supabase non configuré",
         });
-      let query = supabase
-        .from("restaurant_reservations")
-        .select("*")
-        .eq("type", "groupe")
-        .order("created_at", { ascending: false });
-      if (input?.status) query = query.eq("status", input.status);
-      if (input?.search)
-        query = query.or(
-          `name.ilike.%${input.search}%,group_name.ilike.%${input.search}%,reference.ilike.%${input.search}%`
-        );
-      const { data, error } = await query;
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
-      return (data || []).map(mapRestaurantReservation);
+
+      const pageSize = 1000;
+      let offset = 0;
+      const rows: any[] = [];
+
+      while (true) {
+        let query = supabase
+          .from("restaurant_reservations")
+          .select("*")
+          .eq("type", "groupe")
+          .order("created_at", { ascending: false })
+          .range(offset, offset + pageSize - 1);
+
+        if (input?.status) query = query.eq("status", input.status);
+        if (input?.search)
+          query = query.or(
+            `name.ilike.%${input.search}%,group_name.ilike.%${input.search}%,reference.ilike.%${input.search}%`
+          );
+
+        const { data, error } = await query;
+        if (error)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: error.message,
+          });
+
+        const batch = data || [];
+        rows.push(...batch);
+        if (batch.length < pageSize) break;
+        offset += pageSize;
+      }
+
+      return rows.map(mapRestaurantReservation);
     }),
 
   // --- Admin: update reservation status ---
