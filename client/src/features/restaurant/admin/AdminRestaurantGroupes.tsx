@@ -104,9 +104,6 @@ export default function AdminRestaurantGroupes() {
   });
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [inlineEdits, setInlineEdits] = useState<
-    Record<string, Record<string, string | number>>
-  >({});
   const [downloadingProofId, setDownloadingProofId] = useState<number | null>(null);
   const trpcUtils = trpc.useUtils();
   const [createForm, setCreateForm] = useState({
@@ -285,16 +282,6 @@ export default function AdminRestaurantGroupes() {
     },
   });
 
-  const inlineEditMutation = trpc.restaurantReservations.adminEdit.useMutation({
-    onSuccess: () => {
-      toast.success("Mise à jour enregistrée");
-      refetch();
-    },
-    onError: error => {
-      toast.error(error.message || "Erreur lors de la mise à jour");
-    },
-  });
-
   const createManualMutation =
     trpc.restaurantReservations.adminCreateManual.useMutation({
       onSuccess: () => {
@@ -421,9 +408,6 @@ export default function AdminRestaurantGroupes() {
     });
   };
 
-  const getRowKey = (reservation: any) =>
-    `${reservation.type}-${reservation.id}`;
-
   const toDateInputValue = (value: string | Date | null | undefined) => {
     if (!value) return "";
     const parsed = new Date(value);
@@ -431,90 +415,9 @@ export default function AdminRestaurantGroupes() {
     return parsed.toISOString().split("T")[0];
   };
 
-  const getInlineValue = (
-    reservation: any,
-    field: string,
-    fallback?: string | number
-  ) => {
-    const rowKey = getRowKey(reservation);
-    const editedValue = inlineEdits[rowKey]?.[field];
-    if (editedValue !== undefined) return editedValue;
-    if (fallback !== undefined) return fallback;
-    return reservation[field] ?? "";
-  };
-
-  const updateInlineValue = (
-    reservation: any,
-    field: string,
-    value: string | number
-  ) => {
-    const rowKey = getRowKey(reservation);
-    setInlineEdits(current => ({
-      ...current,
-      [rowKey]: {
-        ...(current[rowKey] || {}),
-        [field]: value,
-      },
-    }));
-  };
-
-  const saveInlineValue = (
-    reservation: any,
-    field: string,
-    value: string | number | null
-  ) => {
-    if (isUsingFallbackData) {
-      toast.error("Impossible d'enregistrer : données de démonstration affichées");
-      return;
-    }
-
-    const originalValue = reservation[field] ?? "";
-    if (String(originalValue) === String(value)) return;
-
-    inlineEditMutation.mutate({
-      id: reservation.id,
-      [field]: value,
-    });
-  };
-
-  const saveGuestCountValue = (
-    reservation: any,
-    field: "nbAdult" | "nbKids",
-    rawValue: string
-  ) => {
-    if (isUsingFallbackData) {
-      toast.error("Impossible d'enregistrer : données de démonstration affichées");
-      return;
-    }
-
-    const parsedValue = Math.max(0, Number.parseInt(rawValue || "0", 10) || 0);
-    const nextNbAdult =
-      field === "nbAdult"
-        ? parsedValue
-        : Math.max(
-            0,
-            Number(getInlineValue(reservation, "nbAdult", Number(reservation.nbAdult || 0))) || 0
-          );
-    const nextNbKids =
-      field === "nbKids"
-        ? parsedValue
-        : Math.max(
-            0,
-            Number(getInlineValue(reservation, "nbKids", Number(reservation.nbKids || 0))) || 0
-          );
-    const nextSeatsTotal = nextNbAdult + nextNbKids;
-    const nextTotal = computeTotalFromGuests(nextNbAdult, nextNbKids);
-
-    updateInlineValue(reservation, field, parsedValue);
-    updateInlineValue(reservation, "seatsTotal", nextSeatsTotal);
-    updateInlineValue(reservation, "totalAmount", nextTotal);
-
-    inlineEditMutation.mutate({
-      id: reservation.id,
-      [field]: parsedValue,
-      seatsTotal: nextSeatsTotal,
-      totalAmount: nextTotal,
-    });
+  const formatTableDate = (value: string | Date | null | undefined) => {
+    const dateValue = toDateInputValue(value);
+    return dateValue || "-";
   };
 
   const getSortValue = (reservation: any, key: SortKey) => {
@@ -884,163 +787,28 @@ export default function AdminRestaurantGroupes() {
                           </span>
                         </TableCell>
                         <TableCell>
-                          <Input
-                            type="date"
-                            className="h-8 min-w-[145px]"
-                            value={String(
-                              getInlineValue(
-                                r,
-                                "date",
-                                toDateInputValue(r.date)
-                              )
-                            )}
-                            onChange={e =>
-                              updateInlineValue(r, "date", e.target.value)
-                            }
-                            onBlur={e =>
-                              saveInlineValue(r, "date", e.target.value)
-                            }
-                          />
+                          <span className="text-sm">{formatTableDate(r.date)}</span>
                         </TableCell>
                         <TableCell>
-                          <Select
-                            value={String(
-                              getInlineValue(
-                                r,
-                                "respResa",
-                                r.respResa || "Nayla"
-                              )
-                            )}
-                            onValueChange={value => {
-                              updateInlineValue(r, "respResa", value);
-                              saveInlineValue(r, "respResa", value);
-                            }}
-                          >
-                            <SelectTrigger className="h-8 min-w-[120px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {RESERVATION_RESPONSABLES.map(name => (
-                                <SelectItem key={name} value={name}>
-                                  {name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <span className="text-sm">{r.respResa || "-"}</span>
                         </TableCell>
                         <TableCell>
-                          <Input
-                            type="number"
-                            min={0}
-                            className="h-8 w-20"
-                            value={String(
-                              getInlineValue(
-                                r,
-                                "nbAdult",
-                                Number(r.nbAdult || r.seatsTotal || 0)
-                              )
-                            )}
-                            onChange={e =>
-                              updateInlineValue(r, "nbAdult", e.target.value)
-                            }
-                            onBlur={e =>
-                              saveGuestCountValue(r, "nbAdult", e.target.value)
-                            }
-                          />
+                          <span className="text-sm">{Number(r.nbAdult || r.seatsTotal || 0)}</span>
                         </TableCell>
                         <TableCell>
-                          <Input
-                            type="number"
-                            min={0}
-                            className="h-8 w-20"
-                            value={String(
-                              getInlineValue(r, "nbKids", Number(r.nbKids || 0))
-                            )}
-                            onChange={e =>
-                              updateInlineValue(r, "nbKids", e.target.value)
-                            }
-                            onBlur={e =>
-                              saveGuestCountValue(r, "nbKids", e.target.value)
-                            }
-                          />
+                          <span className="text-sm">{Number(r.nbKids || 0)}</span>
                         </TableCell>
                         <TableCell>
-                          <Input
-                            className="h-8 min-w-[200px] font-medium"
-                            value={String(
-                              r.type === "groupe"
-                                ? getInlineValue(
-                                    r,
-                                    "groupName",
-                                    r.groupName || ""
-                                  )
-                                : getInlineValue(
-                                    r,
-                                    "companyName",
-                                    r.companyName || ""
-                                  )
-                            )}
-                            onChange={e =>
-                              updateInlineValue(
-                                r,
-                                r.type === "groupe"
-                                  ? "groupName"
-                                  : "companyName",
-                                e.target.value
-                              )
-                            }
-                            onBlur={e =>
-                              saveInlineValue(
-                                r,
-                                r.type === "groupe"
-                                  ? "groupName"
-                                  : "companyName",
-                                e.target.value
-                              )
-                            }
-                          />
+                          <span className="text-sm font-medium">{r.type === "groupe" ? r.groupName || "-" : r.companyName || "-"}</span>
                         </TableCell>
                         <TableCell>
-                          <Input
-                            className="h-8 min-w-[170px]"
-                            value={String(
-                              getInlineValue(r, "name", r.name || "")
-                            )}
-                            onChange={e =>
-                              updateInlineValue(r, "name", e.target.value)
-                            }
-                            onBlur={e =>
-                              saveInlineValue(r, "name", e.target.value)
-                            }
-                          />
+                          <span className="text-sm">{r.name || "-"}</span>
                         </TableCell>
                         <TableCell>
-                          <Input
-                            className="h-8 min-w-[135px]"
-                            value={String(
-                              getInlineValue(r, "phone", r.phone || "")
-                            )}
-                            onChange={e =>
-                              updateInlineValue(r, "phone", e.target.value)
-                            }
-                            onBlur={e =>
-                              saveInlineValue(r, "phone", e.target.value)
-                            }
-                          />
+                          <span className="text-sm">{r.phone || "-"}</span>
                         </TableCell>
                         <TableCell>
-                          <Input
-                            className="h-8 min-w-[210px]"
-                            value={String(
-                              getInlineValue(r, "email", r.email || "")
-                            )}
-                            onChange={e =>
-                              updateInlineValue(r, "email", e.target.value)
-                            }
-                            onBlur={e =>
-                              saveInlineValue(r, "email", e.target.value)
-                            }
-                          />
+                          <span className="text-sm">{r.email || "-"}</span>
                         </TableCell>
                         <TableCell>{getStatusBadge(r.status)}</TableCell>
                         <TableCell>
