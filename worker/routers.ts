@@ -5434,6 +5434,44 @@ const reservationsRouter = router({
 // RESTAURANT RESERVATIONS ROUTER (unified)
 // ============================================
 
+async function sha256HexRouter(value: string): Promise<string> {
+  const encoded = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", encoded);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function createProofUploadToken(
+  supabase: ReturnType<typeof createSupabaseAdmin>,
+  reservationId: number,
+  baseUrl: string,
+  ttlDays = 7
+): Promise<string | null> {
+  try {
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    const rawToken = btoa(String.fromCharCode(...bytes))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+    const tokenHash = await sha256HexRouter(rawToken);
+    const expiresAt = new Date(
+      Date.now() + ttlDays * 24 * 60 * 60 * 1000
+    ).toISOString();
+    const { error } = await supabase
+      .from("reservation_payment_tokens")
+      .insert({ reservation_id: reservationId, token_hash: tokenHash, expires_at: expiresAt });
+    if (error) {
+      console.error("[ProofToken] Insert error:", error.message);
+      return null;
+    }
+    return `${baseUrl.replace(/\/$/, "")}/reservations/preuve?token=${encodeURIComponent(rawToken)}`;
+  } catch (err) {
+    console.error("[ProofToken] Unexpected error:", err);
+    return null;
+  }
+}
+
 function generateReservationReference(
   type: "particulier" | "entreprise" | "groupe"
 ): string {
@@ -5458,6 +5496,7 @@ function buildRestaurantReservationRequestEmailHtml(params: {
   reservationDate: string;
   participantsCount: number;
   reference: string;
+  proofUploadUrl?: string;
 }): string {
   const restaurantRibDownloadUrl = "https://www.ftourbabrayan.ma/fr/RIB";
   const reservationTypeLabel =
@@ -5467,12 +5506,19 @@ function buildRestaurantReservationRequestEmailHtml(params: {
         ? "entreprise"
         : "particulier";
 
+  const proofCtaBlock = params.proofUploadUrl
+    ? `<p style="margin:20px 0 8px 0;">Une fois votre virement effectué, déposez votre preuve de virement en cliquant sur le bouton ci-dessous :</p>
+<p style="margin:8px 0;"><a href="${params.proofUploadUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background-color:#166534;color:#ffffff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:15px;font-weight:600;">Déposer ma preuve de virement</a></p>
+<p style="font-size:12px;color:#6b7280;margin:4px 0 0 0;">Ce lien est personnel, à usage unique et valide 7 jours.</p>`
+    : "";
+
   return `<p>Bonjour ${params.customerName},</p>
 <p>Votre demande de réservation ${reservationTypeLabel} pour le ${params.reservationDate} a bien été enregistrée.<br/>
 Nombre estimé de participants : ${params.participantsCount}</p>
 <p>Référence : ${params.reference}</p>
 <p>Afin de confirmer votre réservation à La Table du Jardin, nous vous remercions de bien vouloir verser 50 % du montant à l’avance.</p>
 <p>Vous trouverez nos coordonnées bancaires en téléchargeant notre RIB : <a href="${restaurantRibDownloadUrl}" target="_blank" rel="noopener noreferrer">Télécharger le RIB</a></p>
+${proofCtaBlock}
 <p>Merci pour votre soutien à notre restaurant solidaire ! 💚<br/>À très bientôt.<br/>L’équipe de La Table du Jardin</p>`;
 }
 
@@ -5582,6 +5628,11 @@ const restaurantReservationsRouter = router({
             message: error.message,
           });
         }
+        // Generate proof upload token
+        const baseUrl = (ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma");
+        const ttlDays = Math.max(1, Number(ctx.env.RESERVATION_PROOF_TOKEN_TTL_DAYS || "7"));
+        const proofUploadUrl = await createProofUploadToken(supabase, data.id, baseUrl, ttlDays);
+
         // Send confirmation email to customer + internal notification
         try {
           const { sendEmail } = await import("./email");
@@ -5594,6 +5645,7 @@ const restaurantReservationsRouter = router({
               reservationDate: input.date,
               participantsCount: input.participantsCount,
               reference,
+              proofUploadUrl: proofUploadUrl ?? undefined,
             }),
             apiKey: ctx.env.RESEND_API_KEY,
           });
@@ -5675,6 +5727,11 @@ const restaurantReservationsRouter = router({
             message: error.message,
           });
         }
+        // Generate proof upload token
+        const baseUrlE = (ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma");
+        const ttlDaysE = Math.max(1, Number(ctx.env.RESERVATION_PROOF_TOKEN_TTL_DAYS || "7"));
+        const proofUploadUrlE = await createProofUploadToken(supabase, data.id, baseUrlE, ttlDaysE);
+
         try {
           const { sendEmail } = await import("./email");
           await sendEmail({
@@ -5686,6 +5743,7 @@ const restaurantReservationsRouter = router({
               reservationDate: input.date,
               participantsCount: input.participantsCount,
               reference,
+              proofUploadUrl: proofUploadUrlE ?? undefined,
             }),
             apiKey: ctx.env.RESEND_API_KEY,
           });
@@ -5763,6 +5821,11 @@ const restaurantReservationsRouter = router({
             message: error.message,
           });
         }
+        // Generate proof upload token
+        const baseUrlG = (ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma");
+        const ttlDaysG = Math.max(1, Number(ctx.env.RESERVATION_PROOF_TOKEN_TTL_DAYS || "7"));
+        const proofUploadUrlG = await createProofUploadToken(supabase, data.id, baseUrlG, ttlDaysG);
+
         try {
           const { sendEmail } = await import("./email");
           await sendEmail({
@@ -5774,6 +5837,7 @@ const restaurantReservationsRouter = router({
               reservationDate: input.date,
               participantsCount: input.participantsCount,
               reference,
+              proofUploadUrl: proofUploadUrlG ?? undefined,
             }),
             apiKey: ctx.env.RESEND_API_KEY,
           });
