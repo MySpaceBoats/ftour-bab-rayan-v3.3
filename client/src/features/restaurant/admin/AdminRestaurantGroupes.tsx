@@ -224,8 +224,8 @@ export default function AdminRestaurantGroupes() {
     })),
   ];
 
-  const isUsingFallbackData = apiReservations.length === 0;
-  const reservations = isUsingFallbackData ? fallbackReservations : apiReservations;
+  const isUsingFallbackData = false;
+  const reservations = apiReservations;
 
   const refetch = () => {
     refetchG();

@@ -155,6 +155,13 @@ async function runAutoCancellationAndNotify() {
     }
   }
 }
+async function runAutoCancellationAndNotifySafely() {
+  try {
+    await runAutoCancellationAndNotify();
+  } catch (error) {
+    console.error("[runAutoCancellationAndNotifySafely] Failed", error);
+  }
+}
 
 // ============================================
 // RESTAURANT RESERVATIONS ROUTER
@@ -749,7 +756,7 @@ export const restaurantReservationsRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
     }
     try {
-      await runAutoCancellationAndNotify();
+      await runAutoCancellationAndNotifySafely();
       return await reservationServices.listRestaurantReservations({
         type: "particulier",
       });
@@ -778,7 +785,7 @@ export const restaurantReservationsRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
     }
     try {
-      await runAutoCancellationAndNotify();
+      await runAutoCancellationAndNotifySafely();
       return await reservationServices.listRestaurantReservations({
         type: "groupe",
       });
@@ -807,7 +814,7 @@ export const restaurantReservationsRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
     }
     try {
-      await runAutoCancellationAndNotify();
+      await runAutoCancellationAndNotifySafely();
       return await reservationServices.listRestaurantReservations({
         type: "entreprise",
       });
