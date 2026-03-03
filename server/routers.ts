@@ -5462,16 +5462,22 @@ const paymentsRouter = router({
   }),
 });
 
+const getAccessTokenFromRequest = (ctx: any): string => {
+  const authHeader = ctx.req.headers.authorization;
+  const accessToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.substring(7)
+    : null;
+
+  if (!accessToken) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
+  }
+
+  return accessToken;
+};
+
 const volunteerProfileRouter = router({
   me: protectedProcedure.query(async ({ ctx }) => {
-    const authHeader = ctx.req.headers.authorization;
-    const accessToken = authHeader?.startsWith("Bearer ")
-      ? authHeader.substring(7)
-      : null;
-
-    if (!accessToken) {
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
-    }
+    const accessToken = getAccessTokenFromRequest(ctx);
 
     await volunteerProfileServices.ensureVolunteerProfile({
       id: String(ctx.user.id),
@@ -5492,14 +5498,7 @@ const volunteerProfileRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const authHeader = ctx.req.headers.authorization;
-      const accessToken = authHeader?.startsWith("Bearer ")
-        ? authHeader.substring(7)
-        : null;
-
-      if (!accessToken) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
-      }
+      const accessToken = getAccessTokenFromRequest(ctx);
 
       return volunteerProfileServices.updateMyVolunteerProfile(accessToken, {
         first_name: input.first_name,
@@ -5516,14 +5515,7 @@ const volunteerProfileRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      const authHeader = ctx.req.headers.authorization;
-      const accessToken = authHeader?.startsWith("Bearer ")
-        ? authHeader.substring(7)
-        : null;
-
-      if (!accessToken) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
-      }
+      const accessToken = getAccessTokenFromRequest(ctx);
 
       await volunteerProfileServices.ensureVolunteerProfile({
         id: String(ctx.user.id),
@@ -5538,108 +5530,111 @@ const volunteerProfileRouter = router({
         input.offset
       );
     }),
+
+  registrations: protectedProcedure.query(async ({ ctx }) => {
+    const accessToken = getAccessTokenFromRequest(ctx);
+
+    await volunteerProfileServices.ensureVolunteerProfile({
+      id: String(ctx.user.id),
+      email: ctx.user.email,
+      name: ctx.user.name,
+      phone: ctx.user.phone,
+    });
+
+    return volunteerProfileServices.getMyVolunteerRegistrations(accessToken);
+  }),
+
+  remainingDays: protectedProcedure.query(async ({ ctx }) => {
+    const accessToken = getAccessTokenFromRequest(ctx);
+
+    await volunteerProfileServices.ensureVolunteerProfile({
+      id: String(ctx.user.id),
+      email: ctx.user.email,
+      name: ctx.user.name,
+      phone: ctx.user.phone,
+    });
+
+    return volunteerProfileServices.getVolunteerRemainingDays(accessToken);
+  }),
+
+  registerForDay: protectedProcedure
+    .input(z.object({ dayId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const accessToken = getAccessTokenFromRequest(ctx);
+
+      await volunteerProfileServices.ensureVolunteerProfile({
+        id: String(ctx.user.id),
+        email: ctx.user.email,
+        name: ctx.user.name,
+        phone: ctx.user.phone,
+      });
+
+      const profile = await volunteerProfileServices.getMyVolunteerProfile(accessToken);
+      const normalizedEmail = String(profile.email ?? "").toLowerCase().trim();
+
+      if (!normalizedEmail) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Votre profil doit contenir un email valide.",
+        });
+      }
+
+      const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
+      if (!day) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
+      }
+
+      const today = getDateStringInTimeZone(new Date(), DEFAULT_RAMADAN_TIMEZONE);
+      if (day.date < today) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Impossible de s'inscrire pour une date passée.",
+        });
+      }
+
+      if (!day.isOpen) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Ce jour est fermé aux inscriptions",
+        });
+      }
+
+      if ((day.registeredCount ?? 0) >= day.capacity) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Ce jour a atteint le nombre maximum d'inscriptions",
+        });
+      }
+
+      const emailExists = await supabaseServices.checkVolunteerEmailExistsForDay(
+        normalizedEmail,
+        input.dayId
+      );
+      if (emailExists) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Vous êtes déjà inscrit pour ce jour.",
+        });
+      }
+
+      const volunteer = await supabaseServices.createVolunteerShiftSupabase({
+        firstName: profile.first_name,
+        lastName: profile.last_name,
+        email: normalizedEmail,
+        phone: profile.phone ?? ctx.user.phone ?? "",
+        city: "",
+        dayId: input.dayId,
+        volunteerSlots: ["service_ftour"],
+        acceptedTerms: true,
+      });
+
+      return { success: true, qrToken: volunteer.qrToken, id: volunteer.id };
+    }),
 });
 
 // ============================================
 // MAIN APP ROUTER
 // ============================================
-
-export const appRouter = router({
-  system: systemRouter,
-  auth: router({
-    me: publicProcedure.query(async ({ ctx }) => {
-      // Essayer de récupérer le token depuis le header Authorization
-      const authHeader = ctx.req.headers.authorization;
-      if (authHeader && authHeader.startsWith("Bearer ")) {
-        const token = authHeader.substring(7);
-        const user = await getUserFromToken(token);
-        if (user) {
-          return user;
-        }
-      }
-      return ctx.user;
-    }),
-
-    login: publicProcedure
-      .input(
-        z.object({
-          email: z.string().email(),
-          password: z.string().min(6),
-        })
-      )
-      .mutation(async ({ input }) => {
-        const result = await signInUser(input);
-        if (result.error) {
-          throw new TRPCError({ code: "UNAUTHORIZED", message: result.error });
-        }
-        return { user: result.user, session: result.session };
-      }),
-
-    signup: publicProcedure
-      .input(
-        z.object({
-          email: z.string().email(),
-          password: z.string().min(6),
-          name: z.string().optional(),
-          phone: z.string().optional(),
-        })
-      )
-      .mutation(async ({ input }) => {
-        const result = await signUpUser(input);
-        if (result.error) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: result.error });
-        }
-        return { user: result.user };
-      }),
-
-    refreshSession: publicProcedure
-      .input(
-        z.object({
-          refreshToken: z.string().min(1),
-        })
-      )
-      .mutation(async ({ input }) => {
-        const result = await refreshUserSession(input.refreshToken);
-        if (result.error || !result.session) {
-          throw new TRPCError({
-            code: "UNAUTHORIZED",
-            message: result.error || "Session expirée",
-          });
-        }
-
-        return { session: result.session };
-      }),
-
-    logout: publicProcedure.mutation(async ({ ctx }) => {
-      // Nettoyer le cookie Manus OAuth si présent
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      // Déconnexion Supabase
-      await signOutUser();
-      return { success: true } as const;
-    }),
-  }),
-
-  days: daysRouter,
-  volunteers: volunteersRouter,
-  checkin: checkinRouter,
-  goodies: goodiesRouter,
-  orders: ordersRouter,
-  donations: donationsRouter,
-  contact: contactRouter,
-  partnerLeads: partnerLeadsRouter,
-  users: usersRouter,
-  public: publicRouter,
-  upload: uploadRouter,
-  restaurants: restaurantsRouter,
-  reservations: reservationsRouter,
-  payments: paymentsRouter,
-  gallery: galleryRouter,
-  restaurantReservations: restaurantReservationsRouter,
-  restaurantModule: restaurantModuleRouter,
-  terroirModule: terroirModuleRouter,
-  volunteerProfile: volunteerProfileRouter,
-});
 
 // ============================================
 // PASTRIES ROUTER (Pâtisserie Solidaire)
@@ -6203,7 +6198,7 @@ const qrRouter = router({
 });
 
 // Ajouter les nouveaux routers à l'appRouter existant
-export const appRouterUpdated = router({
+export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(async ({ ctx }) => {
@@ -6304,4 +6299,4 @@ export const appRouterUpdated = router({
   volunteerProfile: volunteerProfileRouter,
 });
 
-export type AppRouter = typeof appRouterUpdated;
+export type AppRouter = typeof appRouter;
