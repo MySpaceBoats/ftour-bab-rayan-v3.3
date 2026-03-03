@@ -345,13 +345,19 @@ export default function AdminRestaurantGroupes() {
 
   const handleEditSubmit = () => {
     if (!editForm) return;
+    const trimmedName = editForm.name.trim();
+    const trimmedEmail = editForm.email.trim();
+    const trimmedPhone = editForm.phone.trim();
+    const trimmedCompanyName = editForm.companyName.trim();
+    const trimmedGroupName = editForm.groupName.trim();
+
     editMutation.mutate({
       id: editForm.id,
-      name: editForm.name,
-      email: editForm.email,
-      phone: editForm.phone,
+      name: trimmedName || undefined,
+      email: trimmedEmail || undefined,
+      phone: trimmedPhone || undefined,
       date: editForm.date,
-      seatsTotal: editForm.nbAdult + editForm.nbKids || editForm.seatsTotal,
+      seatsTotal: editForm.seatsTotal,
       notes: editForm.notes,
       totalAmount: editForm.totalAmount,
       amountReceived: editForm.amountReceived,
@@ -360,8 +366,8 @@ export default function AdminRestaurantGroupes() {
       nbKids: editForm.nbKids,
       paymentMode: editForm.paymentMode,
       respResa: editForm.respResa,
-      companyName: editForm.companyName || undefined,
-      groupName: editForm.groupName || undefined,
+      companyName: trimmedCompanyName || undefined,
+      groupName: trimmedGroupName || undefined,
       modeDeposit: editForm.modeDeposit || null,
       dateAvReg: editForm.dateAvReg || null,
     });
