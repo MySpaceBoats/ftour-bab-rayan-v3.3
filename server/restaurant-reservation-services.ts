@@ -75,6 +75,9 @@ function mapReservation(r: any) {
     latestPaymentProofUploadedAt: (r.latest_payment_proof_uploaded_at ?? r.latestPaymentProofUploadedAt)
       ? new Date(r.latest_payment_proof_uploaded_at ?? r.latestPaymentProofUploadedAt)
       : null,
+    entrySource: r.entry_source ?? r.entrySource ?? "website",
+    createdByName: r.created_by_name ?? r.createdByName ?? null,
+    createdByEmail: r.created_by_email ?? r.createdByEmail ?? null,
   };
 }
 
@@ -110,6 +113,9 @@ export async function createRestaurantReservation(data: {
   respResa?: "Nayla" | "Hind" | "Kamal" | "Rita" | "Réda" | "Souad";
   modeDeposit?: string;
   dateAvReg?: string;
+  entrySource?: "website" | "admin";
+  createdByName?: string;
+  createdByEmail?: string;
 }) {
   try {
     const client = getClient();
@@ -140,6 +146,9 @@ export async function createRestaurantReservation(data: {
         resp_resa: data.respResa ?? "Nayla",
         mode_deposit: data.modeDeposit ?? null,
         date_av_reg: data.dateAvReg ?? null,
+        entry_source: data.entrySource ?? "website",
+        created_by_name: data.createdByName ?? null,
+        created_by_email: data.createdByEmail ?? null,
         display_choice: data.displayChoice || null,
         status: "pending_validation",
         payment_status: "not_requested",
