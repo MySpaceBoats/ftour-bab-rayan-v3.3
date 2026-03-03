@@ -30,6 +30,8 @@ type EditionAlbumOption = {
 export default function VolunteerGalleryUploadModule() {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [selectedAlbumId, setSelectedAlbumId] = useState<string>("none");
+  const [selectedEdition, setSelectedEdition] = useState<string>("none");
+  const [validationEmail, setValidationEmail] = useState("");
   const albums = trpc.public.galleryAlbums.useQuery();
 
   const editionOptions = useMemo<EditionAlbumOption[]>(() => {
@@ -59,9 +61,10 @@ export default function VolunteerGalleryUploadModule() {
   const upload = trpc.gallery.uploadPhotos.useMutation({
     onSuccess: () => {
       toast.success(
-        "Merci ! Vos photos ont bien été envoyées pour validation."
+        "Vos photos sont enregistrées. Vérifiez votre email pour valider la publication sur la galerie."
       );
       setItems([]);
+      setValidationEmail("");
     },
     onError: e => toast.error(e.message),
   });
@@ -94,6 +97,16 @@ export default function VolunteerGalleryUploadModule() {
   const submit = async () => {
     if (selectedAlbumId === "none") {
       toast.error("Merci de choisir l'édition (album) avant l'envoi.");
+      return;
+    }
+    const normalizedEmail = validationEmail.trim().toLowerCase();
+    if (!normalizedEmail) {
+      toast.error("Merci de renseigner votre adresse email.");
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      toast.error("Adresse email invalide.");
       return;
     }
     if (items.length === 0) return;
@@ -137,7 +150,10 @@ export default function VolunteerGalleryUploadModule() {
       );
     }
 
-    await upload.mutateAsync({ photos });
+    await upload.mutateAsync({
+      validationEmail: validationEmail.trim().toLowerCase(),
+      photos,
+    });
   };
 
   const totalSize = useMemo(
@@ -156,6 +172,21 @@ export default function VolunteerGalleryUploadModule() {
             Les photos envoyées par les bénévoles sont publiées après
             validation.
           </p>
+
+          <div className="space-y-2">
+            <Label htmlFor="volunteer-gallery-email">Adresse email de validation</Label>
+            <Input
+              id="volunteer-gallery-email"
+              type="email"
+              placeholder="vous@exemple.com"
+              value={validationEmail}
+              onChange={e => setValidationEmail(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Un email de confirmation vous sera envoyé avec un lien pour autoriser l'affichage public des photos.
+            </p>
+          </div>
+
           <Label htmlFor="volunteer-gallery-files">
             Photos (jpeg, png, webp, max 8MB)
           </Label>
@@ -217,7 +248,7 @@ export default function VolunteerGalleryUploadModule() {
 
       <Button
         onClick={submit}
-        disabled={items.length === 0 || upload.isPending}
+        disabled={items.length === 0 || upload.isPending || !validationEmail.trim()}
       >
         <Upload className="h-4 w-4 mr-2" />
         Envoyer {items.length} photo(s)

@@ -13,6 +13,7 @@ import {
   generateGroupRegistrationEmail,
   generateGroupRefusalEmail,
   generatePartnerLeadNotificationEmail,
+  generateGalleryUploadValidationEmail,
 } from "./email";
 import {
   signInUser,
@@ -37,6 +38,7 @@ import { scannerRouter } from "./scanner-router";
 import * as galleryServices from "./gallery-services";
 import * as volunteerProfileServices from "./volunteer-profile-services";
 import * as XLSX from "xlsx";
+import { randomBytes } from "crypto";
 
 type ParsedGroupVolunteerRow = {
   firstName: string;
@@ -64,6 +66,13 @@ const decodeBase64Payload = (payload: string): Buffer => {
     : payload;
   return Buffer.from(cleanPayload, "base64");
 };
+
+const resolveAppBaseUrl = () =>
+  process.env.PUBLIC_APP_URL ||
+  process.env.APP_BASE_URL ||
+  process.env.VITE_APP_URL ||
+  "https://ftourbabrayan.ma";
+
 
 const getTimeInMinutesInRamadanTimezone = (date: Date): number => {
   const formatter = new Intl.DateTimeFormat("fr-FR", {
@@ -891,6 +900,7 @@ const galleryRouter = router({
   uploadPhotos: protectedProcedure
     .input(
       z.object({
+        validationEmail: z.string().email("Adresse email invalide").optional(),
         photos: z
           .array(
             z.object({
@@ -934,6 +944,16 @@ const galleryRouter = router({
           code: "INTERNAL_SERVER_ERROR",
           message: "Supabase non configuré",
         });
+
+      const validationEmail = input.validationEmail?.trim().toLowerCase() ?? "";
+      if (!canManageGallery && !validationEmail) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Adresse email requise",
+        });
+      }
+      const validationToken = randomBytes(32).toString("hex");
+      const validationUrl = `${resolveAppBaseUrl().replace(/\/$/, "")}/galerie/validation/${validationToken}`;
 
       const albumIds = Array.from(
         new Set(input.photos.map(photo => photo.albumId).filter(Boolean))
@@ -1013,6 +1033,10 @@ const galleryRouter = router({
           sortOrder: photo.sortOrder,
           isFeatured: canManageGallery ? photo.isFeatured : false,
           status: canManageGallery ? photo.status : "draft",
+          validationEmail: validationEmail || undefined,
+          validationToken: validationEmail ? validationToken : undefined,
+          validationSentAt: validationEmail ? new Date().toISOString() : undefined,
+          validatedAt: canManageGallery ? new Date().toISOString() : undefined,
           imageOriginalUrl: originalUrl,
           imageThumbUrl: thumbUrl,
           storagePath: originalPath,
@@ -1025,7 +1049,87 @@ const galleryRouter = router({
         });
         results.push(created);
       }
+
+      if (!canManageGallery && results.length > 0) {
+        const emailPayload = generateGalleryUploadValidationEmail({
+          email: validationEmail,
+          validationUrl,
+        });
+        const emailResult = await sendEmail({
+          to: validationEmail,
+          subject: emailPayload.subject,
+          html: emailPayload.html,
+        });
+
+        if (!emailResult.success) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message:
+              "Photos enregistrées, mais impossible d'envoyer l'email de validation. Réessayez.",
+          });
+        }
+      }
       return results;
+    }),
+
+  validateUploadByEmail: publicProcedure
+    .input(
+      z.object({
+        token: z.string().min(20),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const client = getSupabaseAdminClient();
+      if (!client)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+
+      const { data: rows, error: fetchError } = await client
+        .from("gallery_photos")
+        .select("id,status")
+        .eq("validation_token", input.token);
+
+      if (fetchError) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: fetchError.message });
+      }
+
+      if (!rows || rows.length === 0) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Lien de validation invalide ou expiré",
+        });
+      }
+
+      const alreadyValidated = rows.every(row => row.status === "published");
+      if (alreadyValidated) {
+        return { success: true, alreadyValidated: true, updatedCount: 0 };
+      }
+
+      const photoIdsToPublish = rows
+        .filter(row => row.status !== "published")
+        .map(row => row.id);
+
+      const nowIso = new Date().toISOString();
+      const { error: updateError } = await client
+        .from("gallery_photos")
+        .update({
+          status: "published",
+          validated_at: nowIso,
+          validation_token: null,
+        })
+        .in("id", photoIdsToPublish);
+
+      if (updateError) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: updateError.message });
+      }
+
+      return {
+        success: true,
+        alreadyValidated: false,
+        updatedCount: photoIdsToPublish.length,
+      };
     }),
 
   updatePhoto: adminProcedure

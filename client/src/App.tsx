@@ -23,6 +23,7 @@ import MentionsLegales from "@/features/public/pages/MentionsLegales";
 import RibDownload from "@/features/public/pages/RibDownload";
 import Galerie from "@/features/gallery/pages/Galerie";
 import BenevoleGalerieUpload from "@/features/gallery/pages/BenevoleGalerieUpload";
+import GalerieValidationUpload from "@/features/gallery/pages/GalerieValidationUpload";
 import AdminGalerie from "@/features/gallery/admin/AdminGalerie";
 import AdminGalerieNouveau from "@/features/gallery/admin/AdminGalerieNouveau";
 import AdminGalerieEdit from "@/features/gallery/admin/AdminGalerieEdit";
@@ -293,6 +294,7 @@ function LocalizedRoutes() {
         component={GroupReservationEmailConfirmation}
       />
       <Route path="/reservations/preuve" component={ReservationProofUpload} />
+      <Route path="/galerie/validation/:token" component={GalerieValidationUpload} />
 
       {/* ================================================
           REDIRECT ROOT → default locale

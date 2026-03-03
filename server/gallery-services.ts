@@ -30,6 +30,10 @@ export interface GalleryPhotoCreateInput {
   sizeBytes: number;
   mimeType: string;
   uploadedBy?: string;
+  validationEmail?: string;
+  validationToken?: string;
+  validationSentAt?: string;
+  validatedAt?: string;
 }
 
 function normalizeGalleryEventDate(eventDate?: string) {
@@ -100,6 +104,10 @@ export async function createGalleryPhoto(input: GalleryPhotoCreateInput) {
       size_bytes: input.sizeBytes,
       mime_type: input.mimeType,
       uploaded_by: input.uploadedBy,
+      validation_email: input.validationEmail,
+      validation_token: input.validationToken,
+      validation_sent_at: input.validationSentAt,
+      validated_at: input.validatedAt,
     })
     .select("*")
     .single();
