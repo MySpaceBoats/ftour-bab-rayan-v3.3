@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
 import PrivateRoute from "../components/PrivateRoute";
 import VolunteerBadge from "../components/VolunteerBadge";
@@ -13,18 +13,27 @@ import {
   getMyAttendance,
   getMyVolunteerProfile,
   updateMyVolunteerProfile,
+  updateMyVolunteerPassword,
 } from "../volunteerApi";
 
 export default function VolunteerProfilePage() {
   const profileQuery = getMyVolunteerProfile();
   const attendanceQuery = getMyAttendance(20, 0);
   const updateMutation = updateMyVolunteerProfile();
+  const passwordMutation = updateMyVolunteerPassword();
 
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
     phone: "",
   });
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!profileQuery.data) return;
@@ -41,6 +50,37 @@ export default function VolunteerProfilePage() {
       last_name: form.last_name,
       phone: form.phone || null,
     });
+  };
+
+  const onPasswordSave = async () => {
+    setPasswordMessage(null);
+    setPasswordError(null);
+
+    if (!passwordForm.currentPassword || !passwordForm.newPassword) {
+      setPasswordError("Veuillez remplir tous les champs du mot de passe.");
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError("La confirmation du mot de passe ne correspond pas.");
+      return;
+    }
+
+    try {
+      await passwordMutation.mutateAsync({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+
+      setPasswordMessage("Mot de passe mis à jour avec succès.");
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (error) {
+      setPasswordError(
+        error instanceof Error
+          ? error.message
+          : "Impossible de mettre à jour le mot de passe."
+      );
+    }
   };
 
   return (
@@ -106,6 +146,80 @@ export default function VolunteerProfilePage() {
                   </div>
                   <Button onClick={onSave} disabled={updateMutation.isPending}>
                     {updateMutation.isPending ? "Enregistrement..." : "Enregistrer"}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Sécurité</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-stone-600">
+                    Votre mot de passe initial est votre numéro de téléphone. Vous pouvez le modifier ici.
+                  </p>
+                  {passwordMessage ? (
+                    <Alert>
+                      <AlertTitle>Succès</AlertTitle>
+                      <AlertDescription>{passwordMessage}</AlertDescription>
+                    </Alert>
+                  ) : null}
+                  {passwordError ? (
+                    <Alert variant="destructive">
+                      <AlertDescription>{passwordError}</AlertDescription>
+                    </Alert>
+                  ) : null}
+                  <div>
+                    <Label>Mot de passe actuel</Label>
+                    <Input
+                      type="password"
+                      value={passwordForm.currentPassword}
+                      onChange={(e) =>
+                        setPasswordForm((prev) => ({
+                          ...prev,
+                          currentPassword: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label>Nouveau mot de passe</Label>
+                    <Input
+                      type="password"
+                      value={passwordForm.newPassword}
+                      onChange={(e) =>
+                        setPasswordForm((prev) => ({
+                          ...prev,
+                          newPassword: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label>Confirmer le nouveau mot de passe</Label>
+                    <Input
+                      type="password"
+                      value={passwordForm.confirmPassword}
+                      onChange={(e) =>
+                        setPasswordForm((prev) => ({
+                          ...prev,
+                          confirmPassword: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                  <Button
+                    onClick={onPasswordSave}
+                    disabled={
+                      passwordMutation.isPending ||
+                      !passwordForm.currentPassword ||
+                      !passwordForm.newPassword ||
+                      !passwordForm.confirmPassword
+                    }
+                  >
+                    {passwordMutation.isPending
+                      ? "Mise à jour..."
+                      : "Changer mon mot de passe"}
                   </Button>
                 </CardContent>
               </Card>
