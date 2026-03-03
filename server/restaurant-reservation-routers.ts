@@ -904,6 +904,9 @@ export const restaurantReservationsRouter = router({
             respResa: input.respResa,
             modeDeposit: input.modeDeposit,
             dateAvReg: input.dateAvReg,
+            entrySource: "admin",
+            createdByName: ctx.user?.name ?? undefined,
+            createdByEmail: ctx.user?.email ?? undefined,
           });
 
         if (input.status !== "pending_validation") {

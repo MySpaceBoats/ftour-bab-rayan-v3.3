@@ -617,6 +617,19 @@ export default function AdminRestaurantGroupes() {
     );
   }
 
+  const getReservationEntryUserLabel = (reservation: any) => {
+    const source = String(reservation?.entrySource || "").toLowerCase();
+    if (source === "website") return "Site";
+
+    const createdByName = reservation?.createdByName;
+    const createdByEmail = reservation?.createdByEmail;
+
+    if (createdByName && String(createdByName).trim()) return String(createdByName);
+    if (createdByEmail && String(createdByEmail).trim()) return String(createdByEmail);
+
+    return "-";
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending_validation":
@@ -852,6 +865,7 @@ export default function AdminRestaurantGroupes() {
                     </TableHead>
                     <TableHead>NUMÉRO TÉL</TableHead>
                     <TableHead>EMAIL</TableHead>
+                    <TableHead>SAISI PAR</TableHead>
                     <TableHead>
                       <button
                         type="button"
@@ -869,7 +883,7 @@ export default function AdminRestaurantGroupes() {
                   {filteredReservations?.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={11}
+                        colSpan={12}
                         className="text-center py-8 text-muted-foreground"
                       >
                         Aucune réservation trouvée
@@ -1041,6 +1055,11 @@ export default function AdminRestaurantGroupes() {
                               saveInlineValue(r, "email", e.target.value)
                             }
                           />
+                        </TableCell>
+                        <TableCell>
+                          <span className="inline-block min-w-[120px] text-sm text-muted-foreground">
+                            {getReservationEntryUserLabel(r)}
+                          </span>
                         </TableCell>
                         <TableCell>{getStatusBadge(r.status)}</TableCell>
                         <TableCell>
