@@ -36,6 +36,41 @@ function json(data: any, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
+function cardPage(content: string): string {
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Carte Membre – Ftour Bab Rayan</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;padding:24px 16px;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;color:#111827}
+    .card{max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.07)}
+    .hdr{background:linear-gradient(135deg,#166534 0%,#15803d 100%);padding:22px 28px;text-align:center;color:#fff}
+    .hdr h1{margin:0;font-size:20px;font-weight:700}
+    .hdr p{margin:4px 0 0;font-size:13px;color:#bbf7d0}
+    .body{padding:28px}
+    .ftr{background:#f9fafb;padding:16px 28px;border-top:1px solid #e5e7eb;text-align:center;font-size:12px;color:#6b7280}
+    .ftr a{color:#166534;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="hdr">
+      <h1>Ftour Bab Rayan</h1>
+      <p>Carte Membre</p>
+    </div>
+    <div class="body">${content}</div>
+    <div class="ftr">
+      Association Bab Rayan – Casablanca, Maroc<br/>
+      <a href="mailto:contact@ftourbabrayan.ma">contact@ftourbabrayan.ma</a>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
 async function sha256(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input);
   const hash = await crypto.subtle.digest('SHA-256', bytes);
@@ -147,10 +182,23 @@ export async function handleMemberCardRequest(request: Request, env: Env): Promi
   if (url.pathname === '/card/confirm-order' && request.method === 'GET') {
     const token = url.searchParams.get('token') || '';
     const verified = await verifyToken(token, 'order', env);
-    if (!verified.valid) return new Response('Lien invalide ou expiré', { status: 400 });
+    if (!verified.valid) return new Response(cardPage(`
+      <div style="text-align:center;padding:16px 0;">
+        <div style="font-size:40px;margin-bottom:12px;">⚠️</div>
+        <h2 style="margin:0 0 8px;color:#991b1b;">Lien invalide ou expiré</h2>
+        <p style="color:#374151;">Ce lien a expiré ou a déjà été utilisé. Contactez-nous pour obtenir un nouveau lien.</p>
+        <p style="font-size:13px;color:#6b7280;margin-top:12px;"><a href="mailto:contact@ftourbabrayan.ma" style="color:#166534;">contact@ftourbabrayan.ma</a></p>
+      </div>
+    `), { status: 400, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 
     const { data: order } = await supabase.from('member_card_orders').select('*').eq('id', verified.row.order_id).single();
-    if (!order) return new Response('Commande introuvable', { status: 404 });
+    if (!order) return new Response(cardPage(`
+      <div style="text-align:center;padding:16px 0;">
+        <div style="font-size:40px;margin-bottom:12px;">❌</div>
+        <h2 style="margin:0 0 8px;color:#991b1b;">Commande introuvable</h2>
+        <p style="color:#374151;">Aucune commande associée à ce lien. Contactez-nous.</p>
+      </div>
+    `), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 
     await advanceStatus(order.id, 'CARTE_DEMANDEE', env);
     await markTokenUsed(verified.row.id, env);
@@ -167,26 +215,96 @@ export async function handleMemberCardRequest(request: Request, env: Env): Promi
     await advanceStatus(order.id, 'MAIL_PAIEMENT_ENVOYE', env);
     await logEvent(order.id, 'MAIL_PAIEMENT_ENVOYE', { reason: 'auto_after_confirm' }, env);
 
-    return new Response('<html><body><h1>Demande confirmée ✅</h1><p>Un email de paiement vient d\'être envoyé.</p></body></html>', { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    return new Response(cardPage(`
+      <div style="text-align:center;padding:16px 0 24px;">
+        <div style="font-size:48px;margin-bottom:16px;">✅</div>
+        <h2 style="margin:0 0 12px;color:#166534;font-size:22px;">Demande confirmée !</h2>
+        <p style="margin:0 0 20px;color:#374151;line-height:1.6;">
+          Merci — votre demande de carte membre a bien été enregistrée.<br/>
+          Un e-mail avec les instructions de paiement vient de vous être envoyé.
+        </p>
+        <p style="margin:0;font-size:13px;color:#6b7280;">
+          Vérifiez votre boîte de réception (et vos spams).<br/>
+          Pour toute question : <a href="mailto:contact@ftourbabrayan.ma" style="color:#166534;">contact@ftourbabrayan.ma</a>
+        </p>
+      </div>
+    `), { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   }
 
   if (url.pathname === '/card/payment' && request.method === 'GET') {
     const token = url.searchParams.get('token') || '';
-    return new Response(`<!doctype html><html><body style="font-family:Arial;padding:20px;max-width:720px;margin:0 auto;">
-      <h1>Validation paiement carte membre</h1>
-      <form action="/api/card/confirm-payment" method="post" enctype="multipart/form-data">
+    if (!token) return new Response(cardPage(`
+      <div style="text-align:center;padding:16px 0;">
+        <div style="font-size:40px;margin-bottom:12px;">⚠️</div>
+        <h2 style="margin:0 0 8px;color:#991b1b;">Lien invalide</h2>
+        <p style="color:#374151;">Ce lien est invalide ou a expiré. Contactez-nous si vous avez besoin d'un nouveau lien.</p>
+      </div>
+    `), { status: 400, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+
+    return new Response(cardPage(`
+      <h2 style="margin:0 0 6px;color:#166534;font-size:20px;">Finaliser le paiement de votre carte membre</h2>
+      <p style="margin:0 0 24px;color:#6b7280;font-size:14px;">Choisissez votre mode de paiement et validez ci-dessous.</p>
+
+      <form id="paymentForm" action="/api/card/confirm-payment" method="post" enctype="multipart/form-data">
         <input type="hidden" name="token" value="${token}" />
-        <label>Méthode:</label>
-        <select name="payment_method" required>
-          <option value="on_site">Paiement sur place</option>
-          <option value="bank_transfer">Virement bancaire</option>
-        </select>
-        <br/><br/>
-        <label>Preuve de virement (PDF/JPG/PNG, 10MB max):</label>
-        <input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png" />
-        <br/><br/>
-        <button type="submit">Valider paiement</button>
-      </form></body></html>`, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+
+        <div style="margin-bottom:20px;">
+          <label style="display:block;font-weight:600;margin-bottom:8px;color:#1f2937;">Mode de paiement *</label>
+          <label style="display:flex;align-items:flex-start;gap:10px;padding:14px;border:2px solid #e5e7eb;border-radius:8px;margin-bottom:8px;cursor:pointer;transition:border-color .15s;" id="lbl-site">
+            <input type="radio" name="payment_method" value="on_site" required style="margin-top:2px;" onchange="toggleProof(this.value)" />
+            <span>
+              <strong style="display:block;color:#1f2937;">💵 Paiement sur place</strong>
+              <span style="font-size:13px;color:#6b7280;">Remettez le montant directement à un responsable lors de nos événements.</span>
+            </span>
+          </label>
+          <label style="display:flex;align-items:flex-start;gap:10px;padding:14px;border:2px solid #e5e7eb;border-radius:8px;cursor:pointer;transition:border-color .15s;" id="lbl-bank">
+            <input type="radio" name="payment_method" value="bank_transfer" style="margin-top:2px;" onchange="toggleProof(this.value)" />
+            <span>
+              <strong style="display:block;color:#1f2937;">🏦 Virement bancaire</strong>
+              <span style="font-size:13px;color:#6b7280;">Effectuez un virement et joignez la preuve ci-dessous (PDF/JPG/PNG, max 10 Mo).</span>
+            </span>
+          </label>
+        </div>
+
+        <div id="proofSection" style="display:none;margin-bottom:20px;padding:16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
+          <label style="display:block;font-weight:600;margin-bottom:4px;color:#166534;">RIB pour virement</label>
+          <table style="font-size:13px;color:#374151;margin-bottom:12px;">
+            <tr><td style="padding:2px 8px 2px 0;color:#6b7280;">Banque</td><td><strong>CIH Bank</strong></td></tr>
+            <tr><td style="padding:2px 8px 2px 0;color:#6b7280;">RIB</td><td><strong>230 810 4810820410010168</strong></td></tr>
+            <tr><td style="padding:2px 8px 2px 0;color:#6b7280;">Titulaire</td><td><strong>Association Bab Rayan</strong></td></tr>
+            <tr><td style="padding:2px 8px 2px 0;color:#6b7280;">Motif</td><td><strong>Carte Membre</strong></td></tr>
+          </table>
+          <label style="display:block;font-weight:600;margin-bottom:6px;color:#166534;">Preuve de virement *</label>
+          <input type="file" name="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png"
+            style="width:100%;padding:8px;border:1px solid #bbf7d0;border-radius:6px;background:#ffffff;font-size:14px;box-sizing:border-box;" />
+          <p style="margin:6px 0 0;font-size:12px;color:#6b7280;">Formats acceptés : PDF, JPG, PNG — Taille max : 10 Mo</p>
+        </div>
+
+        <button type="submit" id="submitBtn"
+          style="width:100%;background:#166534;color:#fff;border:none;padding:14px;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;">
+          Valider mon paiement
+        </button>
+      </form>
+
+      <script>
+        function toggleProof(val) {
+          var s = document.getElementById('proofSection');
+          var f = document.getElementById('fileInput');
+          if (val === 'bank_transfer') {
+            s.style.display = 'block';
+            f.setAttribute('required', '');
+          } else {
+            s.style.display = 'none';
+            f.removeAttribute('required');
+          }
+        }
+        document.getElementById('paymentForm').addEventListener('submit', function() {
+          var btn = document.getElementById('submitBtn');
+          btn.textContent = 'Envoi en cours…';
+          btn.disabled = true;
+        });
+      </script>
+    `), { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   }
 
   if (url.pathname === '/api/card/confirm-payment' && request.method === 'POST') {
@@ -224,7 +342,19 @@ export async function handleMemberCardRequest(request: Request, env: Env): Promi
     await markTokenUsed(verified.row.id, env);
     await logEvent(order.id, targetStatus, { payment_method: paymentMethod, has_proof: !!paymentProofPath }, env);
 
-    return new Response('<html><body><h1>Paiement confirmé ✅</h1></body></html>', { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    return new Response(cardPage(`
+      <div style="text-align:center;padding:16px 0 24px;">
+        <div style="font-size:48px;margin-bottom:16px;">🎉</div>
+        <h2 style="margin:0 0 12px;color:#166534;font-size:22px;">Paiement confirmé !</h2>
+        <p style="margin:0 0 16px;color:#374151;line-height:1.6;">
+          Merci pour votre cotisation. Votre carte membre Bab Rayan est en cours de préparation.<br/>
+          Vous serez contacté(e) pour la récupérer lors de nos événements.
+        </p>
+        <p style="margin:0;font-size:13px;color:#6b7280;">
+          Pour toute question : <a href="mailto:contact@ftourbabrayan.ma" style="color:#166534;">contact@ftourbabrayan.ma</a>
+        </p>
+      </div>
+    `), { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   }
 
   if (url.pathname === '/api/admin/card/mark-printed' && request.method === 'POST') {
