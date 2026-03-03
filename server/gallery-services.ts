@@ -32,6 +32,22 @@ export interface GalleryPhotoCreateInput {
   uploadedBy?: string;
 }
 
+function normalizeGalleryEventDate(eventDate?: string) {
+  if (!eventDate) return null;
+  const value = eventDate.trim();
+  if (!value) return null;
+
+  if (/^\d{4}$/.test(value)) {
+    return `${value}-01-01`;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  return null;
+}
+
 export async function uploadGalleryAsset(
   path: string,
   bytes: Uint8Array,
@@ -67,7 +83,7 @@ export async function createGalleryPhoto(input: GalleryPhotoCreateInput) {
     .insert({
       title: input.title,
       description: input.description,
-      event_date: input.eventDate,
+      event_date: normalizeGalleryEventDate(input.eventDate),
       tags: input.tags ?? [],
       album_id: input.albumId,
       sort_order: input.sortOrder ?? 0,
