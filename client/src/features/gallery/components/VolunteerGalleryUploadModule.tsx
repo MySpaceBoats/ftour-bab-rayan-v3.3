@@ -24,13 +24,12 @@ type UploadItem = {
 type EditionAlbumOption = {
   id: string;
   label: string;
-  year: number;
+  year: number | null;
 };
 
 export default function VolunteerGalleryUploadModule() {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [selectedAlbumId, setSelectedAlbumId] = useState<string>("none");
-  const [selectedEdition, setSelectedEdition] = useState<string>("none");
   const [validationEmail, setValidationEmail] = useState("");
   const albums = trpc.public.galleryAlbums.useQuery();
 
@@ -47,15 +46,23 @@ export default function VolunteerGalleryUploadModule() {
     return (albums.data ?? [])
       .map((album: any) => {
         const year = parseYear(album);
-        if (!year) return null;
         return {
           id: album.id as string,
-          label: album.name as string,
+          label:
+            typeof album?.name === "string" && album.name.trim().length > 0
+              ? album.name
+              : "Album sans titre",
           year,
         };
       })
-      .filter((album): album is EditionAlbumOption => Boolean(album))
-      .sort((a, b) => b.year - a.year);
+      .sort((a, b) => {
+        if (a.year && b.year) {
+          return b.year - a.year;
+        }
+        if (a.year) return -1;
+        if (b.year) return 1;
+        return a.label.localeCompare(b.label, "fr");
+      });
   }, [albums.data]);
 
   const upload = trpc.gallery.uploadPhotos.useMutation({
