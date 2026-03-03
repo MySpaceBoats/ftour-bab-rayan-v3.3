@@ -561,7 +561,12 @@ export default function AdminRestaurantGroupes() {
 
     updateInlineValue(reservation, field, parsedValue);
     updateInlineValue(reservation, "totalAmount", nextTotal);
-    saveInlineValue(reservation, "totalAmount", nextTotal);
+
+    inlineEditMutation.mutate({
+      id: reservation.id,
+      [field]: parsedValue,
+      totalAmount: nextTotal,
+    });
   };
 
   const getSortValue = (reservation: any, key: SortKey) => {

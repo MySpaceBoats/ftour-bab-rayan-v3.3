@@ -244,6 +244,44 @@ export interface VolunteerEmailData {
   groupMembersCount?: number;
 }
 
+
+export interface GalleryUploadValidationEmailData {
+  email: string;
+  validationUrl: string;
+}
+
+export function generateGalleryUploadValidationEmail(data: GalleryUploadValidationEmailData): { subject: string; html: string } {
+  const safeEmail = escapeHtml(data.email);
+  const safeValidationUrl = escapeHtml(data.validationUrl);
+
+  const content = `
+    <h2 style="color: #166534; margin-top: 0;">Confirmez la publication de vos photos</h2>
+    <p style="font-size: 16px; color: #374151; line-height: 1.6;">
+      Nous avons bien reçu vos photos pour la galerie Ftour Bab Rayan.
+    </p>
+    <p style="font-size: 16px; color: #374151; line-height: 1.6;">
+      Pour autoriser leur publication sur la galerie publique, merci de confirmer votre adresse email
+      en cliquant sur le bouton ci-dessous.
+    </p>
+    <p style="text-align: center; margin: 30px 0;">
+      <a href="${safeValidationUrl}" style="display: inline-block; background-color: #166534; color: #ffffff; text-decoration: none; padding: 14px 24px; border-radius: 6px; font-weight: 600;">
+        Valider mes photos
+      </a>
+    </p>
+    <p style="font-size: 14px; color: #6b7280; line-height: 1.5;">
+      Si le bouton ne fonctionne pas, copiez-collez ce lien dans votre navigateur :<br>
+      <a href="${safeValidationUrl}" style="color: #166534; word-break: break-all;">${safeValidationUrl}</a>
+    </p>
+    <p style="font-size: 14px; color: #6b7280; line-height: 1.5;">
+      Cet email a été envoyé à ${safeEmail}. Si vous n'êtes pas à l'origine de cet envoi, vous pouvez ignorer ce message.
+    </p>
+  `;
+
+  return {
+    subject: "Validation de vos photos – Galerie Ftour Bab Rayan",
+    html: baseTemplate(content),
+  };
+}
 export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { subject: string; html: string } {
   const qrCodeUrl = getQrCodeUrl(data.qrToken, data.baseUrl);
   const checkinUrl = `${data.baseUrl}/checkin/${data.qrToken}`;
