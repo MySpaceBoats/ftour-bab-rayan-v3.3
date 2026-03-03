@@ -25,6 +25,7 @@ import {
   Lock,
   ShoppingCart,
   UtensilsCrossed,
+  UserCircle2,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -115,14 +116,19 @@ export default function Navbar() {
             )}
           </button>
 
-          {/* Admin Link - icône cadenas avec tooltip "Privé" */}
-          <Link
-            href={localizedHref("/connexion")}
-            className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors"
-            title="Privé"
-          >
-            <Lock className="h-4 w-4" />
-          </Link>
+          {/* Espace bénévole - visible uniquement pour les bénévoles connectés */}
+          {isAuthenticated && !isAdmin && (
+            <Link
+              href={localizedHref("/profil-benevole")}
+              className="flex items-center gap-1 text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors"
+              title="Espace bénévole"
+            >
+              <UserCircle2 className="h-4 w-4" />
+              <span className="text-xs font-medium hidden sm:inline">
+                Espace bénévole
+              </span>
+            </Link>
+          )}
 
           {/* Admin Link - visible uniquement pour les admins connectés */}
           {isAuthenticated && isAdmin && (
@@ -163,6 +169,15 @@ export default function Navbar() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Admin Link - icône cadenas avec tooltip "Privé" */}
+          <Link
+            href={localizedHref("/connexion")}
+            className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors"
+            title="Privé"
+          >
+            <Lock className="h-4 w-4" />
+          </Link>
         </div>
       </div>
 
