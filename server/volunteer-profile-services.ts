@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { DEFAULT_RAMADAN_TIMEZONE, getDateStringInTimeZone } from "@shared/ramadan";
 import { getSupabaseAdminClient } from "./supabase";
 
 export type VolunteerRole = "blue" | "orange" | "yellow" | "red";
@@ -23,6 +24,20 @@ export interface VolunteerAttendance {
   slot: string;
   status: "registered" | "confirmed" | "present" | "cancelled";
   points_earned: number;
+  created_at: string;
+}
+
+export interface VolunteerProfileRegistration {
+  id: number;
+  day_id: number;
+  qr_token: string;
+  qr_status: string;
+  status: string;
+  date: string;
+  day_number: number;
+  location: string | null;
+  iftar_time: string | null;
+  volunteer_slots: string[];
   created_at: string;
 }
 
@@ -108,4 +123,68 @@ export async function getMyAttendance(
 
   if (error) throw new Error(error.message);
   return (data ?? []) as VolunteerAttendance[];
+}
+
+export async function getMyVolunteerRegistrations(accessToken: string) {
+  const profile = await getMyVolunteerProfile(accessToken);
+  const normalizedEmail = String(profile.email ?? "").toLowerCase().trim();
+  if (!normalizedEmail) return [] as VolunteerProfileRegistration[];
+
+  const admin = getSupabaseAdminClient();
+  if (!admin) throw new Error("Supabase admin client not configured");
+
+  const { data, error } = await admin
+    .from("volunteers")
+    .select("id, day_id, qr_token, qr_status, status, created_at, volunteer_slots, ramadan_days(day_number, date, location, iftar_time)")
+    .eq("email", normalizedEmail)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    day_id: row.day_id,
+    qr_token: row.qr_token,
+    qr_status: row.qr_status,
+    status: row.status,
+    date: row.ramadan_days?.date,
+    day_number: row.ramadan_days?.day_number,
+    location: row.ramadan_days?.location ?? null,
+    iftar_time: row.ramadan_days?.iftar_time ?? null,
+    volunteer_slots: Array.isArray(row.volunteer_slots) ? row.volunteer_slots : [],
+    created_at: row.created_at,
+  })) as VolunteerProfileRegistration[];
+}
+
+export async function getVolunteerRemainingDays(accessToken: string) {
+  const today = getDateStringInTimeZone(new Date(), DEFAULT_RAMADAN_TIMEZONE);
+  const registrations = await getMyVolunteerRegistrations(accessToken);
+  const registeredDayIds = new Set(
+    registrations
+      .filter((row) => row.status !== "cancelled")
+      .map((row) => row.day_id)
+  );
+
+  const admin = getSupabaseAdminClient();
+  if (!admin) throw new Error("Supabase admin client not configured");
+
+  const { data, error } = await admin
+    .from("ramadan_days")
+    .select("id, day_number, date, capacity, registered_count, is_open, iftar_time, location")
+    .gte("date", today)
+    .order("day_number", { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((day: any) => ({
+    id: day.id,
+    dayNumber: day.day_number,
+    date: day.date,
+    capacity: day.capacity,
+    registeredCount: day.registered_count,
+    isOpen: day.is_open,
+    iftarTime: day.iftar_time ?? null,
+    location: day.location ?? null,
+    alreadyRegistered: registeredDayIds.has(day.id),
+  }));
 }

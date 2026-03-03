@@ -5538,6 +5538,119 @@ const volunteerProfileRouter = router({
         input.offset
       );
     }),
+
+  registrations: protectedProcedure.query(async ({ ctx }) => {
+    const authHeader = ctx.req.headers.authorization;
+    const accessToken = authHeader?.startsWith("Bearer ")
+      ? authHeader.substring(7)
+      : null;
+
+    if (!accessToken) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
+    }
+
+    await volunteerProfileServices.ensureVolunteerProfile({
+      id: String(ctx.user.id),
+      email: ctx.user.email,
+      name: ctx.user.name,
+      phone: ctx.user.phone,
+    });
+
+    return volunteerProfileServices.getMyVolunteerRegistrations(accessToken);
+  }),
+
+  remainingDays: protectedProcedure.query(async ({ ctx }) => {
+    const authHeader = ctx.req.headers.authorization;
+    const accessToken = authHeader?.startsWith("Bearer ")
+      ? authHeader.substring(7)
+      : null;
+
+    if (!accessToken) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
+    }
+
+    await volunteerProfileServices.ensureVolunteerProfile({
+      id: String(ctx.user.id),
+      email: ctx.user.email,
+      name: ctx.user.name,
+      phone: ctx.user.phone,
+    });
+
+    return volunteerProfileServices.getVolunteerRemainingDays(accessToken);
+  }),
+
+  registerForDay: protectedProcedure
+    .input(z.object({ dayId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const authHeader = ctx.req.headers.authorization;
+      const accessToken = authHeader?.startsWith("Bearer ")
+        ? authHeader.substring(7)
+        : null;
+
+      if (!accessToken) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
+      }
+
+      await volunteerProfileServices.ensureVolunteerProfile({
+        id: String(ctx.user.id),
+        email: ctx.user.email,
+        name: ctx.user.name,
+        phone: ctx.user.phone,
+      });
+
+      const profile = await volunteerProfileServices.getMyVolunteerProfile(accessToken);
+      const normalizedEmail = String(profile.email ?? "").toLowerCase().trim();
+
+      if (!normalizedEmail) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Votre profil doit contenir un email valide.",
+        });
+      }
+
+      const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
+      if (!day) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
+      }
+
+      if (!day.isOpen) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Ce jour est fermé aux inscriptions",
+        });
+      }
+
+      if ((day.registeredCount ?? 0) >= day.capacity) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Ce jour a atteint le nombre maximum d'inscriptions",
+        });
+      }
+
+      const emailExists = await supabaseServices.checkVolunteerEmailExistsForDay(
+        normalizedEmail,
+        input.dayId
+      );
+      if (emailExists) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Vous êtes déjà inscrit pour ce jour.",
+        });
+      }
+
+      const volunteer = await supabaseServices.createVolunteerShiftSupabase({
+        firstName: profile.first_name,
+        lastName: profile.last_name,
+        email: normalizedEmail,
+        phone: profile.phone ?? ctx.user.phone ?? "",
+        city: "",
+        dayId: input.dayId,
+        volunteerSlots: ["service_ftour"],
+        acceptedTerms: true,
+      });
+
+      return { success: true, qrToken: volunteer.qrToken, id: volunteer.id };
+    }),
 });
 
 // ============================================
