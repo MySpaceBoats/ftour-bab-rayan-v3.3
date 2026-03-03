@@ -20,6 +20,8 @@ import {
   getUserFromToken,
   signOutUser,
   refreshUserSession,
+  requestPasswordReset,
+  completePasswordReset,
 } from "./supabase-auth";
 import * as supabaseServices from "./supabase-services";
 import * as reservationServices from "./reservation-services";
@@ -5610,6 +5612,55 @@ export const appRouter = router({
         return { session: result.session };
       }),
 
+    requestPasswordReset: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email(),
+          lang: z.string().trim().min(2).max(5).default("fr"),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const baseUrl = process.env.VITE_APP_URL || "https://ftourbabrayan.ma";
+        const normalizedLang = ["fr", "en", "ar", "amz"].includes(input.lang)
+          ? input.lang
+          : "fr";
+        const redirectTo = `${baseUrl}/${normalizedLang}/reinitialiser-mot-de-passe`;
+
+        const result = await requestPasswordReset({
+          email: input.email,
+          redirectTo,
+        });
+
+        if (result.error) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Impossible d'envoyer le mail de réinitialisation",
+          });
+        }
+
+        return { success: true } as const;
+      }),
+
+    resetPassword: publicProcedure
+      .input(
+        z.object({
+          tokenHash: z.string().min(1),
+          newPassword: z.string().min(6),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const result = await completePasswordReset(input);
+
+        if (result.error) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: result.error,
+          });
+        }
+
+        return { success: true } as const;
+      }),
+
     logout: publicProcedure.mutation(async ({ ctx }) => {
       // Nettoyer le cookie Manus OAuth si présent
       const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -6266,6 +6317,55 @@ export const appRouterUpdated = router({
         }
 
         return { session: result.session };
+      }),
+
+    requestPasswordReset: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email(),
+          lang: z.string().trim().min(2).max(5).default("fr"),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const baseUrl = process.env.VITE_APP_URL || "https://ftourbabrayan.ma";
+        const normalizedLang = ["fr", "en", "ar", "amz"].includes(input.lang)
+          ? input.lang
+          : "fr";
+        const redirectTo = `${baseUrl}/${normalizedLang}/reinitialiser-mot-de-passe`;
+
+        const result = await requestPasswordReset({
+          email: input.email,
+          redirectTo,
+        });
+
+        if (result.error) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Impossible d'envoyer le mail de réinitialisation",
+          });
+        }
+
+        return { success: true } as const;
+      }),
+
+    resetPassword: publicProcedure
+      .input(
+        z.object({
+          tokenHash: z.string().min(1),
+          newPassword: z.string().min(6),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const result = await completePasswordReset(input);
+
+        if (result.error) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: result.error,
+          });
+        }
+
+        return { success: true } as const;
       }),
 
     logout: publicProcedure.mutation(async ({ ctx }) => {
