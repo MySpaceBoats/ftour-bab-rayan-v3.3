@@ -109,3 +109,11 @@ export async function getMyAttendance(
   if (error) throw new Error(error.message);
   return (data ?? []) as VolunteerAttendance[];
 }
+
+export async function updateMyPassword(accessToken: string, password: string) {
+  const client = getRlsClient(accessToken);
+  const { error } = await client.auth.updateUser({ password });
+
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
