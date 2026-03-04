@@ -349,9 +349,8 @@ const GROUP_MAIL_DISPATCH_CC = [
 ] as const;
 
 const VOLUNTEER_GROUP_REGISTRATION_NOTIFICATION_RECIPIENTS = [
-  "contact@ftourbabrayan.ma",
   "naylabennani@hotmail.com",
-  "ratibhind3@gmail.com",
+  "reda.sebbani@gmail.com",
 ] as const;
 
 const sendGroupMailDispatchSummary = async ({
