@@ -19,6 +19,27 @@ function computeDepositDeadline(now = new Date()): Date {
   return deadline;
 }
 
+function normalizeReservationType(rawType: unknown):
+  | "particulier"
+  | "entreprise"
+  | "groupe"
+  | null {
+  if (typeof rawType !== "string") return null;
+
+  const normalized = rawType.trim().toLowerCase();
+  if (["particulier", "particuliers", "individual"].includes(normalized)) {
+    return "particulier";
+  }
+  if (["entreprise", "entreprises", "company"].includes(normalized)) {
+    return "entreprise";
+  }
+  if (["groupe", "group", "groupes"].includes(normalized)) {
+    return "groupe";
+  }
+
+  return null;
+}
+
 /**
  * Map DB row to camelCase object expected by frontend.
  * Handles both snake_case (Supabase/PostgreSQL) and camelCase (Drizzle/MySQL) column names.
@@ -271,7 +292,16 @@ export async function listRestaurantReservations(filters?: {
         .range(offset, offset + limit - 1);
 
       if (filters?.type) {
-        query = query.in("type", typeVariants[filters.type]);
+        const variants = typeVariants[filters.type]
+          .map(type => type.trim())
+          .filter(Boolean);
+        const exactMatches = variants.map(type => `type.eq.${type}`);
+        const caseInsensitiveMatches = variants.map(type => `type.ilike.${type}`);
+        const spaceTolerantMatches = variants.map(type => `type.ilike.${type}%`);
+
+        query = query.or(
+          [...exactMatches, ...caseInsensitiveMatches, ...spaceTolerantMatches].join(",")
+        );
       }
       if (filters?.status) {
         query = query.eq("status", filters.status);
@@ -297,6 +327,12 @@ export async function listRestaurantReservations(filters?: {
 
         currentOffset += queryLimit;
       }
+    }
+
+    if (filters?.type) {
+      rows = rows.filter(
+        row => normalizeReservationType((row as any).type) === filters.type
+      );
     }
 
     if (!rows.length) {
