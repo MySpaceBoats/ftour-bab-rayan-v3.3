@@ -5692,6 +5692,59 @@ const volunteerProfileRouter = router({
         input.offset
       );
     }),
+
+  updatePassword: protectedProcedure
+    .input(
+      z.object({
+        currentPassword: z.string().min(6),
+        newPassword: z.string().min(6),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const authHeader = ctx.req.headers.authorization;
+      const accessToken = authHeader?.startsWith("Bearer ")
+        ? authHeader.substring(7)
+        : null;
+
+      if (!accessToken) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
+      }
+
+      if (input.currentPassword === input.newPassword) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Le nouveau mot de passe doit être différent de l'ancien.",
+        });
+      }
+
+      const isCurrentPasswordValid =
+        await volunteerProfileServices.verifyMyCurrentPassword(
+          accessToken,
+          input.currentPassword
+        );
+
+      if (!isCurrentPasswordValid) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Mot de passe actuel incorrect.",
+        });
+      }
+
+      try {
+        return await volunteerProfileServices.updateMyPassword(
+          accessToken,
+          input.newPassword
+        );
+      } catch (error) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Impossible de mettre à jour le mot de passe.",
+        });
+      }
+    }),
 });
 
 // ============================================

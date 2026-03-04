@@ -68,6 +68,19 @@ function getRlsClient(accessToken: string): SupabaseClient {
   });
 }
 
+function getPublicClient(): SupabaseClient {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error("Supabase public credentials are missing");
+  }
+
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
+
 export async function getMyVolunteerProfile(accessToken: string) {
   const client = getRlsClient(accessToken);
   const { data, error } = await client
@@ -108,4 +121,34 @@ export async function getMyAttendance(
 
   if (error) throw new Error(error.message);
   return (data ?? []) as VolunteerAttendance[];
+}
+
+export async function verifyMyCurrentPassword(
+  accessToken: string,
+  currentPassword: string
+) {
+  const client = getRlsClient(accessToken);
+  const {
+    data: { user },
+    error: userError,
+  } = await client.auth.getUser();
+
+  if (userError) throw new Error(userError.message);
+  if (!user?.email) throw new Error("Email utilisateur introuvable.");
+
+  const publicClient = getPublicClient();
+  const { error } = await publicClient.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  });
+
+  return !error;
+}
+
+export async function updateMyPassword(accessToken: string, password: string) {
+  const client = getRlsClient(accessToken);
+  const { error } = await client.auth.updateUser({ password });
+
+  if (error) throw new Error(error.message);
+  return { success: true };
 }

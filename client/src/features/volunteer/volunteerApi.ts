@@ -44,3 +44,7 @@ export function updateMyVolunteerProfile() {
 export function getMyAttendance(limit = 20, offset = 0) {
   return trpc.volunteerProfile.attendance.useQuery({ limit, offset });
 }
+
+export function updateMyVolunteerPassword() {
+  return trpc.volunteerProfile.updatePassword.useMutation();
+}
