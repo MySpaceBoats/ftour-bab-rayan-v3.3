@@ -48,4 +48,18 @@ describe('group registration emails', () => {
     expect(email.html).toContain('15:30');
     expect(email.html).toContain('20:00');
   });
+
+  it('escapes html in acknowledgement fields', () => {
+    const email = generateGroupRegistrationAcknowledgementEmail({
+      responsibleName: '<img src=x onerror=alert(1)>',
+      groupName: '<script>alert(1)</script>',
+      volunteerSlots: ['<b>custom</b>'],
+    });
+
+    expect(email.html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    expect(email.html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+    expect(email.html).toContain('&lt;b&gt;custom&lt;/b&gt;');
+    expect(email.html).not.toContain('<script>alert(1)</script>');
+  });
+
 });

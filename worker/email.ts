@@ -197,8 +197,8 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
       <tr>
         <td style="padding: 20px;">
           <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">📅 Votre jour de participation</h3>
-          <p style="margin: 5px 0; color: #374151;"><strong>Jour :</strong> ${data.dayNumber} du Ramadan</p>
-          <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.dayDate}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Jour :</strong> ${safeDayNumber} du Ramadan</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${safeDayDate}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Lieu :</strong> ${data.location}</p>
           ${slotsHtml ? `<p style="margin: 10px 0 5px 0; color: #374151;"><strong>Créneaux choisis :</strong></p><ul style="margin: 0; padding-left: 20px; color: #374151;">${slotsHtml}</ul>` : ''}
         </td>
@@ -249,7 +249,7 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
   `;
 
   return {
-    subject: `✅ Confirmation inscription - Ftour Bab Rayan Jour ${data.dayNumber}`,
+    subject: `✅ Confirmation inscription - Ftour Bab Rayan Jour ${safeDayNumber}`,
     html: baseTemplate(content, 'linear-gradient(135deg, #5E5B34 0%, #4A4829 100%)'),
   };
 }
@@ -789,11 +789,11 @@ export function generateGroupRefusalEmail(data: GroupRefusalEmailData): { subjec
     </h2>
 
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-      Cher(e) <strong>${data.responsibleName}</strong>,
+      Cher(e) <strong>${safeResponsibleName}</strong>,
     </p>
 
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-      Nous avons bien étudié votre demande d'inscription groupe <strong>${data.groupName}</strong>${data.dayNumber ? ` pour le jour ${data.dayNumber} du Ramadan` : ''}.
+      Nous avons bien étudié votre demande d'inscription groupe <strong>${safeGroupName}</strong>${data.dayNumber ? ` pour le jour ${safeDayNumber} du Ramadan` : ''}.
       Malheureusement, nous ne pouvons pas y donner suite.
     </p>
 
@@ -814,18 +814,26 @@ export function generateGroupRefusalEmail(data: GroupRefusalEmailData): { subjec
   `;
 
   return {
-    subject: `Votre demande groupe bénévole – ${data.groupName}`,
+    subject: `Votre demande groupe bénévole – ${safeGroupName}`,
     html: baseTemplate(content, 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)'),
   };
 }
 
 export function generateGroupRegistrationEmail(data: GroupRegistrationEmailData): { subject: string; html: string } {
   const times = computeSlotTimes(data.startTime || '18h00');
+  const safeGroupName = escapeHtml(data.groupName);
+  const safeResponsibleName = escapeHtml(data.responsibleName);
+  const safeResponsibleEmail = escapeHtml(data.responsibleEmail);
+  const safeResponsiblePhone = escapeHtml(data.responsiblePhone);
+  const safeEstimatedSize = data.estimatedSize;
+  const safeDayNumber = data.dayNumber;
+  const safeDayDate = data.dayDate ? escapeHtml(data.dayDate) : undefined;
+  const safeFileName = escapeHtml(data.fileName);
   const slotLabels: Record<string, string> = {
     preparation_ftour: `Préparation Ftour (${times.prepStart} – ${times.prepEnd})`,
     service_ftour: `Service Ftour (${times.serviceStart} – ${times.serviceEnd})`,
   };
-  const slotsDisplay = data.volunteerSlots.map(s => slotLabels[s] || s).join(', ');
+  const slotsDisplay = data.volunteerSlots.map(s => escapeHtml(slotLabels[s] || s)).join(', ');
 
   const content = `
     <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
@@ -834,23 +842,23 @@ export function generateGroupRegistrationEmail(data: GroupRegistrationEmailData)
 
     <div style="background-color: #f0fdf4; border-radius: 8px; padding: 20px; margin: 20px 0;">
       <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">👥 Informations du groupe</h3>
-      <p style="margin: 5px 0; color: #374151;"><strong>Nom du groupe :</strong> ${data.groupName}</p>
-      <p style="margin: 5px 0; color: #374151;"><strong>Responsable :</strong> ${data.responsibleName}</p>
-      <p style="margin: 5px 0; color: #374151;"><strong>Email :</strong> <a href="mailto:${data.responsibleEmail}" style="color: #166534;">${data.responsibleEmail}</a></p>
-      <p style="margin: 5px 0; color: #374151;"><strong>Téléphone :</strong> ${data.responsiblePhone}</p>
-      ${data.estimatedSize ? `<p style="margin: 5px 0; color: #374151;"><strong>Nombre estimé :</strong> ${data.estimatedSize} personnes</p>` : ''}
+      <p style="margin: 5px 0; color: #374151;"><strong>Nom du groupe :</strong> ${safeGroupName}</p>
+      <p style="margin: 5px 0; color: #374151;"><strong>Responsable :</strong> ${safeResponsibleName}</p>
+      <p style="margin: 5px 0; color: #374151;"><strong>Email :</strong> <a href="mailto:${safeResponsibleEmail}" style="color: #166534;">${safeResponsibleEmail}</a></p>
+      <p style="margin: 5px 0; color: #374151;"><strong>Téléphone :</strong> ${safeResponsiblePhone}</p>
+      ${data.estimatedSize ? `<p style="margin: 5px 0; color: #374151;"><strong>Nombre estimé :</strong> ${safeEstimatedSize} personnes</p>` : ''}
     </div>
 
     <div style="background-color: #fef3c7; border-radius: 8px; padding: 20px; margin: 20px 0;">
       <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 18px;">📅 Participation</h3>
-      ${data.dayNumber ? `<p style="margin: 5px 0; color: #374151;"><strong>Jour :</strong> ${data.dayNumber} du Ramadan</p>` : ''}
-      ${data.dayDate ? `<p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.dayDate}</p>` : ''}
+      ${data.dayNumber ? `<p style="margin: 5px 0; color: #374151;"><strong>Jour :</strong> ${safeDayNumber} du Ramadan</p>` : ''}
+      ${data.dayDate ? `<p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${safeDayDate}</p>` : ''}
       <p style="margin: 5px 0; color: #374151;"><strong>Créneaux :</strong> ${slotsDisplay}</p>
     </div>
 
     <div style="background-color: #eff6ff; border-radius: 8px; padding: 20px; margin: 20px 0;">
       <h3 style="color: #1e40af; margin: 0 0 15px 0; font-size: 18px;">📎 Fichier joint</h3>
-      <p style="margin: 5px 0; color: #374151;">Le fichier <strong>${data.fileName}</strong> contenant la liste des membres du groupe est joint à cet email.</p>
+      <p style="margin: 5px 0; color: #374151;">Le fichier <strong>${safeFileName}</strong> contenant la liste des membres du groupe est joint à cet email.</p>
     </div>
 
     <p style="color: #6b7280; font-size: 14px; margin: 20px 0 0 0;">
@@ -859,7 +867,7 @@ export function generateGroupRegistrationEmail(data: GroupRegistrationEmailData)
   `;
 
   return {
-    subject: `👥 [Groupe] Inscription bénévole - ${data.groupName}`,
+    subject: `👥 [Groupe] Inscription bénévole - ${safeGroupName}`,
     html: baseTemplate(content),
   };
 }
@@ -868,11 +876,16 @@ export function generateGroupRegistrationAcknowledgementEmail(
   data: GroupRegistrationAcknowledgementEmailData,
 ): { subject: string; html: string } {
   const times = computeSlotTimes(data.startTime || '18h00');
+  const safeResponsibleName = escapeHtml(data.responsibleName);
+  const safeGroupName = escapeHtml(data.groupName);
+  const safeDayNumber = data.dayNumber;
+  const safeDayDate = data.dayDate ? escapeHtml(data.dayDate) : undefined;
+  const safeEstimatedSize = data.estimatedSize;
   const slotLabels: Record<string, string> = {
     preparation_ftour: `Préparation Ftour (${times.prepStart} – ${times.prepEnd})`,
     service_ftour: `Service Ftour (${times.serviceStart} – ${times.serviceEnd})`,
   };
-  const slotsDisplay = data.volunteerSlots.map(s => slotLabels[s] || s).join(', ');
+  const slotsDisplay = data.volunteerSlots.map(s => escapeHtml(slotLabels[s] || s)).join(', ');
 
   const content = `
     <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
@@ -880,19 +893,19 @@ export function generateGroupRegistrationAcknowledgementEmail(
     </h2>
 
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-      Bonjour <strong>${data.responsibleName}</strong>,
+      Bonjour <strong>${safeResponsibleName}</strong>,
     </p>
 
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
       Nous confirmons la bonne réception de votre demande d'inscription pour le groupe
-      <strong>${data.groupName}</strong>. Notre équipe va l'étudier et vous recontacter rapidement.
+      <strong>${safeGroupName}</strong>. Notre équipe va l'étudier et vous recontacter rapidement.
     </p>
 
     <div style="background-color: #f0fdf4; border-radius: 8px; padding: 20px; margin: 20px 0;">
       <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">📋 Récapitulatif</h3>
-      ${data.dayNumber ? `<p style="margin: 5px 0; color: #374151;"><strong>Jour :</strong> ${data.dayNumber} du Ramadan</p>` : ''}
-      ${data.dayDate ? `<p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.dayDate}</p>` : ''}
-      ${data.estimatedSize ? `<p style="margin: 5px 0; color: #374151;"><strong>Nombre estimé :</strong> ${data.estimatedSize} personnes</p>` : ''}
+      ${data.dayNumber ? `<p style="margin: 5px 0; color: #374151;"><strong>Jour :</strong> ${safeDayNumber} du Ramadan</p>` : ''}
+      ${data.dayDate ? `<p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${safeDayDate}</p>` : ''}
+      ${data.estimatedSize ? `<p style="margin: 5px 0; color: #374151;"><strong>Nombre estimé :</strong> ${safeEstimatedSize} personnes</p>` : ''}
       <p style="margin: 5px 0; color: #374151;"><strong>Créneaux demandés :</strong> ${slotsDisplay}</p>
     </div>
 
@@ -902,7 +915,7 @@ export function generateGroupRegistrationAcknowledgementEmail(
   `;
 
   return {
-    subject: `✅ Demande groupe reçue - ${data.groupName}`,
+    subject: `✅ Demande groupe reçue - ${safeGroupName}`,
     html: baseTemplate(content),
   };
 }

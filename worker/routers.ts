@@ -2894,7 +2894,7 @@ const volunteersRouter = router({
       });
 
       try {
-        await sendEmail({
+        const adminEmailResult = await sendEmail({
           to: "admin@ftourbabrayan.ma",
           subject: emailData.subject,
           html: emailData.html,
@@ -2906,7 +2906,14 @@ const volunteersRouter = router({
             },
           ],
         });
-        console.log("[Group Registration] Admin email sent successfully");
+        if (adminEmailResult.success) {
+          console.log("[Group Registration] Admin email sent successfully");
+        } else {
+          console.error(
+            "[Group Registration] Admin email failed:",
+            adminEmailResult.error || "Unknown error",
+          );
+        }
       } catch (error) {
         console.error("[Group Registration] Admin email failed:", error);
       }
@@ -2928,13 +2935,21 @@ const volunteersRouter = router({
           startTime: day?.iftar_time || "18h00",
         });
 
-        await sendEmail({
+        const acknowledgementResult = await sendEmail({
           to: normalizedGroupEmail,
           subject: acknowledgementEmail.subject,
           html: acknowledgementEmail.html,
           apiKey: ctx.env.RESEND_API_KEY,
         });
-        console.log("[Group Registration] Responsible acknowledgement email sent successfully");
+
+        if (acknowledgementResult.success) {
+          console.log("[Group Registration] Responsible acknowledgement email sent successfully");
+        } else {
+          console.error(
+            "[Group Registration] Responsible acknowledgement email failed:",
+            acknowledgementResult.error || "Unknown error",
+          );
+        }
       } catch (error) {
         console.error(
           "[Group Registration] Responsible acknowledgement email failed:",
