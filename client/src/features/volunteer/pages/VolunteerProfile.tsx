@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { useEffect, useState, type ChangeEvent } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -6,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, QrCode } from "lucide-react";
+import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Camera } from "lucide-react";
 import PrivateRoute from "../components/PrivateRoute";
@@ -13,14 +16,20 @@ import VolunteerBadge from "../components/VolunteerBadge";
 import VolunteerGalleryUploadModule from "@/features/gallery/components/VolunteerGalleryUploadModule";
 import {
   getMyAttendance,
+  getMyRegistrations,
+  getMyRemainingDays,
   getMyVolunteerProfile,
+  registerForDayFromProfile,
   updateMyVolunteerProfile,
 } from "../volunteerApi";
 
 export default function VolunteerProfilePage() {
   const profileQuery = getMyVolunteerProfile();
   const attendanceQuery = getMyAttendance(20, 0);
+  const registrationsQuery = getMyRegistrations();
+  const remainingDaysQuery = getMyRemainingDays();
   const updateMutation = updateMyVolunteerProfile();
+  const registerMutation = registerForDayFromProfile();
 
   const [form, setForm] = useState({
     first_name: "",
@@ -72,6 +81,15 @@ export default function VolunteerProfilePage() {
     });
   };
 
+  const latestActiveRegistration = useMemo(() => {
+    const rows = registrationsQuery.data ?? [];
+    return rows.find((row) => row.status !== "cancelled");
+  }, [registrationsQuery.data]);
+
+  const qrLabel = latestActiveRegistration
+    ? `Inscrit jour ${latestActiveRegistration.day_number} - ${latestActiveRegistration.date}`
+    : "Aucune inscription active";
+
   return (
     <PrivateRoute redirectTo="/profil-benevole">
       <div className="min-h-screen flex flex-col bg-stone-50">
@@ -109,6 +127,83 @@ export default function VolunteerProfilePage() {
                   <p className="text-stone-700">
                     Niveau: {profileQuery.data.level} (bientôt)
                   </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Mon QR code bénévole</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {latestActiveRegistration?.qr_token ? (
+                    <>
+                      <div className="flex items-center gap-2 text-sm text-stone-700">
+                        <QrCode className="h-4 w-4" /> {qrLabel}
+                      </div>
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(`${window.location.origin}/checkin/${latestActiveRegistration.qr_token}`)}`}
+                        alt="QR code bénévole"
+                        className="border rounded-lg"
+                        width={240}
+                        height={240}
+                      />
+                      <p className="text-sm text-stone-600">
+                        Ce QR code devient valide pour la date sélectionnée et enregistre votre présence le jour du scan.
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-stone-600">Votre QR code sera activé dès votre première inscription à une date.</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Dates restantes du Ramadan</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {remainingDaysQuery.isLoading ? (
+                    <div className="flex items-center gap-2 text-stone-600">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Chargement des jours...
+                    </div>
+                  ) : remainingDaysQuery.error ? (
+                    <Alert variant="destructive">
+                      <AlertDescription>Impossible de charger les jours restants.</AlertDescription>
+                    </Alert>
+                  ) : !remainingDaysQuery.data?.length ? (
+                    <div className="text-stone-600">Aucun jour restant disponible.</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {remainingDaysQuery.data.map((day) => {
+                        const isFull = (day.registeredCount ?? 0) >= day.capacity;
+                        const disabled = !day.isOpen || isFull || day.alreadyRegistered || registerMutation.isPending;
+                        return (
+                          <div key={day.id} className="flex items-center justify-between border rounded-md p-3 bg-white">
+                            <div>
+                              <div className="font-medium">Jour {day.dayNumber} - {day.date}</div>
+                              <div className="text-sm text-stone-600">
+                                {day.location || "Association Bab Rayan"} • {day.iftarTime || "18h00"}
+                              </div>
+                            </div>
+                            <Button
+                              variant={day.alreadyRegistered ? "secondary" : "default"}
+                              disabled={disabled}
+                              onClick={async () => {
+                                try {
+                                  await registerMutation.mutateAsync({ dayId: day.id });
+                                  toast.success("Inscription confirmée. Votre QR est activé pour ce jour.");
+                                } catch (error: any) {
+                                  toast.error(error?.message || "Erreur lors de l'inscription");
+                                }
+                              }}
+                            >
+                              {day.alreadyRegistered ? "Déjà inscrit" : "S'inscrire"}
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
