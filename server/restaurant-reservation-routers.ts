@@ -34,9 +34,11 @@ function generateQrToken(): string {
 
 
 const GROUP_RESERVATION_CONFIRMATION_TTL_MS = 1000 * 60 * 60 * 24 * 2; // 48h
-const GROUP_NOTIFICATION_RECIPIENTS = [
+const GROUP_NOTIFICATION_TO = "contact@ftourbabrayan.ma";
+const GROUP_NOTIFICATION_BCC_RECIPIENTS = [
   "digital@myspace.boats",
   "nailabennani@hotmail.com",
+  "reda.sebbani@gmail.com",
 ] as const;
 
 
@@ -575,15 +577,12 @@ export const restaurantReservationsRouter = router({
             reservation.displayChoice === "jardin" ? "jardin" : "brasserie",
         }).html;
 
-        await Promise.all(
-          GROUP_NOTIFICATION_RECIPIENTS.map(to =>
-            sendEmail({
-              to,
-              subject: `📬 Nouvelle demande Groupe - ${groupNotificationDate}`,
-              html: groupNotificationHtml,
-            })
-          )
-        );
+        await sendEmail({
+          to: GROUP_NOTIFICATION_TO,
+          bcc: [...GROUP_NOTIFICATION_BCC_RECIPIENTS],
+          subject: `📬 Nouvelle demande Groupe - ${groupNotificationDate}`,
+          html: groupNotificationHtml,
+        });
       }
 
       const refreshed = await reservationServices.getRestaurantReservationById(
