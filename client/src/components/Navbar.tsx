@@ -239,7 +239,7 @@ export default function Navbar() {
             <Link href={localizedHref("/benevole")}>
               <Button
                 size="sm"
-                className="bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3] border-2 border-[#F2E9D3] font-semibold"
+                className="bg-red-600 text-white hover:bg-red-700 border-2 border-red-600 font-semibold"
               >
                 <Users className="h-4 w-4 mr-2" />
                 {t.cta.volunteer}
@@ -367,7 +367,7 @@ export default function Navbar() {
                     href={localizedHref("/benevole")}
                     onClick={() => setIsOpen(false)}
                   >
-                    <Button className="w-full bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3] border-2 border-[#F2E9D3] font-semibold">
+                    <Button className="w-full bg-red-600 text-white hover:bg-red-700 border-2 border-red-600 font-semibold">
                       <Users className="h-4 w-4 mr-2" />
                       {t.cta.volunteer}
                     </Button>
