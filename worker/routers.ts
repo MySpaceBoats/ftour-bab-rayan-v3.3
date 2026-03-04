@@ -2867,7 +2867,11 @@ const volunteersRouter = router({
       }
 
       // Build and send email with attachment to admin
-      const { sendEmail, generateGroupRegistrationEmail } = await import(
+      const {
+        sendEmail,
+        generateGroupRegistrationEmail,
+        generateGroupRegistrationAcknowledgementEmail,
+      } = await import(
         "./email"
       );
       const emailData = generateGroupRegistrationEmail({
@@ -2890,7 +2894,7 @@ const volunteersRouter = router({
       });
 
       try {
-        await sendEmail({
+        const adminEmailResult = await sendEmail({
           to: "admin@ftourbabrayan.ma",
           subject: emailData.subject,
           html: emailData.html,
@@ -2902,9 +2906,55 @@ const volunteersRouter = router({
             },
           ],
         });
-        console.log("[Group Registration] Admin email sent successfully");
+        if (adminEmailResult.success) {
+          console.log("[Group Registration] Admin email sent successfully");
+        } else {
+          console.error(
+            "[Group Registration] Admin email failed:",
+            adminEmailResult.error || "Unknown error",
+          );
+        }
       } catch (error) {
         console.error("[Group Registration] Admin email failed:", error);
+      }
+
+      try {
+        const acknowledgementEmail = generateGroupRegistrationAcknowledgementEmail({
+          responsibleName: input.responsibleName,
+          groupName: input.groupName,
+          dayNumber: day?.day_number,
+          dayDate: day?.date
+            ? new Date(day.date).toLocaleDateString("fr-FR", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+              })
+            : undefined,
+          estimatedSize: input.estimatedSize,
+          volunteerSlots: input.volunteerSlots,
+          startTime: day?.iftar_time || "18h00",
+        });
+
+        const acknowledgementResult = await sendEmail({
+          to: normalizedGroupEmail,
+          subject: acknowledgementEmail.subject,
+          html: acknowledgementEmail.html,
+          apiKey: ctx.env.RESEND_API_KEY,
+        });
+
+        if (acknowledgementResult.success) {
+          console.log("[Group Registration] Responsible acknowledgement email sent successfully");
+        } else {
+          console.error(
+            "[Group Registration] Responsible acknowledgement email failed:",
+            acknowledgementResult.error || "Unknown error",
+          );
+        }
+      } catch (error) {
+        console.error(
+          "[Group Registration] Responsible acknowledgement email failed:",
+          error,
+        );
       }
 
       return {
