@@ -772,6 +772,16 @@ export interface GroupRefusalEmailData {
   rejectionReason?: string;
 }
 
+export interface GroupRegistrationAcknowledgementEmailData {
+  responsibleName: string;
+  groupName: string;
+  dayNumber?: number;
+  dayDate?: string;
+  estimatedSize?: number;
+  volunteerSlots: string[];
+  startTime?: string;
+}
+
 export function generateGroupRefusalEmail(data: GroupRefusalEmailData): { subject: string; html: string } {
   const content = `
     <h2 style="color: #991b1b; margin: 0 0 20px 0; font-size: 24px;">
@@ -850,6 +860,49 @@ export function generateGroupRegistrationEmail(data: GroupRegistrationEmailData)
 
   return {
     subject: `👥 [Groupe] Inscription bénévole - ${data.groupName}`,
+    html: baseTemplate(content),
+  };
+}
+
+export function generateGroupRegistrationAcknowledgementEmail(
+  data: GroupRegistrationAcknowledgementEmailData,
+): { subject: string; html: string } {
+  const times = computeSlotTimes(data.startTime || '18h00');
+  const slotLabels: Record<string, string> = {
+    preparation_ftour: `Préparation Ftour (${times.prepStart} – ${times.prepEnd})`,
+    service_ftour: `Service Ftour (${times.serviceStart} – ${times.serviceEnd})`,
+  };
+  const slotsDisplay = data.volunteerSlots.map(s => slotLabels[s] || s).join(', ');
+
+  const content = `
+    <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
+      Votre demande groupe a bien été reçue ✅
+    </h2>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Bonjour <strong>${data.responsibleName}</strong>,
+    </p>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Nous confirmons la bonne réception de votre demande d'inscription pour le groupe
+      <strong>${data.groupName}</strong>. Notre équipe va l'étudier et vous recontacter rapidement.
+    </p>
+
+    <div style="background-color: #f0fdf4; border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">📋 Récapitulatif</h3>
+      ${data.dayNumber ? `<p style="margin: 5px 0; color: #374151;"><strong>Jour :</strong> ${data.dayNumber} du Ramadan</p>` : ''}
+      ${data.dayDate ? `<p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.dayDate}</p>` : ''}
+      ${data.estimatedSize ? `<p style="margin: 5px 0; color: #374151;"><strong>Nombre estimé :</strong> ${data.estimatedSize} personnes</p>` : ''}
+      <p style="margin: 5px 0; color: #374151;"><strong>Créneaux demandés :</strong> ${slotsDisplay}</p>
+    </div>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">
+      Merci pour votre engagement solidaire ❤️
+    </p>
+  `;
+
+  return {
+    subject: `✅ Demande groupe reçue - ${data.groupName}`,
     html: baseTemplate(content),
   };
 }

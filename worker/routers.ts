@@ -2867,7 +2867,11 @@ const volunteersRouter = router({
       }
 
       // Build and send email with attachment to admin
-      const { sendEmail, generateGroupRegistrationEmail } = await import(
+      const {
+        sendEmail,
+        generateGroupRegistrationEmail,
+        generateGroupRegistrationAcknowledgementEmail,
+      } = await import(
         "./email"
       );
       const emailData = generateGroupRegistrationEmail({
@@ -2905,6 +2909,37 @@ const volunteersRouter = router({
         console.log("[Group Registration] Admin email sent successfully");
       } catch (error) {
         console.error("[Group Registration] Admin email failed:", error);
+      }
+
+      try {
+        const acknowledgementEmail = generateGroupRegistrationAcknowledgementEmail({
+          responsibleName: input.responsibleName,
+          groupName: input.groupName,
+          dayNumber: day?.day_number,
+          dayDate: day?.date
+            ? new Date(day.date).toLocaleDateString("fr-FR", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+              })
+            : undefined,
+          estimatedSize: input.estimatedSize,
+          volunteerSlots: input.volunteerSlots,
+          startTime: day?.iftar_time || "18h00",
+        });
+
+        await sendEmail({
+          to: normalizedGroupEmail,
+          subject: acknowledgementEmail.subject,
+          html: acknowledgementEmail.html,
+          apiKey: ctx.env.RESEND_API_KEY,
+        });
+        console.log("[Group Registration] Responsible acknowledgement email sent successfully");
+      } catch (error) {
+        console.error(
+          "[Group Registration] Responsible acknowledgement email failed:",
+          error,
+        );
       }
 
       return {
