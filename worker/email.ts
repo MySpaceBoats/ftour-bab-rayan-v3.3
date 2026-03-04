@@ -6,7 +6,6 @@
 const RESEND_API_URL = "https://api.resend.com/emails";
 const FROM_EMAIL = "Ftour Bab Rayan <noreply@ftourbabrayan.ma>";
 const REPLY_TO = "contact@ftourbabrayan.ma";
-const BCC_EMAIL = "rsebbani@myspace.boats";
 
 /**
  * Calcule les horaires des créneaux bénévoles à partir de l'heure d'iftar.
@@ -67,7 +66,6 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
         subject: options.subject,
         html: options.html,
         reply_to: REPLY_TO,
-        bcc: [BCC_EMAIL],
         ...(options.cc ? { cc: options.cc } : {}),
         ...(options.attachments ? { attachments: options.attachments } : {}),
       }),
