@@ -240,7 +240,7 @@ export default function Programme() {
               Choisissez un ou plusieurs jours et rejoignez notre équipe de bénévoles
             </p>
             <Link href={`/${lang}/benevole`}>
-              <Button size="lg" className="bg-primary hover:bg-primary/90">
+              <Button size="lg" className="bg-red-600 text-white hover:bg-red-700 border-2 border-red-600">
                 <Users className="h-5 w-5 mr-2" />
                 Devenir bénévole
                 <ArrowRight className="h-5 w-5 ml-2" />

@@ -64,7 +64,7 @@ export default function Home() {
                 <Link href={`/${lang}/benevole`}>
                   <Button 
                     size="lg" 
-                    className="w-full sm:w-auto text-lg px-8 py-6 bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3] border-2 border-[#F2E9D3]"
+                    className="w-full sm:w-auto text-lg px-8 py-6 bg-red-600 text-white hover:bg-red-700 border-2 border-red-600"
                   >
                     <Users className="h-5 w-5 mr-2" />
                     {t.cta.volunteer}
@@ -449,7 +449,7 @@ export default function Home() {
               <Link href={`/${lang}/benevole`}>
                 <Button 
                   size="lg" 
-                  className="w-full sm:w-auto text-lg px-8 bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]"
+                  className="w-full sm:w-auto text-lg px-8 bg-red-600 text-white hover:bg-red-700 border-2 border-red-600"
                 >
                   <Users className="h-5 w-5 mr-2" />
                   Devenir bénévole

@@ -275,7 +275,7 @@ export default function Evenement() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href={`/${lang}/benevole`}>
-                <Button size="lg" variant="secondary" className="w-full sm:w-auto">
+                <Button size="lg" className="w-full sm:w-auto bg-red-600 text-white hover:bg-red-700 border-2 border-red-600">
                   <Users className="h-5 w-5 mr-2" />
                   {t.cta.volunteer}
                 </Button>
