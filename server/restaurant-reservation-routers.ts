@@ -34,6 +34,12 @@ function generateQrToken(): string {
 
 
 const GROUP_RESERVATION_CONFIRMATION_TTL_MS = 1000 * 60 * 60 * 24 * 2; // 48h
+const GROUP_NOTIFICATION_TO = "contact@ftourbabrayan.ma";
+const GROUP_NOTIFICATION_BCC_RECIPIENTS = [
+  "digital@myspace.boats",
+  "nailabennani@hotmail.com",
+  "reda.sebbani@gmail.com",
+] as const;
 
 
 function getPublicAppBaseUrl(): string {
@@ -554,28 +560,28 @@ export const restaurantReservationsRouter = router({
           text: customerRequestEmail.text,
         });
 
+        const groupNotificationDate = reservation.date
+          ? reservation.date.toISOString().split("T")[0]
+          : "date inconnue";
+        const groupNotificationHtml = generateNewBookingNotificationEmail({
+          type: "groupe",
+          date: reservation.date
+            ? reservation.date.toISOString().split("T")[0]
+            : "",
+          participantsCount: reservation.seatsTotal,
+          contactName: reservation.name,
+          contactEmail: reservation.email,
+          contactPhone: reservation.phone,
+          reference: reservation.reference,
+          displayChoice:
+            reservation.displayChoice === "jardin" ? "jardin" : "brasserie",
+        }).html;
+
         await sendEmail({
-          to: "digital@myspace.boats",
-          subject: `📬 Nouvelle demande Groupe - ${
-            reservation.date
-              ? reservation.date.toISOString().split("T")[0]
-              : "date inconnue"
-          }`,
-          html: generateNewBookingNotificationEmail({
-            type: "groupe",
-            date: reservation.date
-              ? reservation.date.toISOString().split("T")[0]
-              : "",
-            participantsCount: reservation.seatsTotal,
-            contactName: reservation.name,
-            contactEmail: reservation.email,
-            contactPhone: reservation.phone,
-            reference: reservation.reference,
-            displayChoice:
-              reservation.displayChoice === "jardin"
-                ? "jardin"
-                : "brasserie",
-          }).html,
+          to: GROUP_NOTIFICATION_TO,
+          bcc: [...GROUP_NOTIFICATION_BCC_RECIPIENTS],
+          subject: `📬 Nouvelle demande Groupe - ${groupNotificationDate}`,
+          html: groupNotificationHtml,
         });
       }
 
