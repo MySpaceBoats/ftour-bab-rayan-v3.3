@@ -251,6 +251,13 @@ export async function listRestaurantReservations(filters?: {
 }) {
   try {
     const client = getClient();
+
+    const typeVariants: Record<"particulier" | "entreprise" | "groupe", string[]> = {
+      particulier: ["particulier", "particuliers", "individual"],
+      entreprise: ["entreprise", "entreprises", "company"],
+      groupe: ["groupe", "group", "groupes"],
+    };
+
     const hasExplicitLimit =
       typeof filters?.limit === "number" && filters.limit > 0;
     const queryLimit = hasExplicitLimit ? filters!.limit! : 1000;
@@ -264,7 +271,7 @@ export async function listRestaurantReservations(filters?: {
         .range(offset, offset + limit - 1);
 
       if (filters?.type) {
-        query = query.eq("type", filters.type);
+        query = query.in("type", typeVariants[filters.type]);
       }
       if (filters?.status) {
         query = query.eq("status", filters.status);
