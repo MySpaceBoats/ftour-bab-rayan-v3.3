@@ -287,7 +287,7 @@ export default function Association() {
                 </div>
               </div>
               <Link href={`/${lang}/benevole`}>
-                <Button size="lg" className="mt-4">
+                <Button size="lg" className="mt-4 bg-red-600 text-white hover:bg-red-700 border-2 border-red-600">
                   {t.cta.volunteer}
                 </Button>
               </Link>
@@ -307,7 +307,7 @@ export default function Association() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
                 <Link href={`/${lang}/benevole`}>
-                  <Button size="lg" variant="secondary">
+                  <Button size="lg" className="bg-red-600 text-white hover:bg-red-700 border-2 border-red-600">
                     {t.cta.volunteer}
                   </Button>
                 </Link>
