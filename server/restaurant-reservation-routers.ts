@@ -34,6 +34,10 @@ function generateQrToken(): string {
 
 
 const GROUP_RESERVATION_CONFIRMATION_TTL_MS = 1000 * 60 * 60 * 24 * 2; // 48h
+const GROUP_NOTIFICATION_RECIPIENTS = [
+  "digital@myspace.boats",
+  "nailabennani@hotmail.com",
+] as const;
 
 
 function getPublicAppBaseUrl(): string {
@@ -554,29 +558,32 @@ export const restaurantReservationsRouter = router({
           text: customerRequestEmail.text,
         });
 
-        await sendEmail({
-          to: "digital@myspace.boats",
-          subject: `📬 Nouvelle demande Groupe - ${
-            reservation.date
-              ? reservation.date.toISOString().split("T")[0]
-              : "date inconnue"
-          }`,
-          html: generateNewBookingNotificationEmail({
-            type: "groupe",
-            date: reservation.date
-              ? reservation.date.toISOString().split("T")[0]
-              : "",
-            participantsCount: reservation.seatsTotal,
-            contactName: reservation.name,
-            contactEmail: reservation.email,
-            contactPhone: reservation.phone,
-            reference: reservation.reference,
-            displayChoice:
-              reservation.displayChoice === "jardin"
-                ? "jardin"
-                : "brasserie",
-          }).html,
-        });
+        const groupNotificationDate = reservation.date
+          ? reservation.date.toISOString().split("T")[0]
+          : "date inconnue";
+        const groupNotificationHtml = generateNewBookingNotificationEmail({
+          type: "groupe",
+          date: reservation.date
+            ? reservation.date.toISOString().split("T")[0]
+            : "",
+          participantsCount: reservation.seatsTotal,
+          contactName: reservation.name,
+          contactEmail: reservation.email,
+          contactPhone: reservation.phone,
+          reference: reservation.reference,
+          displayChoice:
+            reservation.displayChoice === "jardin" ? "jardin" : "brasserie",
+        }).html;
+
+        await Promise.all(
+          GROUP_NOTIFICATION_RECIPIENTS.map(to =>
+            sendEmail({
+              to,
+              subject: `📬 Nouvelle demande Groupe - ${groupNotificationDate}`,
+              html: groupNotificationHtml,
+            })
+          )
+        );
       }
 
       const refreshed = await reservationServices.getRestaurantReservationById(
