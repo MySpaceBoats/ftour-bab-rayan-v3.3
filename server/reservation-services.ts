@@ -1,5 +1,6 @@
 import { getSupabaseAdminClient } from './supabase';
 import { nanoid } from 'nanoid';
+import { DEFAULT_RAMADAN_TIMEZONE, getDateStringInTimeZone } from '@shared/ramadan';
 
 // ============================================
 // RESTAURANT SERVICES
@@ -521,6 +522,17 @@ export interface CheckinData {
   validatedBy: string;
 }
 
+export function getCurrentReservationDate(timeZone = DEFAULT_RAMADAN_TIMEZONE): string {
+  return getDateStringInTimeZone(new Date(), timeZone);
+}
+
+export function isReservationValidForCurrentDate(
+  reservationDate: string,
+  currentDate = getCurrentReservationDate()
+): boolean {
+  return reservationDate === currentDate;
+}
+
 export async function createCheckinSupabase(data: CheckinData) {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error('Supabase not configured');
@@ -542,8 +554,8 @@ export async function createCheckinSupabase(data: CheckinData) {
   }
 
   // Check date
-  const today = new Date().toISOString().split('T')[0];
-  if (reservation.date !== today) {
+  const today = getCurrentReservationDate();
+  if (!isReservationValidForCurrentDate(reservation.date, today)) {
     throw new Error(`Cette réservation est pour le ${reservation.date}, pas pour aujourd'hui`);
   }
 
