@@ -40,6 +40,29 @@ function normalizeReservationType(rawType: unknown):
   return null;
 }
 
+function inferReservationTypeFromRow(row: any):
+  | "particulier"
+  | "entreprise"
+  | "groupe"
+  | null {
+  const rawGroupName = row?.group_name ?? row?.groupName;
+  if (typeof rawGroupName === "string" && rawGroupName.trim().length > 0) {
+    return "groupe";
+  }
+
+  const rawCompanyName = row?.company_name ?? row?.companyName;
+  if (typeof rawCompanyName === "string" && rawCompanyName.trim().length > 0) {
+    return "entreprise";
+  }
+
+  const normalizedFromType = normalizeReservationType(row?.type);
+  if (normalizedFromType) {
+    return normalizedFromType;
+  }
+
+  return null;
+}
+
 /**
  * Map DB row to camelCase object expected by frontend.
  * Handles both snake_case (Supabase/PostgreSQL) and camelCase (Drizzle/MySQL) column names.
@@ -55,7 +78,7 @@ function mapReservation(r: any) {
   return {
     id: r.id,
     reference: r.reference,
-    type: r.type,
+    type: inferReservationTypeFromRow(r) ?? r.type ?? null,
     seatsTotal: r.seats_total ?? r.seatsTotal ?? 0,
     date: rawDate ? new Date(rawDate) : null,
     name: r.name,
@@ -312,7 +335,7 @@ export async function listRestaurantReservations(filters?: {
 
     if (filters?.type) {
       rows = rows.filter(
-        row => normalizeReservationType((row as any).type) === filters.type
+        row => inferReservationTypeFromRow(row) === filters.type
       );
     }
 
