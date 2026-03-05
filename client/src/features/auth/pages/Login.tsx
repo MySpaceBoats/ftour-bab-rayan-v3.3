@@ -33,7 +33,7 @@ export default function Login() {
         // Stocker la session persistée (token + refresh)
         setStoredSession(data.session);
         // Rediriger vers /admin si l'utilisateur est admin, sinon vers l'accueil
-        const isAdmin = data.user?.role && ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'admin_patisserie', 'admin_terroir', 'admin_contenu', 'admin_messages', 'vue_restaurant'].includes(data.user.role);
+        const isAdmin = data.user?.role && ['admin', 'super_admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'admin_patisserie', 'admin_terroir', 'admin_contenu', 'admin_messages', 'vue_restaurant', 'manager_restaurant'].includes(data.user.role);
         window.location.href = isAdmin ? '/admin' : redirectTo;
       }
     },

@@ -24,6 +24,7 @@ const roleLabels: Record<string, string> = {
   scanner: "Scanner",
   admin_restaurant: "Admin Restaurant",
   vue_restaurant: "Vue Restaurant",
+  manager_restaurant: "Manager Restaurant",
   admin_patisserie: "Admin Pâtisserie",
   admin_terroir: "Admin Terroir",
   admin_contenu: "Admin Contenu",
@@ -40,6 +41,7 @@ const roleColors: Record<string, string> = {
   scanner: "bg-cyan-100 text-cyan-700",
   admin_restaurant: "bg-amber-100 text-amber-700",
   vue_restaurant: "bg-lime-100 text-lime-700",
+  manager_restaurant: "bg-yellow-100 text-yellow-700",
   admin_patisserie: "bg-rose-100 text-rose-700",
   admin_terroir: "bg-emerald-100 text-emerald-700",
   admin_contenu: "bg-indigo-100 text-indigo-700",
@@ -201,6 +203,7 @@ export default function AdminUtilisateurs() {
                         <SelectItem value="admin_dons">Admin Dons</SelectItem>
                         <SelectItem value="admin_restaurant">Admin Restaurant</SelectItem>
                         <SelectItem value="vue_restaurant">Vue Restaurant</SelectItem>
+                              <SelectItem value="manager_restaurant">Manager Restaurant</SelectItem>
                         <SelectItem value="admin_patisserie">Admin Pâtisserie</SelectItem>
                         <SelectItem value="admin_terroir">Admin Terroir</SelectItem>
                         <SelectItem value="admin_contenu">Admin Contenu</SelectItem>
@@ -271,7 +274,7 @@ export default function AdminUtilisateurs() {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {users?.filter((u: any) => ['admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'admin_restaurant', 'vue_restaurant', 'admin_patisserie', 'admin_terroir'].includes(u.role)).length || 0}
+                {users?.filter((u: any) => ['admin', 'admin_ops', 'admin_boutique', 'admin_dons', 'admin_restaurant', 'vue_restaurant', 'manager_restaurant', 'admin_patisserie', 'admin_terroir'].includes(u.role)).length || 0}
               </div>
               <div className="text-xs text-muted-foreground">Admins</div>
             </CardContent>
@@ -350,6 +353,7 @@ export default function AdminUtilisateurs() {
                               <SelectItem value="admin_dons">Admin Dons</SelectItem>
                               <SelectItem value="admin_restaurant">Admin Restaurant</SelectItem>
                               <SelectItem value="vue_restaurant">Vue Restaurant</SelectItem>
+                              <SelectItem value="manager_restaurant">Manager Restaurant</SelectItem>
                               <SelectItem value="admin_patisserie">Admin Pâtisserie</SelectItem>
                               <SelectItem value="admin_terroir">Admin Terroir</SelectItem>
                               <SelectItem value="admin">Admin</SelectItem>
@@ -410,6 +414,10 @@ export default function AdminUtilisateurs() {
               <div>
                 <Badge className={roleColors.vue_restaurant}>Vue Restaurant</Badge>
                 <p className="text-muted-foreground mt-1">Consultation des 3 modules restaurant</p>
+              </div>
+              <div>
+                <Badge className={roleColors.manager_restaurant}>Manager Restaurant</Badge>
+                <p className="text-muted-foreground mt-1">Accès au dashboard restaurant uniquement</p>
               </div>
               <div>
                 <Badge className={roleColors.admin_patisserie}>Admin Pâtisserie</Badge>

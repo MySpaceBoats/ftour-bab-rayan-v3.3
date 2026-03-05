@@ -603,7 +603,7 @@ export const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
       if (!allowedRoles.includes(ctx.user?.role || "")) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -672,7 +672,7 @@ export const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
       if (!allowedRoles.includes(ctx.user?.role || "")) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -755,6 +755,7 @@ export const restaurantReservationsRouter = router({
       "super_admin",
       "admin_restaurant",
       "vue_restaurant",
+      "manager_restaurant",
       "admin_ops",
       "admin_operations",
     ];
@@ -784,6 +785,7 @@ export const restaurantReservationsRouter = router({
       "super_admin",
       "admin_restaurant",
       "vue_restaurant",
+      "manager_restaurant",
       "admin_ops",
       "admin_operations",
     ];
@@ -813,6 +815,7 @@ export const restaurantReservationsRouter = router({
       "super_admin",
       "admin_restaurant",
       "vue_restaurant",
+      "manager_restaurant",
       "admin_ops",
       "admin_operations",
     ];
@@ -842,6 +845,7 @@ export const restaurantReservationsRouter = router({
       "super_admin",
       "admin_restaurant",
       "vue_restaurant",
+      "manager_restaurant",
       "admin_ops",
       "admin_operations",
     ];
@@ -901,7 +905,7 @@ export const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
       if (!allowedRoles.includes(ctx.user?.role || "")) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -982,7 +986,7 @@ export const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
       if (!allowedRoles.includes(ctx.user?.role || "")) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -1043,7 +1047,7 @@ export const restaurantReservationsRouter = router({
         )
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
       if (!allowedRoles.includes(ctx.user?.role || "")) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -1079,7 +1083,7 @@ export const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
       if (!allowedRoles.includes(ctx.user?.role || "")) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -1114,7 +1118,7 @@ export const restaurantReservationsRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
       if (!allowedRoles.includes(ctx.user?.role || "")) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
       }
@@ -1155,7 +1159,7 @@ export const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
       if (!allowedRoles.includes(ctx.user?.role || "")) {
         throw new TRPCError({
           code: "FORBIDDEN",

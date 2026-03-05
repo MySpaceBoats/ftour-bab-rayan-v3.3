@@ -46,6 +46,7 @@ export default function Navbar() {
       "scanner",
       "admin_restaurant",
       "vue_restaurant",
+      "manager_restaurant",
       "admin_patisserie",
       "admin_terroir",
       "admin_contenu",
