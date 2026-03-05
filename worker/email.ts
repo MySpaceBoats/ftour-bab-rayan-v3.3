@@ -166,6 +166,8 @@ export interface VolunteerEmailData {
 
 export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { subject: string; html: string } {
   const qrCodeUrl = getQrCodeUrl(data.qrToken, data.baseUrl);
+  const safeDayNumber = data.dayNumber;
+  const safeDayDate = data.dayDate;
 
   const times = computeSlotTimes(data.startTime);
   const slotLabels: Record<string, string> = {
@@ -781,6 +783,9 @@ export interface GroupRegistrationAcknowledgementEmailData {
 }
 
 export function generateGroupRefusalEmail(data: GroupRefusalEmailData): { subject: string; html: string } {
+  const safeResponsibleName = escapeHtml(data.responsibleName);
+  const safeGroupName = escapeHtml(data.groupName);
+  const safeDayNumber = data.dayNumber;
   const content = `
     <h2 style="color: #991b1b; margin: 0 0 20px 0; font-size: 24px;">
       Demande groupe bénévole non retenue
