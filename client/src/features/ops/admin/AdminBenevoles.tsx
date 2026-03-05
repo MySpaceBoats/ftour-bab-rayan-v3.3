@@ -291,7 +291,7 @@ export default function AdminBenevoles() {
   const statsSource = volunteersList;
   const totalCount = statsSource.length;
   const registeredCount = statsSource.filter(
-    (v: any) => v.status === "registered"
+    (v: any) => v.status === "registered" && !isVolunteerPresent(v)
   ).length;
   const confirmedCount = statsSource.filter(
     (v: any) => v.status === "confirmed" && !isVolunteerPresent(v)
