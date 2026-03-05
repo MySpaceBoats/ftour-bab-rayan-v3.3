@@ -657,6 +657,7 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
     "admin_dons",
     "admin_restaurant",
             "vue_restaurant",
+            "manager_restaurant",
     "admin_patisserie",
     "admin_terroir",
   ];
@@ -723,7 +724,7 @@ const adminDonsProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 const adminRestaurantProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant"];
+  const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -933,6 +934,7 @@ const galleryRouter = router({
             "admin_dons",
             "admin_restaurant",
             "vue_restaurant",
+            "manager_restaurant",
             "admin_patisserie",
             "admin_terroir",
           ].includes(ctx.user.role)
@@ -2887,6 +2889,7 @@ const usersRouter = router({
             "scanner",
             "admin_restaurant",
             "vue_restaurant",
+            "manager_restaurant",
             "admin_patisserie",
             "admin_terroir",
             "admin_contenu",
@@ -2929,6 +2932,7 @@ const usersRouter = router({
           "scanner",
           "admin_restaurant",
           "vue_restaurant",
+          "manager_restaurant",
           "admin_patisserie",
           "admin_terroir",
           "admin_contenu",
