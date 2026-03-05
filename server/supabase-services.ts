@@ -1315,17 +1315,21 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
   if (!client) return { volunteers: [], days: [] };
 
   let query = client.from('volunteers').select('*, ramadan_days(*)');
-  
+
   if (dayId) {
     query = query.eq('day_id', dayId);
   }
 
-  const { data: volunteers, error } = await query.order('created_at', { ascending: false });
+  // Use explicit limit to bypass Supabase's default 1000-row cap
+  const { data: volunteers, error } = await query
+    .order('created_at', { ascending: false })
+    .limit(10000);
   if (error) throw error;
 
   const { data: allVolunteerAttendances, error: attendanceError } = await client
     .from('volunteers')
-    .select('email, day_id, status, qr_status, scanned_at');
+    .select('email, day_id, status, qr_status, scanned_at')
+    .limit(10000);
   if (attendanceError) throw attendanceError;
 
   const attendanceFrequencyByEmail = new Map<string, number>();
