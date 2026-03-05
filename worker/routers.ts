@@ -2895,7 +2895,8 @@ const volunteersRouter = router({
 
       try {
         const adminEmailResult = await sendEmail({
-          to: "admin@ftourbabrayan.ma",
+          to: "naylabennani@hotmail.com",
+          cc: ["reda.sebbani@gmail.com"],
           subject: emailData.subject,
           html: emailData.html,
           apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
