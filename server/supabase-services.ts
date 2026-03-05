@@ -1325,10 +1325,12 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
 
   const { data: allVolunteerAttendances, error: attendanceError } = await client
     .from('volunteers')
-    .select('email, status, qr_status, scanned_at');
+    .select('email, day_id, status, qr_status, scanned_at');
   if (attendanceError) throw attendanceError;
 
   const attendanceFrequencyByEmail = new Map<string, number>();
+  // Track (email, day_id) pairs to avoid double-counting duplicate rows on the same day
+  const seenPairs = new Set<string>();
   for (const attendanceRow of allVolunteerAttendances ?? []) {
     const email = String(attendanceRow.email ?? '').toLowerCase().trim();
     if (!email) continue;
@@ -1339,6 +1341,11 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
       !!attendanceRow.scanned_at;
 
     if (!isPresent) continue;
+
+    const pairKey = `${email}:${attendanceRow.day_id}`;
+    if (seenPairs.has(pairKey)) continue;
+    seenPairs.add(pairKey);
+
     attendanceFrequencyByEmail.set(
       email,
       (attendanceFrequencyByEmail.get(email) ?? 0) + 1
@@ -1674,12 +1681,16 @@ export async function getVolunteerStatsSupabase() {
 
   const { data, error } = await client
     .from('volunteers')
-    .select('status');
+    .select('status, qr_status, scanned_at');
 
   if (error) throw error;
 
   const total = data?.length || 0;
-  const present = data?.filter(v => v.status === 'present').length || 0;
+  const present = data?.filter(v =>
+    v.status === 'present' ||
+    v.qr_status === 'validated' ||
+    !!v.scanned_at
+  ).length || 0;
   const absent = data?.filter(v => v.status === 'absent').length || 0;
 
   return { total, present, absent };
