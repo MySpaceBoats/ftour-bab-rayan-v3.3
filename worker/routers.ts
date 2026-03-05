@@ -973,7 +973,7 @@ const scannerRouter = router({
             });
           }
 
-          const orderReference = `FBR-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+          const orderReference = `FBR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
           const unitPrice = parseFloat(goodie.price) || 0;
 
           const { data: createdOrder, error: orderError } = await supabase
