@@ -459,7 +459,13 @@ export default function AdminRestaurantGroupes() {
         r.groupName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.companyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.reference?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = statusFilter === "all" || r.status === statusFilter;
+      const matchesStatus =
+        statusFilter === "all" ||
+        r.status === statusFilter ||
+        (statusFilter === "pending_validation" &&
+          ["pending_confirmation", "submitted"].includes(r.status)) ||
+        (statusFilter === "validated_pending_payment" &&
+          ["pending_deposit", "pending_confirmation"].includes(r.status));
       return matchesSearch && matchesStatus;
     });
 
