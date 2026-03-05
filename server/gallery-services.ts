@@ -131,24 +131,15 @@ export async function listGalleryAlbums(publicOnly = false) {
   return data ?? [];
 }
 
-export async function resolveGalleryAssetUrl(
+export function resolveGalleryAssetUrl(
   storagePath?: string | null,
-  fallbackUrl?: string | null,
-  expiresInSeconds = 60 * 60
-) {
+  fallbackUrl?: string | null
+): string | null {
   if (!storagePath) return fallbackUrl ?? null;
 
   const client = getSupabaseAdminClient();
   if (!client) return fallbackUrl ?? null;
 
-  const { data, error } = await client.storage
-    .from("images")
-    .createSignedUrl(storagePath, expiresInSeconds);
-
-  if (!error && data?.signedUrl) return data.signedUrl;
-
-  const { data: publicUrlData } = client.storage
-    .from("images")
-    .getPublicUrl(storagePath);
-  return publicUrlData.publicUrl || fallbackUrl || null;
+  const { data } = client.storage.from("images").getPublicUrl(storagePath);
+  return data.publicUrl || fallbackUrl || null;
 }

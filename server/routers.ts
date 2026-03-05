@@ -775,17 +775,17 @@ const gallerySchema = z.object({
   status: z.enum(["draft", "published", "rejected"]).default("draft"),
 });
 
-const withResolvedGalleryUrls = async (photo: any) => ({
+const withResolvedGalleryUrls = (photo: any) => ({
   ...photo,
-  image_original_url: await galleryServices.resolveGalleryAssetUrl(
+  image_original_url: galleryServices.resolveGalleryAssetUrl(
     photo.storage_path,
     photo.image_original_url
   ),
-  image_thumb_url: await galleryServices.resolveGalleryAssetUrl(
+  image_thumb_url: galleryServices.resolveGalleryAssetUrl(
     photo.thumb_storage_path,
     photo.image_thumb_url
   ),
-  image_medium_url: await galleryServices.resolveGalleryAssetUrl(
+  image_medium_url: galleryServices.resolveGalleryAssetUrl(
     photo.medium_storage_path,
     photo.image_medium_url
   ),
@@ -872,7 +872,7 @@ const galleryRouter = router({
         .range(start, end);
       if (error)
         throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-      const items = await Promise.all((data ?? []).map(withResolvedGalleryUrls));
+      const items = (data ?? []).map(withResolvedGalleryUrls);
       return {
         items,
         total: count ?? 0,
@@ -3388,7 +3388,7 @@ const publicRouter = router({
       const { data, error, count } = await query.range(start, end);
       if (error)
         throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-      const items = await Promise.all((data ?? []).map(withResolvedGalleryUrls));
+      const items = (data ?? []).map(withResolvedGalleryUrls);
       return { items, total: count ?? 0, page, pageSize };
     }),
 });
