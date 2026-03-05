@@ -301,7 +301,7 @@ export async function handleCashOrderRequest(request: Request, env: Env): Promis
       to: customer.email,
       subject: 'Confirmation de votre commande – Association Bab Rayan',
       html,
-      apiKey: env.RESEND_API_KEY,
+      apiKey: env.RESEND_API_KEY || env.EMAIL_PROVIDER_KEY || "",
       ...(env.CASH_ORDER_ADMIN_CC_EMAIL ? { cc: [env.CASH_ORDER_ADMIN_CC_EMAIL] } : {}),
     });
 

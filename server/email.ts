@@ -64,13 +64,13 @@ interface ResendResponse {
  * Envoie un email via l'API Resend
  */
 export async function sendEmail(options: EmailOptions): Promise<{ success: boolean; id?: string; error?: string }> {
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = process.env.RESEND_API_KEY || process.env.EMAIL_PROVIDER_KEY;
   
   console.log("[Email] Attempting to send email to:", options.to);
   console.log("[Email] API Key present:", !!apiKey, apiKey ? `(${apiKey.substring(0, 10)}...)` : '');
   
   if (!apiKey) {
-    console.warn("[Email] RESEND_API_KEY not configured, skipping email");
+    console.warn("[Email] RESEND_API_KEY/EMAIL_PROVIDER_KEY not configured, skipping email");
     return { success: false, error: "API key not configured" };
   }
 
@@ -142,13 +142,14 @@ function escapeHtml(value: string): string {
  * On vérifie simplement que la clé est présente et a le bon format
  */
 export async function verifyResendApiKey(): Promise<boolean> {
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = process.env.RESEND_API_KEY || process.env.EMAIL_PROVIDER_KEY;
   
   if (!apiKey) {
     return false;
   }
 
   // Vérifier le format de la clé Resend (commence par re_)
+  // Accepte RESEND_API_KEY ou EMAIL_PROVIDER_KEY
   if (!apiKey.startsWith('re_')) {
     return false;
   }

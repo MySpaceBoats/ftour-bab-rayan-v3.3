@@ -49,7 +49,7 @@ interface EmailOptions {
 
 export async function sendEmail(options: EmailOptions): Promise<{ success: boolean; id?: string; error?: string }> {
   if (!options.apiKey) {
-    console.warn("[Email] RESEND_API_KEY not configured, skipping email");
+    console.warn("[Email] RESEND_API_KEY/EMAIL_PROVIDER_KEY not configured, skipping email");
     return { success: false, error: "API key not configured" };
   }
 

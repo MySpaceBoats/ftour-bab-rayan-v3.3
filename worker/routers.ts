@@ -1240,7 +1240,7 @@ const scannerRouter = router({
         to: input.to,
         subject: "Accès Scanner Bénévoles — QR Code & Identifiants",
         html,
-        apiKey: ctx.env.RESEND_API_KEY,
+        apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
       });
 
       if (!result.success) {
@@ -1545,7 +1545,7 @@ const galleryRouter = router({
           to: validationEmail,
           subject: emailPayload.subject,
           html: emailPayload.html,
-          apiKey: ctx.env.RESEND_API_KEY,
+          apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
         });
         if (!emailResult.success) {
           throw new TRPCError({
@@ -2442,7 +2442,7 @@ const volunteersRouter = router({
           to: input.email,
           subject: emailData.subject,
           html: emailData.html,
-          apiKey: ctx.env.RESEND_API_KEY,
+          apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
         });
 
         if (emailResult.success) {
@@ -2566,7 +2566,7 @@ const volunteersRouter = router({
           to: normalizedEmail,
           subject: emailData.subject,
           html: emailData.html,
-          apiKey: ctx.env.RESEND_API_KEY,
+          apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
         });
 
         if (emailResult.success) {
@@ -2898,7 +2898,7 @@ const volunteersRouter = router({
           to: "admin@ftourbabrayan.ma",
           subject: emailData.subject,
           html: emailData.html,
-          apiKey: ctx.env.RESEND_API_KEY,
+          apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
           attachments: [
             {
               filename: input.fileName,
@@ -2939,7 +2939,7 @@ const volunteersRouter = router({
           to: normalizedGroupEmail,
           subject: acknowledgementEmail.subject,
           html: acknowledgementEmail.html,
-          apiKey: ctx.env.RESEND_API_KEY,
+          apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
         });
 
         if (acknowledgementResult.success) {
@@ -3255,7 +3255,7 @@ const volunteersRouter = router({
               to: normalizedResponsibleEmail,
               subject,
               html,
-              apiKey: ctx.env.RESEND_API_KEY,
+              apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
             });
           } else {
             const refusalEmailData = generateGroupRefusalEmail({
@@ -3267,7 +3267,7 @@ const volunteersRouter = router({
               to: normalizedResponsibleEmail,
               subject: refusalEmailData.subject,
               html: refusalEmailData.html,
-              apiKey: ctx.env.RESEND_API_KEY,
+              apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
             });
           }
         }
@@ -3581,7 +3581,7 @@ const volunteersRouter = router({
               to: email,
               subject: emailData.subject,
               html: emailData.html,
-              apiKey: ctx.env.RESEND_API_KEY,
+              apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
             });
 
             if (emailResult.success) {
@@ -4190,7 +4190,7 @@ const ordersRouter = router({
           to: input.customerEmail,
           subject: emailData.subject,
           html: emailData.html,
-          apiKey: ctx.env.RESEND_API_KEY,
+          apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
         });
       } catch (emailError) {
         console.error("[Worker] Error sending order email:", emailError);
@@ -4432,7 +4432,7 @@ const donationsRouter = router({
           to: input.donorEmail,
           subject: emailData.subject,
           html: emailData.html,
-          apiKey: ctx.env.RESEND_API_KEY,
+          apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
         });
       } catch (emailError) {
         console.error("[Worker] Error sending donation email:", emailError);
@@ -4755,7 +4755,7 @@ const pastryOrdersRouter = router({
           to: input.email || input.phone,
           subject: `Confirmation de commande pâtisserie #${reference}`,
           html: `<h2>Commande Pâtisserie #${reference}</h2><p>Merci pour votre commande!</p><p>Montant total: ${input.totalAmount} DH</p><p>Méthode de paiement: ${input.paymentMethod}</p>`,
-          apiKey: ctx.env.RESEND_API_KEY,
+          apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
         });
       } catch (emailError) {
         console.error("[Worker] Pastry order email error:", emailError);
@@ -4891,7 +4891,7 @@ const contactRouter = router({
           to: input.email,
           subject: userEmailData.subject,
           html: userEmailData.html,
-          apiKey: ctx.env.RESEND_API_KEY,
+          apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
         });
 
         // Send notification to admin
@@ -4907,7 +4907,7 @@ const contactRouter = router({
           to: "contact@ftourbabrayan.ma",
           subject: adminEmailData.subject,
           html: adminEmailData.html,
-          apiKey: ctx.env.RESEND_API_KEY,
+          apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
         });
       } catch (emailError) {
         console.error("[Worker] Error sending contact email:", emailError);
@@ -5464,7 +5464,7 @@ const reservationsRouter = router({
             to: input.email,
             subject: customerEmail.subject,
             html: customerEmail.html,
-            apiKey: ctx.env.RESEND_API_KEY,
+            apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
           });
 
           // Send to admin
@@ -5474,7 +5474,7 @@ const reservationsRouter = router({
             to: "contact@ftourbabrayan.ma",
             subject: adminEmail.subject,
             html: adminEmail.html,
-            apiKey: ctx.env.RESEND_API_KEY,
+            apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
           });
         } catch (emailError) {
           console.error(
@@ -6045,13 +6045,13 @@ const restaurantReservationsRouter = router({
               reference,
               proofUploadUrl: proofUploadUrl ?? undefined,
             }),
-            apiKey: ctx.env.RESEND_API_KEY,
+            apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
           });
           await sendEmail({
             to: "digital@myspace.boats",
             subject: `Nouvelle reservation Particulier - ${input.date} - ${reference}`,
             html: `<h2>Nouvelle réservation Particulier</h2><p><strong>Nom:</strong> ${input.firstName}</p><p><strong>Email:</strong> ${input.email}</p><p><strong>Tél:</strong> ${input.phone}</p><p><strong>Date:</strong> ${input.date}</p><p><strong>Participants:</strong> ${input.participantsCount}</p><p><strong>Référence:</strong> ${reference}</p>`,
-            apiKey: ctx.env.RESEND_API_KEY,
+            apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
           });
         } catch (emailErr) {
           console.error(
@@ -6143,13 +6143,13 @@ const restaurantReservationsRouter = router({
               reference,
               proofUploadUrl: proofUploadUrlE ?? undefined,
             }),
-            apiKey: ctx.env.RESEND_API_KEY,
+            apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
           });
           await sendEmail({
             to: "digital@myspace.boats",
             subject: `Nouvelle demande Entreprise - ${input.date} - ${reference}`,
             html: `<h2>Nouvelle demande Entreprise</h2><p><strong>Entreprise:</strong> ${input.companyName}</p><p><strong>Contact:</strong> ${input.contactName}</p><p><strong>Email:</strong> ${input.email}</p><p><strong>Tél:</strong> ${input.phone}</p><p><strong>Date:</strong> ${input.date}</p><p><strong>Participants:</strong> ${input.participantsCount}</p><p><strong>Référence:</strong> ${reference}</p>`,
-            apiKey: ctx.env.RESEND_API_KEY,
+            apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
           });
         } catch (emailErr) {
           console.error(
@@ -6237,13 +6237,13 @@ const restaurantReservationsRouter = router({
               reference,
               proofUploadUrl: proofUploadUrlG ?? undefined,
             }),
-            apiKey: ctx.env.RESEND_API_KEY,
+            apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
           });
           await sendEmail({
             to: "digital@myspace.boats",
             subject: `Nouvelle demande Groupe - ${input.date} - ${reference}`,
             html: `<h2>Nouvelle demande Groupe</h2><p><strong>Groupe:</strong> ${input.groupName}</p><p><strong>Contact:</strong> ${input.contactName}</p><p><strong>Email:</strong> ${input.email}</p><p><strong>Tél:</strong> ${input.phone}</p><p><strong>Date:</strong> ${input.date}</p><p><strong>Participants:</strong> ${input.participantsCount}</p><p><strong>Référence:</strong> ${reference}</p>`,
-            apiKey: ctx.env.RESEND_API_KEY,
+            apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
           });
         } catch (emailErr) {
           console.error(
@@ -6304,7 +6304,7 @@ const restaurantReservationsRouter = router({
           to: reservation.email,
           subject: `Réservation confirmée - ${reservation.reference}`,
           html: buildRestaurantReservationValidatedEmailHtml(reservation.name),
-          apiKey: ctx.env.RESEND_API_KEY,
+          apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
         });
       } catch (emailErr) {
         console.error(
@@ -6348,7 +6348,7 @@ const restaurantReservationsRouter = router({
           to: reservation.email,
           subject: `Reservation refusee - ${reservation.reference}`,
           html: `<h2 style="color:#dc2626;">Réservation refusée</h2><p>Bonjour <strong>${reservation.name}</strong>,</p><p>Nous sommes désolés, votre réservation <strong>${reservation.reference}</strong> n'a pas pu être acceptée.</p><p>N'hésitez pas à nous contacter pour plus d'informations.</p><p>Cordialement,<br><strong>L'équipe Ftour Bab Rayan</strong></p>`,
-          apiKey: ctx.env.RESEND_API_KEY,
+          apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
         });
       } catch (emailErr) {
         console.error("[RestaurantReservations] Refuse email error:", emailErr);
@@ -7568,7 +7568,7 @@ const partnerLeadsRouter = router({
           to: "admin@ftourbabrayan.ma",
           subject: adminEmailData.subject,
           html: adminEmailData.html,
-          apiKey: ctx.env.RESEND_API_KEY,
+          apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
         });
       } catch (emailError) {
         console.error("[Worker] Error sending partner lead email:", emailError);

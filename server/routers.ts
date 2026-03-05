@@ -558,6 +558,9 @@ const processGroupVolunteerRows = async ({
     const insertChunks = chunkArray(uniqueRows, 200);
 
     for (const rowsChunk of insertChunks) {
+      let emailSent = false;
+      let emailError: string | undefined;
+
       try {
         const createdVolunteers =
           await supabaseServices.createVolunteerShiftsBulkSupabase(
@@ -1491,6 +1494,9 @@ const volunteersRouter = router({
       // Send confirmation email with QR code
       // Always use input.volunteerSlots (from form) to ensure slots appear
       // in the email even if the DB column doesn't exist yet
+      let emailSent = false;
+      let emailError: string | undefined;
+
       try {
         const baseUrl =
           process.env.NODE_ENV === "production"
@@ -1519,20 +1525,37 @@ const volunteersRouter = router({
           baseUrl,
         });
 
-        await sendEmail({
+        const emailResult = await sendEmail({
           to: normalizedEmail,
           subject: emailData.subject,
           html: emailData.html,
         });
-        console.log(
-          "[Volunteer Registration] Email sent successfully to:",
-          normalizedEmail
-        );
+
+        emailSent = emailResult.success;
+        emailError = emailResult.error;
+
+        if (emailResult.success) {
+          console.log(
+            "[Volunteer Registration] Email sent successfully to:",
+            normalizedEmail
+          );
+        } else {
+          console.error(
+            "[Volunteer Registration] Email send failed:",
+            emailResult.error || "Unknown email error"
+          );
+        }
       } catch (error) {
+        emailError = error instanceof Error ? error.message : "Unknown error";
         console.error("[Volunteer Registration] Email send failed:", error);
       }
 
-      return { id: volunteer.id, qrToken: volunteer.qrToken };
+      return {
+        id: volunteer.id,
+        qrToken: volunteer.qrToken,
+        emailSent,
+        ...(emailError ? { emailError } : {}),
+      };
     }),
 
   adminCreateManual: adminOpsProcedure
