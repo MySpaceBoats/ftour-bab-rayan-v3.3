@@ -196,6 +196,7 @@ Configurer dans le dashboard Cloudflare Workers → Settings → Variables, ou v
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Clé service role Supabase (**côté Worker uniquement — ne jamais exposer côté client**) |
 | `SUPABASE_ANON_KEY` | ✅ | Clé publique Supabase (validation JWT admin) |
 | `RESEND_API_KEY` | ✅ | Clé API [Resend](https://resend.com) pour l'envoi d'emails |
+| `EMAIL_PROVIDER_KEY` | Optionnel | Alias de `RESEND_API_KEY` (compatibilité de configuration) |
 | `PUBLIC_APP_URL` | ✅ | URL publique du site (ex. `https://www.ftourbabrayan.ma`) — utilisée dans les liens emails |
 | `JWT_SECRET` | ✅ | Secret JWT pour la validation des sessions |
 | `ORDER_PROOF_SECRET` | Recommandé | Secret HMAC pour les tokens de preuve (autres fonctionnalités) |

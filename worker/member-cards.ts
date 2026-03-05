@@ -174,7 +174,7 @@ export async function handleMemberCardRequest(request: Request, env: Env): Promi
     const token = await createToken(order.id, 'order', env);
     const confirmUrl = `${env.PUBLIC_APP_URL || 'https://www.ftourbabrayan.ma'}/card/confirm-order?token=${token}`;
     const email = buildOrderEmail(confirmUrl);
-    await sendEmail({ to: member.email, subject: email.subject, html: email.html, apiKey: env.RESEND_API_KEY });
+    await sendEmail({ to: member.email, subject: email.subject, html: email.html, apiKey: env.RESEND_API_KEY || env.EMAIL_PROVIDER_KEY || "" });
     await logEvent(order.id, 'MAIL_COMMANDE_ENVOYE', { member_id }, env);
     return json({ ok: true, order_id: order.id });
   }
@@ -210,7 +210,7 @@ export async function handleMemberCardRequest(request: Request, env: Env): Promi
 
     const { data: member } = await supabase.from('members').select('email').eq('id', order.member_id).single();
     if (member?.email) {
-      await sendEmail({ to: member.email, subject: emailData.subject, html: emailData.html, apiKey: env.RESEND_API_KEY });
+      await sendEmail({ to: member.email, subject: emailData.subject, html: emailData.html, apiKey: env.RESEND_API_KEY || env.EMAIL_PROVIDER_KEY || "" });
     }
     await advanceStatus(order.id, 'MAIL_PAIEMENT_ENVOYE', env);
     await logEvent(order.id, 'MAIL_PAIEMENT_ENVOYE', { reason: 'auto_after_confirm' }, env);
@@ -395,7 +395,7 @@ export async function handleMemberCardRequest(request: Request, env: Env): Promi
     const token = await createToken(order.id, 'payment', env);
     const paymentUrl = `${env.PUBLIC_APP_URL || 'https://www.ftourbabrayan.ma'}/card/payment?token=${token}`;
     const emailData = buildPaymentEmail(paymentUrl, Number(order.amount || 150), order.currency || 'MAD');
-    await sendEmail({ to: member.email, subject: emailData.subject, html: emailData.html, apiKey: env.RESEND_API_KEY });
+    await sendEmail({ to: member.email, subject: emailData.subject, html: emailData.html, apiKey: env.RESEND_API_KEY || env.EMAIL_PROVIDER_KEY || "" });
     await advanceStatus(order.id, 'MAIL_PAIEMENT_ENVOYE', env);
     await logEvent(order.id, 'MAIL_PAIEMENT_ENVOYE', { reason: 'manual_resend' }, env);
     return json({ ok: true });

@@ -16,7 +16,8 @@ export interface Env {
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
-  RESEND_API_KEY: string;
+  RESEND_API_KEY?: string;
+  EMAIL_PROVIDER_KEY?: string;
   JWT_SECRET: string;
   VITE_APP_ID: string;
   NODE_ENV: string;
@@ -288,7 +289,7 @@ export default {
       const dashboardUrl = env.RESERVATION_ADMIN_DASHBOARD_URL || `${(env.PUBLIC_APP_URL || 'https://www.ftourbabrayan.ma').replace(/\/$/, '')}/admin/restaurant-reservations`;
       await sendEmail({
         to: 'admin@ftourbabrayan.ma',
-        apiKey: env.RESEND_API_KEY,
+        apiKey: env.RESEND_API_KEY || env.EMAIL_PROVIDER_KEY || "",
         subject: `Acompte reçu – [${reservation.reference}]`,
         html: `<p>Une preuve d'acompte a été déposée.</p><p><strong>Réf:</strong> ${reservation.reference}<br/><strong>Nom:</strong> ${reservation.name}<br/><strong>Email:</strong> ${reservation.email}<br/><strong>Date:</strong> ${new Date().toISOString()}</p><p><a href="${dashboardUrl}">Ouvrir le dashboard</a></p>${signed.data?.signedUrl ? `<p><a href="${signed.data.signedUrl}">Consulter la preuve (URL signée)</a></p>` : ''}`,
       });
