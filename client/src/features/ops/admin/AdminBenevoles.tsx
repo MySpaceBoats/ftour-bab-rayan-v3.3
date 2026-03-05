@@ -413,7 +413,7 @@ export default function AdminBenevoles() {
           <div>
             <h1 className="font-bold text-lg">Gestion des bénévoles</h1>
             <p className="text-xs text-muted-foreground">
-              {totalCount} bénévole(s) affiché(s) / {volunteersList.length || 0}{" "}
+              {filteredVolunteers.length} bénévole(s) affiché(s) / {volunteersList.length || 0}{" "}
               total
             </p>
           </div>
