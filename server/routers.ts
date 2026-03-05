@@ -1775,6 +1775,78 @@ const volunteersRouter = router({
       return { success: true };
     }),
 
+  adminResendConfirmationEmailsLast24h: adminOpsProcedure
+    .mutation(async () => {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const volunteers = await supabaseServices.getVolunteersRegisteredSinceSupabase(since);
+
+      const baseUrl =
+        process.env.NODE_ENV === "production"
+          ? "https://ftourbabrayan.ma"
+          : "http://localhost:3000";
+
+      const details: { email: string; success: boolean; error?: string }[] = [];
+
+      const emailTasks = volunteers.map(volunteer => async () => {
+        if (!volunteer.qrToken) {
+          return { email: volunteer.email, success: false, error: "QR token manquant" };
+        }
+        if (!volunteer.day) {
+          return { email: volunteer.email, success: false, error: "Jour introuvable" };
+        }
+
+        try {
+          const emailData = generateVolunteerConfirmationEmail({
+            firstName: volunteer.firstName,
+            lastName: volunteer.lastName,
+            email: volunteer.email,
+            dayNumber: volunteer.day.dayNumber,
+            dayDate: new Date(volunteer.day.date).toLocaleDateString("fr-FR", {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+            }),
+            location: volunteer.day.location || "Association Bab Rayan, Casablanca",
+            startTime: volunteer.day.iftarTime || "18h00",
+            volunteerSlots: volunteer.volunteerSlots,
+            qrToken: volunteer.qrToken,
+            baseUrl,
+          });
+
+          const result = await sendEmail({
+            to: volunteer.email,
+            subject: emailData.subject,
+            html: emailData.html,
+          });
+
+          if (result.success) {
+            return { email: volunteer.email, success: true };
+          }
+          return { email: volunteer.email, success: false, error: result.error || "Envoi échoué" };
+        } catch (err) {
+          return {
+            email: volunteer.email,
+            success: false,
+            error: err instanceof Error ? err.message : "Erreur inconnue",
+          };
+        }
+      });
+
+      const batches = chunkArray(emailTasks, 25);
+      for (let i = 0; i < batches.length; i++) {
+        const results = await runWithConcurrencyLimit(batches[i], 1);
+        details.push(...results);
+        if (i < batches.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 800));
+        }
+      }
+
+      const sent = details.filter(d => d.success).length;
+      const failed = details.length - sent;
+
+      return { total: volunteers.length, sent, failed, details };
+    }),
+
   registerGroup: publicProcedure
     .input(
       z.object({

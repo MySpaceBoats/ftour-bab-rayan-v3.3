@@ -3334,3 +3334,40 @@ export async function deleteFaqSupabase(id: number) {
   if (error) throw new Error(`Erreur suppression FAQ: ${error.message}`);
   return { success: true };
 }
+
+export async function getVolunteersRegisteredSinceSupabase(sinceDate: Date) {
+  const client = getSupabaseAdminClient();
+  if (!client) return [];
+
+  const { data, error } = await client
+    .from('volunteers')
+    .select('*, ramadan_days(*)')
+    .gte('created_at', sinceDate.toISOString())
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return (data ?? []).map((v: any) => {
+    const rd = v.ramadan_days;
+    return {
+      id: v.id,
+      firstName: v.first_name ?? v.firstName,
+      lastName: v.last_name ?? v.lastName,
+      email: v.email,
+      phone: v.phone,
+      city: v.city,
+      dayId: v.day_id ?? v.dayId,
+      volunteerSlots: extractSlots(v),
+      qrToken: v.qr_token ?? v.qrToken,
+      status: v.status,
+      emailSent: v.email_sent ?? v.emailSent,
+      createdAt: new Date(v.created_at ?? v.createdAt),
+      day: rd ? {
+        dayNumber: rd.day_number ?? rd.dayNumber,
+        date: rd.date,
+        location: rd.location,
+        iftarTime: rd.iftar_time ?? rd.iftarTime,
+      } : null,
+    };
+  });
+}
