@@ -273,12 +273,6 @@ export async function listRestaurantReservations(filters?: {
   try {
     const client = getClient();
 
-    const typeVariants: Record<"particulier" | "entreprise" | "groupe", string[]> = {
-      particulier: ["particulier", "particuliers", "individual"],
-      entreprise: ["entreprise", "entreprises", "company"],
-      groupe: ["groupe", "group", "groupes"],
-    };
-
     const hasExplicitLimit =
       typeof filters?.limit === "number" && filters.limit > 0;
     const queryLimit = hasExplicitLimit ? filters!.limit! : 1000;
@@ -290,19 +284,6 @@ export async function listRestaurantReservations(filters?: {
         .select("*")
         .order("id", { ascending: false })
         .range(offset, offset + limit - 1);
-
-      if (filters?.type) {
-        const variants = typeVariants[filters.type]
-          .map(type => type.trim())
-          .filter(Boolean);
-        const exactMatches = variants.map(type => `type.eq.${type}`);
-        const caseInsensitiveMatches = variants.map(type => `type.ilike.${type}`);
-        const spaceTolerantMatches = variants.map(type => `type.ilike.${type}%`);
-
-        query = query.or(
-          [...exactMatches, ...caseInsensitiveMatches, ...spaceTolerantMatches].join(",")
-        );
-      }
       if (filters?.status) {
         query = query.eq("status", filters.status);
       }
