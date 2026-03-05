@@ -261,6 +261,11 @@ async function logQRScanSafely(params: {
   }
 }
 
+function getFrenchOrdinal(n: number): string {
+  if (n === 1) return '1ère';
+  return `${n}e`;
+}
+
 const QR_TYPE_LABELS: Record<QrType, string> = {
   volunteer: "Bénévole",
   reservation_particulier: "Réservation Particulier",
@@ -349,7 +354,7 @@ export const scannerRouter = router({
                 ? `Déjà confirmé — ${fullName}`
                 : validationResult.state === "group_entry_confirmed"
                   ? `Entrée groupe validée — ${fullName}`
-                  : `Bénévole confirmé — ${fullName}`
+                  : `Bénévole confirmé — ${fullName} (${getFrenchOrdinal(validationResult.participationCount ?? 1)} participation au ftour !)`
               : validationResult.error || "Erreur de validation",
             validationSuccess: validationResult.success,
             entity: {
@@ -1019,7 +1024,7 @@ export const scannerRouter = router({
         }
         return {
           success: true,
-          message: `Bénévole confirmé — ${fullName}`,
+          message: `Bénévole confirmé — ${fullName} (${getFrenchOrdinal(result.participationCount ?? 1)} participation au ftour !)`,
           state: "confirmed" as const,
           volunteer: vol
             ? { id: vol.id, name: fullName, email: vol.email, phone: vol.phone }
