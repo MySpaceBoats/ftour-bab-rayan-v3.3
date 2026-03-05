@@ -5901,6 +5901,8 @@ Le nombre de personnes confirmé sera facturé en totalité, même en cas d’ab
  * Map DB row (snake_case) to camelCase object expected by frontend.
  */
 function mapReservation(r: any) {
+  const rawDateAvReg = r.date_av_reg ?? r.dateAvReg;
+
   return {
     id: r.id,
     reference: r.reference,
@@ -5933,6 +5935,17 @@ function mapReservation(r: any) {
         ? new Date(r.processedAt)
         : null,
     notes: r.notes,
+    totalAmount: Number(r.total_amount ?? r.totalAmount ?? 0),
+    amountReceived: Number(r.amount_received ?? r.amountReceived ?? 0),
+    deposit: Number(r.deposit ?? r.depositAmount ?? 0),
+    nbAdult: Number(r.nb_adult ?? r.nbAdult ?? 0),
+    nbKids: Number(r.nb_kids ?? r.nbKids ?? 0),
+    adultAmount: Number(r.adult_amount ?? r.adultAmount ?? 0),
+    kidsAmount: Number(r.kids_amount ?? r.kidsAmount ?? 0),
+    paymentMode: r.payment_mode ?? r.paymentMode ?? "cash",
+    respResa: r.resp_resa ?? r.respResa ?? "Nayla",
+    modeDeposit: r.mode_deposit ?? r.modeDeposit ?? null,
+    dateAvReg: rawDateAvReg ? new Date(rawDateAvReg) : null,
     createdAt: r.created_at
       ? new Date(r.created_at)
       : r.createdAt
@@ -6552,24 +6565,52 @@ const restaurantReservationsRouter = router({
 
   adminEdit: protectedProcedure
     .input(
-      z.object({
-        id: z.number(),
-        name: z.string().min(1).optional(),
-        email: z.string().email().optional(),
-        phone: z.string().min(1).optional(),
-        date: z
-          .string()
-          .regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide")
-          .optional(),
-        seatsTotal: z.number().int().min(1).optional(),
-        notes: z.string().optional(),
-        companyName: z.string().optional(),
-        groupName: z.string().optional(),
-        displayChoice: z.string().optional(),
-      })
+      z
+        .object({
+          id: z.number(),
+          name: z.string().min(1).optional(),
+          email: z.string().email().optional(),
+          phone: z.string().min(1).optional(),
+          date: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide")
+            .optional(),
+          seatsTotal: z.number().int().min(1).optional(),
+          notes: z.string().optional(),
+          totalAmount: z.number().min(0).optional(),
+          adultAmount: z.number().min(0).optional(),
+          kidsAmount: z.number().min(0).optional(),
+          amountReceived: z.number().min(0).optional(),
+          deposit: z.number().min(0).optional(),
+          nbAdult: z.number().int().min(0).optional(),
+          nbKids: z.number().int().min(0).optional(),
+          paymentMode: z.enum(["cash", "virement", "espece"]).optional(),
+          respResa: z.enum(["Nayla", "Hind", "Kamal", "Rita", "Réda", "Souad"]).optional(),
+          companyName: z.string().optional(),
+          groupName: z.string().optional(),
+          displayChoice: z.string().optional(),
+          modeDeposit: z.string().nullable().optional(),
+          dateAvReg: z.string().nullable().optional(),
+        })
+        .refine(
+          payload =>
+            Object.keys(payload).some(
+              key => key !== "id" && payload[key as keyof typeof payload] !== undefined
+            ),
+          {
+            message: "Aucun champ valide à mettre à jour",
+          }
+        )
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      const allowedRoles = [
+        "admin",
+        "super_admin",
+        "admin_restaurant",
+        "vue_restaurant",
+        "admin_ops",
+        "admin_operations",
+      ];
       if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -6595,6 +6636,24 @@ const restaurantReservationsRouter = router({
         updatePayload.group_name = rest.groupName;
       if (rest.displayChoice !== undefined)
         updatePayload.display_choice = rest.displayChoice;
+      if (rest.totalAmount !== undefined)
+        updatePayload.total_amount = rest.totalAmount;
+      if (rest.amountReceived !== undefined)
+        updatePayload.amount_received = rest.amountReceived;
+      if (rest.deposit !== undefined) updatePayload.deposit = rest.deposit;
+      if (rest.nbAdult !== undefined) updatePayload.nb_adult = rest.nbAdult;
+      if (rest.nbKids !== undefined) updatePayload.nb_kids = rest.nbKids;
+      if (rest.adultAmount !== undefined)
+        updatePayload.adult_amount = rest.adultAmount;
+      if (rest.kidsAmount !== undefined)
+        updatePayload.kids_amount = rest.kidsAmount;
+      if (rest.paymentMode !== undefined)
+        updatePayload.payment_mode = rest.paymentMode;
+      if (rest.respResa !== undefined) updatePayload.resp_resa = rest.respResa;
+      if (rest.modeDeposit !== undefined)
+        updatePayload.mode_deposit = rest.modeDeposit;
+      if (rest.dateAvReg !== undefined)
+        updatePayload.date_av_reg = rest.dateAvReg;
 
       const supabase = createSupabaseAdmin(ctx.env);
       const { data, error } = await supabase
