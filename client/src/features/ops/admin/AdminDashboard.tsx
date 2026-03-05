@@ -500,7 +500,7 @@ export default function Admin() {
                       {volunteerStats?.total || 0}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {volunteerStats?.present || 0} présents
+                      {volunteerStats?.present || 0} présents · {volunteerStats?.confirmed || 0} confirmés · {volunteerStats?.registered || 0} inscrits
                     </p>
                   </div>
                   <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">

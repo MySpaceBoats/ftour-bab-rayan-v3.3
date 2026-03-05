@@ -1677,7 +1677,7 @@ export async function updateVolunteerStatusSupabase(volunteerId: number, status:
 
 export async function getVolunteerStatsSupabase() {
   const client = getSupabaseAdminClient();
-  if (!client) return { total: 0, present: 0, absent: 0 };
+  if (!client) return { total: 0, registered: 0, confirmed: 0, present: 0, absent: 0 };
 
   const { data, error } = await client
     .from('volunteers')
@@ -1685,15 +1685,17 @@ export async function getVolunteerStatsSupabase() {
 
   if (error) throw error;
 
-  const total = data?.length || 0;
-  const present = data?.filter(v =>
-    v.status === 'present' ||
-    v.qr_status === 'validated' ||
-    !!v.scanned_at
-  ).length || 0;
-  const absent = data?.filter(v => v.status === 'absent').length || 0;
+  const rows = data ?? [];
+  const isPresent = (v: { status: string; qr_status: string | null; scanned_at: string | null }) =>
+    v.status === 'present' || v.qr_status === 'validated' || !!v.scanned_at;
 
-  return { total, present, absent };
+  const total = rows.length;
+  const present = rows.filter(isPresent).length;
+  const confirmed = rows.filter(v => v.status === 'confirmed' && !isPresent(v)).length;
+  const registered = rows.filter(v => v.status === 'registered').length;
+  const absent = rows.filter(v => v.status === 'absent').length;
+
+  return { total, registered, confirmed, present, absent };
 }
 
 export async function deleteVolunteerSupabase(volunteerId: number) {
