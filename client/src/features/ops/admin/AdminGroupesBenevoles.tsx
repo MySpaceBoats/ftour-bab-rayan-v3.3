@@ -19,7 +19,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -48,6 +47,7 @@ export default function AdminGroupesBenevoles() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [editing, setEditing] = useState<any | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const query = trpc.volunteers.listGroupRequests.useQuery();
   const utils = trpc.useUtils();
@@ -69,13 +69,44 @@ export default function AdminGroupesBenevoles() {
   });
 
   const updateMutation = trpc.volunteers.updateGroupRequest.useMutation({
-    onSuccess: () => {
+    onSuccess: (_result, variables) => {
       toast.success("Demande modifiée");
+      utils.volunteers.listGroupRequests.setData(undefined, previous => {
+        if (!previous || !editing) return previous;
+        return previous.map((row: any) =>
+          row.id === variables.requestId
+            ? {
+                ...row,
+                groupName: editing.groupName,
+                responsibleName: editing.responsibleName,
+                responsibleEmail: editing.responsibleEmail,
+                responsiblePhone: editing.responsiblePhone,
+                estimatedSize: editing.estimatedSize,
+              }
+            : row
+        );
+      });
+      setIsEditDialogOpen(false);
       setEditing(null);
       utils.volunteers.listGroupRequests.invalidate();
     },
     onError: error => toast.error(error.message),
   });
+
+  const openEditDialog = (row: any) => {
+    setEditing({
+      ...row,
+      estimatedSize: row.estimatedSize ?? "",
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const closeEditDialog = (open: boolean) => {
+    setIsEditDialogOpen(open);
+    if (!open) {
+      setEditing(null);
+    }
+  };
 
   const filtered = useMemo(() => {
     const rows = query.data || [];
@@ -267,92 +298,13 @@ export default function AdminGroupesBenevoles() {
                         >
                           <XCircle className="h-4 w-4 mr-1" /> Refuser
                         </Button>
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setEditing(row)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Modifier la demande</DialogTitle>
-                            </DialogHeader>
-                            {editing && (
-                              <div className="space-y-3">
-                                <div>
-                                  <Label>Nom groupe</Label>
-                                  <Input
-                                    value={editing.groupName}
-                                    onChange={e =>
-                                      setEditing({
-                                        ...editing,
-                                        groupName: e.target.value,
-                                      })
-                                    }
-                                  />
-                                </div>
-                                <div>
-                                  <Label>Responsable</Label>
-                                  <Input
-                                    value={editing.responsibleName}
-                                    onChange={e =>
-                                      setEditing({
-                                        ...editing,
-                                        responsibleName: e.target.value,
-                                      })
-                                    }
-                                  />
-                                </div>
-                                <div>
-                                  <Label>Email</Label>
-                                  <Input
-                                    value={editing.responsibleEmail}
-                                    onChange={e =>
-                                      setEditing({
-                                        ...editing,
-                                        responsibleEmail: e.target.value,
-                                      })
-                                    }
-                                  />
-                                </div>
-                                <div>
-                                  <Label>Téléphone</Label>
-                                  <Input
-                                    value={editing.responsiblePhone}
-                                    onChange={e =>
-                                      setEditing({
-                                        ...editing,
-                                        responsiblePhone: e.target.value,
-                                      })
-                                    }
-                                  />
-                                </div>
-                                <Button
-                                  onClick={() =>
-                                    updateMutation.mutate({
-                                      requestId: editing.id,
-                                      groupName: editing.groupName,
-                                      responsibleName: editing.responsibleName,
-                                      responsibleEmail:
-                                        editing.responsibleEmail,
-                                      responsiblePhone:
-                                        editing.responsiblePhone,
-                                      estimatedSize: editing.estimatedSize
-                                        ? Number(editing.estimatedSize)
-                                        : null,
-                                    })
-                                  }
-                                >
-                                  Sauvegarder
-                                </Button>
-                              </div>
-                            )}
-                          </DialogContent>
-                        </Dialog>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openEditDialog(row)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"
@@ -371,6 +323,90 @@ export default function AdminGroupesBenevoles() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={closeEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier la demande</DialogTitle>
+          </DialogHeader>
+          {editing && (
+            <div className="space-y-3">
+              <div>
+                <Label>Nom groupe</Label>
+                <Input
+                  value={editing.groupName}
+                  onChange={e =>
+                    setEditing({
+                      ...editing,
+                      groupName: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label>Responsable</Label>
+                <Input
+                  value={editing.responsibleName}
+                  onChange={e =>
+                    setEditing({
+                      ...editing,
+                      responsibleName: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input
+                  value={editing.responsibleEmail}
+                  onChange={e =>
+                    setEditing({
+                      ...editing,
+                      responsibleEmail: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label>Téléphone</Label>
+                <Input
+                  value={editing.responsiblePhone}
+                  onChange={e =>
+                    setEditing({
+                      ...editing,
+                      responsiblePhone: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <Button
+                disabled={updateMutation.isPending}
+                onClick={() =>
+                  updateMutation.mutate({
+                    requestId: editing.id,
+                    groupName: editing.groupName,
+                    responsibleName: editing.responsibleName,
+                    responsibleEmail: editing.responsibleEmail,
+                    responsiblePhone: editing.responsiblePhone,
+                    estimatedSize: editing.estimatedSize
+                      ? Number(editing.estimatedSize)
+                      : null,
+                  })
+                }
+              >
+                {updateMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Sauvegarde...
+                  </>
+                ) : (
+                  "Sauvegarder"
+                )}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
