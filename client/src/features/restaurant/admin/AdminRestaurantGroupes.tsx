@@ -152,6 +152,17 @@ export default function AdminRestaurantGroupes() {
   const hasAccess = user?.role && allowedRoles.includes(user.role);
 
   const {
+    data: particuliers,
+    isLoading: loadingP,
+    isError: errorP,
+    error: errorParticuliers,
+    refetch: refetchP,
+  } = trpc.restaurantReservations.adminListParticuliers.useQuery(undefined, {
+    enabled: !!hasAccess,
+    retry: 1,
+  });
+
+  const {
     data: groupes,
     isLoading: loadingG,
     isError: errorG,
@@ -173,9 +184,9 @@ export default function AdminRestaurantGroupes() {
     retry: 1,
   });
 
-  const isLoading = loadingG || loadingE;
-  const isError = errorG || errorE;
-  const error = errorGroupes || errorEntreprises;
+  const isLoading = loadingP || loadingG || loadingE;
+  const isError = errorP || errorG || errorE;
+  const error = errorParticuliers || errorGroupes || errorEntreprises;
 
   const fallbackReservations = GROUPES_FALLBACK_RESERVATIONS.map((r, index) => {
     const fullName = [r.prenom, r.nom].filter(Boolean).join(" ");
@@ -214,6 +225,7 @@ export default function AdminRestaurantGroupes() {
   });
 
   const apiReservations = [
+    ...(particuliers || []).map((r: any) => ({ ...r, type: r.type || "particulier" })),
     ...(groupes || []).map((r: any) => ({ ...r, type: r.type || "groupe" })),
     ...(entreprises || []).map((r: any) => ({
       ...r,
@@ -225,6 +237,7 @@ export default function AdminRestaurantGroupes() {
   const reservations = apiReservations;
 
   const refetch = () => {
+    refetchP();
     refetchG();
     refetchE();
   };
@@ -486,6 +499,9 @@ export default function AdminRestaurantGroupes() {
     });
   }, [reservations, searchQuery, statusFilter, sortConfig]);
 
+  const totalReservationsCount = reservations?.length || 0;
+  const filteredReservationsCount = filteredReservations?.length || 0;
+
   const toggleSort = (key: SortKey) => {
     setSortConfig(current => {
       if (current.key === key) {
@@ -521,7 +537,7 @@ export default function AdminRestaurantGroupes() {
             </div>
             <h1 className="text-xl font-bold">Accès non autorisé</h1>
             <p className="text-muted-foreground">
-              Vous n'avez pas les droits pour accéder aux réservations groupes.
+              Vous n'avez pas les droits pour accéder aux réservations restaurant.
             </p>
             <Link href="/admin">
               <Button variant="outline">Retour au dashboard</Button>
@@ -668,11 +684,13 @@ export default function AdminRestaurantGroupes() {
           <div>
             <h1 className="font-bold text-lg flex items-center gap-2">
               <UsersRound className="h-5 w-5 text-[#5d5a3c]" />
-              Réservations Groupes ou Entreprises
+              Réservations Restaurant
             </h1>
             <p className="text-xs text-muted-foreground">
-              {filteredReservations?.length || 0} réservation(s) - soumises à
-              confirmation
+              {filteredReservationsCount} réservation(s) affichée(s) sur {totalReservationsCount}
+              {statusFilter === "all"
+                ? " (restaurant, tous types et statuts)"
+                : " (restaurant, filtre actif)"}
             </p>
           </div>
         </div>
