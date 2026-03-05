@@ -1564,6 +1564,23 @@ export async function scanAndValidateTokenSupabase(token: string, validatedBy?: 
 
   console.log(JSON.stringify({ event: 'volunteer_confirm', volunteerId: volunteer.id, state }));
 
+  // Count total participations for this volunteer (by email) including the current one
+  let participationCount = 1;
+  try {
+    const { data: allParticipations } = await client
+      .from('volunteers')
+      .select('day_id')
+      .eq('email', volunteer.email)
+      .or('qr_status.eq.validated,status.eq.present,status.eq.confirmed');
+
+    if (allParticipations) {
+      const uniqueDays = new Set(allParticipations.map((r: any) => r.day_id).filter(Boolean));
+      participationCount = Math.max(1, uniqueDays.size);
+    }
+  } catch (e) {
+    console.warn('[Volunteer] Failed to compute participation count', e);
+  }
+
   const volunteerResponse = {
     ...volunteer,
     qrStatus: 'validated' as const,
@@ -1576,6 +1593,7 @@ export async function scanAndValidateTokenSupabase(token: string, validatedBy?: 
     success: true,
     state,
     volunteer: volunteerResponse,
+    participationCount,
   };
 }
 
