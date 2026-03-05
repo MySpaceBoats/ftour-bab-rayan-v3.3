@@ -48,6 +48,7 @@ import {
   Upload,
   FileSpreadsheet,
   UserPlus,
+  RefreshCw,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -182,6 +183,18 @@ export default function AdminBenevoles() {
       toast.error(error.message);
     },
   });
+
+  const resendEmailsMutation =
+    trpc.volunteers.adminResendConfirmationEmailsLast24h.useMutation({
+      onSuccess: data => {
+        toast.success(
+          `Emails envoyés : ${data.sent}/${data.total} (${data.failed} échec${data.failed !== 1 ? "s" : ""})`
+        );
+      },
+      onError: error => {
+        toast.error(`Erreur : ${error.message}`);
+      },
+    });
 
   const handleImportExcel = async () => {
     if (!importFile || !importDayId || importSlots.length === 0) {
@@ -506,6 +519,19 @@ export default function AdminBenevoles() {
               <Button variant="secondary" onClick={() => setManualOpen(true)}>
                 <UserPlus className="h-4 w-4 mr-2" />
                 Ajouter manuellement
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => resendEmailsMutation.mutate()}
+                disabled={resendEmailsMutation.isPending}
+                title="Renvoyer un email de confirmation à tous les bénévoles inscrits dans les 24 dernières heures"
+              >
+                {resendEmailsMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Renvoyer emails (24h)
               </Button>
             </div>
           </CardContent>
