@@ -1334,6 +1334,36 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
   const client = getSupabaseAdminClient();
   if (!client) return { volunteers: [], days: [] };
 
+  const fetchAllVolunteers = async () => {
+    const pageSize = 1000;
+    let from = 0;
+    const allRows: any[] = [];
+
+    while (true) {
+      const to = from + pageSize - 1;
+      let query = client
+        .from('volunteers')
+        .select('*, ramadan_days(*)')
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      if (dayId) {
+        query = query.eq('day_id', dayId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const rows = data ?? [];
+      allRows.push(...rows);
+
+      if (rows.length < pageSize) break;
+      from += pageSize;
+    }
+
+    return allRows;
+  };
+
   const fetchAllVolunteerAttendances = async () => {
     const pageSize = 1000;
     let from = 0;
@@ -1364,18 +1394,7 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
     return allRows;
   };
 
-  let query = client.from('volunteers').select('*, ramadan_days(*)');
-
-  if (dayId) {
-    query = query.eq('day_id', dayId);
-  }
-
-  // Use explicit limit to bypass Supabase's default 1000-row cap
-  const { data: volunteers, error } = await query
-    .order('created_at', { ascending: false })
-    .limit(10000);
-  if (error) throw error;
-
+  const volunteers = await fetchAllVolunteers();
   const allVolunteerAttendances = await fetchAllVolunteerAttendances();
 
   const attendanceFrequencyByEmail = new Map<string, number>();
