@@ -90,20 +90,26 @@ export default function Galerie() {
               Tous
             </button>
 
-            {YEARS.map(year => (
-              <button
-                key={year}
-                onClick={() => setSelectedYear(year)}
-                className={cn(
-                  "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium border transition-colors whitespace-nowrap",
-                  selectedYear === year
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background text-foreground border-border hover:bg-muted"
-                )}
-              >
-                {year}
-              </button>
-            ))}
+            {YEARS.map(year => {
+              const isFuture = year > CURRENT_YEAR;
+              return (
+                <button
+                  key={year}
+                  onClick={() => !isFuture && setSelectedYear(year)}
+                  disabled={isFuture}
+                  className={cn(
+                    "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium border transition-colors whitespace-nowrap",
+                    isFuture
+                      ? "bg-muted text-muted-foreground border-border cursor-not-allowed opacity-40"
+                      : selectedYear === year
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-foreground border-border hover:bg-muted"
+                  )}
+                >
+                  {year}
+                </button>
+              );
+            })}
           </div>
 
           <button
