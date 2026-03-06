@@ -591,6 +591,51 @@ const galleryRouter = router({
       };
     }),
 
+  resendValidationEmail: publicProcedure
+    .input(z.object({ email: z.string().email() }))
+    .mutation(async ({ input }) => {
+      const client = getSupabaseAdminClient();
+      if (!client)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Supabase non configuré" });
+
+      const email = input.email.trim().toLowerCase();
+
+      const { data: rows, error } = await client
+        .from("gallery_photos")
+        .select("id,validation_token,validation_email")
+        .eq("validation_email", email)
+        .eq("status", "draft")
+        .not("validation_token", "is", null)
+        .limit(1);
+
+      if (error)
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+
+      if (!rows || rows.length === 0)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Aucune photo en attente de validation pour cet email.",
+        });
+
+      const token = rows[0].validation_token;
+      const validationUrl = `${resolveAppBaseUrl().replace(/\/$/, "")}/galerie/validation/${token}`;
+
+      const emailPayload = generateGalleryUploadValidationEmail({ email, validationUrl });
+      const emailResult = await sendEmail({
+        to: email,
+        subject: emailPayload.subject,
+        html: emailPayload.html,
+      });
+
+      if (!emailResult.success)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Impossible d'envoyer l'email. Réessayez.",
+        });
+
+      return { success: true };
+    }),
+
   updatePhoto: adminProcedure
     .input(
       z.object({ id: z.string().uuid(), ...gallerySchema.partial().shape })
