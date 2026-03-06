@@ -192,50 +192,63 @@ export default function VolunteerGalleryUploadModule() {
 
           <div className="space-y-2">
             <Label>Édition (album)</Label>
-            <Select value={selectedAlbumId} onValueChange={setSelectedAlbumId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choisir une édition" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">— Choisir une édition —</SelectItem>
-                {(() => {
-                  const pastAndCurrentEditions = editionOptions.filter(
-                    e => e.year !== null && e.year <= CURRENT_YEAR
-                  );
-                  const recentEditions = pastAndCurrentEditions.filter(
-                    e => e.year! >= CURRENT_YEAR - 2
-                  );
-                  const olderEditions = pastAndCurrentEditions.filter(
-                    e => e.year! < CURRENT_YEAR - 2
-                  );
-                  return (
-                    <>
-                      {recentEditions.length > 0 && (
-                        <SelectGroup>
-                          <SelectLabel>Éditions récentes</SelectLabel>
-                          {recentEditions.map(edition => (
-                            <SelectItem key={edition.id} value={edition.id}>
-                              {edition.label}
-                              {edition.year === CURRENT_YEAR ? " (en cours)" : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      )}
-                      {olderEditions.length > 0 && (
-                        <SelectGroup>
-                          <SelectLabel>Anciennes éditions</SelectLabel>
-                          {olderEditions.map(edition => (
-                            <SelectItem key={edition.id} value={edition.id}>
-                              {edition.label}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      )}
-                    </>
-                  );
-                })()}
-              </SelectContent>
-            </Select>
+            {albums.isLoading ? (
+              <div className="h-9 flex items-center px-3 border rounded-md text-sm text-muted-foreground bg-muted/30">
+                Chargement des éditions…
+              </div>
+            ) : albums.isError ? (
+              <div className="h-9 flex items-center px-3 border border-destructive/50 rounded-md text-sm text-destructive">
+                Impossible de charger les éditions
+              </div>
+            ) : (
+              <Select value={selectedAlbumId} onValueChange={setSelectedAlbumId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir une édition" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Choisir une édition —</SelectItem>
+                  {(() => {
+                    const pastAndCurrentEditions = editionOptions.filter(
+                      e => e.year !== null && e.year <= CURRENT_YEAR
+                    );
+                    const recentEditions = pastAndCurrentEditions.filter(
+                      e => e.year! >= CURRENT_YEAR - 2
+                    );
+                    const olderEditions = pastAndCurrentEditions.filter(
+                      e => e.year! < CURRENT_YEAR - 2
+                    );
+                    if (pastAndCurrentEditions.length === 0) {
+                      return null;
+                    }
+                    return (
+                      <>
+                        {recentEditions.length > 0 && (
+                          <SelectGroup>
+                            <SelectLabel>Éditions récentes</SelectLabel>
+                            {recentEditions.map(edition => (
+                              <SelectItem key={edition.id} value={edition.id}>
+                                {edition.label}
+                                {edition.year === CURRENT_YEAR ? " (en cours)" : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        )}
+                        {olderEditions.length > 0 && (
+                          <SelectGroup>
+                            <SelectLabel>Anciennes éditions</SelectLabel>
+                            {olderEditions.map(edition => (
+                              <SelectItem key={edition.id} value={edition.id}>
+                                {edition.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        )}
+                      </>
+                    );
+                  })()}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </CardContent>
       </Card>
