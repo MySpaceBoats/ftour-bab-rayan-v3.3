@@ -1375,7 +1375,6 @@ const galleryRouter = router({
   uploadPhotos: protectedProcedure
     .input(
       z.object({
-        validationEmail: z.string().email("Adresse email invalide").optional(),
         photos: z
           .array(
             z.object({
@@ -1408,22 +1407,6 @@ const galleryRouter = router({
             "admin_terroir",
           ].includes(ctx.user.role)
       );
-
-      const validationEmail = input.validationEmail?.trim().toLowerCase() ?? "";
-      if (!canManageGallery && !validationEmail) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Adresse email requise",
-        });
-      }
-
-      const tokenBytes = new Uint8Array(32);
-      crypto.getRandomValues(tokenBytes);
-      const validationToken = Array.from(tokenBytes)
-        .map(b => b.toString(16).padStart(2, "0"))
-        .join("");
-      const baseUrl = (ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma").replace(/\/$/, "");
-      const validationUrl = `${baseUrl}/galerie/validation/${validationToken}`;
 
       const albumIds = Array.from(
         new Set(input.photos.map(p => p.albumId).filter(Boolean))
@@ -1513,7 +1496,7 @@ const galleryRouter = router({
             album_id: photo.albumId,
             sort_order: photo.sortOrder,
             is_featured: canManageGallery ? photo.isFeatured : false,
-            status: canManageGallery ? photo.status : "draft",
+            status: "published",
             image_original_url: originalUrl,
             image_thumb_url: thumbUrl,
             storage_path: originalPath,
@@ -1523,10 +1506,7 @@ const galleryRouter = router({
             size_bytes: buffer.length,
             mime_type: photo.fileType,
             uploaded_by: ctx.user?.email,
-            validation_email: validationEmail || null,
-            validation_token: validationEmail ? validationToken : null,
-            validation_sent_at: validationEmail ? new Date().toISOString() : null,
-            validated_at: canManageGallery ? new Date().toISOString() : null,
+            validated_at: new Date().toISOString(),
           })
           .select("*")
           .single();
@@ -1534,25 +1514,6 @@ const galleryRouter = router({
         if (error)
           throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
         results.push(data);
-      }
-
-      if (!canManageGallery && results.length > 0 && validationEmail) {
-        const emailPayload = generateGalleryUploadValidationEmail({
-          email: validationEmail,
-          validationUrl,
-        });
-        const emailResult = await sendEmail({
-          to: validationEmail,
-          subject: emailPayload.subject,
-          html: emailPayload.html,
-          apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
-        });
-        if (!emailResult.success) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Photos enregistrées, mais impossible d'envoyer l'email de validation. Réessayez.",
-          });
-        }
       }
 
       return results;
