@@ -1593,6 +1593,50 @@ const galleryRouter = router({
       return { success: true, alreadyValidated: false, updatedCount: idsToPublish.length };
     }),
 
+  resendValidationEmail: publicProcedure
+    .input(z.object({ email: z.string().email() }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const email = input.email.trim().toLowerCase();
+
+      const { data: rows, error } = await supabase
+        .from("gallery_photos")
+        .select("id,validation_token,validation_email")
+        .eq("validation_email", email)
+        .eq("status", "draft")
+        .not("validation_token", "is", null)
+        .limit(1);
+
+      if (error)
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+
+      if (!rows || rows.length === 0)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Aucune photo en attente de validation pour cet email.",
+        });
+
+      const token = rows[0].validation_token;
+      const baseUrl = (ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma").replace(/\/$/, "");
+      const validationUrl = `${baseUrl}/galerie/validation/${token}`;
+
+      const emailPayload = generateGalleryUploadValidationEmail({ email, validationUrl });
+      const emailResult = await sendEmail({
+        to: email,
+        subject: emailPayload.subject,
+        html: emailPayload.html,
+        apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
+      });
+
+      if (!emailResult.success)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Impossible d'envoyer l'email. Réessayez.",
+        });
+
+      return { success: true };
+    }),
+
   createAlbum: adminProcedure
     .input(z.object({
       name: z.string().min(1).max(120),
