@@ -2590,19 +2590,101 @@ const volunteersRouter = router({
     .query(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
 
-      let query = supabase.from("volunteers").select("*, ramadan_days(*)");
+      // Paginate through all volunteers to bypass the 1000-row default limit
+      const fetchAllVolunteers = async () => {
+        const pageSize = 1000;
+        let from = 0;
+        const allRows: any[] = [];
 
-      if (input.dayId) {
-        query = query.eq("day_id", input.dayId);
-      }
+        while (true) {
+          const to = from + pageSize - 1;
+          let query = supabase
+            .from("volunteers")
+            .select("*, ramadan_days(*)")
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, to);
 
-      const { data, error } = await query.order("created_at", {
-        ascending: false,
-      });
+          if (input.dayId) {
+            query = query.eq("day_id", input.dayId);
+          }
 
-      if (error) {
-        console.error("[Worker] Error fetching volunteers:", error);
-        return { volunteers: [], days: [] };
+          const { data, error } = await query;
+          if (error) {
+            console.error("[Worker] Error fetching volunteers:", error);
+            return allRows;
+          }
+
+          const rows = data ?? [];
+          allRows.push(...rows);
+
+          if (rows.length < pageSize) break;
+          from += pageSize;
+        }
+
+        return allRows;
+      };
+
+      // Fetch all attendance rows (all days) to compute per-volunteer presence frequency
+      const fetchAllAttendances = async () => {
+        const pageSize = 1000;
+        let from = 0;
+        const allRows: Array<{
+          email: string | null;
+          day_id: number | null;
+          status: string | null;
+          qr_status: string | null;
+          scanned_at: string | null;
+        }> = [];
+
+        while (true) {
+          const to = from + pageSize - 1;
+          const { data, error } = await supabase
+            .from("volunteers")
+            .select("email, day_id, status, qr_status, scanned_at")
+            .order("id", { ascending: true })
+            .range(from, to);
+
+          if (error) break;
+
+          const rows = data ?? [];
+          allRows.push(...rows);
+
+          if (rows.length < pageSize) break;
+          from += pageSize;
+        }
+
+        return allRows;
+      };
+
+      const [data, allAttendances] = await Promise.all([
+        fetchAllVolunteers(),
+        fetchAllAttendances(),
+      ]);
+
+      // Build attendance frequency map (count distinct days where volunteer was present)
+      const attendanceFrequencyByEmail = new Map<string, number>();
+      const seenPairs = new Set<string>();
+      for (const row of allAttendances) {
+        const email = String(row.email ?? "").toLowerCase().trim();
+        if (!email) continue;
+
+        const isPresent =
+          row.status !== "cancelled" &&
+          (row.status === "present" ||
+            row.qr_status === "validated" ||
+            !!row.scanned_at);
+
+        if (!isPresent) continue;
+
+        const pairKey = `${email}:${row.day_id}`;
+        if (seenPairs.has(pairKey)) continue;
+        seenPairs.add(pairKey);
+
+        attendanceFrequencyByEmail.set(
+          email,
+          (attendanceFrequencyByEmail.get(email) ?? 0) + 1
+        );
       }
 
       // Get all days for the dropdown
@@ -2611,11 +2693,14 @@ const volunteersRouter = router({
         .select("*")
         .order("day_number", { ascending: true });
 
-      const volunteers = (data || []).map(v => ({
+      const volunteers = (data || []).map((v: any) => ({
         id: v.id,
         firstName: v.first_name,
         lastName: v.last_name,
         email: v.email,
+        attendanceFrequency: attendanceFrequencyByEmail.get(
+          String(v.email ?? "").toLowerCase().trim()
+        ) ?? 0,
         phone: v.phone,
         city: v.city,
         dayId: v.day_id,
@@ -2636,7 +2721,7 @@ const volunteersRouter = router({
           : null,
       }));
 
-      const days = (daysData || []).map(d => ({
+      const days = (daysData || []).map((d: any) => ({
         id: d.id,
         dayNumber: d.day_number,
         date: d.date,
