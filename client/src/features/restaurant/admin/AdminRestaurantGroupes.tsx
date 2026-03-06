@@ -369,7 +369,7 @@ export default function AdminRestaurantGroupes() {
       name: trimmedName || undefined,
       email: trimmedEmail || undefined,
       phone: trimmedPhone || undefined,
-      date: editForm.date,
+      date: editForm.date || undefined,
       seatsTotal: editForm.seatsTotal,
       notes: editForm.notes,
       totalAmount: editForm.totalAmount,

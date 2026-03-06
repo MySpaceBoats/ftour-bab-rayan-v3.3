@@ -6274,7 +6274,7 @@ const restaurantReservationsRouter = router({
   validate: protectedProcedure
     .input(z.object({ reference: z.string(), baseUrl: z.string().url() }))
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
       if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -6319,7 +6319,7 @@ const restaurantReservationsRouter = router({
   refuse: protectedProcedure
     .input(z.object({ reference: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
       if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -6376,7 +6376,7 @@ const restaurantReservationsRouter = router({
     }),
 
   adminListParticuliers: protectedProcedure.query(async ({ ctx }) => {
-    const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+    const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
     if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
     }
@@ -6397,7 +6397,7 @@ const restaurantReservationsRouter = router({
   }),
 
   adminListGroupes: protectedProcedure.query(async ({ ctx }) => {
-    const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+    const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
     if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
     }
@@ -6419,7 +6419,7 @@ const restaurantReservationsRouter = router({
   }),
 
   adminListEntreprises: protectedProcedure.query(async ({ ctx }) => {
-    const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+    const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
     if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
     }
@@ -6452,6 +6452,15 @@ const restaurantReservationsRouter = router({
         phone: z.string().min(1, "Téléphone requis"),
         date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide"),
         seatsTotal: z.number().int().min(2),
+        nbAdult: z.number().int().min(0).optional(),
+        nbKids: z.number().int().min(0).optional(),
+        totalAmount: z.number().min(0).optional(),
+        amountReceived: z.number().min(0).optional(),
+        deposit: z.number().min(0).optional(),
+        paymentMode: z.enum(["cash", "virement", "espece"]).optional(),
+        respResa: z.enum(["Nayla", "Hind", "Kamal", "Rita", "Réda", "Souad"]).optional(),
+        modeDeposit: z.string().optional(),
+        dateAvReg: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide").optional(),
         notes: z.string().optional(),
         displayChoice: z.enum(["jardin", "brasserie"]).optional(),
         status: z
@@ -6464,7 +6473,7 @@ const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
       if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -6487,6 +6496,15 @@ const restaurantReservationsRouter = router({
           phone: input.phone,
           date: input.date,
           seats_total: input.seatsTotal,
+          nb_adult: input.nbAdult ?? null,
+          nb_kids: input.nbKids ?? null,
+          total_amount: input.totalAmount ?? null,
+          amount_received: input.amountReceived ?? null,
+          deposit: input.deposit ?? null,
+          payment_mode: input.paymentMode ?? null,
+          resp_resa: input.respResa ?? null,
+          mode_deposit: input.modeDeposit ?? null,
+          date_av_reg: input.dateAvReg ?? null,
           notes: input.notes || null,
           display_choice: input.displayChoice || null,
           company_name:
@@ -6496,6 +6514,9 @@ const restaurantReservationsRouter = router({
           payment_status: "not_applicable",
           qr_token: qrToken,
           qr_status: input.status === "paid_confirmed" ? "active" : "inactive",
+          entry_source: "admin",
+          created_by_name: ctx.user.name ?? null,
+          created_by_email: ctx.user.email ?? null,
           created_at: now,
           updated_at: now,
         })
@@ -6533,7 +6554,7 @@ const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
       if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -6562,6 +6583,47 @@ const restaurantReservationsRouter = router({
           .eq("id", input.id);
       }
       return { success: true, reservation: data };
+    }),
+
+  adminGetLatestProofUrl: protectedProcedure
+    .input(z.object({ reservationId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
+      if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
+      }
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data: proof } = await supabase
+        .from("reservation_payment_proofs")
+        .select("storage_path, uploaded_at")
+        .eq("reservation_id", input.reservationId)
+        .order("uploaded_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!proof?.storage_path) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Aucune preuve de virement trouvée",
+        });
+      }
+
+      const bucket = "reservation-payment-proofs";
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(proof.storage_path, 3600);
+
+      if (signedError || !signedData?.signedUrl) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Impossible de générer le lien de téléchargement",
+        });
+      }
+
+      return {
+        storagePath: proof.storage_path,
+        signedUrl: signedData.signedUrl,
+      };
     }),
 
   adminEdit: protectedProcedure
@@ -6609,6 +6671,7 @@ const restaurantReservationsRouter = router({
         "super_admin",
         "admin_restaurant",
         "vue_restaurant",
+        "manager_restaurant",
         "admin_ops",
         "admin_operations",
       ];
@@ -6682,7 +6745,7 @@ const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
       if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
         throw new TRPCError({
           code: "FORBIDDEN",
