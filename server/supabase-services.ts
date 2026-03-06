@@ -940,9 +940,10 @@ export async function createAccountsForFrequentPresentVolunteers(minPresences = 
   const threshold = Math.max(1, Math.floor(minPresences));
   const { data: presentRows, error: presentError } = await client
     .from('volunteers')
-    .select('first_name,last_name,email,phone,status,created_at')
-    .eq('status', 'present')
-    .order('created_at', { ascending: false });
+    .select('first_name,last_name,email,phone,status,qr_status,scanned_at,created_at')
+    .or('status.eq.present,qr_status.eq.validated')
+    .order('created_at', { ascending: false })
+    .limit(10000);
 
   if (presentError) throw presentError;
 
@@ -954,6 +955,7 @@ export async function createAccountsForFrequentPresentVolunteers(minPresences = 
   }>();
 
   for (const row of presentRows ?? []) {
+    if (row.status === 'cancelled') continue;
     const email = String(row.email ?? '').toLowerCase().trim();
     const phone = String(row.phone ?? '').trim();
     if (!email || !phone) continue;
@@ -1340,9 +1342,10 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
     if (!email) continue;
 
     const isPresent =
-      attendanceRow.status === 'present' ||
-      attendanceRow.qr_status === 'validated' ||
-      !!attendanceRow.scanned_at;
+      attendanceRow.status !== 'cancelled' &&
+      (attendanceRow.status === 'present' ||
+        attendanceRow.qr_status === 'validated' ||
+        !!attendanceRow.scanned_at);
 
     if (!isPresent) continue;
 
@@ -1485,7 +1488,7 @@ export async function scanAndValidateTokenSupabase(token: string, validatedBy?: 
 
   const updatePayload: Record<string, any> = {
     qr_status: 'validated',
-    status: 'confirmed',
+    status: 'present',
     scanned_at: now,
     scanned_by: validatedBy,
   };
@@ -1665,7 +1668,7 @@ export async function updateVolunteerStatusSupabase(volunteerId: number, status:
         .from('volunteers')
         .select('ramadan_days(day_number)')
         .eq('email', volunteerBeforeUpdate.email)
-        .eq('status', 'present');
+        .or('status.eq.present,qr_status.eq.validated');
 
       if (presentHistoryError) {
         console.warn('[Volunteer] Unable to fetch present history for manager recommendation', {
@@ -1703,13 +1706,15 @@ export async function getVolunteerStatsSupabase() {
 
   const { data, error } = await client
     .from('volunteers')
-    .select('status, qr_status, scanned_at');
+    .select('status, qr_status, scanned_at')
+    .limit(10000);
 
   if (error) throw error;
 
   const rows = data ?? [];
   const isPresent = (v: { status: string; qr_status: string | null; scanned_at: string | null }) =>
-    v.status === 'present' || v.qr_status === 'validated' || !!v.scanned_at;
+    v.status !== 'cancelled' &&
+    (v.status === 'present' || v.qr_status === 'validated' || !!v.scanned_at);
 
   const total = rows.length;
   const present = rows.filter(isPresent).length;
