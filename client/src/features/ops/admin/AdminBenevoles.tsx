@@ -48,6 +48,9 @@ import {
   Upload,
   FileSpreadsheet,
   UserPlus,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -92,6 +95,8 @@ export default function AdminBenevoles() {
   const [selectedVolunteer, setSelectedVolunteer] = useState<number | null>(
     null
   );
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   // Import Excel state
   const [importOpen, setImportOpen] = useState(false);
@@ -284,6 +289,54 @@ export default function AdminBenevoles() {
       matchesSlot &&
       matchesAttendanceFrequency
     );
+  });
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(d => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortColumn !== column)
+      return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />;
+    return sortDirection === "asc" ? (
+      <ArrowUp className="h-3 w-3 ml-1" />
+    ) : (
+      <ArrowDown className="h-3 w-3 ml-1" />
+    );
+  };
+
+  const sortedVolunteers = [...filteredVolunteers].sort((a: any, b: any) => {
+    if (!sortColumn) return 0;
+    let aVal: any;
+    let bVal: any;
+    switch (sortColumn) {
+      case "name":
+        aVal = `${a.lastName} ${a.firstName}`.toLowerCase();
+        bVal = `${b.lastName} ${b.firstName}`.toLowerCase();
+        break;
+      case "day":
+        aVal = a.day?.dayNumber ?? 0;
+        bVal = b.day?.dayNumber ?? 0;
+        break;
+      case "frequency":
+        aVal = Number(a.attendanceFrequency ?? 0);
+        bVal = Number(b.attendanceFrequency ?? 0);
+        break;
+      case "status":
+        aVal = a.status;
+        bVal = b.status;
+        break;
+      default:
+        return 0;
+    }
+    if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+    if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
+    return 0;
   });
 
   // Les indicateurs doivent refléter l'ensemble des bénévoles du jour sélectionné,
@@ -566,17 +619,49 @@ export default function AdminBenevoles() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Bénévole</TableHead>
+                      <TableHead
+                        className="cursor-pointer select-none hover:bg-muted/50"
+                        onClick={() => handleSort("name")}
+                      >
+                        <span className="flex items-center">
+                          Bénévole
+                          <SortIcon column="name" />
+                        </span>
+                      </TableHead>
                       <TableHead>Contact</TableHead>
-                      <TableHead>Jour / Date</TableHead>
+                      <TableHead
+                        className="cursor-pointer select-none hover:bg-muted/50"
+                        onClick={() => handleSort("day")}
+                      >
+                        <span className="flex items-center">
+                          Jour / Date
+                          <SortIcon column="day" />
+                        </span>
+                      </TableHead>
                       <TableHead>Créneaux</TableHead>
-                      <TableHead>Fréquence présence</TableHead>
-                      <TableHead>Statut</TableHead>
+                      <TableHead
+                        className="cursor-pointer select-none hover:bg-muted/50"
+                        onClick={() => handleSort("frequency")}
+                      >
+                        <span className="flex items-center">
+                          Fréquence présence
+                          <SortIcon column="frequency" />
+                        </span>
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer select-none hover:bg-muted/50"
+                        onClick={() => handleSort("status")}
+                      >
+                        <span className="flex items-center">
+                          Statut
+                          <SortIcon column="status" />
+                        </span>
+                      </TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredVolunteers.map(volunteer => (
+                    {sortedVolunteers.map(volunteer => (
                       <TableRow key={volunteer.id}>
                         <TableCell>
                           <div>
