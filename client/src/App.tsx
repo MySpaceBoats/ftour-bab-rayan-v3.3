@@ -46,6 +46,7 @@ import CompanyBookingSpace from "@/features/restaurant/pages/CompanyBookingSpace
 import Reservation from "@/features/restaurant/pages/Reservation";
 import CheckinReservation from "@/features/restaurant/pages/CheckinReservation";
 import GroupReservationEmailConfirmation from "@/features/restaurant/pages/GroupReservationEmailConfirmation";
+import AdminReservationValidation from "@/features/restaurant/pages/AdminReservationValidation";
 import ReservationProofUpload from "@/features/restaurant/pages/ReservationProofUpload";
 import AdminRestaurantGroupes from "@/features/restaurant/admin/AdminRestaurantGroupes";
 import AdminRestaurantEntreprises from "@/features/restaurant/admin/AdminRestaurantEntreprises";
@@ -292,6 +293,10 @@ function LocalizedRoutes() {
       <Route
         path="/reservation-groupe/confirmation-email/:token"
         component={GroupReservationEmailConfirmation}
+      />
+      <Route
+        path="/reservation/valider/:token"
+        component={AdminReservationValidation}
       />
       <Route path="/reservations/preuve" component={ReservationProofUpload} />
       <Route path="/galerie/validation/:token" component={GalerieValidationUpload} />

@@ -11,6 +11,7 @@ import {
   generateRestaurantReservationAutoCancelledEmail,
   formatCasablancaDateTimeLong,
   generateRestaurantGroupVerificationEmail,
+  generateAdminReservationValidationEmail,
 } from "./email";
 import * as reservationServices from "./restaurant-reservation-services";
 import crypto from "crypto";
@@ -40,6 +41,13 @@ const GROUP_NOTIFICATION_BCC_RECIPIENTS = [
   "nailabennani@hotmail.com",
   "reda.sebbani@gmail.com",
 ] as const;
+
+const ADMIN_VALIDATION_NOTIFICATION_RECIPIENTS = [
+  "ratibhind3@gmail.com",
+  "reda.sebbani@gmail.com",
+] as const;
+
+const ADMIN_VALIDATION_TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
 
 
 function getPublicAppBaseUrl(): string {
@@ -117,6 +125,83 @@ function verifyGroupReservationConfirmationToken(token: string): {
     return { reference, email, issuedAt };
   } catch {
     return null;
+  }
+}
+
+function createAdminValidationToken(reference: string): string {
+  const issuedAt = Date.now();
+  const payload = `${reference}|${issuedAt}`;
+  const signature = crypto
+    .createHmac("sha256", getReservationConfirmationSecret())
+    .update(payload)
+    .digest("hex");
+
+  return Buffer.from(`${payload}|${signature}`, "utf-8").toString("base64url");
+}
+
+function verifyAdminValidationToken(token: string): { reference: string; issuedAt: number } | null {
+  try {
+    const decoded = Buffer.from(token, "base64url").toString("utf-8");
+    const [reference, issuedAtRaw, signature] = decoded.split("|");
+
+    if (!reference || !issuedAtRaw || !signature) {
+      return null;
+    }
+
+    const payload = `${reference}|${issuedAtRaw}`;
+    const expected = crypto
+      .createHmac("sha256", getReservationConfirmationSecret())
+      .update(payload)
+      .digest("hex");
+
+    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+      return null;
+    }
+
+    const issuedAt = Number(issuedAtRaw);
+    if (!Number.isFinite(issuedAt)) {
+      return null;
+    }
+
+    if (Date.now() - issuedAt > ADMIN_VALIDATION_TOKEN_TTL_MS) {
+      return null;
+    }
+
+    return { reference, issuedAt };
+  } catch {
+    return null;
+  }
+}
+
+async function sendAdminValidationNotifications(params: {
+  type: "particulier" | "entreprise" | "groupe";
+  date: string;
+  participantsCount: number;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+  reference: string;
+  companyName?: string;
+  groupName?: string;
+  displayChoice?: string;
+}) {
+  const token = createAdminValidationToken(params.reference);
+  const validationUrl = `${getPublicAppBaseUrl()}/reservation/valider/${token}`;
+
+  for (const recipient of ADMIN_VALIDATION_NOTIFICATION_RECIPIENTS) {
+    try {
+      const notifEmail = generateAdminReservationValidationEmail({
+        ...params,
+        validationUrl,
+      });
+      await sendEmail({
+        to: recipient,
+        subject: notifEmail.subject,
+        html: notifEmail.html,
+      });
+    } catch (err) {
+      console.error("[sendAdminValidationNotifications] Failed to send to", recipient, err);
+    }
   }
 }
 
@@ -250,6 +335,17 @@ export const restaurantReservationsRouter = router({
             }).html,
           });
 
+          await sendAdminValidationNotifications({
+            type: "particulier",
+            date: input.date,
+            participantsCount: input.participantsCount,
+            contactName: input.firstName,
+            contactEmail: input.email,
+            contactPhone: input.phone,
+            reference,
+            displayChoice: input.displayChoice,
+          });
+
           return {
             success: true,
             reservation,
@@ -367,6 +463,18 @@ export const restaurantReservationsRouter = router({
               }
             );
           }
+
+          await sendAdminValidationNotifications({
+            type: "entreprise",
+            date: input.date,
+            participantsCount: input.participantsCount,
+            contactName: input.contactName,
+            contactEmail: input.email,
+            contactPhone: input.phone,
+            reference,
+            companyName: input.companyName,
+            displayChoice: input.displayChoice,
+          });
 
           return {
             success: true,
@@ -580,8 +688,20 @@ export const restaurantReservationsRouter = router({
         await sendEmail({
           to: GROUP_NOTIFICATION_TO,
           bcc: [...GROUP_NOTIFICATION_BCC_RECIPIENTS],
-          subject: `📬 Nouvelle demande Groupe - ${groupNotificationDate}`,
+          subject: `Nouvelle demande Groupe - ${groupNotificationDate}`,
           html: groupNotificationHtml,
+        });
+
+        await sendAdminValidationNotifications({
+          type: "groupe",
+          date: reservation.date ? reservation.date.toISOString().split("T")[0] : "",
+          participantsCount: reservation.seatsTotal,
+          contactName: reservation.name,
+          contactEmail: reservation.email,
+          contactPhone: reservation.phone,
+          reference: reservation.reference,
+          groupName: reservation.groupName ?? undefined,
+          displayChoice: reservation.displayChoice === "jardin" ? "jardin" : "brasserie",
         });
       }
 
@@ -1255,5 +1375,81 @@ export const restaurantReservationsRouter = router({
           message: "Erreur lors de la mise à jour du statut",
         });
       }
+    }),
+
+  // ============================================
+  // PUBLIC: VALIDATE RESERVATION VIA ADMIN TOKEN
+  // (triggered when admin clicks validation link in notification email)
+  // ============================================
+
+  validateByAdminToken: publicProcedure
+    .input(
+      z.object({
+        token: z.string().min(10, "Token invalide"),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const parsed = verifyAdminValidationToken(input.token);
+      if (!parsed) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Lien de validation invalide ou expiré",
+        });
+      }
+
+      const reservation =
+        await reservationServices.getRestaurantReservationByReference(
+          parsed.reference
+        );
+
+      if (!reservation) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Réservation introuvable",
+        });
+      }
+
+      const alreadyValidated = [
+        "validated_pending_payment",
+        "paid_confirmed",
+        "confirmed",
+        "completed",
+      ].includes(reservation.status);
+
+      if (!alreadyValidated) {
+        await reservationServices.updateRestaurantReservationStatus(
+          reservation.id,
+          "validated_pending_payment"
+        );
+        await reservationServices.updateRestaurantReservationPaymentStatus(
+          reservation.id,
+          "pending_payment"
+        );
+
+        const reservationDateIso = reservation.date
+          ? reservation.date.toISOString().split("T")[0]
+          : "";
+        const confirmedEmail = generateRestaurantReservationConfirmedEmail({
+          firstName: reservation.name,
+          reference: reservation.reference,
+          reservationDateLong: formatReservationDateLong(reservationDateIso),
+          partySize: reservation.seatsTotal,
+          partySizeConfirmed: reservation.seatsTotal,
+        });
+
+        await sendEmail({
+          to: reservation.email,
+          subject: confirmedEmail.subject,
+          html: confirmedEmail.html,
+          text: confirmedEmail.text,
+        });
+      }
+
+      return {
+        success: true,
+        alreadyValidated,
+        reference: reservation.reference,
+        clientEmail: reservation.email,
+      };
     }),
 });

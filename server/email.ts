@@ -1868,6 +1868,88 @@ export function generateNewBookingNotificationEmail(data: NewBookingNotification
 
 
 // ============================================
+// EMAIL NOTIFICATION ADMIN AVEC LIEN DE VALIDATION RÉSERVATION RESTAURANT
+// ============================================
+
+export interface AdminReservationValidationEmailData {
+  type: 'particulier' | 'entreprise' | 'groupe';
+  date: string;
+  participantsCount: number;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+  reference: string;
+  companyName?: string;
+  groupName?: string;
+  displayChoice?: string;
+  validationUrl: string;
+}
+
+export function generateAdminReservationValidationEmail(data: AdminReservationValidationEmailData): { subject: string; html: string } {
+  const typeLabel = {
+    particulier: 'Particulier',
+    entreprise: 'Entreprise',
+    groupe: 'Groupe',
+  }[data.type];
+
+  const content = `
+    <h2 style="color: #5d5a3c; margin: 0 0 20px 0; font-size: 24px;">
+      Nouvelle demande de reservation restaurant
+    </h2>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Une nouvelle demande de reservation vient d'etre recue. Veuillez verifier les details ci-dessous et valider si vous souhaitez confirmer la reservation au client.
+    </p>
+
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f0; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">Details de la demande</h3>
+          <p style="margin: 5px 0; color: #374151;"><strong>Type :</strong> ${typeLabel}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Participants :</strong> ${data.participantsCount}</p>
+          ${data.displayChoice ? `<p style="margin: 5px 0; color: #374151;"><strong>Salle :</strong> ${data.displayChoice}</p>` : ''}
+          ${data.companyName ? `<p style="margin: 5px 0; color: #374151;"><strong>Entreprise :</strong> ${data.companyName}</p>` : ''}
+          ${data.groupName ? `<p style="margin: 5px 0; color: #374151;"><strong>Groupe :</strong> ${data.groupName}</p>` : ''}
+          <p style="margin: 5px 0; color: #374151;"><strong>Contact :</strong> ${data.contactName}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Email :</strong> <a href="mailto:${data.contactEmail}" style="color: #166534;">${data.contactEmail}</a></p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Telephone :</strong> ${data.contactPhone}</p>
+          <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;"><strong>Reference :</strong> ${data.reference}</p>
+        </td>
+      </tr>
+    </table>
+
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f0fdf4; border-radius: 8px; margin: 20px 0; border: 1px solid #86efac;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #166534; margin: 0 0 10px 0; font-size: 18px;">Action requise</h3>
+          <p style="margin: 0 0 16px 0; color: #374151; font-size: 15px; line-height: 1.6;">
+            Cliquez sur le bouton ci-dessous pour valider cette reservation. Le client recevra automatiquement un email de confirmation.
+          </p>
+          <a href="${data.validationUrl}"
+             style="display: inline-block; background-color: #166534; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-size: 16px; font-weight: bold;">
+            Valider la reservation
+          </a>
+          <p style="margin: 14px 0 0 0; color: #6b7280; font-size: 13px;">
+            Ou copiez ce lien dans votre navigateur :<br>
+            <span style="word-break: break-all;">${data.validationUrl}</span>
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+      Ce lien de validation est valable 7 jours. Si vous ne souhaitez pas valider cette reservation, ignorez cet email.
+    </p>
+  `;
+
+  return {
+    subject: `[Action requise] Nouvelle reservation ${typeLabel} - ${data.date} - Ref. ${data.reference}`,
+    html: baseTemplate(content),
+  };
+}
+
+// ============================================
 // EMAIL POUR INSCRIPTION GROUPE BÉNÉVOLE
 // ============================================
 
