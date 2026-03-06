@@ -1334,23 +1334,70 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
   const client = getSupabaseAdminClient();
   if (!client) return { volunteers: [], days: [] };
 
-  let query = client.from('volunteers').select('*, ramadan_days(*)');
+  const fetchAllVolunteers = async () => {
+    const pageSize = 1000;
+    let from = 0;
+    const allRows: any[] = [];
 
-  if (dayId) {
-    query = query.eq('day_id', dayId);
-  }
+    while (true) {
+      const to = from + pageSize - 1;
+      let query = client
+        .from('volunteers')
+        .select('*, ramadan_days(*)')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(from, to);
 
-  // Use explicit limit to bypass Supabase's default 1000-row cap
-  const { data: volunteers, error } = await query
-    .order('created_at', { ascending: false })
-    .limit(10000);
-  if (error) throw error;
+      if (dayId) {
+        query = query.eq('day_id', dayId);
+      }
 
-  const { data: allVolunteerAttendances, error: attendanceError } = await client
-    .from('volunteers')
-    .select('email, day_id, status, qr_status, scanned_at')
-    .limit(10000);
-  if (attendanceError) throw attendanceError;
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const rows = data ?? [];
+      allRows.push(...rows);
+
+      if (rows.length < pageSize) break;
+      from += pageSize;
+    }
+
+    return allRows;
+  };
+
+  const fetchAllVolunteerAttendances = async () => {
+    const pageSize = 1000;
+    let from = 0;
+    const allRows: Array<{
+      email: string | null;
+      day_id: number | null;
+      status: string | null;
+      qr_status: string | null;
+      scanned_at: string | null;
+    }> = [];
+
+    while (true) {
+      const to = from + pageSize - 1;
+      const { data, error } = await client
+        .from('volunteers')
+        .select('email, day_id, status, qr_status, scanned_at')
+        .order('id', { ascending: true })
+        .range(from, to);
+
+      if (error) throw error;
+
+      const rows = data ?? [];
+      allRows.push(...rows);
+
+      if (rows.length < pageSize) break;
+      from += pageSize;
+    }
+
+    return allRows;
+  };
+
+  const volunteers = await fetchAllVolunteers();
+  const allVolunteerAttendances = await fetchAllVolunteerAttendances();
 
   const attendanceFrequencyByEmail = new Map<string, number>();
   // Track (email, day_id) pairs to avoid double-counting duplicate rows on the same day
