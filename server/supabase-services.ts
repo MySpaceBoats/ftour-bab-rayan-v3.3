@@ -1345,6 +1345,7 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
         .from('volunteers')
         .select('*, ramadan_days(*)')
         .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
         .range(from, to);
 
       if (dayId) {
@@ -1380,6 +1381,7 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
       const { data, error } = await client
         .from('volunteers')
         .select('email, day_id, status, qr_status, scanned_at')
+        .order('id', { ascending: true })
         .range(from, to);
 
       if (error) throw error;
