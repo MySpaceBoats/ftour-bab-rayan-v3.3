@@ -233,11 +233,14 @@ export default function VolunteerGalleryUploadModule() {
               <SelectContent>
                 <SelectItem value="none">— Choisir une édition —</SelectItem>
                 {(() => {
-                  const recentEditions = editionOptions.filter(
-                    e => e.year !== null && e.year >= CURRENT_YEAR - 2
+                  const pastAndCurrentEditions = editionOptions.filter(
+                    e => e.year !== null && e.year <= CURRENT_YEAR
                   );
-                  const olderEditions = editionOptions.filter(
-                    e => e.year === null || e.year < CURRENT_YEAR - 2
+                  const recentEditions = pastAndCurrentEditions.filter(
+                    e => e.year! >= CURRENT_YEAR - 2
+                  );
+                  const olderEditions = pastAndCurrentEditions.filter(
+                    e => e.year! < CURRENT_YEAR - 2
                   );
                   return (
                     <>
