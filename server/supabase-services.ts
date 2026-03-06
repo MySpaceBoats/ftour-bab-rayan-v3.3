@@ -1334,6 +1334,36 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
   const client = getSupabaseAdminClient();
   if (!client) return { volunteers: [], days: [] };
 
+  const fetchAllVolunteerAttendances = async () => {
+    const pageSize = 1000;
+    let from = 0;
+    const allRows: Array<{
+      email: string | null;
+      day_id: number | null;
+      status: string | null;
+      qr_status: string | null;
+      scanned_at: string | null;
+    }> = [];
+
+    while (true) {
+      const to = from + pageSize - 1;
+      const { data, error } = await client
+        .from('volunteers')
+        .select('email, day_id, status, qr_status, scanned_at')
+        .range(from, to);
+
+      if (error) throw error;
+
+      const rows = data ?? [];
+      allRows.push(...rows);
+
+      if (rows.length < pageSize) break;
+      from += pageSize;
+    }
+
+    return allRows;
+  };
+
   let query = client.from('volunteers').select('*, ramadan_days(*)');
 
   if (dayId) {
@@ -1346,11 +1376,7 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
     .limit(10000);
   if (error) throw error;
 
-  const { data: allVolunteerAttendances, error: attendanceError } = await client
-    .from('volunteers')
-    .select('email, day_id, status, qr_status, scanned_at')
-    .limit(10000);
-  if (attendanceError) throw attendanceError;
+  const allVolunteerAttendances = await fetchAllVolunteerAttendances();
 
   const attendanceFrequencyByEmail = new Map<string, number>();
   // Track (email, day_id) pairs to avoid double-counting duplicate rows on the same day
