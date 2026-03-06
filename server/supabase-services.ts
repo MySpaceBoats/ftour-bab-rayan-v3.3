@@ -747,6 +747,7 @@ export interface VolunteerGroupRequestData {
   volunteerSlots: string[];
   fileName: string;
   fileBase64: string;
+  validationToken?: string;
 }
 
 async function hydrateVolunteerGroupRequestDays(rows: any[]) {
@@ -797,6 +798,7 @@ export async function createVolunteerGroupRequestSupabase(input: VolunteerGroupR
       file_name: input.fileName,
       file_base64: input.fileBase64,
       status: 'pending',
+      ...(input.validationToken ? { validation_token: input.validationToken } : {}),
     })
     .select('*')
     .single();
@@ -827,6 +829,22 @@ export async function getVolunteerGroupRequestByIdSupabase(id: number) {
     .from('volunteer_group_requests')
     .select('*')
     .eq('id', id)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+  const [hydrated] = await hydrateVolunteerGroupRequestDays([data]);
+  return hydrated;
+}
+
+export async function getVolunteerGroupRequestByValidationToken(token: string) {
+  const client = getSupabaseAdminClient();
+  if (!client) return null;
+
+  const { data, error } = await client
+    .from('volunteer_group_requests')
+    .select('*')
+    .eq('validation_token', token)
     .maybeSingle();
 
   if (error) throw error;

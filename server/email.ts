@@ -1964,6 +1964,7 @@ export interface GroupRegistrationEmailData {
   dayDate?: string;
   startTime?: string;
   fileName: string;
+  validationUrl?: string;
 }
 
 export interface GroupRefusalEmailData {
@@ -2058,6 +2059,26 @@ export function generateGroupRegistrationEmail(data: GroupRegistrationEmailData)
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
       Veuillez traiter cette inscription groupe dans les meilleurs délais.
     </p>
+
+    ${data.validationUrl ? `
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f0fdf4; border-radius: 8px; margin: 20px 0; border: 2px solid #16a34a;">
+      <tr>
+        <td style="padding: 24px; text-align: center;">
+          <h3 style="color: #166534; margin: 0 0 12px 0; font-size: 18px;">Validation en un clic</h3>
+          <p style="color: #374151; font-size: 14px; margin: 0 0 20px 0; line-height: 1.5;">
+            Cliquez sur le bouton ci-dessous pour valider directement cette inscription.<br>
+            La confirmation sera envoyée au responsable et les participants recevront leur QR code automatiquement.
+          </p>
+          <a href="${data.validationUrl}"
+             style="display: inline-block; background-color: #16a34a; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 700; letter-spacing: 0.5px;">
+            Valider l'inscription du groupe
+          </a>
+          <p style="color: #6b7280; font-size: 12px; margin: 16px 0 0 0;">
+            Lien à usage unique. Ou gérez les demandes depuis l'interface d'administration.
+          </p>
+        </td>
+      </tr>
+    </table>` : ''}
   `;
 
   return {

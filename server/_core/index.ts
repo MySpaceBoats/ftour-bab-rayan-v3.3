@@ -16,6 +16,7 @@ import {
   initializeAllStocks,
 } from "../supabase-services";
 import { DONATION_SUGGESTED_AMOUNTS_MAD } from "../../shared/const";
+import { validateGroupRequestByToken } from "../volunteer-group-service";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -201,6 +202,31 @@ async function startServer() {
     });
   });
 
+  // Direct validation link for volunteer group requests (from admin notification email)
+  app.get("/api/validate-group-request/:token", async (req, res) => {
+    const { token } = req.params;
+
+    if (!token || typeof token !== "string" || token.length < 32) {
+      res.status(400).send(validationResultPage(false, "Lien de validation invalide."));
+      return;
+    }
+
+    try {
+      const result = await validateGroupRequestByToken(token);
+      res.status(200).send(
+        validationResultPage(
+          true,
+          `L'inscription du groupe <strong>${result.groupName}</strong> pour le jour ${result.dayNumber} du Ramadan a été validée avec succès.<br><br>
+           Un email de confirmation avec le QR code a été envoyé au responsable (<strong>${result.responsibleEmail}</strong>).<br>
+           ${result.participantsProcessed > 0 ? `${result.participantsProcessed} participant(s) ont été inscrits et ont reçu leur QR code par email.` : ''}`
+        )
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Une erreur est survenue.";
+      res.status(400).send(validationResultPage(false, message));
+    }
+  });
+
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // tRPC API
@@ -228,6 +254,57 @@ async function startServer() {
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
   });
+}
+
+function validationResultPage(success: boolean, message: string): string {
+  const color = success ? "#166534" : "#991b1b";
+  const bgColor = success ? "#f0fdf4" : "#fef2f2";
+  const borderColor = success ? "#16a34a" : "#dc2626";
+  const icon = success ? "✅" : "❌";
+  const title = success ? "Inscription validée" : "Validation impossible";
+
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title} – Ftour Bab Rayan</title>
+</head>
+<body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f5f5f5;">
+  <table role="presentation" style="width:100%;border-collapse:collapse;">
+    <tr>
+      <td align="center" style="padding:60px 20px;">
+        <table role="presentation" style="width:560px;max-width:100%;border-collapse:collapse;background:#fff;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,0.1);">
+          <tr>
+            <td style="background:linear-gradient(135deg,#166534 0%,#15803d 100%);padding:28px;text-align:center;border-radius:12px 12px 0 0;">
+              <h1 style="color:#fff;margin:0;font-size:26px;font-weight:bold;">
+                Ftour <span style="color:#fbbf24;">Bab Rayan</span>
+              </h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px 36px;">
+              <div style="background-color:${bgColor};border:2px solid ${borderColor};border-radius:10px;padding:28px;text-align:center;">
+                <div style="font-size:48px;margin-bottom:16px;">${icon}</div>
+                <h2 style="color:${color};margin:0 0 16px 0;font-size:22px;">${title}</h2>
+                <p style="color:#374151;font-size:15px;line-height:1.7;margin:0;">${message}</p>
+              </div>
+              <p style="color:#6b7280;font-size:13px;text-align:center;margin:28px 0 0 0;">
+                Vous pouvez fermer cette fenêtre.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#f8f9fa;padding:18px 36px;text-align:center;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb;">
+              <p style="margin:0;font-size:13px;color:#6b7280;">Association Bab Rayan – 4 rue Bayt Lahm, quartier Palmier, Casablanca</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 }
 
 startServer().catch(console.error);
