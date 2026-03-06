@@ -287,11 +287,25 @@ export default {
 
       const signed = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 60 * 24);
       const dashboardUrl = env.RESERVATION_ADMIN_DASHBOARD_URL || `${(env.PUBLIC_APP_URL || 'https://www.ftourbabrayan.ma').replace(/\/$/, '')}/admin/restaurant-reservations`;
+      const uploadedAt = new Date().toLocaleString('fr-FR', { timeZone: 'Africa/Casablanca', dateStyle: 'full', timeStyle: 'short' });
+      const proofLink = signed.data?.signedUrl ? `<p style="margin:16px 0"><a href="${signed.data.signedUrl}" style="background:#15803d;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600">📎 Consulter la preuve de virement</a></p>` : '';
       await sendEmail({
-        to: 'admin@ftourbabrayan.ma',
+        to: 'ratibhind3@gmail.com',
+        cc: ['reda.sebbani@gmail.com', 'admin@ftourbabrayan.ma'],
         apiKey: env.RESEND_API_KEY || env.EMAIL_PROVIDER_KEY || "",
-        subject: `Acompte reçu – [${reservation.reference}]`,
-        html: `<p>Une preuve d'acompte a été déposée.</p><p><strong>Réf:</strong> ${reservation.reference}<br/><strong>Nom:</strong> ${reservation.name}<br/><strong>Email:</strong> ${reservation.email}<br/><strong>Date:</strong> ${new Date().toISOString()}</p><p><a href="${dashboardUrl}">Ouvrir le dashboard</a></p>${signed.data?.signedUrl ? `<p><a href="${signed.data.signedUrl}">Consulter la preuve (URL signée)</a></p>` : ''}`,
+        subject: `🔔 Nouvelle preuve de virement – [${reservation.reference}]`,
+        html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+<h2 style="color:#15803d">Nouvelle preuve de virement reçue</h2>
+<table style="width:100%;border-collapse:collapse;margin:16px 0">
+<tr><td style="padding:8px;background:#f0fdf4;font-weight:600;width:40%">Référence</td><td style="padding:8px;background:#f0fdf4">${reservation.reference}</td></tr>
+<tr><td style="padding:8px;font-weight:600">Nom</td><td style="padding:8px">${reservation.name}</td></tr>
+<tr><td style="padding:8px;background:#f0fdf4;font-weight:600">Email client</td><td style="padding:8px;background:#f0fdf4">${reservation.email}</td></tr>
+<tr><td style="padding:8px;font-weight:600">Date de dépôt</td><td style="padding:8px">${uploadedAt}</td></tr>
+${note ? `<tr><td style="padding:8px;background:#f0fdf4;font-weight:600">Note</td><td style="padding:8px;background:#f0fdf4">${note}</td></tr>` : ''}
+</table>
+${proofLink}
+<p style="margin:16px 0"><a href="${dashboardUrl}" style="color:#15803d">Ouvrir le dashboard des réservations</a></p>
+</div>`,
       });
 
       return jsonResponse({ success: true });
