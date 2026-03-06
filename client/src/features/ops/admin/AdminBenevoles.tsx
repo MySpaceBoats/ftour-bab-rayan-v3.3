@@ -288,7 +288,8 @@ export default function AdminBenevoles() {
 
   // Les indicateurs doivent refléter l'ensemble des bénévoles du jour sélectionné,
   // et non le résultat de recherche / filtrage de statut dans le tableau.
-  const statsSource = volunteersList;
+  // Les bénévoles annulés sont exclus des statistiques.
+  const statsSource = volunteersList.filter((v: any) => v.status !== "cancelled");
   const totalCount = statsSource.length;
   const registeredCount = statsSource.filter(
     (v: any) => v.status === "registered" && !isVolunteerPresent(v)
