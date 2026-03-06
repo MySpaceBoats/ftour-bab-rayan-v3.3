@@ -373,7 +373,7 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
         <td style="padding: 20px;">
           <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 18px;">📋 Consignes importantes</h3>
           <ul style="margin: 0; padding-left: 20px; color: #374151;">
-            <li style="margin-bottom: 8px; color: #dc2626; font-weight: bold;">L'entrée pour participer au service est entre 17h00 et 17h45. Il est interdit aux bénévoles d'entrer au-delà de 17h45.</li>
+            <li style="margin-bottom: 8px; color: #dc2626; font-weight: bold;">L'entrée pour participer au service commence à partir de 16h30. Il est interdit aux bénévoles d'entrer au-delà de 17h30.</li>
             <li style="margin-bottom: 8px;">Arrivez à l'heure prévu par le créneau choisi.</li>
             <li style="margin-bottom: 8px;">En cas d'empêchement, prévenez-nous à l'avance</li>
             <li style="margin-bottom: 8px;">Portez des vêtements confortables</li>

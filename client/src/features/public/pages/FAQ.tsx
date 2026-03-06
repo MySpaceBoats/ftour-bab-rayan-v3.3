@@ -17,7 +17,7 @@ const defaultFaqs = [
   {
     category: "benevole",
     question: "Quels sont les horaires des bénévoles ?",
-    answer: "Deux créneaux sont proposés : Préparation ftour (15h00 – 16h45) et Service ftour (17h30 – 19h15). Important : l'entrée pour participer au service est entre 17h00 et 17h45. Il est interdit aux bénévoles d'entrer au-delà de 17h45."
+    answer: "Deux créneaux sont proposés : Préparation ftour (15h00 – 16h45) et Service ftour (17h30 – 19h15). Important : l'entrée pour participer au service commence à partir de 16h30. Il est interdit aux bénévoles d'entrer au-delà de 17h30."
   },
   {
     category: "benevole",

@@ -670,10 +670,10 @@ export default function Benevole() {
           : "Consignes importantes",
     entryRule:
       lang === "ar"
-        ? "الدخول للمشاركة في الخدمة بين الساعة 17:00 و17:45. يُمنع على المتطوعين الدخول بعد الساعة 17:45."
+        ? "الدخول للمشاركة في الخدمة يبدأ من الساعة 16:30. يُمنع على المتطوعين الدخول بعد الساعة 17:30."
         : lang === "en"
-          ? "Entry to participate in the service is between 5:00pm and 5:45pm. Volunteers are not permitted to enter after 5:45pm."
-          : "L'entrée pour participer au service est entre 17h00 et 17h45. Il est interdit aux bénévoles d'entrer au-delà de 17h45.",
+          ? "Entry to participate in the service starts from 4:30pm. Volunteers are not permitted to enter after 5:30pm."
+          : "L'entrée pour participer au service commence à partir de 16h30. Il est interdit aux bénévoles d'entrer au-delà de 17h30.",
     consigneNoBags:
       lang === "ar"
         ? "الحقائب غير مسموح بها."
@@ -984,10 +984,10 @@ export default function Benevole() {
 
   const entryRuleText =
     lang === "ar"
-      ? "الدخول للمشاركة في الخدمة بين الساعة 17:00 و17:45. يُمنع على المتطوعين الدخول بعد الساعة 17:45."
+      ? "الدخول للمشاركة في الخدمة يبدأ من الساعة 16:30. يُمنع على المتطوعين الدخول بعد الساعة 17:30."
       : lang === "en"
-        ? "Entry to participate in the service is between 5:00pm and 5:45pm. Volunteers are not permitted to enter after 5:45pm."
-        : "L'entrée pour participer au service est entre 17h00 et 17h45. Il est interdit aux bénévoles d'entrer au-delà de 17h45.";
+        ? "Entry to participate in the service starts from 4:30pm. Volunteers are not permitted to enter after 5:30pm."
+        : "L'entrée pour participer au service commence à partir de 16h30. Il est interdit aux bénévoles d'entrer au-delà de 17h30.";
 
   return (
     <div className="min-h-screen flex flex-col">
