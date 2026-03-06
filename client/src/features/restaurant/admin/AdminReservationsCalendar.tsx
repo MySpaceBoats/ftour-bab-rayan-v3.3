@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { toast } from "sonner";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, Loader2, Users,
   UtensilsCrossed, UsersRound, CalendarDays, XCircle, Moon
@@ -37,10 +39,12 @@ interface ReservationItem {
 }
 
 interface DayData {
+  id: number | null;
   date: Date;
   reservations: ReservationItem[];
   totalSeats: number;
   groupCount: number;
+  capacity: number | null;
 }
 
 // ============================================
@@ -108,6 +112,7 @@ export default function AdminReservationsCalendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [capacityInput, setCapacityInput] = useState("");
 
   const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
   const hasAccess = user?.role && allowedRoles.includes(user.role);
@@ -124,6 +129,24 @@ export default function AdminReservationsCalendar() {
   const { data: entreprises, isLoading: loadingE } = trpc.restaurantReservations.adminListEntreprises.useQuery(undefined, {
     enabled: !!hasAccess,
     retry: 1,
+  });
+  const { data: ramadanDays } = trpc.days.list.useQuery(undefined, {
+    enabled: !!hasAccess,
+    retry: 1,
+  });
+
+  const utils = trpc.useUtils();
+  const updateCapacityMutation = trpc.days.update.useMutation({
+    onSuccess: async () => {
+      toast.success("Capacité du jour mise à jour");
+      await utils.days.list.invalidate();
+      await utils.restaurantReservations.adminListParticuliers.invalidate();
+      await utils.restaurantReservations.adminListGroupes.invalidate();
+      await utils.restaurantReservations.adminListEntreprises.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erreur lors de la mise à jour de la capacité");
+    },
   });
 
   const isLoading = loadingP || loadingG || loadingE;
@@ -146,15 +169,23 @@ export default function AdminReservationsCalendar() {
 
     const days = eachDayOfInterval({ start: calStart, end: calEnd });
 
+    const dayInfoByDate = new Map<string, { id: number; capacity: number }>();
+    for (const day of ramadanDays || []) {
+      dayInfoByDate.set(day.date, { id: day.id, capacity: day.capacity });
+    }
+
     const dayMap = new Map<string, DayData>();
 
     for (const day of days) {
       const key = format(day, "yyyy-MM-dd");
+      const dayInfo = dayInfoByDate.get(key);
       dayMap.set(key, {
+        id: dayInfo?.id ?? null,
         date: day,
         reservations: [],
         totalSeats: 0,
         groupCount: 0,
+        capacity: dayInfo?.capacity ?? null,
       });
     }
 
@@ -176,7 +207,7 @@ export default function AdminReservationsCalendar() {
     }
 
     return Array.from(dayMap.values());
-  }, [allReservations, currentMonth]);
+  }, [allReservations, currentMonth, ramadanDays]);
 
   // Ramadan stats (19 février – 13 mars)
   const RAMADAN_START = new Date(2026, 1, 19); // Feb 19
@@ -208,7 +239,24 @@ export default function AdminReservationsCalendar() {
   const handleDayClick = (dayData: DayData) => {
     if (dayData.reservations.length === 0) return;
     setSelectedDay(dayData);
+    setCapacityInput(dayData.capacity ? String(dayData.capacity) : "");
     setDialogOpen(true);
+  };
+
+  const handleUpdateCapacity = () => {
+    if (!selectedDay?.id) return;
+    const nextCapacity = Number(capacityInput);
+    if (!Number.isFinite(nextCapacity) || nextCapacity < 1) {
+      toast.error("Veuillez saisir une capacité valide (minimum 1)");
+      return;
+    }
+
+    updateCapacityMutation.mutate({
+      id: selectedDay.id,
+      capacity: nextCapacity,
+    });
+
+    setSelectedDay((prev) => (prev ? { ...prev, capacity: nextCapacity } : prev));
   };
 
   if (!hasAccess) {
@@ -370,7 +418,7 @@ export default function AdminReservationsCalendar() {
                             <div className="flex items-center gap-1">
                               <UtensilsCrossed className="h-3 w-3 text-[#5d5a3c] shrink-0" />
                               <span className="text-xs font-bold text-[#5d5a3c]">
-                                {dayData.totalSeats}
+                                {dayData.totalSeats}/{dayData.capacity ?? "-"}
                                 <span className="font-normal text-[#6b6b4e] hidden sm:inline"> pl.</span>
                               </span>
                             </div>
@@ -420,7 +468,7 @@ export default function AdminReservationsCalendar() {
               <DialogDescription>
                 {selectedDay && (
                   <span>
-                    {selectedDay.totalSeats} places réservées &bull; {selectedDay.groupCount} groupe{selectedDay.groupCount > 1 ? "s" : ""}
+                    {selectedDay.totalSeats}/{selectedDay.capacity ?? "-"} places &bull; {selectedDay.groupCount} groupe{selectedDay.groupCount > 1 ? "s" : ""}
                   </span>
                 )}
               </DialogDescription>
@@ -431,14 +479,36 @@ export default function AdminReservationsCalendar() {
                 {/* Summary */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-[#f5f5e8] rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-[#5d5a3c]">{selectedDay.totalSeats}</p>
-                    <p className="text-xs text-[#6b6b4e]">Places réservées</p>
+                    <p className="text-2xl font-bold text-[#5d5a3c]">{selectedDay.totalSeats}/{selectedDay.capacity ?? "-"}</p>
+                    <p className="text-xs text-[#6b6b4e]">Inscrits / capacité</p>
                   </div>
                   <div className="bg-[#f5f5e8] rounded-lg p-3 text-center">
                     <p className="text-2xl font-bold text-[#5d5a3c]">{selectedDay.groupCount}</p>
                     <p className="text-xs text-[#6b6b4e]">Groupes inscrits</p>
                   </div>
                 </div>
+
+                {selectedDay.id && (
+                  <div className="border border-[#e8e8d8] rounded-lg p-3 bg-[#fafaf0] space-y-2">
+                    <p className="text-xs font-semibold text-[#5d5a3c]">Modifier la capacité du jour</p>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={1}
+                        value={capacityInput}
+                        onChange={(e) => setCapacityInput(e.target.value)}
+                        className="max-w-[160px]"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleUpdateCapacity}
+                        disabled={updateCapacityMutation.isPending}
+                      >
+                        {updateCapacityMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enregistrer"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Reservation list */}
                 <div className="space-y-2">
