@@ -23,21 +23,18 @@ export default function AdminJours() {
   const [formData, setFormData] = useState({
     date: "",
     dayNumber: 1,
-    maxCapacity: 120,
+    capacity: 120,
     location: "",
-    startTime: "15:00",
-    endTime: "22:00",
-    instructions: "",
+    iftarTime: "18:30",
+    notes: "",
   });
 
   const [bulkFormData, setBulkFormData] = useState({
     startDate: "",
     daysCount: 30,
-    maxCapacity: 120,
+    capacity: 120,
     location: "",
-    startTime: "15:00",
-    endTime: "22:00",
-    instructions: "",
+    iftarTime: "18:30",
   });
 
   const { data: days, isLoading, refetch } = trpc.days.list.useQuery();
@@ -91,20 +88,17 @@ export default function AdminJours() {
     setFormData({
       date: "",
       dayNumber: 1,
-      maxCapacity: 120,
+      capacity: 120,
       location: "",
-      startTime: "15:00",
-      endTime: "22:00",
-      instructions: "",
+      iftarTime: "18:30",
+      notes: "",
     });
     setBulkFormData({
       startDate: "",
       daysCount: 30,
-      maxCapacity: 120,
+      capacity: 120,
       location: "",
-      startTime: "15:00",
-      endTime: "22:00",
-      instructions: "",
+      iftarTime: "18:30",
     });
   };
 
@@ -197,13 +191,13 @@ export default function AdminJours() {
                     </div>
                     <div className="space-y-2">
                       <Label>Capacité par jour</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={bulkFormData.maxCapacity}
-                        onChange={(e) => setBulkFormData({ ...bulkFormData, maxCapacity: parseInt(e.target.value) })}
-                      />
-                    </div>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={bulkFormData.capacity}
+                          onChange={(e) => setBulkFormData({ ...bulkFormData, capacity: parseInt(e.target.value) })}
+                        />
+                      </div>
                     <div className="space-y-2">
                       <Label>Lieu</Label>
                       <Input
@@ -214,19 +208,11 @@ export default function AdminJours() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Heure de début</Label>
+                        <Label>Heure d'iftar</Label>
                         <Input
                           type="time"
-                          value={bulkFormData.startTime}
-                          onChange={(e) => setBulkFormData({ ...bulkFormData, startTime: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Heure de fin</Label>
-                        <Input
-                          type="time"
-                          value={bulkFormData.endTime}
-                          onChange={(e) => setBulkFormData({ ...bulkFormData, endTime: e.target.value })}
+                          value={bulkFormData.iftarTime}
+                          onChange={(e) => setBulkFormData({ ...bulkFormData, iftarTime: e.target.value })}
                         />
                       </div>
                     </div>
@@ -255,13 +241,13 @@ export default function AdminJours() {
                     </div>
                     <div className="space-y-2">
                       <Label>Capacité maximale</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={formData.maxCapacity}
-                        onChange={(e) => setFormData({ ...formData, maxCapacity: parseInt(e.target.value) })}
-                      />
-                    </div>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={formData.capacity}
+                          onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) })}
+                        />
+                      </div>
                     <div className="space-y-2">
                       <Label>Lieu</Label>
                       <Input
@@ -272,19 +258,11 @@ export default function AdminJours() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Heure de début</Label>
+                        <Label>Heure d'iftar</Label>
                         <Input
                           type="time"
-                          value={formData.startTime}
-                          onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Heure de fin</Label>
-                        <Input
-                          type="time"
-                          value={formData.endTime}
-                          onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                          value={formData.iftarTime}
+                          onChange={(e) => setFormData({ ...formData, iftarTime: e.target.value })}
                         />
                       </div>
                     </div>
@@ -337,7 +315,7 @@ export default function AdminJours() {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-primary">
-                {days?.reduce((acc: number, d: any) => acc + d.currentCount, 0) || 0}
+                {days?.reduce((acc: number, d: any) => acc + (d.registeredCount || 0), 0) || 0}
               </div>
               <div className="text-xs text-muted-foreground">Inscrits total</div>
             </CardContent>
@@ -377,12 +355,12 @@ export default function AdminJours() {
                             month: 'short',
                           })}
                         </TableCell>
-                        <TableCell>{day.maxCapacity}</TableCell>
+                        <TableCell>{day.capacity}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Users className="h-4 w-4 text-muted-foreground" />
-                            <span className={day.currentCount >= day.maxCapacity ? "text-red-600 font-bold" : ""}>
-                              {day.currentCount}/{day.maxCapacity}
+                            <span className={(day.registeredCount || 0) >= day.capacity ? "text-red-600 font-bold" : ""}>
+                              {day.registeredCount || 0}/{day.capacity}
                             </span>
                           </div>
                         </TableCell>
