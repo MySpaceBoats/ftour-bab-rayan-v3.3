@@ -235,6 +235,15 @@ const sections: SectionDefinition[] = [
     title: "Task Force",
     modules: [
       {
+        label: "Calendrier",
+        description: "Configurer les jours du Ramadan et leurs capacités",
+        route: "/admin/jours",
+        icon: Calendar,
+        iconColor: "text-blue-600",
+        iconBg: "bg-blue-100",
+        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'admin_operations'],
+      },
+      {
         label: "Bénévoles",
         description: "Gérer les inscriptions et suivre les présences par jour",
         route: "/admin/benevoles",
@@ -277,15 +286,6 @@ const sections: SectionDefinition[] = [
   {
     title: "Goodies",
     modules: [
-      {
-        label: "Calendrier",
-        description: "Configurer les jours du Ramadan et leurs capacités",
-        route: "/admin/jours",
-        icon: Calendar,
-        iconColor: "text-blue-600",
-        iconBg: "bg-blue-100",
-        allowedRoles: ["super_admin"],
-      },
       {
         label: "Scanner Produits",
         description: "Scanner les QR codes des produits et commandes",
