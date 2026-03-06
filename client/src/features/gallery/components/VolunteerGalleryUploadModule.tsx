@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,9 @@ import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -26,6 +28,8 @@ type EditionAlbumOption = {
   label: string;
   year: number | null;
 };
+
+const CURRENT_YEAR = new Date().getFullYear();
 
 export default function VolunteerGalleryUploadModule() {
   const [items, setItems] = useState<UploadItem[]>([]);
@@ -65,6 +69,15 @@ export default function VolunteerGalleryUploadModule() {
       });
   }, [albums.data]);
 
+  // Auto-select current year's album when albums load
+  useEffect(() => {
+    if (selectedAlbumId !== "none" || editionOptions.length === 0) return;
+    const currentEdition = editionOptions.find(e => e.year === CURRENT_YEAR);
+    if (currentEdition) {
+      setSelectedAlbumId(currentEdition.id);
+    }
+  }, [editionOptions, selectedAlbumId]);
+
   const upload = trpc.gallery.uploadPhotos.useMutation({
     onSuccess: () => {
       toast.success(
@@ -72,6 +85,8 @@ export default function VolunteerGalleryUploadModule() {
       );
       setItems([]);
       setValidationEmail("");
+      // Reset album selection to trigger auto-select of current year
+      setSelectedAlbumId("none");
     },
     onError: e => toast.error(e.message),
   });
@@ -216,12 +231,40 @@ export default function VolunteerGalleryUploadModule() {
                 <SelectValue placeholder="Choisir une édition" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Choisir une édition</SelectItem>
-                {editionOptions.map(edition => (
-                  <SelectItem key={edition.id} value={edition.id}>
-                    {edition.label}
-                  </SelectItem>
-                ))}
+                <SelectItem value="none">— Choisir une édition —</SelectItem>
+                {(() => {
+                  const recentEditions = editionOptions.filter(
+                    e => e.year !== null && e.year >= CURRENT_YEAR - 2
+                  );
+                  const olderEditions = editionOptions.filter(
+                    e => e.year === null || e.year < CURRENT_YEAR - 2
+                  );
+                  return (
+                    <>
+                      {recentEditions.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel>Éditions récentes</SelectLabel>
+                          {recentEditions.map(edition => (
+                            <SelectItem key={edition.id} value={edition.id}>
+                              {edition.label}
+                              {edition.year === CURRENT_YEAR ? " (en cours)" : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                      {olderEditions.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel>Anciennes éditions</SelectLabel>
+                          {olderEditions.map(edition => (
+                            <SelectItem key={edition.id} value={edition.id}>
+                              {edition.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                    </>
+                  );
+                })()}
               </SelectContent>
             </Select>
           </div>
