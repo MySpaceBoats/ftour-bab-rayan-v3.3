@@ -2869,7 +2869,10 @@ const publicRouter = router({
             .select("id")
             .eq("slug", input.album)
             .maybeSingle();
-          if (album?.id) query = query.eq("album_id", album.id);
+          if (!album?.id) {
+            return { items: [], total: 0, page, pageSize };
+          }
+          query = query.eq("album_id", album.id);
         } else {
           query = query.eq("album_id", input.album);
         }
