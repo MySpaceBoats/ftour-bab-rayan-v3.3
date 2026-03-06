@@ -358,7 +358,6 @@ const galleryRouter = router({
   uploadPhotos: protectedProcedure
     .input(
       z.object({
-        validationEmail: z.string().email("Adresse email invalide").optional(),
         photos: z
           .array(
             z.object({
@@ -404,15 +403,6 @@ const galleryRouter = router({
           message: "Supabase non configuré",
         });
 
-      const validationEmail = input.validationEmail?.trim().toLowerCase() ?? "";
-      if (!canManageGallery && !validationEmail) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Adresse email requise",
-        });
-      }
-      const validationToken = randomBytes(32).toString("hex");
-      const validationUrl = `${resolveAppBaseUrl().replace(/\/$/, "")}/galerie/validation/${validationToken}`;
 
       const albumIds = Array.from(
         new Set(input.photos.map(photo => photo.albumId).filter(Boolean))
@@ -491,11 +481,8 @@ const galleryRouter = router({
           albumId: photo.albumId,
           sortOrder: photo.sortOrder,
           isFeatured: canManageGallery ? photo.isFeatured : false,
-          status: canManageGallery ? photo.status : "draft",
-          validationEmail: validationEmail || undefined,
-          validationToken: validationEmail ? validationToken : undefined,
-          validationSentAt: validationEmail ? new Date().toISOString() : undefined,
-          validatedAt: canManageGallery ? new Date().toISOString() : undefined,
+          status: "published",
+          validatedAt: new Date().toISOString(),
           imageOriginalUrl: originalUrl,
           imageThumbUrl: thumbUrl,
           storagePath: originalPath,
@@ -509,25 +496,6 @@ const galleryRouter = router({
         results.push(created);
       }
 
-      if (!canManageGallery && results.length > 0) {
-        const emailPayload = generateGalleryUploadValidationEmail({
-          email: validationEmail,
-          validationUrl,
-        });
-        const emailResult = await sendEmail({
-          to: validationEmail,
-          subject: emailPayload.subject,
-          html: emailPayload.html,
-        });
-
-        if (!emailResult.success) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message:
-              "Photos enregistrées, mais impossible d'envoyer l'email de validation. Réessayez.",
-          });
-        }
-      }
       return results;
     }),
 
