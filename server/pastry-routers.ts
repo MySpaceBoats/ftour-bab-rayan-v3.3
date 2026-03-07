@@ -10,7 +10,7 @@ import { getSupabaseAdminClient } from "./supabase";
 // ============================================
 
 const adminBoutiqueProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_boutique', 'admin_patisserie'];
+  const allowedRoles = ['admin', 'super_admin', 'admin_boutique', 'admin_patisserie', 'admin_ops', 'admin_operations'];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès boutique requis' });
   }
