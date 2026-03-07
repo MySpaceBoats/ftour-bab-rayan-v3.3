@@ -766,6 +766,20 @@ const daysRouter = router({
       return { success: true };
     }),
 
+  setOpenStatus: adminProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        isOpen: z.boolean(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      await supabaseServices.updateRamadanDaySupabase(input.id, {
+        isOpen: input.isOpen,
+      });
+      return { success: true };
+    }),
+
   delete: superAdminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
