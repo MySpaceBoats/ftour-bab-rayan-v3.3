@@ -331,6 +331,26 @@ export async function handleCashOrderRequest(request: Request, env: Env): Promis
   }
 
   const orderMatch = url.pathname.match(/^\/api\/orders\/([A-Z0-9-]+)$/);
+  if (url.pathname === '/api/orders' && request.method === 'GET') {
+    const ctx = await createWorkerContext(request, env);
+    const allowedRoles = ['admin', 'super_admin', 'admin_ops', 'scanner', 'admin_boutique', 'admin_dons', 'admin_terroir'];
+    if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+      return jsonResponse({ error: 'Unauthorized' }, 401);
+    }
+
+    const { data, error } = await supabase
+      .from('cash_orders')
+      .select('id,reference,status,customer_first_name,customer_last_name,total_mad,created_at,cash_order_items(name_snapshot,qty,unit_price_mad,type_snapshot)')
+      .order('created_at', { ascending: false })
+      .limit(500);
+
+    if (error) {
+      return jsonResponse({ error: error.message || 'Erreur lors du chargement des commandes' }, 500);
+    }
+
+    return jsonResponse(data || []);
+  }
+
   if (orderMatch && request.method === 'GET') {
     const reference = orderMatch[1];
     const token = url.searchParams.get('t');

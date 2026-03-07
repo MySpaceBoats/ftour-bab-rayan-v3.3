@@ -139,7 +139,7 @@ export const ROUTE_ROLES: Record<string, readonly Role[]> = {
   '/admin/utilisateurs': [ROLES.SUPER_ADMIN],
 
   // Dashboard unifié
-  '/admin/unified-dashboard': [ROLES.SUPER_ADMIN],
+  '/admin/unified-dashboard': [...ADMIN_BASE, ROLES.ADMIN_BOUTIQUE, ROLES.ADMIN_PATISSERIE, ROLES.ADMIN_TERROIR, ROLES.ADMIN_DONS, ROLES.ADMIN_OPS, ROLES.SCANNER],
 };
 
 // ============================================
