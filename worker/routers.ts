@@ -2256,6 +2256,28 @@ const daysRouter = router({
       return { success: true };
     }),
 
+  setOpenStatus: adminProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        isOpen: z.boolean(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const { error } = await supabase
+        .from("ramadan_days")
+        .update({ is_open: input.isOpen })
+        .eq("id", input.id);
+
+      if (error) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      }
+
+      return { success: true };
+    }),
+
   delete: superAdminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input, ctx }) => {
