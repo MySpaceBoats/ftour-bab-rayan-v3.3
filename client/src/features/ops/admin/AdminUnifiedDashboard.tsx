@@ -1,165 +1,183 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useI18n } from '@/i18n';
-import { Download, Filter, Search, TrendingUp } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/_core/hooks/useAuth';
+import { ArrowLeft, Download, Filter, Loader2, Search, TrendingUp } from 'lucide-react';
 
-interface UnifiedOrder {
-  id: number;
+type UnifiedModule = 'entrees' | 'goodies' | 'pastry' | 'terroir' | 'donation';
+
+type UnifiedRow = {
+  id: string;
   reference: string;
-  module: 'goodies' | 'pastry' | 'donation' | 'ftour';
-  customer_name: string;
+  module: UnifiedModule;
+  customer: string;
   phone: string;
-  email?: string;
-  total_amount: number;
-  payment_method: string;
-  business_status: string;
-  payment_status: string;
-  channel: 'online' | 'on_site_qr' | 'on_site_admin';
-  created_at: string;
-}
+  amount: number;
+  paymentStatus: string;
+  businessStatus: string;
+  createdAt: string;
+};
 
-// Mock data for demonstration
-const mockOrders: UnifiedOrder[] = [
-  {
-    id: 1,
-    reference: 'GOD-001',
-    module: 'goodies',
-    customer_name: 'Ahmed Hassan',
-    phone: '+212612345678',
-    email: 'ahmed@example.com',
-    total_amount: 150,
-    payment_method: 'cash',
-    business_status: 'delivered',
-    payment_status: 'paid',
-    channel: 'online',
-    created_at: '2026-02-08T10:00:00Z',
-  },
-  {
-    id: 2,
-    reference: 'PAS-001',
-    module: 'pastry',
-    customer_name: 'Fatima Zahra',
-    phone: '+212698765432',
-    email: 'fatima@example.com',
-    total_amount: 200,
-    payment_method: 'bank_transfer',
-    business_status: 'confirmed',
-    payment_status: 'pending',
-    channel: 'on_site_qr',
-    created_at: '2026-02-08T11:30:00Z',
-  },
-  {
-    id: 3,
-    reference: 'DON-001',
-    module: 'donation',
-    customer_name: 'Mohammed Ali',
-    phone: '+212612111111',
-    total_amount: 500,
-    payment_method: 'paypal',
-    business_status: 'confirmed',
-    payment_status: 'paid',
-    channel: 'online',
-    created_at: '2026-02-08T14:00:00Z',
-  },
-];
+type CashOrder = {
+  id: string;
+  reference: string;
+  status: string;
+  customer_first_name: string;
+  customer_last_name: string;
+  total_mad: number;
+  created_at: string;
+};
 
 export default function AdminUnifiedDashboard() {
-  const { t } = useI18n();
   const [searchTerm, setSearchTerm] = useState('');
   const [moduleFilter, setModuleFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
-  const [channelFilter, setChannelFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
 
-  // Filter orders
-  const filteredOrders = mockOrders.filter(order => {
-    const matchesSearch =
-      order.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.phone.includes(searchTerm);
+  const { user } = useAuth();
+  const canReadGoodies = ['admin', 'super_admin', 'admin_boutique'].includes(user?.role || '');
+  const canReadPastry = ['admin', 'super_admin', 'admin_boutique', 'admin_patisserie'].includes(user?.role || '');
+  const canReadTerroir = ['admin', 'super_admin', 'admin_terroir'].includes(user?.role || '');
+  const canReadDonations = ['admin', 'super_admin', 'admin_dons'].includes(user?.role || '');
+  const canReadEntrees = ['admin', 'super_admin', 'admin_ops', 'scanner', 'admin_boutique', 'admin_dons', 'admin_terroir'].includes(user?.role || '');
 
-    const matchesModule = moduleFilter === 'all' || order.module === moduleFilter;
-    const matchesStatus = statusFilter === 'all' || order.business_status === statusFilter;
-    const matchesPayment = paymentFilter === 'all' || order.payment_status === paymentFilter;
-    const matchesChannel = channelFilter === 'all' || order.channel === channelFilter;
+  const goodies = trpc.orders.listAll.useQuery(undefined, { enabled: canReadGoodies });
+  const pastries = trpc.pastryOrders.list.useQuery({}, { enabled: canReadPastry });
+  const terroir = trpc.terroirModule.adminListOrders.useQuery(undefined, { enabled: canReadTerroir });
+  const donations = trpc.donations.listAll.useQuery(undefined, { enabled: canReadDonations });
 
-    const orderDate = new Date(order.created_at);
-    const matchesDateFrom = !dateFrom || orderDate >= new Date(dateFrom);
-    const matchesDateTo = !dateTo || orderDate <= new Date(dateTo);
+  const [cashOrders, setCashOrders] = useState<CashOrder[]>([]);
+  const [cashLoading, setCashLoading] = useState(false);
 
-    return (
-      matchesSearch &&
-      matchesModule &&
-      matchesStatus &&
-      matchesPayment &&
-      matchesChannel &&
-      matchesDateFrom &&
-      matchesDateTo
-    );
-  });
+  useEffect(() => {
+    if (!canReadEntrees) return;
+    setCashLoading(true);
+    fetch('/api/orders')
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Erreur de chargement');
+        return res.json();
+      })
+      .then((data: CashOrder[]) => setCashOrders(Array.isArray(data) ? data : []))
+      .catch(() => setCashOrders([]))
+      .finally(() => setCashLoading(false));
+  }, [canReadEntrees]);
 
-  // Statistics
+  const rows = useMemo<UnifiedRow[]>(() => {
+    const mappedGoodies = (goodies.data || []).map((o: any) => ({
+      id: `goodies-${o.id}`,
+      reference: o.orderReference,
+      module: 'goodies' as const,
+      customer: o.customerName || '—',
+      phone: o.customerPhone || '—',
+      amount: Number(o.totalAmount || 0),
+      paymentStatus: o.status === 'paid' || o.status === 'delivered' ? 'paid' : 'pending',
+      businessStatus: o.status || 'reserved',
+      createdAt: o.createdAt,
+    }));
+
+    const mappedPastries = (pastries.data || []).map((o: any) => ({
+      id: `pastry-${o.id}`,
+      reference: o.reference,
+      module: 'pastry' as const,
+      customer: o.customer_name || '—',
+      phone: o.phone || '—',
+      amount: Number(o.total_amount || 0),
+      paymentStatus: o.payment_status || 'pending',
+      businessStatus: o.order_status || 'reserved',
+      createdAt: o.created_at,
+    }));
+
+    const mappedTerroir = (terroir.data || []).map((o: any) => ({
+      id: `terroir-${o.id}`,
+      reference: o.order_reference,
+      module: 'terroir' as const,
+      customer: o.customer_name || '—',
+      phone: o.customer_phone || '—',
+      amount: Number(o.total_amount || 0),
+      paymentStatus: o.payment_status || (o.status === 'paid' || o.status === 'picked_up' ? 'paid' : 'pending'),
+      businessStatus: o.status || 'created',
+      createdAt: o.created_at,
+    }));
+
+    const mappedDonations = (donations.data || []).map((d: any) => ({
+      id: `don-${d.id}`,
+      reference: d.donationReference,
+      module: 'donation' as const,
+      customer: d.isAnonymous ? 'Anonyme' : d.donorName,
+      phone: d.donorPhone || '—',
+      amount: Number(d.amount || 0),
+      paymentStatus: d.status === 'received' ? 'paid' : d.status,
+      businessStatus: d.status || 'promised',
+      createdAt: d.createdAt,
+    }));
+
+    const mappedEntrees = cashOrders.map((o) => ({
+      id: `entrees-${o.id}`,
+      reference: o.reference,
+      module: 'entrees' as const,
+      customer: `${o.customer_first_name || ''} ${o.customer_last_name || ''}`.trim() || '—',
+      phone: '—',
+      amount: Number(o.total_mad || 0),
+      paymentStatus: o.status === 'FULFILLED' ? 'paid' : 'pending',
+      businessStatus: o.status,
+      createdAt: o.created_at,
+    }));
+
+    return [...mappedEntrees, ...mappedGoodies, ...mappedPastries, ...mappedTerroir, ...mappedDonations]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [cashOrders, goodies.data, pastries.data, terroir.data, donations.data]);
+
+  const filteredRows = useMemo(() => rows.filter((row) => {
+    const q = searchTerm.toLowerCase();
+    const matchSearch = !q || row.reference.toLowerCase().includes(q) || row.customer.toLowerCase().includes(q) || row.phone.includes(searchTerm);
+    const matchModule = moduleFilter === 'all' || row.module === moduleFilter;
+    const matchPayment = paymentFilter === 'all' || row.paymentStatus === paymentFilter;
+    const matchStatus = statusFilter === 'all' || row.businessStatus === statusFilter;
+    const matchDate = !dateFrom || new Date(row.createdAt) >= new Date(dateFrom);
+    return matchSearch && matchModule && matchPayment && matchStatus && matchDate;
+  }), [rows, searchTerm, moduleFilter, paymentFilter, statusFilter, dateFrom]);
+
   const stats = {
-    total: filteredOrders.length,
-    paid: filteredOrders.filter(o => o.payment_status === 'paid').length,
-    pending: filteredOrders.filter(o => o.payment_status === 'pending').length,
-    totalAmount: filteredOrders.reduce((sum, o) => sum + o.total_amount, 0),
+    total: filteredRows.length,
+    paid: filteredRows.filter((r) => ['paid', 'confirmed', 'received', 'FULFILLED'].includes(r.paymentStatus)).length,
+    pending: filteredRows.filter((r) => !['paid', 'confirmed', 'received', 'FULFILLED'].includes(r.paymentStatus)).length,
+    amount: filteredRows.reduce((sum, r) => sum + r.amount, 0),
     byModule: {
-      goodies: filteredOrders.filter(o => o.module === 'goodies').length,
-      pastry: filteredOrders.filter(o => o.module === 'pastry').length,
-      donation: filteredOrders.filter(o => o.module === 'donation').length,
-      ftour: filteredOrders.filter(o => o.module === 'ftour').length,
+      entrees: filteredRows.filter((r) => r.module === 'entrees').length,
+      goodies: filteredRows.filter((r) => r.module === 'goodies').length,
+      pastry: filteredRows.filter((r) => r.module === 'pastry').length,
+      terroir: filteredRows.filter((r) => r.module === 'terroir').length,
+      donation: filteredRows.filter((r) => r.module === 'donation').length,
     },
   };
 
-  // Export CSV
-  const handleExportCSV = () => {
-    const headers = ['Référence', 'Module', 'Client', 'Téléphone', 'Email', 'Montant', 'Paiement', 'Statut', 'Canal', 'Date'];
-    const rows = filteredOrders.map(order => [
-      order.reference,
-      order.module,
-      order.customer_name,
-      order.phone,
-      order.email || '',
-      order.total_amount,
-      order.payment_method,
-      order.business_status,
-      order.channel,
-      new Date(order.created_at).toLocaleDateString('fr-FR'),
+  const isLoading = goodies.isLoading || pastries.isLoading || terroir.isLoading || donations.isLoading || cashLoading;
+
+  const exportCsv = () => {
+    const headers = ['Référence', 'Module', 'Client', 'Téléphone', 'Montant', 'Paiement', 'Statut', 'Date'];
+    const rowsCsv = filteredRows.map((r) => [
+      r.reference,
+      r.module,
+      r.customer,
+      r.phone,
+      String(r.amount),
+      r.paymentStatus,
+      r.businessStatus,
+      new Date(r.createdAt).toLocaleDateString('fr-FR'),
     ]);
-
-    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
+    const csv = [headers, ...rowsCsv].map((row) => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `unified-orders-${new Date().toISOString().split('T')[0]}.csv`;
+    a.href = URL.createObjectURL(blob);
+    a.download = `dashboard-unifie-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
-  };
-
-  const getModuleLabel = (module: string) => {
-    const labels: Record<string, string> = {
-      goodies: 'Goodies',
-      pastry: 'Pâtisserie',
-      donation: 'Donation',
-      ftour: 'Ftour',
-    };
-    return labels[module] || module;
-  };
-
-  const getChannelLabel = (channel: string) => {
-    const labels: Record<string, string> = {
-      online: 'En ligne',
-      on_site_qr: 'QR Code',
-      on_site_admin: 'Admin',
-    };
-    return labels[channel] || channel;
   };
 
   return (
@@ -167,202 +185,117 @@ export default function AdminUnifiedDashboard() {
       <div className="bg-gradient-to-r from-blue-50 to-purple-50 py-8 border-b">
         <div className="container">
           <div className="flex items-center gap-3 mb-2">
+            <Link href="/admin">
+              <Button variant="ghost" size="icon"><ArrowLeft className="w-5 h-5" /></Button>
+            </Link>
             <TrendingUp className="w-8 h-8 text-blue-600" />
-            <h1 className="text-3xl font-bold text-foreground">Dashboard Unifié</h1>
+            <h1 className="text-3xl font-bold text-foreground">Dashboard unifié des commandes</h1>
           </div>
-          <p className="text-muted-foreground">Vue centralisée de tous les services (Goodies, Pâtisserie, Dons, Ftour)</p>
+          <p className="text-muted-foreground">Entrées, Goodies, Terroir, Dons et Pâtisserie dans une seule vue.</p>
         </div>
       </div>
 
-      <div className="container py-12">
-        {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-          <Card className="p-6">
-            <p className="text-sm text-muted-foreground mb-1">Total</p>
-            <p className="text-3xl font-bold">{stats.total}</p>
-          </Card>
-          <Card className="p-6">
-            <p className="text-sm text-muted-foreground mb-1">Payées</p>
-            <p className="text-3xl font-bold text-green-600">{stats.paid}</p>
-          </Card>
-          <Card className="p-6">
-            <p className="text-sm text-muted-foreground mb-1">En attente</p>
-            <p className="text-3xl font-bold text-amber-600">{stats.pending}</p>
-          </Card>
-          <Card className="p-6">
-            <p className="text-sm text-muted-foreground mb-1">Montant</p>
-            <p className="text-3xl font-bold text-primary">{stats.totalAmount} DH</p>
-          </Card>
-          <Card className="p-6">
-            <p className="text-sm text-muted-foreground mb-1">Modules</p>
-            <div className="text-xs space-y-1">
-              <p>G:{stats.byModule.goodies} P:{stats.byModule.pastry}</p>
-              <p>D:{stats.byModule.donation} F:{stats.byModule.ftour}</p>
-            </div>
+      <div className="container py-10 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <Card className="p-4"><p className="text-sm text-muted-foreground">Total</p><p className="text-3xl font-bold">{stats.total}</p></Card>
+          <Card className="p-4"><p className="text-sm text-muted-foreground">Payées / reçues</p><p className="text-3xl font-bold text-green-600">{stats.paid}</p></Card>
+          <Card className="p-4"><p className="text-sm text-muted-foreground">En attente</p><p className="text-3xl font-bold text-amber-600">{stats.pending}</p></Card>
+          <Card className="p-4"><p className="text-sm text-muted-foreground">Montant global</p><p className="text-3xl font-bold">{stats.amount} DH</p></Card>
+          <Card className="p-4 text-xs space-y-1">
+            <p className="text-sm text-muted-foreground">Modules</p>
+            <p>Entrées: {stats.byModule.entrees}</p>
+            <p>Goodies: {stats.byModule.goodies}</p>
+            <p>Pâtisserie: {stats.byModule.pastry}</p>
+            <p>Terroir: {stats.byModule.terroir}</p>
+            <p>Dons: {stats.byModule.donation}</p>
           </Card>
         </div>
 
-        {/* Filters */}
-        <Card className="p-6 mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-5 h-5" />
-            <h2 className="font-semibold text-lg">Filtres</h2>
-          </div>
-
+        <Card className="p-6 space-y-4">
+          <div className="flex items-center gap-2"><Filter className="w-5 h-5" /><h2 className="font-semibold">Filtres</h2></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             <div>
-              <Label className="text-sm">Recherche</Label>
+              <Label>Recherche</Label>
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Référence, client..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="pl-8"
-                />
+                <Input className="pl-8" placeholder="Référence, client..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
             </div>
-
             <div>
-              <Label className="text-sm">Module</Label>
+              <Label>Module</Label>
               <Select value={moduleFilter} onValueChange={setModuleFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="entrees">Entrées</SelectItem>
                   <SelectItem value="goodies">Goodies</SelectItem>
                   <SelectItem value="pastry">Pâtisserie</SelectItem>
-                  <SelectItem value="donation">Donation</SelectItem>
-                  <SelectItem value="ftour">Ftour</SelectItem>
+                  <SelectItem value="terroir">Terroir</SelectItem>
+                  <SelectItem value="donation">Dons</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
             <div>
-              <Label className="text-sm">Statut</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous</SelectItem>
-                  <SelectItem value="reserved">Réservé</SelectItem>
-                  <SelectItem value="confirmed">Confirmé</SelectItem>
-                  <SelectItem value="delivered">Livré</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label className="text-sm">Paiement</Label>
+              <Label>Paiement</Label>
               <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tous</SelectItem>
                   <SelectItem value="paid">Payé</SelectItem>
                   <SelectItem value="pending">En attente</SelectItem>
+                  <SelectItem value="received">Reçu</SelectItem>
+                  <SelectItem value="confirmed">Confirmé</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
             <div>
-              <Label className="text-sm">Canal</Label>
-              <Select value={channelFilter} onValueChange={setChannelFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous</SelectItem>
-                  <SelectItem value="online">En ligne</SelectItem>
-                  <SelectItem value="on_site_qr">QR Code</SelectItem>
-                  <SelectItem value="on_site_admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Statut métier</Label>
+              <Input placeholder="ex: delivered, reserved..." value={statusFilter === 'all' ? '' : statusFilter} onChange={(e) => setStatusFilter(e.target.value || 'all')} />
             </div>
-
             <div>
-              <Label className="text-sm">Période</Label>
-              <div className="flex gap-2">
-                <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} placeholder="De" />
-              </div>
+              <Label>À partir du</Label>
+              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
             </div>
-          </div>
-
-          <div className="mt-4 flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSearchTerm('');
-                setModuleFilter('all');
-                setStatusFilter('all');
-                setPaymentFilter('all');
-                setChannelFilter('all');
-                setDateFrom('');
-                setDateTo('');
-              }}
-            >
-              Réinitialiser
-            </Button>
-            <Button onClick={handleExportCSV} className="ml-auto">
-              <Download className="w-4 h-4 mr-2" />
-              Exporter CSV
-            </Button>
+            <div className="flex items-end gap-2">
+              <Button variant="outline" onClick={() => { setSearchTerm(''); setModuleFilter('all'); setPaymentFilter('all'); setStatusFilter('all'); setDateFrom(''); }}>Réinitialiser</Button>
+              <Button onClick={exportCsv}><Download className="w-4 h-4 mr-2" />CSV</Button>
+            </div>
           </div>
         </Card>
 
-        {/* Orders Table */}
         <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-muted border-b">
-                <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Référence</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Module</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Client</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Montant</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Paiement</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Statut</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Canal</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {filteredOrders.map(order => (
-                  <tr key={order.id} className="hover:bg-muted/50 transition-colors">
-                    <td className="px-6 py-3 font-mono text-sm">{order.reference}</td>
-                    <td className="px-6 py-3 text-sm">
-                      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                        {getModuleLabel(order.module)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 text-sm">{order.customer_name}</td>
-                    <td className="px-6 py-3 text-sm font-semibold">{order.total_amount} DH</td>
-                    <td className="px-6 py-3 text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        order.payment_status === 'paid'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-amber-100 text-amber-800'
-                      }`}>
-                        {order.payment_status === 'paid' ? 'Payé' : 'En attente'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 text-sm">
-                      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
-                        {order.business_status === 'delivered' ? 'Livré' : order.business_status === 'confirmed' ? 'Confirmé' : 'Réservé'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 text-sm">{getChannelLabel(order.channel)}</td>
-                    <td className="px-6 py-3 text-sm text-muted-foreground">
-                      {new Date(order.created_at).toLocaleDateString('fr-FR')}
-                    </td>
+          {isLoading ? (
+            <div className="py-14 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted border-b">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Référence</th>
+                    <th className="px-4 py-3 text-left">Module</th>
+                    <th className="px-4 py-3 text-left">Client</th>
+                    <th className="px-4 py-3 text-left">Montant</th>
+                    <th className="px-4 py-3 text-left">Paiement</th>
+                    <th className="px-4 py-3 text-left">Statut</th>
+                    <th className="px-4 py-3 text-left">Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filteredRows.map((row) => (
+                    <tr key={row.id} className="border-b hover:bg-muted/40">
+                      <td className="px-4 py-3 font-mono text-xs">{row.reference}</td>
+                      <td className="px-4 py-3"><Badge variant="outline">{row.module}</Badge></td>
+                      <td className="px-4 py-3">{row.customer}</td>
+                      <td className="px-4 py-3 font-semibold">{row.amount} DH</td>
+                      <td className="px-4 py-3">{row.paymentStatus}</td>
+                      <td className="px-4 py-3">{row.businessStatus}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{new Date(row.createdAt).toLocaleDateString('fr-FR')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </Card>
       </div>
     </div>

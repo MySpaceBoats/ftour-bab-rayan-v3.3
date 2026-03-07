@@ -334,7 +334,7 @@ const sections: SectionDefinition[] = [
         icon: BarChart3,
         iconColor: "text-blue-600",
         iconBg: "bg-blue-100",
-        allowedRoles: ["super_admin"],
+        allowedRoles: ["admin", "super_admin", "admin_boutique", "admin_patisserie", "admin_terroir", "admin_dons", "admin_ops", "scanner"],
       },
     ],
   },
