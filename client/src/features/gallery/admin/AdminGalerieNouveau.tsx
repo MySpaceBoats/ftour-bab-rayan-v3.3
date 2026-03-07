@@ -8,7 +8,9 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -28,10 +30,23 @@ type Item = {
   isFeatured: boolean;
 };
 
+const YEAR_RE = /\b(20\d{2}|19\d{2})\b/;
+
 export default function AdminGalerieNouveau() {
   const [items, setItems] = useState<Item[]>([]);
-  const { data: albums } = trpc.gallery.listAlbums.useQuery();
+  const { data: albums, isLoading: albumsLoading } = trpc.gallery.listAlbums.useQuery();
   const [albumId, setAlbumId] = useState<string>("none");
+
+  const { editionAlbums, generalAlbums } = useMemo(() => {
+    const all = albums ?? [];
+    const editions = all
+      .filter((a: any) => YEAR_RE.test(String(a.name ?? "") + " " + String(a.slug ?? "")))
+      .sort((a: any, b: any) => (b.sortOrder ?? 0) - (a.sortOrder ?? 0));
+    const general = all.filter(
+      (a: any) => !YEAR_RE.test(String(a.name ?? "") + " " + String(a.slug ?? ""))
+    );
+    return { editionAlbums: editions, generalAlbums: general };
+  }, [albums]);
   const upload = trpc.gallery.uploadPhotos.useMutation({
     onSuccess: () => toast.success("Upload terminé"),
     onError: e => toast.error(e.message),
@@ -146,20 +161,41 @@ export default function AdminGalerieNouveau() {
               {(totalSize / (1024 * 1024)).toFixed(2)} MB
             </div>
             <div className="max-w-xs">
-              <Label>Album</Label>
-              <Select value={albumId} onValueChange={setAlbumId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Aucun album" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Aucun</SelectItem>
-                  {(albums ?? []).map((a: any) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Album / Édition</Label>
+              {albumsLoading ? (
+                <div className="h-9 flex items-center px-3 border rounded-md text-sm text-muted-foreground bg-muted/30">
+                  Chargement des albums…
+                </div>
+              ) : (
+                <Select value={albumId} onValueChange={setAlbumId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Aucun album" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Aucun</SelectItem>
+                    {editionAlbums.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel>Éditions par année</SelectLabel>
+                        {editionAlbums.map((a: any) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                    {generalAlbums.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel>Albums généraux</SelectLabel>
+                        {generalAlbums.map((a: any) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </CardContent>
         </Card>
