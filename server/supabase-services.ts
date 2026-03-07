@@ -1,6 +1,6 @@
 import { getSupabaseAdminClient, getSupabasePublicClient, volunteerSlotsColumnExists } from './supabase';
 import { generateSecureToken } from './qrcode';
-import { addDaysToDateString, DEFAULT_RAMADAN_TIMEZONE, getDateStringInTimeZone, getRamadanDay } from '@shared/ramadan';
+import { addDaysToDateString, DEFAULT_RAMADAN_TIMEZONE, getDateStringInTimeZone, getRamadanDay, resolveRamadanDayAvailability } from '@shared/ramadan';
 import { sendEmail } from './email';
 
 const MANAGER_RECOMMENDATION_STREAK = 6;
@@ -409,7 +409,8 @@ export async function getAllRamadanDaysSupabase() {
     .order('day_number', { ascending: true });
 
   if (error) throw error;
-  return data?.map(d => ({
+
+  const mappedDays = data?.map(d => ({
     id: d.id,
     dayNumber: d.day_number,
     date: d.date,
@@ -423,33 +424,18 @@ export async function getAllRamadanDaysSupabase() {
     createdAt: new Date(d.created_at),
     updatedAt: new Date(d.updated_at),
   })) || [];
+
+  const openDayIds = resolveRamadanDayAvailability(mappedDays);
+
+  return mappedDays.map(day => ({
+    ...day,
+    isOpen: openDayIds.has(day.id),
+  }));
 }
 
 export async function getRamadanDayByIdSupabase(id: number) {
-  const client = getSupabaseAdminClient();
-  if (!client) return null;
-
-  const { data, error } = await client
-    .from('ramadan_days')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error || !data) return null;
-  return {
-    id: data.id,
-    dayNumber: data.day_number,
-    date: data.date,
-    hijriDate: data.hijri_date,
-    capacity: data.capacity,
-    registeredCount: data.registered_count,
-    isOpen: data.is_open,
-    iftarTime: data.iftar_time,
-    location: data.location,
-    notes: data.notes,
-    createdAt: new Date(data.created_at),
-    updatedAt: new Date(data.updated_at),
-  };
+  const days = await getAllRamadanDaysSupabase();
+  return days.find(day => day.id === id) ?? null;
 }
 
 export async function updateRamadanDaySupabase(id: number, updates: Partial<RamadanDayData>) {

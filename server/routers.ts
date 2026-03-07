@@ -27,10 +27,7 @@ import {
 import * as supabaseServices from "./supabase-services";
 import * as reservationServices from "./reservation-services";
 import { getSupabaseAdminClient } from "./supabase";
-import {
-  DEFAULT_RAMADAN_TIMEZONE,
-  getDateStringInTimeZone,
-} from "@shared/ramadan";
+import { DEFAULT_RAMADAN_TIMEZONE, getDateStringInTimeZone } from "@shared/ramadan";
 import { companyBookingsRouter } from "./company-booking-routers";
 import { restaurantReservationsRouter } from "./restaurant-reservation-routers";
 import { contentRouter } from "./content-router";
@@ -54,45 +51,6 @@ const resolveAppBaseUrl = () =>
   process.env.VITE_APP_URL ||
   "https://ftourbabrayan.ma";
 
-
-const getTimeInMinutesInRamadanTimezone = (date: Date): number => {
-  const formatter = new Intl.DateTimeFormat("fr-FR", {
-    timeZone: DEFAULT_RAMADAN_TIMEZONE,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-  const parts = formatter.formatToParts(date);
-  const hour = Number(parts.find(part => part.type === "hour")?.value ?? "0");
-  const minute = Number(
-    parts.find(part => part.type === "minute")?.value ?? "0"
-  );
-  return hour * 60 + minute;
-};
-
-const isAutoReopenedForServiceOnly = (day: {
-  date: string;
-  isOpen: boolean;
-  registeredCount?: number | null;
-  capacity: number;
-}) => {
-  const now = new Date();
-  const isSameRamadanDate =
-    getDateStringInTimeZone(now, DEFAULT_RAMADAN_TIMEZONE) === day.date;
-  if (!isSameRamadanDate) return false;
-
-  const isAfterReopenTime =
-    getTimeInMinutesInRamadanTimezone(now) >= 17 * 60 + 30;
-  if (!isAfterReopenTime) return false;
-
-  const isDayClosedOrFull =
-    !day.isOpen || (day.registeredCount ?? 0) >= day.capacity;
-  return isDayClosedOrFull;
-};
-
-const isServiceOnlySelection = (volunteerSlots: string[]) =>
-  volunteerSlots.length > 0 &&
-  volunteerSlots.every(slot => slot === "service_ftour");
 
 const VOLUNTEER_GROUP_REGISTRATION_NOTIFICATION_RECIPIENTS = [
   "naylabennani@hotmail.com",
@@ -913,22 +871,10 @@ const volunteersRouter = router({
       if (!day) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
       }
-      const dayAutoReopenedForServiceOnly = isAutoReopenedForServiceOnly(day);
-      if (!day.isOpen && !dayAutoReopenedForServiceOnly) {
+      if (!day.isOpen) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Ce jour est fermé aux inscriptions",
-        });
-      }
-
-      if (
-        dayAutoReopenedForServiceOnly &&
-        !isServiceOnlySelection(input.volunteerSlots)
-      ) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message:
-            "Après 17h30, seul le créneau service est ouvert pour ce jour.",
         });
       }
 
@@ -937,7 +883,6 @@ const volunteersRouter = router({
         input.comment.toUpperCase().includes("DOUZ");
 
       if (
-        !dayAutoReopenedForServiceOnly &&
         (day.registeredCount ?? 0) >= day.capacity &&
         !hasBypassCode
       ) {
@@ -1368,28 +1313,16 @@ const volunteersRouter = router({
       if (!day) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
       }
-      const dayAutoReopenedForServiceOnly = isAutoReopenedForServiceOnly(day);
-      if (!day.isOpen && !dayAutoReopenedForServiceOnly) {
+      if (!day.isOpen) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Ce jour est fermé aux inscriptions",
         });
       }
 
-      if (
-        dayAutoReopenedForServiceOnly &&
-        !isServiceOnlySelection(input.volunteerSlots)
-      ) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message:
-            "Après 17h30, seul le créneau service est ouvert pour ce jour.",
-        });
-      }
-
       const estimatedGroupSize = Math.max(1, input.estimatedSize ?? 1);
       const availableSeats = Math.max(0, day.capacity - (day.registeredCount ?? 0));
-      if (!dayAutoReopenedForServiceOnly && estimatedGroupSize > availableSeats) {
+      if (estimatedGroupSize > availableSeats) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message:
