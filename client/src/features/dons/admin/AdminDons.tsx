@@ -24,7 +24,7 @@ export default function AdminDons() {
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
   const [selectedDonation, setSelectedDonation] = useState<number | null>(null);
 
-  const canManageDonations = isAuthenticated && user?.role && ['admin', 'super_admin', 'admin_dons'].includes(user.role);
+  const canManageDonations = isAuthenticated && user?.role && ['admin', 'super_admin', 'admin_dons', 'admin_ops', 'admin_operations'].includes(user.role);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {

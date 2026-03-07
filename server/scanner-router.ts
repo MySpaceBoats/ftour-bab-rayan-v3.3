@@ -1,38 +1,11 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "./_core/trpc";
+import { router, publicProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getSupabaseAdminClient } from "./supabase";
 import * as supabaseServices from "./supabase-services";
 import * as reservationServices from "./reservation-services";
 
-// ============================================
-// SCANNER ACCESS GUARD (Admin Session Required)
-// ============================================
-/**
- * Scanner access guard - requires active admin session
- * Allowed roles: admin, super_admin, admin_ops, scanner
- */
-const scannerProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ["admin", "super_admin", "admin_ops", "scanner"];
-
-  // Check if user exists and has valid session
-  if (!ctx.user) {
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message: "Accès non autorisé – session administrateur requise",
-    });
-  }
-
-  // Check if user has required role
-  if (!allowedRoles.includes(ctx.user.role)) {
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message: "Accès non autorisé – session administrateur requise",
-    });
-  }
-
-  return next({ ctx });
-});
+const scannerProcedure = publicProcedure;
 
 // ============================================
 // QR TYPE DETECTION

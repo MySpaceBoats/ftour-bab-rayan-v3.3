@@ -147,7 +147,7 @@ const sections: SectionDefinition[] = [
         icon: Package,
         iconColor: "text-secondary-foreground",
         iconBg: "bg-secondary/20",
-        allowedRoles: ["admin", "super_admin", "admin_boutique"],
+        allowedRoles: ["admin", "super_admin", "admin_boutique", "admin_ops", "admin_operations"],
       },
       {
         label: "Catalogue Goodies",
@@ -156,7 +156,7 @@ const sections: SectionDefinition[] = [
         icon: ShoppingBag,
         iconColor: "text-secondary-foreground",
         iconBg: "bg-secondary/20",
-        allowedRoles: ["admin", "super_admin", "admin_boutique"],
+        allowedRoles: ["admin", "super_admin", "admin_boutique", "admin_ops", "admin_operations"],
       },
       {
         label: "Commandes Pâtisserie",
@@ -170,6 +170,8 @@ const sections: SectionDefinition[] = [
           "super_admin",
           "admin_boutique",
           "admin_patisserie",
+          "admin_ops",
+          "admin_operations",
         ],
       },
       {
@@ -184,6 +186,8 @@ const sections: SectionDefinition[] = [
           "super_admin",
           "admin_boutique",
           "admin_patisserie",
+          "admin_ops",
+          "admin_operations",
         ],
       },
       {
@@ -193,7 +197,7 @@ const sections: SectionDefinition[] = [
         icon: Package,
         iconColor: "text-emerald-700",
         iconBg: "bg-emerald-100",
-        allowedRoles: ["admin", "super_admin", "admin_terroir"],
+        allowedRoles: ["admin", "super_admin", "admin_terroir", "admin_ops", "admin_operations"],
       },
       {
         label: "Catalogue Terroir",
@@ -202,7 +206,7 @@ const sections: SectionDefinition[] = [
         icon: ShoppingBag,
         iconColor: "text-emerald-700",
         iconBg: "bg-emerald-100",
-        allowedRoles: ["admin", "super_admin", "admin_terroir"],
+        allowedRoles: ["admin", "super_admin", "admin_terroir", "admin_ops", "admin_operations"],
       },
       {
         label: "Paiements",
@@ -269,7 +273,7 @@ const sections: SectionDefinition[] = [
         icon: Heart,
         iconColor: "text-accent",
         iconBg: "bg-accent/10",
-        allowedRoles: ["admin", "super_admin", "admin_dons"],
+        allowedRoles: ["admin", "super_admin", "admin_dons", "admin_ops", "admin_operations"],
       },
     ],
   },
@@ -363,7 +367,7 @@ const sections: SectionDefinition[] = [
         icon: UserCog,
         iconColor: "text-purple-600",
         iconBg: "bg-purple-100",
-        allowedRoles: ["super_admin"],
+        allowedRoles: ["super_admin", "admin_ops", "admin_operations"],
       },
       {
         label: "Messages",

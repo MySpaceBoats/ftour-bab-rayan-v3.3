@@ -74,6 +74,16 @@ export default function AdminJours() {
     },
   });
 
+  const setOpenStatusMutation = trpc.days.setOpenStatus.useMutation({
+    onSuccess: (_data, variables) => {
+      toast.success(variables.isOpen ? "Jour ouvert" : "Jour fermé");
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(error.message);
+    },
+  });
+
   const deleteMutation = trpc.days.delete.useMutation({
     onSuccess: () => {
       toast.success("Jour supprimé");
@@ -119,7 +129,7 @@ export default function AdminJours() {
   };
 
   const toggleDayOpen = (dayId: number, currentIsOpen: boolean) => {
-    updateMutation.mutate({ id: dayId, isOpen: !currentIsOpen });
+    setOpenStatusMutation.mutate({ id: dayId, isOpen: !currentIsOpen });
   };
 
   const handleDeleteDay = (dayId: number) => {
@@ -383,7 +393,7 @@ export default function AdminJours() {
                               size="sm"
                               variant="outline"
                               onClick={() => toggleDayOpen(day.id, day.isOpen)}
-                              disabled={updateMutation.isPending}
+                              disabled={setOpenStatusMutation.isPending}
                             >
                               {day.isOpen ? "Fermer" : "Ouvrir"}
                             </Button>
