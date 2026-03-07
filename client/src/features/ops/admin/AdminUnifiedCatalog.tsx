@@ -23,6 +23,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import {
@@ -30,34 +41,57 @@ import {
   ExternalLink,
   Image as ImageIcon,
   Loader2,
+  Pencil,
   Plus,
+  Search,
+  Trash2,
   Upload,
   X,
 } from "lucide-react";
 
 type ProductType = "all" | "goodies" | "pastry" | "terroir";
 
+type UnifiedRow = {
+  id: string;
+  rawId: number;
+  type: Exclude<ProductType, "all">;
+  name: string;
+  description: string;
+  category: string;
+  imageUrl: string;
+  sortOrder: number;
+  price: number | null;
+  stock: number;
+  isActive: boolean;
+  manageRoute: string;
+};
+
+const BASE_FORM = {
+  name: "",
+  description: "",
+  category: "",
+  imageUrl: "",
+  price: 0,
+  stock: 0,
+  sortOrder: 0,
+  isActive: true,
+  variantLabel: "",
+  variantSku: "",
+};
+
 export default function AdminUnifiedCatalog() {
   const [selectedType, setSelectedType] = useState<ProductType>("all");
+  const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const [createType, setCreateType] =
     useState<Exclude<ProductType, "all">>("goodies");
+  const [editingRow, setEditingRow] = useState<UnifiedRow | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    category: "",
-    imageUrl: "",
-    price: 0,
-    stock: 0,
-    sortOrder: 0,
-    isActive: true,
-    variantLabel: "",
-    variantSku: "",
-  });
+  const [form, setForm] = useState(BASE_FORM);
 
   const goodiesQuery = trpc.goodies.listAll.useQuery();
   const pastriesQuery = trpc.pastries.list.useQuery();
@@ -114,43 +148,70 @@ export default function AdminUnifiedCatalog() {
     });
 
   const updateGoodie = trpc.goodies.update.useMutation({
-    onSuccess: () => goodiesQuery.refetch(),
+    onSuccess: () => {
+      toast.success("Produit goodies mis à jour");
+      goodiesQuery.refetch();
+      postEdit();
+    },
     onError: (err: any) => toast.error(err.message),
   });
 
   const updatePastry = trpc.pastries.update.useMutation({
-    onSuccess: () => pastriesQuery.refetch(),
+    onSuccess: () => {
+      toast.success("Produit pâtisserie mis à jour");
+      pastriesQuery.refetch();
+      postEdit();
+    },
     onError: (err: any) => toast.error(err.message),
   });
 
   const updateTerroir = trpc.terroirModule.adminUpdateProduct.useMutation({
-    onSuccess: () => terroirQuery.refetch(),
+    onSuccess: () => {
+      toast.success("Produit terroir mis à jour");
+      terroirQuery.refetch();
+      postEdit();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const deleteGoodie = trpc.goodies.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Produit goodies supprimé");
+      goodiesQuery.refetch();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const deletePastry = trpc.pastries.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Produit pâtisserie supprimé");
+      pastriesQuery.refetch();
+    },
     onError: (err: any) => toast.error(err.message),
   });
 
   const postCreate = () => {
     setShowCreate(false);
     setImagePreview(null);
-    setForm({
-      name: "",
-      description: "",
-      category: "",
-      imageUrl: "",
-      price: 0,
-      stock: 0,
-      sortOrder: 0,
-      isActive: true,
-      variantLabel: "",
-      variantSku: "",
-    });
+    setForm(BASE_FORM);
   };
 
-  const unifiedRows = useMemo(() => {
+  const postEdit = () => {
+    setShowEdit(false);
+    setEditingRow(null);
+    setImagePreview(null);
+    setForm(BASE_FORM);
+  };
+
+  const unifiedRows = useMemo<UnifiedRow[]>(() => {
     const goodies = (goodiesQuery.data || []).map((item: any) => ({
       id: `goodies-${item.id}`,
       type: "goodies" as const,
       name: item.name,
+      description: item.description || "",
       category: item.category || "-",
+      imageUrl: item.imageUrl || "",
+      sortOrder: item.sortOrder || 0,
       price: item.price,
       stock: item.stock ?? 0,
       isActive: item.isActive,
@@ -162,7 +223,10 @@ export default function AdminUnifiedCatalog() {
       id: `pastry-${item.id}`,
       type: "pastry" as const,
       name: item.name,
+      description: item.description || "",
       category: item.category || "-",
+      imageUrl: item.image_url || "",
+      sortOrder: item.sort_order || 0,
       price: item.price,
       stock: item.stock ?? 0,
       isActive: item.active,
@@ -174,7 +238,10 @@ export default function AdminUnifiedCatalog() {
       id: `terroir-${item.id}`,
       type: "terroir" as const,
       name: item.name,
+      description: item.description || "",
       category: item.category || "-",
+      imageUrl: item.image_url || "",
+      sortOrder: item.sort_order || 0,
       price: item.terroir_product_variants?.[0]?.price_unit
         ? Number(item.terroir_product_variants[0].price_unit)
         : null,
@@ -187,10 +254,22 @@ export default function AdminUnifiedCatalog() {
       rawId: item.id,
     }));
 
-    const combined = [...goodies, ...pastries, ...terroir];
-    if (selectedType === "all") return combined;
-    return combined.filter(row => row.type === selectedType);
-  }, [goodiesQuery.data, pastriesQuery.data, terroirQuery.data, selectedType]);
+    return [...goodies, ...pastries, ...terroir]
+      .filter(row =>
+        selectedType === "all" ? true : row.type === selectedType
+      )
+      .filter(row =>
+        `${row.name} ${row.description} ${row.category}`
+          .toLowerCase()
+          .includes(search.toLowerCase())
+      );
+  }, [
+    goodiesQuery.data,
+    pastriesQuery.data,
+    terroirQuery.data,
+    selectedType,
+    search,
+  ]);
 
   const loading =
     goodiesQuery.isLoading || pastriesQuery.isLoading || terroirQuery.isLoading;
@@ -230,8 +309,27 @@ export default function AdminUnifiedCatalog() {
     reader.readAsDataURL(file);
   };
 
+  const openEditDialog = (row: UnifiedRow) => {
+    setEditingRow(row);
+    setCreateType(row.type);
+    setForm({
+      name: row.name,
+      description: row.description,
+      category: row.category === "-" ? "" : row.category,
+      imageUrl: row.imageUrl,
+      price: row.price || 0,
+      stock: row.stock,
+      sortOrder: row.sortOrder,
+      isActive: row.isActive,
+      variantLabel: "",
+      variantSku: "",
+    });
+    setImagePreview(row.imageUrl || null);
+    setShowEdit(true);
+  };
+
   const handleCreate = () => {
-    if (!form.name) {
+    if (!form.name.trim()) {
       toast.error("Le nom du produit est obligatoire");
       return;
     }
@@ -278,7 +376,51 @@ export default function AdminUnifiedCatalog() {
     });
   };
 
-  const toggleActive = (row: any) => {
+  const handleUpdate = () => {
+    if (!editingRow) return;
+
+    if (editingRow.type === "goodies") {
+      updateGoodie.mutate({
+        id: editingRow.rawId,
+        name: form.name,
+        description: form.description,
+        category: form.category,
+        imageUrl: form.imageUrl,
+        price: form.price,
+        stock: form.stock,
+        sortOrder: form.sortOrder,
+        isActive: form.isActive,
+      });
+      return;
+    }
+
+    if (editingRow.type === "pastry") {
+      updatePastry.mutate({
+        id: editingRow.rawId,
+        name: form.name,
+        description: form.description || undefined,
+        category: form.category || undefined,
+        imageUrl: form.imageUrl || undefined,
+        price: form.price,
+        stock: form.stock,
+        sortOrder: form.sortOrder,
+        active: form.isActive,
+      });
+      return;
+    }
+
+    updateTerroir.mutate({
+      id: editingRow.rawId,
+      name: form.name,
+      description: form.description,
+      category: form.category,
+      imageUrl: form.imageUrl,
+      sortOrder: form.sortOrder,
+      isActive: form.isActive,
+    });
+  };
+
+  const toggleActive = (row: UnifiedRow) => {
     if (row.type === "goodies") {
       updateGoodie.mutate({ id: row.rawId, isActive: !row.isActive });
     } else if (row.type === "pastry") {
@@ -287,6 +429,224 @@ export default function AdminUnifiedCatalog() {
       updateTerroir.mutate({ id: row.rawId, isActive: !row.isActive });
     }
   };
+
+  const handleDelete = (row: UnifiedRow) => {
+    if (row.type === "goodies") {
+      deleteGoodie.mutate({ id: row.rawId });
+      return;
+    }
+
+    if (row.type === "pastry") {
+      deletePastry.mutate({ id: row.rawId });
+      return;
+    }
+
+    updateTerroir.mutate({ id: row.rawId, isActive: false });
+  };
+
+  const renderFormFields = () => (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label>Type de catalogue</Label>
+        <div className="flex gap-2 flex-wrap">
+          {(["goodies", "pastry", "terroir"] as const).map(type => (
+            <Button
+              key={type}
+              type="button"
+              variant={createType === type ? "default" : "outline"}
+              onClick={() => setCreateType(type)}
+              disabled={showEdit}
+            >
+              {type === "goodies"
+                ? "Goodies"
+                : type === "pastry"
+                  ? "Pâtisserie"
+                  : "Terroir"}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="space-y-2 md:col-span-2">
+          <Label>Nom du produit *</Label>
+          <Input
+            value={form.name}
+            onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
+          />
+        </div>
+        <div className="space-y-2 md:col-span-2">
+          <Label>Description</Label>
+          <Textarea
+            value={form.description}
+            onChange={e =>
+              setForm(prev => ({
+                ...prev,
+                description: e.target.value,
+              }))
+            }
+            rows={3}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Catégorie</Label>
+          <Input
+            value={form.category}
+            onChange={e =>
+              setForm(prev => ({
+                ...prev,
+                category: e.target.value,
+              }))
+            }
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Ordre</Label>
+          <Input
+            type="number"
+            min="0"
+            value={form.sortOrder || ""}
+            onChange={e =>
+              setForm(prev => ({
+                ...prev,
+                sortOrder: Number(e.target.value) || 0,
+              }))
+            }
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>
+            Prix (DH)
+            {createType === "terroir" ? " (pour 1ère variante)" : " *"}
+          </Label>
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.price || ""}
+            onChange={e =>
+              setForm(prev => ({
+                ...prev,
+                price: Number(e.target.value) || 0,
+              }))
+            }
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>
+            Stock{createType === "terroir" ? " (1ère variante)" : ""}
+          </Label>
+          <Input
+            type="number"
+            min="0"
+            value={form.stock || ""}
+            onChange={e =>
+              setForm(prev => ({
+                ...prev,
+                stock: Number(e.target.value) || 0,
+              }))
+            }
+          />
+        </div>
+
+        {createType === "terroir" && !showEdit && (
+          <>
+            <div className="space-y-2">
+              <Label>Label variante (optionnel)</Label>
+              <Input
+                value={form.variantLabel}
+                onChange={e =>
+                  setForm(prev => ({
+                    ...prev,
+                    variantLabel: e.target.value,
+                  }))
+                }
+                placeholder="250g, 500ml..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>SKU variante (optionnel)</Label>
+              <Input
+                value={form.variantSku}
+                onChange={e =>
+                  setForm(prev => ({
+                    ...prev,
+                    variantSku: e.target.value,
+                  }))
+                }
+              />
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label>Image</Label>
+        <div className="border rounded-md p-3">
+          {imagePreview || form.imageUrl ? (
+            <div className="relative inline-block">
+              <img
+                src={imagePreview || form.imageUrl}
+                alt="preview"
+                className="max-h-40 rounded"
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="destructive"
+                className="absolute -top-2 -right-2 h-6 w-6"
+                onClick={() => {
+                  setImagePreview(null);
+                  setForm(prev => ({ ...prev, imageUrl: "" }));
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Choisir une image
+            </Button>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            accept="image/png,image/jpeg,image/jpg,image/webp"
+            onChange={handleUpload}
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <Label>Actif</Label>
+        <Switch
+          checked={form.isActive}
+          onCheckedChange={checked =>
+            setForm(prev => ({ ...prev, isActive: checked }))
+          }
+        />
+      </div>
+    </div>
+  );
+
+  const isBusy =
+    isUploading ||
+    createGoodie.isPending ||
+    createPastry.isPending ||
+    createTerroirProduct.isPending ||
+    updateGoodie.isPending ||
+    updatePastry.isPending ||
+    updateTerroir.isPending ||
+    deleteGoodie.isPending ||
+    deletePastry.isPending;
 
   return (
     <RequireRole
@@ -317,7 +677,16 @@ export default function AdminUnifiedCatalog() {
               </div>
             </div>
 
-            <Dialog open={showCreate} onOpenChange={setShowCreate}>
+            <Dialog
+              open={showCreate}
+              onOpenChange={open => {
+                setShowCreate(open);
+                if (!open) {
+                  setForm(BASE_FORM);
+                  setImagePreview(null);
+                }
+              }}
+            >
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" /> Ajouter un produit
@@ -327,223 +696,19 @@ export default function AdminUnifiedCatalog() {
                 <DialogHeader>
                   <DialogTitle>Créer un produit</DialogTitle>
                 </DialogHeader>
-
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Type de catalogue</Label>
-                    <div className="flex gap-2 flex-wrap">
-                      {(["goodies", "pastry", "terroir"] as const).map(type => (
-                        <Button
-                          key={type}
-                          type="button"
-                          variant={createType === type ? "default" : "outline"}
-                          onClick={() => setCreateType(type)}
-                        >
-                          {type === "goodies"
-                            ? "Goodies"
-                            : type === "pastry"
-                              ? "Pâtisserie"
-                              : "Terroir"}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="space-y-2 md:col-span-2">
-                      <Label>Nom du produit *</Label>
-                      <Input
-                        value={form.name}
-                        onChange={e =>
-                          setForm(prev => ({ ...prev, name: e.target.value }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <Label>Description</Label>
-                      <Textarea
-                        value={form.description}
-                        onChange={e =>
-                          setForm(prev => ({
-                            ...prev,
-                            description: e.target.value,
-                          }))
-                        }
-                        rows={3}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Catégorie</Label>
-                      <Input
-                        value={form.category}
-                        onChange={e =>
-                          setForm(prev => ({
-                            ...prev,
-                            category: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Ordre</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={form.sortOrder || ""}
-                        onChange={e =>
-                          setForm(prev => ({
-                            ...prev,
-                            sortOrder: Number(e.target.value) || 0,
-                          }))
-                        }
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>
-                        Prix (DH)
-                        {createType === "terroir"
-                          ? " (pour 1ère variante)"
-                          : " *"}
-                      </Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={form.price || ""}
-                        onChange={e =>
-                          setForm(prev => ({
-                            ...prev,
-                            price: Number(e.target.value) || 0,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>
-                        Stock
-                        {createType === "terroir" ? " (1ère variante)" : ""}
-                      </Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={form.stock || ""}
-                        onChange={e =>
-                          setForm(prev => ({
-                            ...prev,
-                            stock: Number(e.target.value) || 0,
-                          }))
-                        }
-                      />
-                    </div>
-
-                    {createType === "terroir" && (
-                      <>
-                        <div className="space-y-2">
-                          <Label>Label variante (optionnel)</Label>
-                          <Input
-                            value={form.variantLabel}
-                            onChange={e =>
-                              setForm(prev => ({
-                                ...prev,
-                                variantLabel: e.target.value,
-                              }))
-                            }
-                            placeholder="250g, 500ml..."
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>SKU variante (optionnel)</Label>
-                          <Input
-                            value={form.variantSku}
-                            onChange={e =>
-                              setForm(prev => ({
-                                ...prev,
-                                variantSku: e.target.value,
-                              }))
-                            }
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Image</Label>
-                    <div className="border rounded-md p-3">
-                      {imagePreview || form.imageUrl ? (
-                        <div className="relative inline-block">
-                          <img
-                            src={imagePreview || form.imageUrl}
-                            alt="preview"
-                            className="max-h-40 rounded"
-                          />
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="destructive"
-                            className="absolute -top-2 -right-2 h-6 w-6"
-                            onClick={() => {
-                              setImagePreview(null);
-                              setForm(prev => ({ ...prev, imageUrl: "" }));
-                              if (fileInputRef.current)
-                                fileInputRef.current.value = "";
-                            }}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => fileInputRef.current?.click()}
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Choisir une image
-                        </Button>
-                      )}
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        className="hidden"
-                        accept="image/png,image/jpeg,image/jpg,image/webp"
-                        onChange={handleUpload}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <Label>Actif</Label>
-                    <Switch
-                      checked={form.isActive}
-                      onCheckedChange={checked =>
-                        setForm(prev => ({ ...prev, isActive: checked }))
-                      }
-                    />
-                  </div>
-
-                  <Button
-                    className="w-full"
-                    onClick={handleCreate}
-                    disabled={
-                      isUploading ||
-                      createGoodie.isPending ||
-                      createPastry.isPending ||
-                      createTerroirProduct.isPending
-                    }
-                  >
-                    {isUploading ||
-                    createGoodie.isPending ||
-                    createPastry.isPending ||
-                    createTerroirProduct.isPending ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Plus className="h-4 w-4 mr-2" />
-                    )}
-                    Créer le produit
-                  </Button>
-                </div>
+                {renderFormFields()}
+                <Button
+                  className="w-full"
+                  onClick={handleCreate}
+                  disabled={isBusy}
+                >
+                  {isBusy ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4 mr-2" />
+                  )}
+                  Créer le produit
+                </Button>
               </DialogContent>
             </Dialog>
           </div>
@@ -602,6 +767,16 @@ export default function AdminUnifiedCatalog() {
                 {item.label}
               </Button>
             ))}
+
+            <div className="relative ml-auto w-full md:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-9"
+                placeholder="Rechercher un produit..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+            </div>
           </div>
 
           <Card>
@@ -665,6 +840,48 @@ export default function AdminUnifiedCatalog() {
                             >
                               {row.isActive ? "Désactiver" : "Activer"}
                             </Button>
+
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openEditDialog(row)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>
+                                    Supprimer ce produit ?
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Cette action est définitive pour
+                                    Goodies/Pâtisserie. Pour le terroir, le
+                                    produit sera désactivé.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-red-600 hover:bg-red-700"
+                                    onClick={() => handleDelete(row)}
+                                  >
+                                    Confirmer
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+
                             <Link href={row.manageRoute}>
                               <Button size="sm" variant="outline">
                                 <ExternalLink className="h-4 w-4 mr-1" /> Gérer
@@ -679,6 +896,35 @@ export default function AdminUnifiedCatalog() {
               )}
             </CardContent>
           </Card>
+
+          <Dialog
+            open={showEdit}
+            onOpenChange={open => {
+              setShowEdit(open);
+              if (!open) {
+                postEdit();
+              }
+            }}
+          >
+            <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Modifier le produit</DialogTitle>
+              </DialogHeader>
+              {renderFormFields()}
+              <Button
+                className="w-full"
+                onClick={handleUpdate}
+                disabled={isBusy}
+              >
+                {isBusy ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Pencil className="h-4 w-4 mr-2" />
+                )}
+                Enregistrer
+              </Button>
+            </DialogContent>
+          </Dialog>
 
           <p className="text-xs text-muted-foreground flex items-center gap-2">
             <ImageIcon className="h-3 w-3" />
