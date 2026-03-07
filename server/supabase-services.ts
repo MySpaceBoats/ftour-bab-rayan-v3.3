@@ -1,6 +1,6 @@
 import { getSupabaseAdminClient, getSupabasePublicClient, volunteerSlotsColumnExists } from './supabase';
 import { generateSecureToken } from './qrcode';
-import { addDaysToDateString, DEFAULT_RAMADAN_TIMEZONE, getDateStringInTimeZone, getRamadanDay, resolveRamadanDayAvailability } from '@shared/ramadan';
+import { addDaysToDateString, DEFAULT_RAMADAN_TIMEZONE, getDateStringInTimeZone, getRamadanDay, isInConfiguredRamadan, resolveRamadanDayAvailability } from '@shared/ramadan';
 import { sendEmail } from './email';
 
 const MANAGER_RECOMMENDATION_STREAK = 6;
@@ -630,13 +630,16 @@ export async function deleteRamadanDailyStatSupabase(id: number) {
 export async function getRamadanSummarySupabase() {
   const activeConfig = await getActiveRamadanConfigSupabase();
   if (!activeConfig) {
+    const timezone = DEFAULT_RAMADAN_TIMEZONE;
+    const now = new Date();
+
     return {
       hijriYear: null,
       todayRamadanDay: null,
       totalsToDate: { meals: 0, beneficiaries: 0, volunteersPresence: 0 },
-      asOfGregorianDate: getDateStringInTimeZone(new Date(), DEFAULT_RAMADAN_TIMEZONE),
-      timezone: DEFAULT_RAMADAN_TIMEZONE,
-      isInRamadan: false,
+      asOfGregorianDate: getDateStringInTimeZone(now, timezone),
+      timezone,
+      isInRamadan: isInConfiguredRamadan(now, { timeZone: timezone }),
     };
   }
 
@@ -669,7 +672,7 @@ export async function getRamadanSummarySupabase() {
     totalsToDate: totals,
     asOfGregorianDate: todayDate,
     timezone: activeConfig.timezone,
-    isInRamadan: todayRamadanDay !== null,
+    isInRamadan: todayRamadanDay !== null || isInConfiguredRamadan(new Date(), { timeZone: activeConfig.timezone }),
     configId: activeConfig.id,
   };
 }

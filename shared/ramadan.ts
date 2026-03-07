@@ -1,3 +1,5 @@
+import { DEFAULT_RAMADAN_DATE_TOLERANCE_DAYS, RAMADAN_DATE_RANGES, type RamadanRange } from './config/ramadanDates';
+
 export const DEFAULT_RAMADAN_TIMEZONE = 'Africa/Casablanca';
 const DEFAULT_DAY_CLOSE_TIME_MINUTES = 19 * 60;
 const MAX_DAILY_VOLUNTEERS = 120;
@@ -90,6 +92,32 @@ export function resolveRamadanDayAvailability(
     .map((day) => day.id);
 
   return new Set(openDayIds);
+}
+
+function clampToleranceDays(toleranceDays: number): number {
+  if (!Number.isFinite(toleranceDays) || toleranceDays < 0) {
+    return DEFAULT_RAMADAN_DATE_TOLERANCE_DAYS;
+  }
+
+  return Math.floor(toleranceDays);
+}
+
+export function isDateWithinRamadanRange(dateString: string, range: RamadanRange, toleranceDays = DEFAULT_RAMADAN_DATE_TOLERANCE_DAYS): boolean {
+  const tolerance = clampToleranceDays(toleranceDays);
+  const start = addDaysToDateString(range.startDate, -tolerance);
+  const end = addDaysToDateString(range.endDate, tolerance);
+
+  return dateString >= start && dateString <= end;
+}
+
+export function getRamadanRangeForDate(dateString: string, toleranceDays = DEFAULT_RAMADAN_DATE_TOLERANCE_DAYS): RamadanRange | null {
+  return RAMADAN_DATE_RANGES.find((range) => isDateWithinRamadanRange(dateString, range, toleranceDays)) ?? null;
+}
+
+export function isInConfiguredRamadan(date: Date = new Date(), options: { timeZone?: string; toleranceDays?: number } = {}): boolean {
+  const timeZone = options.timeZone ?? DEFAULT_RAMADAN_TIMEZONE;
+  const dateString = getDateStringInTimeZone(date, timeZone);
+  return getRamadanRangeForDate(dateString, options.toleranceDays) !== null;
 }
 
 export function getRamadanDay(todayDateString: string, startDateString: string): number | null {
