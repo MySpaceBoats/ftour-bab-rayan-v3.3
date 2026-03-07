@@ -104,6 +104,7 @@ import AdminUnifiedDashboard from "@/features/ops/admin/AdminUnifiedDashboard";
 import AdminQRCodes from "@/features/ops/admin/AdminQRCodes";
 import AdminRamadanStats from "@/features/ops/admin/AdminRamadanStats";
 import AdminMemberCards from "@/features/ops/admin/AdminMemberCards";
+import AdminUnifiedCatalog from "@/features/ops/admin/AdminUnifiedCatalog";
 
 // ============================================
 // SCANNER — features/scanner
@@ -247,7 +248,10 @@ function LocalizedRoutes() {
 
       {/* Admin Ops */}
       <Route path="/admin/benevoles" component={AdminBenevoles} />
-      <Route path="/admin/benevoles-groupes" component={AdminGroupesBenevoles} />
+      <Route
+        path="/admin/benevoles-groupes"
+        component={AdminGroupesBenevoles}
+      />
       <Route path="/admin/jours" component={AdminJours} />
       <Route path="/admin/ramadan-stats" component={AdminRamadanStats} />
       <Route path="/admin/cards" component={AdminMemberCards} />
@@ -257,6 +261,7 @@ function LocalizedRoutes() {
 
       {/* Admin QR Codes Catalogue */}
       <Route path="/admin/qr-codes" component={AdminQRCodes} />
+      <Route path="/admin/catalogue-unifie" component={AdminUnifiedCatalog} />
       <Route path="/admin/orders-cash" component={AdminCashOrders} />
       <Route path="/admin/galerie" component={AdminGalerie} />
       <Route path="/admin/galerie/nouveau" component={AdminGalerieNouveau} />
@@ -299,7 +304,10 @@ function LocalizedRoutes() {
         component={AdminReservationValidation}
       />
       <Route path="/reservations/preuve" component={ReservationProofUpload} />
-      <Route path="/galerie/validation/:token" component={GalerieValidationUpload} />
+      <Route
+        path="/galerie/validation/:token"
+        component={GalerieValidationUpload}
+      />
 
       {/* ================================================
           REDIRECT ROOT → default locale
@@ -329,7 +337,10 @@ function LocalizedRoutes() {
       <Route path="/:lang/galerie" component={Galerie} />
       <Route path="/:lang/connexion" component={Login} />
       <Route path="/:lang/inscription" component={Signup} />
-      <Route path="/:lang/reinitialiser-mot-de-passe" component={ForgotPassword} />
+      <Route
+        path="/:lang/reinitialiser-mot-de-passe"
+        component={ForgotPassword}
+      />
       <Route path="/:lang/profil-benevole" component={VolunteerProfilePage} />
 
       {/* Restaurant public */}
@@ -354,17 +365,24 @@ function LocalizedRoutes() {
 
       {/* Commerce public */}
       <Route path="/:lang/patisserie" component={Pastries} />
-      <Route path="/:lang/terroir">{() => <Redirect to={`/${lang}/boutique`} />}</Route>
+      <Route path="/:lang/terroir">
+        {() => <Redirect to={`/${lang}/boutique`} />}
+      </Route>
       <Route path="/:lang/goodies" component={Goodies} />
       <Route path="/:lang/cart/:type" component={Cart} />
       <Route path="/:lang/checkout/:type" component={UnifiedCheckout} />
-      <Route path="/:lang/buy/goodie/:id">{() => <Redirect to={`/${lang}/goodies`} />}</Route>
-      <Route path="/:lang/buy/pastry/:id">{() => <Redirect to={`/${lang}/patisserie`} />}</Route>
-      <Route path="/:lang/buy/terroir/:id">{() => <Redirect to={`/${lang}/boutique`} />}</Route>
+      <Route path="/:lang/buy/goodie/:id">
+        {() => <Redirect to={`/${lang}/goodies`} />}
+      </Route>
+      <Route path="/:lang/buy/pastry/:id">
+        {() => <Redirect to={`/${lang}/patisserie`} />}
+      </Route>
+      <Route path="/:lang/buy/terroir/:id">
+        {() => <Redirect to={`/${lang}/boutique`} />}
+      </Route>
 
       {/* Dons public */}
       <Route path="/:lang/dons" component={Dons} />
-
 
       {/* ================================================
           LEGACY ROUTES — redirects vers /:lang/*

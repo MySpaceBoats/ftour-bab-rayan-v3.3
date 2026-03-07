@@ -53,7 +53,20 @@ type SectionDefinition = {
   borderClass?: string;
 };
 
-const ALL_ADMIN_ROLES = ['admin', 'super_admin', 'admin_ops', 'admin_operations', 'admin_boutique', 'admin_dons', 'scanner', 'admin_restaurant', 'vue_restaurant', 'manager_restaurant', 'admin_patisserie', 'admin_terroir'];
+const ALL_ADMIN_ROLES = [
+  "admin",
+  "super_admin",
+  "admin_ops",
+  "admin_operations",
+  "admin_boutique",
+  "admin_dons",
+  "scanner",
+  "admin_restaurant",
+  "vue_restaurant",
+  "manager_restaurant",
+  "admin_patisserie",
+  "admin_terroir",
+];
 
 const sections: SectionDefinition[] = [
   {
@@ -70,7 +83,13 @@ const sections: SectionDefinition[] = [
         icon: UsersRound,
         iconColor: "text-[#5d5a3c]",
         iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"],
+        allowedRoles: [
+          "admin",
+          "super_admin",
+          "admin_restaurant",
+          "vue_restaurant",
+          "manager_restaurant",
+        ],
         buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
       },
       {
@@ -81,7 +100,13 @@ const sections: SectionDefinition[] = [
         icon: CalendarDays,
         iconColor: "text-[#5d5a3c]",
         iconBg: "bg-[#5d5a3c]/10",
-        allowedRoles: ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"],
+        allowedRoles: [
+          "admin",
+          "super_admin",
+          "admin_restaurant",
+          "vue_restaurant",
+          "manager_restaurant",
+        ],
         buttonClass: "border-[#5d5a3c] text-[#5d5a3c] hover:bg-[#5d5a3c]/10",
       },
       {
@@ -99,6 +124,22 @@ const sections: SectionDefinition[] = [
   {
     title: "Commerce",
     modules: [
+      {
+        label: "Catalogue unifié",
+        description:
+          "Ajouter et piloter goodies, pâtisseries et terroir depuis un seul dashboard",
+        route: "/admin/catalogue-unifie",
+        icon: ShoppingBag,
+        iconColor: "text-indigo-700",
+        iconBg: "bg-indigo-100",
+        allowedRoles: [
+          "admin",
+          "super_admin",
+          "admin_boutique",
+          "admin_patisserie",
+          "admin_terroir",
+        ],
+      },
       {
         label: "Commandes Goodies",
         description: "Gérer les réservations de goodies et leur statut",
@@ -181,7 +222,8 @@ const sections: SectionDefinition[] = [
       },
       {
         label: "Cartes membres",
-        description: "Suivre les statuts, paiements et livraisons des cartes membres",
+        description:
+          "Suivre les statuts, paiements et livraisons des cartes membres",
         route: "/admin/cards",
         icon: FileText,
         iconColor: "text-teal-700",
@@ -241,7 +283,7 @@ const sections: SectionDefinition[] = [
         icon: Calendar,
         iconColor: "text-blue-600",
         iconBg: "bg-blue-100",
-        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'admin_operations'],
+        allowedRoles: ["admin", "super_admin", "admin_ops", "admin_operations"],
       },
       {
         label: "Bénévoles",
@@ -250,25 +292,27 @@ const sections: SectionDefinition[] = [
         icon: Users,
         iconColor: "text-primary",
         iconBg: "bg-primary/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'admin_operations'],
+        allowedRoles: ["admin", "super_admin", "admin_ops", "admin_operations"],
       },
       {
         label: "Groupes bénévoles",
-        description: "Traiter les demandes groupes: pièces jointes, validation et refus",
+        description:
+          "Traiter les demandes groupes: pièces jointes, validation et refus",
         route: "/admin/benevoles-groupes",
         icon: Users,
         iconColor: "text-primary",
         iconBg: "bg-primary/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'admin_operations'],
+        allowedRoles: ["admin", "super_admin", "admin_ops", "admin_operations"],
       },
       {
         label: "Stats Ramadan",
-        description: "Saisie quotidienne et cumuls des indicateurs Ftour Ramadan",
+        description:
+          "Saisie quotidienne et cumuls des indicateurs Ftour Ramadan",
         route: "/admin/ramadan-stats",
         icon: Calendar,
         iconColor: "text-primary",
         iconBg: "bg-primary/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'admin_operations'],
+        allowedRoles: ["admin", "super_admin", "admin_ops", "admin_operations"],
       },
       {
         label: "Scanner QR",
@@ -278,8 +322,14 @@ const sections: SectionDefinition[] = [
         icon: QrCode,
         iconColor: "text-primary",
         iconBg: "bg-primary/10",
-        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'admin_operations', 'scanner'],
-        variant: 'primary',
+        allowedRoles: [
+          "admin",
+          "super_admin",
+          "admin_ops",
+          "admin_operations",
+          "scanner",
+        ],
+        variant: "primary",
       },
     ],
   },
@@ -293,7 +343,13 @@ const sections: SectionDefinition[] = [
         icon: QrCode,
         iconColor: "text-orange-600",
         iconBg: "bg-orange-100",
-        allowedRoles: ['admin', 'super_admin', 'admin_ops', 'admin_operations', 'scanner'],
+        allowedRoles: [
+          "admin",
+          "super_admin",
+          "admin_ops",
+          "admin_operations",
+          "scanner",
+        ],
       },
     ],
   },
@@ -334,7 +390,16 @@ const sections: SectionDefinition[] = [
         icon: BarChart3,
         iconColor: "text-blue-600",
         iconBg: "bg-blue-100",
-        allowedRoles: ["admin", "super_admin", "admin_boutique", "admin_patisserie", "admin_terroir", "admin_dons", "admin_ops", "scanner"],
+        allowedRoles: [
+          "admin",
+          "super_admin",
+          "admin_boutique",
+          "admin_patisserie",
+          "admin_terroir",
+          "admin_dons",
+          "admin_ops",
+          "scanner",
+        ],
       },
     ],
   },
@@ -349,11 +414,28 @@ export default function Admin() {
   const [, navigate] = useLocation();
 
   const isAdmin = user?.role && ALL_ADMIN_ROLES.includes(user.role);
-  const isSuperAdmin = user?.role === 'super_admin';
-  const canManageVolunteers = user?.role && ['admin', 'super_admin', 'admin_ops', 'admin_operations'].includes(user.role);
-  const canManageOrders = user?.role && ['admin', 'super_admin', 'admin_boutique'].includes(user.role);
-  const canManageDonations = user?.role && ['admin', 'super_admin', 'admin_dons'].includes(user.role);
-  const canManageRestaurant = user?.role && ['admin', 'super_admin', 'admin_restaurant', 'vue_restaurant', 'manager_restaurant', 'admin_ops', 'admin_operations'].includes(user.role);
+  const isSuperAdmin = user?.role === "super_admin";
+  const canManageVolunteers =
+    user?.role &&
+    ["admin", "super_admin", "admin_ops", "admin_operations"].includes(
+      user.role
+    );
+  const canManageOrders =
+    user?.role &&
+    ["admin", "super_admin", "admin_boutique"].includes(user.role);
+  const canManageDonations =
+    user?.role && ["admin", "super_admin", "admin_dons"].includes(user.role);
+  const canManageRestaurant =
+    user?.role &&
+    [
+      "admin",
+      "super_admin",
+      "admin_restaurant",
+      "vue_restaurant",
+      "manager_restaurant",
+      "admin_ops",
+      "admin_operations",
+    ].includes(user.role);
 
   const { data: volunteerStats } = trpc.volunteers.stats.useQuery(undefined, {
     enabled: isAuthenticated && !!canManageVolunteers,
@@ -500,7 +582,9 @@ export default function Admin() {
                       {volunteerStats?.total || 0}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {volunteerStats?.present || 0} présents · {volunteerStats?.confirmed || 0} confirmés · {volunteerStats?.registered || 0} inscrits
+                      {volunteerStats?.present || 0} présents ·{" "}
+                      {volunteerStats?.confirmed || 0} confirmés ·{" "}
+                      {volunteerStats?.registered || 0} inscrits
                     </p>
                   </div>
                   <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
