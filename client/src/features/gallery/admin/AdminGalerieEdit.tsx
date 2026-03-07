@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,9 @@ import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -35,7 +37,19 @@ export default function AdminGalerieEdit() {
     { id },
     { enabled: !!id }
   );
-  const { data: albums } = trpc.gallery.listAlbums.useQuery();
+  const { data: albums, isLoading: albumsLoading } = trpc.gallery.listAlbums.useQuery();
+
+  const YEAR_RE = /\b(20\d{2}|19\d{2})\b/;
+  const { editionAlbums, generalAlbums } = useMemo(() => {
+    const all = albums ?? [];
+    const editions = all
+      .filter((a: any) => YEAR_RE.test(String(a.name ?? "") + " " + String(a.slug ?? "")))
+      .sort((a: any, b: any) => (b.sortOrder ?? 0) - (a.sortOrder ?? 0));
+    const general = all.filter(
+      (a: any) => !YEAR_RE.test(String(a.name ?? "") + " " + String(a.slug ?? ""))
+    );
+    return { editionAlbums: editions, generalAlbums: general };
+  }, [albums]);
   const update = trpc.gallery.updatePhoto.useMutation({
     onSuccess: () => toast.success("Photo mise à jour"),
     onError: e => toast.error(e.message),
@@ -105,25 +119,46 @@ export default function AdminGalerieEdit() {
             </div>
             <div className="grid md:grid-cols-2 gap-3">
               <div>
-                <Label>Album</Label>
-                <Select
-                  value={form.albumId}
-                  onValueChange={v =>
-                    setForm((f: any) => ({ ...f, albumId: v }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Aucun</SelectItem>
-                    {(albums ?? []).map((a: any) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Album / Édition</Label>
+                {albumsLoading ? (
+                  <div className="h-9 flex items-center px-3 border rounded-md text-sm text-muted-foreground bg-muted/30">
+                    Chargement…
+                  </div>
+                ) : (
+                  <Select
+                    value={form.albumId}
+                    onValueChange={v =>
+                      setForm((f: any) => ({ ...f, albumId: v }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Aucun</SelectItem>
+                      {editionAlbums.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel>Éditions par année</SelectLabel>
+                          {editionAlbums.map((a: any) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {a.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                      {generalAlbums.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel>Albums généraux</SelectLabel>
+                          {generalAlbums.map((a: any) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {a.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div>
                 <Label>Statut</Label>
