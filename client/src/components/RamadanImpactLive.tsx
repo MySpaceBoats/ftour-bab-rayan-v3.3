@@ -34,10 +34,16 @@ export default function RamadanImpactLive({ className = "" }: { className?: stri
               Impossible de charger les statistiques Ramadan pour le moment.
             </CardContent>
           </Card>
-        ) : data?.todayRamadanDay == null ? (
+        ) : !data?.isInRamadan ? (
           <Card>
             <CardContent className="p-6 text-sm text-muted-foreground">
               Les statistiques seront mises à jour pendant Ramadan.
+            </CardContent>
+          </Card>
+        ) : data?.todayRamadanDay == null ? (
+          <Card>
+            <CardContent className="p-6 text-sm text-muted-foreground">
+              Ramadan est en cours. Les statistiques détaillées seront publiées prochainement.
             </CardContent>
           </Card>
         ) : (
