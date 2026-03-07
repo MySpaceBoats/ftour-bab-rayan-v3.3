@@ -121,7 +121,7 @@ const adminOpsProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 const adminBoutiqueProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ["admin", "super_admin", "admin_boutique"];
+  const allowedRoles = ["admin", "super_admin", "admin_boutique", "admin_ops", "admin_operations"];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -132,7 +132,7 @@ const adminBoutiqueProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 const adminDonsProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ["admin", "super_admin", "admin_dons"];
+  const allowedRoles = ["admin", "super_admin", "admin_dons", "admin_ops", "admin_operations"];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: "FORBIDDEN", message: "Accès dons requis" });
   }
@@ -156,6 +156,8 @@ const adminPatisserieProcedure = protectedProcedure.use(({ ctx, next }) => {
     "super_admin",
     "admin_patisserie",
     "admin_boutique",
+    "admin_ops",
+    "admin_operations",
   ];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({
@@ -167,7 +169,7 @@ const adminPatisserieProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 const adminTerroirProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ["admin", "super_admin", "admin_terroir"];
+  const allowedRoles = ["admin", "super_admin", "admin_terroir", "admin_ops", "admin_operations"];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({
       code: "FORBIDDEN",
