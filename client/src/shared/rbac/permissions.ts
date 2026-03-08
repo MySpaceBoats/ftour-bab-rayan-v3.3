@@ -140,6 +140,12 @@ export const ROUTE_ROLES: Record<string, readonly Role[]> = {
 
   // Dashboard unifié
   '/admin/unified-dashboard': [...ADMIN_BASE, ROLES.ADMIN_BOUTIQUE, ROLES.ADMIN_PATISSERIE, ROLES.ADMIN_TERROIR, ROLES.ADMIN_DONS, ROLES.ADMIN_OPS, ROLES.SCANNER],
+
+  // Gestion de stock (Inventory)
+  '/admin/inventory': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.ADMIN_BOUTIQUE, ROLES.ADMIN_PATISSERIE, ROLES.ADMIN_TERROIR],
+  '/admin/inventory/products': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.ADMIN_BOUTIQUE, ROLES.ADMIN_PATISSERIE, ROLES.ADMIN_TERROIR],
+  '/admin/inventory/events': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.ADMIN_BOUTIQUE, ROLES.ADMIN_PATISSERIE, ROLES.ADMIN_TERROIR],
+  '/admin/inventory/movements': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.ADMIN_BOUTIQUE, ROLES.ADMIN_PATISSERIE, ROLES.ADMIN_TERROIR],
 };
 
 // ============================================

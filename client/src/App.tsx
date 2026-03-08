@@ -120,6 +120,14 @@ import ScannerBenevoles from "@/features/scanner/pages/ScannerBenevoles";
 import ScannerFtours from "@/features/scanner/pages/ScannerFtours";
 
 // ============================================
+// INVENTORY — features/inventory
+// ============================================
+import AdminInventory from "@/features/inventory/admin/AdminInventory";
+import AdminInventoryProducts from "@/features/inventory/admin/AdminInventoryProducts";
+import AdminInventoryEvents from "@/features/inventory/admin/AdminInventoryEvents";
+import AdminInventoryMovements from "@/features/inventory/admin/AdminInventoryMovements";
+
+// ============================================
 // CONTENU — features/contenu
 // ============================================
 import AdminContenu from "@/features/contenu/admin/AdminContenu";
@@ -267,6 +275,12 @@ function LocalizedRoutes() {
       <Route path="/admin/galerie" component={AdminGalerie} />
       <Route path="/admin/galerie/nouveau" component={AdminGalerieNouveau} />
       <Route path="/admin/galerie/:id" component={AdminGalerieEdit} />
+
+      {/* Admin Inventory */}
+      <Route path="/admin/inventory" component={AdminInventory} />
+      <Route path="/admin/inventory/products" component={AdminInventoryProducts} />
+      <Route path="/admin/inventory/events" component={AdminInventoryEvents} />
+      <Route path="/admin/inventory/movements" component={AdminInventoryMovements} />
 
       {/* Admin Contenu */}
       <Route path="/admin/contenu" component={AdminContenu} />
