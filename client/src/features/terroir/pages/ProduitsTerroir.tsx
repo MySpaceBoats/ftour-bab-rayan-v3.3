@@ -31,6 +31,23 @@ export default function ProduitsTerroir() {
 
   const terroirCart = getCartByType('terroir');
 
+  const getFallbackVariant = (product: any) => {
+    const fallbackPrice = Number(product?.price_unit ?? product?.price ?? 0);
+    if (!Number.isFinite(fallbackPrice) || fallbackPrice <= 0) {
+      return null;
+    }
+
+    return {
+      id: undefined,
+      label: 'Format unique',
+      price_unit: fallbackPrice,
+      stock_total: null,
+      stock_reserved: null,
+      is_active: true,
+      isFallback: true,
+    };
+  };
+
   const findCartIndex = (productId: number, variantId?: number) =>
     unifiedCart.findIndex(
       item => item.productType === 'terroir' && item.productId === productId && item.variantId === variantId
@@ -186,7 +203,8 @@ export default function ProduitsTerroir() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {products.map(product => {
-                    const variants = product.terroir_product_variants?.filter((v: any) => v.is_active !== false) || [];
+                    const configuredVariants = product.terroir_product_variants?.filter((v: any) => v.is_active !== false) || [];
+                    const variants = configuredVariants.length > 0 ? configuredVariants : [getFallbackVariant(product)].filter(Boolean);
                     const first = variants[0];
                     return (
                       <Card key={product.id} className="overflow-hidden">
@@ -207,14 +225,17 @@ export default function ProduitsTerroir() {
                               const reservedStock = Number(variant.stock_reserved ?? 0);
                               const availableStock = Math.max(0, totalStock - reservedStock);
                               const isOutOfStock = hasStockTracking && availableStock <= 0;
+                              const inStockLabel = hasStockTracking
+                                ? `${t.terroir.inStock || 'En stock'} (${availableStock})`
+                                : (t.terroir.inStock || 'En stock');
 
                               return (
-                              <div key={variant.id} className="flex items-center justify-between border rounded-md p-2">
+                              <div key={variant.id ?? `fallback-${product.id}`} className="flex items-center justify-between border rounded-md p-2">
                                 <div>
                                   <p className="text-sm font-medium">{variant.label}</p>
                                   <p className="text-xs text-muted-foreground">{Number(variant.price_unit)} DH</p>
                                   <p className={`text-xs font-medium ${isOutOfStock ? 'text-red-500' : 'text-green-600'}`}>
-                                    {isOutOfStock ? (t.terroir.outOfStock || 'Rupture de stock') : `${t.terroir.inStock || 'En stock'} (${availableStock})`}
+                                    {isOutOfStock ? (t.terroir.outOfStock || 'Rupture de stock') : inStockLabel}
                                   </p>
                                 </div>
                                 <Button size="sm" disabled={isOutOfStock} onClick={() => handleAddToCart(product, variant)}>
