@@ -454,6 +454,56 @@ export async function getStockOverview() {
   return data ?? [];
 }
 
+/**
+ * Résumé agrégé du stock (KPIs) — retourne un petit objet au lieu de toutes les lignes.
+ * Beaucoup plus rapide pour le tableau de bord.
+ */
+export async function getStockSummary(): Promise<{
+  globalQty: number;
+  bufferQty: number;
+  posQty: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  activeProductCount: number;
+}> {
+  const [balancesResult, productsResult] = await Promise.all([
+    db()
+      .from('inventory_stock_balances')
+      .select('quantity_on_hand, inventory_locations!inner ( type )'),
+    db()
+      .from('inventory_products')
+      .select('id', { count: 'planned', head: true })
+      .eq('is_active', true),
+  ]);
+
+  if (balancesResult.error) throw new Error(parseError(balancesResult.error));
+
+  let globalQty = 0;
+  let bufferQty = 0;
+  let posQty = 0;
+  let lowStockCount = 0;
+  let outOfStockCount = 0;
+
+  for (const b of balancesResult.data ?? []) {
+    const type = (b as any).inventory_locations?.type as string | undefined;
+    const qty: number = b.quantity_on_hand;
+    if (type === 'GLOBAL') globalQty += qty;
+    else if (type === 'EVENT_BUFFER') bufferQty += qty;
+    else if (type === 'POS') posQty += qty;
+    if (qty === 0) outOfStockCount++;
+    else if (qty <= 5) lowStockCount++;
+  }
+
+  return {
+    globalQty,
+    bufferQty,
+    posQty,
+    lowStockCount,
+    outOfStockCount,
+    activeProductCount: productsResult.count ?? 0,
+  };
+}
+
 // ============================================================
 // STOCK MOVEMENTS (transactional — via RPC)
 // ============================================================
@@ -642,7 +692,7 @@ export async function getMovementHistory(filters?: {
       to_location:inventory_locations!inventory_movements_to_location_id_fkey ( id, name, type, code ),
       pos_location:inventory_locations!inventory_movements_pos_location_id_fkey ( id, name, type, code ),
       inventory_events ( id, name )
-    `, { count: 'exact' })
+    `, { count: 'planned' })
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 

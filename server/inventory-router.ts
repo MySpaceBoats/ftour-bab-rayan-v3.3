@@ -255,6 +255,14 @@ export const inventoryRouter = router({
       }
     }),
 
+    summary: inventoryAdminProcedure.query(async () => {
+      try {
+        return await inv.getStockSummary();
+      } catch (e: any) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+      }
+    }),
+
     addStock: inventoryAdminProcedure
       .input(z.object({
         productId:     z.number().int().positive(),

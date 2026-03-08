@@ -44,17 +44,17 @@ export default function AdminInventoryEvents() {
   const [returnForm, setReturnForm] = useState(emptyReturnForm);
 
   // Queries
-  const { data: events, isLoading: eventsLoading, refetch: refetchEvents } = trpc.inventory.events.list.useQuery({});
-  const { data: products } = trpc.inventory.products.list.useQuery({ isActive: true });
-  const { data: globalLoc } = trpc.inventory.locations.globalLocation.useQuery();
+  const { data: events, isLoading: eventsLoading, refetch: refetchEvents } = trpc.inventory.events.list.useQuery({}, { staleTime: 30_000 });
+  const { data: products } = trpc.inventory.products.list.useQuery({ isActive: true }, { staleTime: 60_000 });
+  const { data: globalLoc } = trpc.inventory.locations.globalLocation.useQuery(undefined, { staleTime: 120_000 });
 
   const { data: eventLocations, refetch: refetchLocs } = trpc.inventory.locations.list.useQuery(
     { eventId: selectedEventId! },
-    { enabled: selectedEventId !== null }
+    { enabled: selectedEventId !== null, staleTime: 30_000 }
   );
   const { data: eventReport, refetch: refetchReport } = trpc.inventory.events.report.useQuery(
     { eventId: selectedEventId! },
-    { enabled: selectedEventId !== null }
+    { enabled: selectedEventId !== null, staleTime: 30_000 }
   );
 
   const bufferLocation = (eventLocations ?? []).find((l: any) => l.type === 'EVENT_BUFFER');

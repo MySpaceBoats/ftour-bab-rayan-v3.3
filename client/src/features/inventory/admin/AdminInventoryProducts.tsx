@@ -54,14 +54,14 @@ export default function AdminInventoryProducts() {
     isActive: true,
     productType: filterType !== "all" ? filterType : undefined,
     search: search || undefined,
-  });
+  }, { staleTime: 30_000 });
 
   const { data: stockDetail } = trpc.inventory.products.balances.useQuery(
     { productId: showStockDetail! },
     { enabled: showStockDetail !== null }
   );
 
-  const overview = trpc.inventory.stock.overview.useQuery();
+  const overview = trpc.inventory.stock.overview.useQuery(undefined, { staleTime: 60_000 });
 
   // Mutations
   const createProduct = trpc.inventory.products.create.useMutation({

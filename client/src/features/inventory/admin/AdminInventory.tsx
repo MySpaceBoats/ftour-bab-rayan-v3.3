@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import RequireRole from "@/components/RequireRole";
 import {
   Package, Warehouse, MapPin, ArrowLeftRight, BarChart3,
-  AlertTriangle, TrendingDown, History, Plus,
+  AlertTriangle, TrendingDown, History,
 } from "lucide-react";
 
 function StockLevelCard({
@@ -31,28 +31,19 @@ function StockLevelCard({
 }
 
 export default function AdminInventory() {
-  const { data: overview, isLoading } = trpc.inventory.stock.overview.useQuery();
-  const { data: movements } = trpc.inventory.movements.list.useQuery({
-    limit: 10,
-    offset: 0,
+  const { data: summary, isLoading } = trpc.inventory.stock.summary.useQuery(undefined, {
+    staleTime: 60_000,
   });
-  const { data: products } = trpc.inventory.products.list.useQuery({ isActive: true });
+  const { data: movements } = trpc.inventory.movements.list.useQuery(
+    { limit: 10, offset: 0 },
+    { staleTime: 30_000 },
+  );
 
-  // Aggregation côté client
-  const globalQty = (overview ?? [])
-    .filter((b: any) => b.inventory_locations?.type === 'GLOBAL')
-    .reduce((s: number, b: any) => s + b.quantity_on_hand, 0);
-
-  const bufferQty = (overview ?? [])
-    .filter((b: any) => b.inventory_locations?.type === 'EVENT_BUFFER')
-    .reduce((s: number, b: any) => s + b.quantity_on_hand, 0);
-
-  const posQty = (overview ?? [])
-    .filter((b: any) => b.inventory_locations?.type === 'POS')
-    .reduce((s: number, b: any) => s + b.quantity_on_hand, 0);
-
-  const lowStock = (overview ?? []).filter((b: any) => b.quantity_on_hand > 0 && b.quantity_on_hand <= 5);
-  const outOfStock = (overview ?? []).filter((b: any) => b.quantity_on_hand === 0);
+  const globalQty    = summary?.globalQty       ?? 0;
+  const bufferQty    = summary?.bufferQty        ?? 0;
+  const posQty       = summary?.posQty           ?? 0;
+  const lowStock     = { length: summary?.lowStockCount    ?? 0 };
+  const outOfStock   = { length: summary?.outOfStockCount  ?? 0 };
 
   const navLinks = [
     { href: "/admin/inventory/products",  label: "Produits & Stock",          icon: Package },
@@ -124,7 +115,7 @@ export default function AdminInventory() {
             <StockLevelCard
               title="Stock total"
               value={globalQty + bufferQty + posQty}
-              subtitle={`${(products ?? []).length} produits actifs`}
+              subtitle={`${summary?.activeProductCount ?? 0} produits actifs`}
               icon={BarChart3}
               color="text-purple-600"
             />
@@ -143,10 +134,7 @@ export default function AdminInventory() {
                       {outOfStock.length} emplacement(s) en rupture de stock
                     </p>
                     <p className="text-red-600 text-xs mt-0.5">
-                      {outOfStock.slice(0, 3).map((b: any) =>
-                        `${b.inventory_products?.name} @ ${b.inventory_locations?.name}`
-                      ).join(' · ')}
-                      {outOfStock.length > 3 && ` · +${outOfStock.length - 3} autres`}
+                      Consultez la page Produits &amp; Stock pour le détail.
                     </p>
                   </div>
                 </CardContent>
@@ -161,10 +149,7 @@ export default function AdminInventory() {
                       {lowStock.length} emplacement(s) avec stock faible (≤ 5)
                     </p>
                     <p className="text-amber-600 text-xs mt-0.5">
-                      {lowStock.slice(0, 3).map((b: any) =>
-                        `${b.inventory_products?.name} (${b.quantity_on_hand})`
-                      ).join(' · ')}
-                      {lowStock.length > 3 && ` · +${lowStock.length - 3} autres`}
+                      Consultez la page Produits &amp; Stock pour le détail.
                     </p>
                   </div>
                 </CardContent>
