@@ -253,6 +253,21 @@ const sections: SectionDefinition[] = [
           "scanner",
         ],
       },
+      {
+        label: "Scanner Produits",
+        description: "Scanner les QR codes des produits et commandes",
+        route: "/admin/scan-product",
+        icon: QrCode,
+        iconColor: "text-orange-600",
+        iconBg: "bg-orange-100",
+        allowedRoles: [
+          "admin",
+          "super_admin",
+          "admin_ops",
+          "admin_operations",
+          "scanner",
+        ],
+      },
     ],
   },
   {
@@ -336,26 +351,6 @@ const sections: SectionDefinition[] = [
         iconColor: "text-sky-700",
         iconBg: "bg-sky-100",
         allowedRoles: ["admin", "super_admin", "admin_ops"],
-      },
-    ],
-  },
-  {
-    title: "Goodies",
-    modules: [
-      {
-        label: "Scanner Produits",
-        description: "Scanner les QR codes des produits et commandes",
-        route: "/admin/scan-product",
-        icon: QrCode,
-        iconColor: "text-orange-600",
-        iconBg: "bg-orange-100",
-        allowedRoles: [
-          "admin",
-          "super_admin",
-          "admin_ops",
-          "admin_operations",
-          "scanner",
-        ],
       },
     ],
   },
