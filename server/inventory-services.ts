@@ -362,7 +362,8 @@ export async function getStockEntryBySlug(slug: string) {
 }
 
 export async function listStockEntryProducts(filters?: { search?: string; isActive?: boolean }) {
-  const globalLoc = await getGlobalLocation();
+  // Global location is optional — used only for balance display
+  const globalLoc = await getGlobalLocation().catch(() => null);
 
   let q = db()
     .from('inventory_products')
@@ -380,34 +381,47 @@ export async function listStockEntryProducts(filters?: { search?: string; isActi
 
   const rows = products ?? [];
 
-  await Promise.all(
+  // Best-effort: generate missing slugs, ignore individual failures
+  await Promise.allSettled(
     rows
       .filter((p: any) => !p.stock_entry_qr_slug)
       .map((p: any) => ensureStockEntryQrSlug(p.id)),
   );
 
   const productIds = rows.map((p: any) => p.id);
-  const { data: balances } = await db()
-    .from('inventory_stock_balances')
-    .select('product_id, quantity_on_hand')
-    .eq('location_id', globalLoc.id)
-    .in('product_id', productIds.length ? productIds : [-1]);
 
-  const { data: qrMovements } = await db()
-    .from('inventory_movements')
-    .select('id, product_id, quantity, movement_type, created_at, performed_by, reason, note, reference_type')
-    .eq('reference_type', 'QR_STOCK_ENTRY')
-    .in('product_id', productIds.length ? productIds : [-1])
-    .order('created_at', { ascending: false });
+  let balances: any[] = [];
+  let qrMovements: any[] = [];
 
-  const byBalance = new Map<number, number>((balances ?? []).map((b: any) => [b.product_id, b.quantity_on_hand]));
+  if (globalLoc) {
+    const [balRes, movRes] = await Promise.all([
+      db()
+        .from('inventory_stock_balances')
+        .select('product_id, quantity_on_hand')
+        .eq('location_id', globalLoc.id)
+        .in('product_id', productIds.length ? productIds : [-1]),
+      db()
+        .from('inventory_movements')
+        .select('id, product_id, quantity, movement_type, created_at, performed_by, reason, note, reference_type')
+        .eq('reference_type', 'QR_STOCK_ENTRY')
+        .in('product_id', productIds.length ? productIds : [-1])
+        .order('created_at', { ascending: false }),
+    ]);
+    balances = balRes.data ?? [];
+    qrMovements = movRes.data ?? [];
+  }
+
+  const byBalance = new Map<number, number>(balances.map((b: any) => [b.product_id, b.quantity_on_hand]));
   const byLastMovement = new Map<number, any>();
-  for (const m of qrMovements ?? []) {
+  for (const m of qrMovements) {
     if (!byLastMovement.has(m.product_id)) byLastMovement.set(m.product_id, m);
   }
 
   const normalized = await Promise.all(rows.map(async (p: any) => {
-    const slug = p.stock_entry_qr_slug ?? await ensureStockEntryQrSlug(p.id);
+    let slug = p.stock_entry_qr_slug as string | null;
+    if (!slug) {
+      slug = await ensureStockEntryQrSlug(p.id).catch(() => null);
+    }
     return {
       ...p,
       stock_entry_qr_slug: slug,
@@ -416,14 +430,14 @@ export async function listStockEntryProducts(filters?: { search?: string; isActi
     };
   }));
 
-  return { globalLocationId: globalLoc.id, products: normalized };
+  return { globalLocationId: globalLoc?.id ?? null, products: normalized };
 }
 
 export async function getStockEntryProductDetail(productId: number) {
-  const globalLoc = await getGlobalLocation();
+  const globalLoc = await getGlobalLocation().catch(() => null);
   const product = await getInventoryProductById(productId);
-  const slug = product.stock_entry_qr_slug ?? await ensureStockEntryQrSlug(productId);
-  const current = await getStockBalance(productId, globalLoc.id);
+  const slug = product.stock_entry_qr_slug ?? await ensureStockEntryQrSlug(productId).catch(() => null);
+  const current = globalLoc ? await getStockBalance(productId, globalLoc.id) : 0;
 
   const { data: history } = await db()
     .from('inventory_movements')
@@ -434,7 +448,7 @@ export async function getStockEntryProductDetail(productId: number) {
     .limit(20);
 
   return {
-    product: { ...product, stock_entry_qr_slug: slug },
+    product: { ...product, stock_entry_qr_slug: slug ?? null },
     globalLocation: globalLoc,
     globalStock: current,
     history: history ?? [],

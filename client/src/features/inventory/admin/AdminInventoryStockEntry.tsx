@@ -81,7 +81,10 @@ export default function AdminInventoryStockEntry() {
                   <Badge variant={p.stock_entry_qr_enabled ? "default" : "destructive"}>{p.stock_entry_qr_enabled ? "QR actif" : "QR inactif"}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">SKU: {p.sku || "—"}</p>
-                <QrImage data={qrUrl(p.stock_entry_qr_slug)} size={220} alt={`QR entrée stock ${p.name}`} className="w-28 h-28 border rounded" />
+                {p.stock_entry_qr_slug
+                  ? <QrImage data={qrUrl(p.stock_entry_qr_slug)} size={220} alt={`QR entrée stock ${p.name}`} className="w-28 h-28 border rounded" />
+                  : <div className="w-28 h-28 border rounded bg-muted flex items-center justify-center text-xs text-muted-foreground text-center p-1">QR non généré</div>
+                }
                 <div className="flex flex-wrap gap-2 pt-1">
                   <Link href={`/admin/inventory/stock-entry/${p.id}`}><Button size="sm" variant="outline"><Eye className="h-3 w-3 mr-1" />Voir</Button></Link>
                   <Button size="sm" variant="outline" onClick={() => void downloadQr(p.name, p.stock_entry_qr_slug)}>Télécharger</Button>
