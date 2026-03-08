@@ -2298,13 +2298,18 @@ const donationsRouter = router({
             paymentMethod: donation.paymentMethod,
             donationReference: donation.donationReference,
           });
-          await sendEmail({
+          const result = await sendEmail({
             to: donation.donorEmail,
             subject: emailData.subject,
             html: emailData.html,
           });
+          if (!result.success) {
+            console.error("[Donation] Email de réception non envoyé:", result.error, "→ destinataire:", donation.donorEmail);
+          } else {
+            console.log("[Donation] Email de réception envoyé avec succès à:", donation.donorEmail, "id:", result.id);
+          }
         } catch (error) {
-          console.error("[Donation] Email de confirmation de réception échoué:", error);
+          console.error("[Donation] Erreur lors de l'envoi de l'email de réception:", error);
         }
       }
 
@@ -2331,13 +2336,18 @@ const donationsRouter = router({
           paymentMethod: donation.paymentMethod,
           donationReference: donation.donationReference,
         });
-        await sendEmail({
+        const result = await sendEmail({
           to: donation.donorEmail,
           subject: emailData.subject,
           html: emailData.html,
         });
+        if (!result.success) {
+          console.error("[Donation] Email de réception non envoyé:", result.error, "→ destinataire:", donation.donorEmail);
+        } else {
+          console.log("[Donation] Email de réception envoyé avec succès à:", donation.donorEmail, "id:", result.id);
+        }
       } catch (error) {
-        console.error("[Donation] Email de confirmation de réception échoué:", error);
+        console.error("[Donation] Erreur lors de l'envoi de l'email de réception:", error);
       }
 
       return { success: true };

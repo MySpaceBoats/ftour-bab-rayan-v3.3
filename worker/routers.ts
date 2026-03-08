@@ -4609,6 +4609,41 @@ const donationsRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
       }
 
+      // Send confirmation email when donation is validated as "received"
+      if (input.status === "received") {
+        try {
+          const { data: donation } = await supabase
+            .from("donations")
+            .select("donor_name, donor_email, donation_reference, amount, payment_method")
+            .eq("id", input.donationId)
+            .single();
+
+          if (donation) {
+            const { sendEmail, generateDonationReceivedEmail } = await import("./email");
+            const emailData = generateDonationReceivedEmail({
+              donorName: donation.donor_name,
+              donorEmail: donation.donor_email,
+              donationReference: donation.donation_reference,
+              amount: donation.amount,
+              paymentMethod: donation.payment_method,
+            });
+            const result = await sendEmail({
+              to: donation.donor_email,
+              subject: emailData.subject,
+              html: emailData.html,
+              apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
+            });
+            if (!result.success) {
+              console.error("[Worker] Email de réception non envoyé:", result.error, "→", donation.donor_email);
+            } else {
+              console.log("[Worker] Email de réception envoyé à:", donation.donor_email, "id:", result.id);
+            }
+          }
+        } catch (emailError) {
+          console.error("[Worker] Erreur envoi email réception don:", emailError);
+        }
+      }
+
       return { success: true };
     }),
 
