@@ -4281,7 +4281,12 @@ const terroirModuleRouter = router({
       .order("sort_order", { ascending: true });
 
     if (!joinQuery.error) {
-      return joinQuery.data || [];
+      return (joinQuery.data || []).map((product: any) => ({
+        ...product,
+        terroir_product_variants: (product.terroir_product_variants || []).filter(
+          (v: any) => v.is_active !== false
+        ),
+      }));
     }
 
     console.warn(
