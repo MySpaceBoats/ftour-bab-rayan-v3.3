@@ -159,6 +159,123 @@ export async function syncInventoryProduct(input: {
 }
 
 // ============================================================
+// CATALOG SYNC — import all existing catalog products
+// ============================================================
+
+export async function syncAllCatalogProducts(): Promise<{
+  synced: number;
+  errors: number;
+  details: string[];
+}> {
+  let synced = 0;
+  let errors = 0;
+  const details: string[] = [];
+
+  // --- Goodies ---
+  const { data: goodies } = await db()
+    .from('goodies')
+    .select('id, name, category');
+  for (const g of goodies ?? []) {
+    try {
+      await syncInventoryProduct({
+        productType: 'goodie',
+        sourceProductId: g.id,
+        name: g.name,
+        category: g.category ?? null,
+      });
+      synced++;
+    } catch (e: any) {
+      errors++;
+      details.push(`goodie#${g.id}: ${e.message}`);
+    }
+  }
+
+  // --- Goodie variants ---
+  const { data: goodieVariants } = await db()
+    .from('goodie_variants')
+    .select('id, goodie_id, name, sku, goodies(name, category)');
+  for (const v of goodieVariants ?? []) {
+    try {
+      const parent = (v as any).goodies;
+      await syncInventoryProduct({
+        productType: 'goodie_variant',
+        sourceProductId: (v as any).goodie_id,
+        sourceVariantId: v.id,
+        name: parent ? `${parent.name} – ${v.name}` : v.name,
+        sku: v.sku ?? null,
+        category: parent?.category ?? null,
+      });
+      synced++;
+    } catch (e: any) {
+      errors++;
+      details.push(`goodie_variant#${v.id}: ${e.message}`);
+    }
+  }
+
+  // --- Terroir products ---
+  const { data: terroirProducts } = await db()
+    .from('terroir_products')
+    .select('id, name, category');
+  for (const t of terroirProducts ?? []) {
+    try {
+      await syncInventoryProduct({
+        productType: 'terroir_product',
+        sourceProductId: t.id,
+        name: t.name,
+        category: t.category ?? null,
+      });
+      synced++;
+    } catch (e: any) {
+      errors++;
+      details.push(`terroir_product#${t.id}: ${e.message}`);
+    }
+  }
+
+  // --- Terroir variants ---
+  const { data: terroirVariants } = await db()
+    .from('terroir_product_variants')
+    .select('id, product_id, label, sku, terroir_products(name, category)');
+  for (const v of terroirVariants ?? []) {
+    try {
+      const parent = (v as any).terroir_products;
+      await syncInventoryProduct({
+        productType: 'terroir_variant',
+        sourceProductId: (v as any).product_id,
+        sourceVariantId: v.id,
+        name: parent ? `${parent.name} – ${v.label}` : v.label,
+        sku: v.sku ?? null,
+        category: parent?.category ?? null,
+      });
+      synced++;
+    } catch (e: any) {
+      errors++;
+      details.push(`terroir_variant#${v.id}: ${e.message}`);
+    }
+  }
+
+  // --- Pastries ---
+  const { data: pastries } = await db()
+    .from('pastries')
+    .select('id, name, category');
+  for (const p of pastries ?? []) {
+    try {
+      await syncInventoryProduct({
+        productType: 'pastry',
+        sourceProductId: p.id,
+        name: p.name,
+        category: p.category ?? null,
+      });
+      synced++;
+    } catch (e: any) {
+      errors++;
+      details.push(`pastry#${p.id}: ${e.message}`);
+    }
+  }
+
+  return { synced, errors, details };
+}
+
+// ============================================================
 // EVENTS
 // ============================================================
 

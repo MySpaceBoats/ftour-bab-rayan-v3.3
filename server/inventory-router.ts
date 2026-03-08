@@ -112,6 +112,15 @@ export const inventoryRouter = router({
         }
       }),
 
+    syncAllCatalogs: inventoryAdminProcedure
+      .mutation(async () => {
+        try {
+          return await inv.syncAllCatalogProducts();
+        } catch (e: any) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+        }
+      }),
+
     balances: inventoryAdminProcedure
       .input(z.object({ productId: z.number().int().positive() }))
       .query(async ({ input }) => {

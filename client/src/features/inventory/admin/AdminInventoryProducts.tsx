@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Plus, Package, Search, Edit, BarChart3 } from "lucide-react";
+import { ArrowLeft, Plus, Package, Search, Edit, BarChart3, RefreshCw } from "lucide-react";
 
 const PRODUCT_TYPES = [
   { value: "goodie",          label: "Goodie" },
@@ -71,6 +71,14 @@ export default function AdminInventoryProducts() {
   const updateProduct = trpc.inventory.products.update.useMutation({
     onSuccess: () => { toast.success("Produit mis à jour"); setEditingId(null); setForm(emptyForm); refetch(); },
     onError: (e) => toast.error(e.message),
+  });
+  const syncAllCatalogs = trpc.inventory.products.syncAllCatalogs.useMutation({
+    onSuccess: (result) => {
+      toast.success(`Synchronisation terminée : ${result.synced} produit(s) importé(s)${result.errors > 0 ? `, ${result.errors} erreur(s)` : ''}`);
+      refetch();
+      overview.refetch();
+    },
+    onError: (e) => toast.error(`Erreur synchronisation : ${e.message}`),
   });
 
   // Helpers
@@ -161,6 +169,14 @@ export default function AdminInventoryProducts() {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            variant="outline"
+            onClick={() => syncAllCatalogs.mutate()}
+            disabled={syncAllCatalogs.isPending}
+          >
+            <RefreshCw className={`h-4 w-4 mr-1 ${syncAllCatalogs.isPending ? 'animate-spin' : ''}`} />
+            {syncAllCatalogs.isPending ? 'Synchronisation...' : 'Sync catalogues'}
+          </Button>
           <Button onClick={() => { setShowCreate(true); setEditingId(null); setForm(emptyForm); }}>
             <Plus className="h-4 w-4 mr-1" /> Nouveau produit
           </Button>

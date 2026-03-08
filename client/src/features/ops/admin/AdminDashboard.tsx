@@ -360,6 +360,43 @@ const sections: SectionDefinition[] = [
     ],
   },
   {
+    title: "Gestion de stock",
+    modules: [
+      {
+        label: "Gestion de stock",
+        description: "Suivi multi-niveaux du stock : global, buffer événement et points de vente",
+        route: "/admin/inventory",
+        icon: Package,
+        iconColor: "text-green-700",
+        iconBg: "bg-green-100",
+        allowedRoles: [
+          "admin",
+          "super_admin",
+          "admin_ops",
+          "admin_boutique",
+          "admin_patisserie",
+          "admin_terroir",
+        ],
+      },
+      {
+        label: "Produits & Stock",
+        description: "Catalogue des produits stockables avec niveaux de stock par emplacement",
+        route: "/admin/inventory/products",
+        icon: Package,
+        iconColor: "text-green-700",
+        iconBg: "bg-green-100",
+        allowedRoles: [
+          "admin",
+          "super_admin",
+          "admin_ops",
+          "admin_boutique",
+          "admin_patisserie",
+          "admin_terroir",
+        ],
+      },
+    ],
+  },
+  {
     title: "Système",
     modules: [
       {
