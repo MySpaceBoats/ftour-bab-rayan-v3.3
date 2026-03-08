@@ -67,7 +67,7 @@ export default function AdminInventoryProducts() {
     onSuccess: () => { toast.success("Produit mis à jour"); setEditingId(null); setForm(emptyForm); refetch(); },
     onError: (e) => toast.error(e.message),
   });
-  const syncAllCatalogs = trpc.inventory.products.syncAllCatalogs.useMutation({
+  const syncAllCatalogs = trpc.inventory.syncAllCatalogs.useMutation({
     onSuccess: (result) => {
       toast.success(`Synchronisation terminée : ${result.synced} produit(s) importé(s)${result.errors > 0 ? `, ${result.errors} erreur(s)` : ''}`);
       refetch();
