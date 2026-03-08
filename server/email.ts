@@ -626,6 +626,78 @@ export function generateDonationConfirmationEmail(data: DonationEmailData): { su
 }
 
 /**
+ * Email de confirmation de réception de don (validé par l'admin)
+ */
+export interface DonationReceivedEmailData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  amount: number;
+  paymentMethod: 'transfer' | 'on_site' | 'cheque' | string;
+  donationReference: string;
+}
+
+export function generateDonationReceivedEmail(data: DonationReceivedEmailData): { subject: string; html: string } {
+  const paymentMethodLabel =
+    data.paymentMethod === 'transfer' ? 'virement bancaire'
+    : data.paymentMethod === 'cheque' ? 'chèque'
+    : 'espèces';
+
+  const content = `
+    <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
+      ✅ Votre don a bien été reçu !
+    </h2>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Cher(e) <strong>${data.firstName} ${data.lastName}</strong>,
+    </p>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Nous avons bien reçu et enregistré votre don. Merci infiniment pour votre générosité et votre soutien à l'association Bab Rayan. Votre geste contribue directement au bien-être des enfants et des familles que nous accompagnons.
+    </p>
+
+    <!-- Montant -->
+    <div style="background-color: #dcfce7; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; border: 2px solid #16a34a;">
+      <p style="margin: 0; color: #166534; font-size: 14px; font-weight: 600;">DON REÇU ET CONFIRMÉ</p>
+      <p style="margin: 10px 0 0 0; color: #166534; font-size: 36px; font-weight: bold;">
+        ${data.amount} MAD
+      </p>
+      <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;">
+        Référence : <strong>${data.donationReference}</strong>
+      </p>
+      <p style="margin: 6px 0 0 0; color: #6b7280; font-size: 14px;">
+        Mode de paiement : <strong>${paymentMethodLabel}</strong>
+      </p>
+    </div>
+
+    <!-- Impact -->
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f3f4f6; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #374151; margin: 0 0 15px 0; font-size: 18px;">💚 Votre don en action</h3>
+          <ul style="margin: 0; padding-left: 20px; color: #374151;">
+            <li style="margin-bottom: 8px;">Repas Ftour pour les enfants et familles</li>
+            <li style="margin-bottom: 8px;">Programmes éducatifs et de formation</li>
+            <li style="margin-bottom: 8px;">Accompagnement social des familles</li>
+            <li style="margin-bottom: 8px;">Activités culturelles et sportives</li>
+          </ul>
+        </td>
+      </tr>
+    </table>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">
+      Que Allah vous récompense pour votre générosité.<br>
+      <strong>L'équipe Ftour Bab Rayan</strong>
+    </p>
+  `;
+
+  return {
+    subject: `✅ Don reçu - Merci pour votre soutien ! - Ftour Bab Rayan`,
+    html: baseTemplate(content),
+  };
+}
+
+/**
  * Email de notification pour le formulaire de contact
  */
 export interface ContactEmailData {
