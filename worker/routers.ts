@@ -7005,7 +7005,14 @@ const terroirModuleRouter = router({
       .eq("is_active", true)
       .order("sort_order", { ascending: true });
 
-    if (!joinQuery.error) return joinQuery.data || [];
+    if (!joinQuery.error) {
+      return (joinQuery.data || []).map((product: any) => ({
+        ...product,
+        terroir_product_variants: (product.terroir_product_variants || []).filter(
+          (v: any) => v.is_active !== false
+        ),
+      }));
+    }
 
     const { data: products, error: productsError } = await supabase
       .from("terroir_products")
@@ -7028,7 +7035,7 @@ const terroirModuleRouter = router({
       .select("*")
       .in("product_id", productIds)
       .eq("is_active", true)
-      .order("sort_order", { ascending: true });
+      .order("id", { ascending: true });
 
     if (variantsError) {
       throw new TRPCError({
