@@ -2267,7 +2267,7 @@ export interface DonationData {
   donorEmail: string;
   donorPhone?: string;
   amount: number;
-  paymentMethod: 'transfer' | 'cheque' | 'cash';
+  paymentMethod: 'transfer' | 'on_site';
   message?: string;
   isAnonymous?: boolean;
   acceptsUpdates?: boolean;
