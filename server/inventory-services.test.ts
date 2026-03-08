@@ -382,4 +382,73 @@ describe('inventory-services unit tests', () => {
       ]);
     });
   });
+
+  // ----------------------------------------------------------
+  // recordStockEntry
+  // ----------------------------------------------------------
+  describe('recordStockEntry', () => {
+    it('should refuse invalid quantity', async () => {
+      const { recordStockEntry } = await import('./inventory-services');
+      await expect(recordStockEntry({ productId: 1, qty: 0, source: 'QR_STOCK_ENTRY' })).rejects.toThrow('Quantité invalide');
+    });
+
+    it('should add stock on global location and tag movement source QR_STOCK_ENTRY', async () => {
+      fakeClient.rpc = vi.fn().mockResolvedValue({ data: 501, error: null });
+
+      fakeClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'inventory_products') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: { id: 1, stock_entry_qr_enabled: true, stock_entry_qr_slug: 'stk_1_abc' }, error: null }),
+            maybeSingle: vi.fn().mockResolvedValue({ data: { id: 1, stock_entry_qr_enabled: true, stock_entry_qr_slug: 'stk_1_abc' }, error: null }),
+          };
+        }
+        if (table === 'inventory_locations') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: { id: 9, type: 'GLOBAL', is_active: true }, error: null }),
+          };
+        }
+        if (table === 'inventory_stock_balances') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({ data: { quantity_on_hand: 77 }, error: null }),
+          };
+        }
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: null, error: null }),
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        };
+      });
+
+      const { recordStockEntry } = await import('./inventory-services');
+      const res = await recordStockEntry({
+        productId: 1,
+        qty: 12,
+        entryType: 'PURCHASE_IN',
+        userId: 42,
+        source: 'QR_STOCK_ENTRY',
+        note: 'Reception lot A',
+      });
+
+      expect(fakeClient.rpc).toHaveBeenCalledWith('inventory_add_stock', expect.objectContaining({
+        p_product_id: 1,
+        p_location_id: 9,
+        p_quantity: 12,
+        p_movement_type: 'PURCHASE_IN',
+        p_reference_type: 'QR_STOCK_ENTRY',
+        p_reference_id: 'stk_1_abc',
+      }));
+      expect(res.movementId).toBe(501);
+      expect(res.newGlobalBalance).toBe(77);
+    });
+  });
+
 });

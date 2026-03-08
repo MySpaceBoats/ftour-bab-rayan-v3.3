@@ -1,6 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import { router, protectedProcedure } from './_core/trpc';
+import { router, protectedProcedure, publicProcedure } from './_core/trpc';
 import * as inv from './inventory-services';
 
 // ============================================================
@@ -29,6 +29,7 @@ const movementTypeEnum = z.enum([
   'TRANSFER_OUT', 'TRANSFER_IN', 'SALE', 'RETURN_IN', 'RETURN_OUT',
   'ADJUSTMENT_PLUS', 'ADJUSTMENT_MINUS',
 ]);
+const stockEntryTypeEnum = z.enum(['INITIAL_LOAD', 'PURCHASE_IN', 'DONATION_IN', 'PRODUCTION_IN']);
 
 // ============================================================
 // ROUTER
@@ -394,6 +395,101 @@ export const inventoryRouter = router({
         } catch (e: any) {
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
         }
+      }),
+  }),
+
+
+
+  // ----------------------------------------------------------
+  // QR STOCK ENTRY (flux logistique séparé du QR de vente)
+  // ----------------------------------------------------------
+
+  stockEntry: router({
+    listProducts: inventoryAdminProcedure
+      .input(z.object({
+        search: z.string().optional(),
+        isActive: z.boolean().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        return inv.listStockEntryProducts(input);
+      }),
+
+    getProductDetail: inventoryAdminProcedure
+      .input(z.object({ productId: z.number().int().positive() }))
+      .query(async ({ input }) => {
+        return inv.getStockEntryProductDetail(input.productId);
+      }),
+
+    getBySlug: publicProcedure
+      .input(z.object({ slug: z.string().min(6).max(140) }))
+      .query(async ({ input }) => {
+        try {
+          return await inv.getStockEntryBySlug(input.slug);
+        } catch (e: any) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: e.message });
+        }
+      }),
+
+    ensureQr: inventoryAdminProcedure
+      .input(z.object({ productId: z.number().int().positive() }))
+      .mutation(async ({ input }) => {
+        try {
+          const slug = await inv.ensureStockEntryQrSlug(input.productId);
+          return { slug };
+        } catch (e: any) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: e.message });
+        }
+      }),
+
+    regenerateQr: inventoryAdminProcedure
+      .input(z.object({ productId: z.number().int().positive() }))
+      .mutation(async ({ input }) => {
+        try {
+          const slug = await inv.regenerateStockEntryQrSlug(input.productId);
+          return { slug };
+        } catch (e: any) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: e.message });
+        }
+      }),
+
+    setQrEnabled: inventoryAdminProcedure
+      .input(z.object({ productId: z.number().int().positive(), enabled: z.boolean() }))
+      .mutation(async ({ input }) => {
+        try {
+          return await inv.setStockEntryQrEnabled(input.productId, input.enabled);
+        } catch (e: any) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: e.message });
+        }
+      }),
+
+    submit: inventoryAdminProcedure
+      .input(z.object({
+        productId: z.number().int().positive(),
+        qty: z.number().int().positive(),
+        entryType: stockEntryTypeEnum.optional(),
+        note: z.string().max(500).optional(),
+        reason: z.string().max(500).optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        try {
+          return await inv.recordStockEntry({
+            productId: input.productId,
+            qty: input.qty,
+            entryType: input.entryType,
+            note: input.note,
+            reason: input.reason,
+            userId: ctx.user?.id,
+            source: 'QR_STOCK_ENTRY',
+          });
+        } catch (e: any) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: e.message });
+        }
+      }),
+
+    history: inventoryAdminProcedure
+      .input(z.object({ limit: z.number().int().min(1).max(300).optional() }).optional())
+      .query(async ({ input }) => {
+        return inv.getQrStockEntryHistory(input?.limit ?? 100);
       }),
   }),
 
