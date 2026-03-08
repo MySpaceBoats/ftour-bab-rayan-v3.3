@@ -37,6 +37,18 @@ const stockEntryTypeEnum = z.enum(['INITIAL_LOAD', 'PURCHASE_IN', 'DONATION_IN',
 
 export const inventoryRouter = router({
 
+  // Backward-compatible endpoint kept at the inventory root.
+  // Some clients call inventory.syncAllCatalogs while others call
+  // inventory.products.syncAllCatalogs.
+  syncAllCatalogs: inventoryAdminProcedure
+    .mutation(async () => {
+      try {
+        return await inv.syncAllCatalogProducts();
+      } catch (e: any) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+      }
+    }),
+
   // ----------------------------------------------------------
   // PRODUCTS
   // ----------------------------------------------------------
