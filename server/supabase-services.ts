@@ -2352,6 +2352,38 @@ export async function getAllDonationsSupabase() {
   })) || [];
 }
 
+export async function getDonationByIdSupabase(donationId: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+
+  const { data: d, error } = await client
+    .from('donations')
+    .select('*')
+    .eq('id', donationId)
+    .single();
+
+  if (error) {
+    console.error('[Donations] Error fetching donation by id:', error.message, error.code);
+    throw error;
+  }
+
+  return {
+    id: d.id,
+    donationReference: d.donation_reference ?? d.donationReference,
+    donorName: d.donor_name ?? d.donorName,
+    donorEmail: d.donor_email ?? d.donorEmail,
+    donorPhone: d.donor_phone ?? d.donorPhone,
+    amount: parseFloat(d.amount) || 0,
+    paymentMethod: d.payment_method ?? d.paymentMethod,
+    status: d.status ?? d.donationStatus,
+    message: d.message,
+    isAnonymous: d.is_anonymous ?? d.isAnonymous ?? false,
+    acceptsUpdates: d.accepts_updates ?? d.acceptsUpdates ?? false,
+    processedBy: d.processed_by ?? d.processedBy,
+    createdAt: new Date(d.created_at ?? d.createdAt),
+  };
+}
+
 export async function markDonationReceivedSupabase(donationId: number, processedBy?: number) {
   const client = getSupabaseAdminClient();
   if (!client) throw new Error('Supabase not configured');

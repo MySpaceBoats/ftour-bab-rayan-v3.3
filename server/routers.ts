@@ -11,6 +11,7 @@ import {
   generateVolunteerConfirmationEmail,
   generateOrderConfirmationEmail,
   generateDonationConfirmationEmail,
+  generateDonationReceivedEmail,
   generateContactNotificationEmail,
   generateGroupRegistrationEmail,
   generateGroupRefusalEmail,
@@ -2283,6 +2284,30 @@ const donationsRouter = router({
         input.status,
         ctx.user?.id
       );
+
+      // Envoyer un email de confirmation quand le don passe au statut "reçu"
+      if (input.status === "received") {
+        try {
+          const donation = await supabaseServices.getDonationByIdSupabase(input.donationId);
+          const nameParts = donation.donorName.split(" ");
+          const emailData = generateDonationReceivedEmail({
+            firstName: nameParts[0] || donation.donorName,
+            lastName: nameParts.slice(1).join(" ") || "",
+            email: donation.donorEmail,
+            amount: donation.amount,
+            paymentMethod: donation.paymentMethod,
+            donationReference: donation.donationReference,
+          });
+          await sendEmail({
+            to: donation.donorEmail,
+            subject: emailData.subject,
+            html: emailData.html,
+          });
+        } catch (error) {
+          console.error("[Donation] Email de confirmation de réception échoué:", error);
+        }
+      }
+
       return { success: true };
     }),
 
@@ -2293,6 +2318,28 @@ const donationsRouter = router({
         input.donationId,
         ctx.user?.id
       );
+
+      // Envoyer un email de confirmation de réception
+      try {
+        const donation = await supabaseServices.getDonationByIdSupabase(input.donationId);
+        const nameParts = donation.donorName.split(" ");
+        const emailData = generateDonationReceivedEmail({
+          firstName: nameParts[0] || donation.donorName,
+          lastName: nameParts.slice(1).join(" ") || "",
+          email: donation.donorEmail,
+          amount: donation.amount,
+          paymentMethod: donation.paymentMethod,
+          donationReference: donation.donationReference,
+        });
+        await sendEmail({
+          to: donation.donorEmail,
+          subject: emailData.subject,
+          html: emailData.html,
+        });
+      } catch (error) {
+        console.error("[Donation] Email de confirmation de réception échoué:", error);
+      }
+
       return { success: true };
     }),
 
