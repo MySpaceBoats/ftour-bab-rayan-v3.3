@@ -353,7 +353,7 @@ export interface DonationEmailData {
   donorEmail: string;
   donationReference: string;
   amount: string;
-  paymentMethod: 'transfer' | 'on_site' | 'cheque';
+  paymentMethod: 'transfer' | 'cheque' | 'cash';
   message?: string;
 }
 

@@ -31,7 +31,7 @@ export default function Dons() {
     donorPhone: "",
     amount: "",
     customAmount: "",
-    paymentMethod: "transfer" as "transfer" | "on_site" | "cheque",
+    paymentMethod: "transfer" as "transfer" | "cash" | "cheque",
     message: "",
     isAnonymous: false,
     acceptsUpdates: false,
@@ -40,7 +40,7 @@ export default function Dons() {
   const [donationSuccess, setDonationSuccess] = useState<{
     reference: string;
     amount: string;
-    paymentMethod: "transfer" | "on_site" | "cheque";
+    paymentMethod: "transfer" | "cash" | "cheque";
   } | null>(null);
 
   const createDonationMutation = trpc.donations.create.useMutation({
@@ -276,7 +276,7 @@ export default function Dons() {
                       <Label>{t.donations.paymentMethod} *</Label>
                       <RadioGroup
                         value={formData.paymentMethod}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value as "transfer" | "on_site" | "cheque" }))}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value as "transfer" | "cash" | "cheque" }))}
                         className="grid md:grid-cols-3 gap-4"
                       >
                         <div className={`flex items-center space-x-3 border rounded-lg p-4 cursor-pointer transition-colors ${formData.paymentMethod === 'transfer' ? 'border-primary bg-primary/5' : 'border-border'}`}>
@@ -289,9 +289,9 @@ export default function Dons() {
                             </div>
                           </Label>
                         </div>
-                        <div className={`flex items-center space-x-3 border rounded-lg p-4 cursor-pointer transition-colors ${formData.paymentMethod === 'on_site' ? 'border-primary bg-primary/5' : 'border-border'}`}>
-                          <RadioGroupItem value="on_site" id="on_site" />
-                          <Label htmlFor="on_site" className="flex items-center gap-3 cursor-pointer flex-1">
+                        <div className={`flex items-center space-x-3 border rounded-lg p-4 cursor-pointer transition-colors ${formData.paymentMethod === 'cash' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                          <RadioGroupItem value="cash" id="cash" />
+                          <Label htmlFor="cash" className="flex items-center gap-3 cursor-pointer flex-1">
                             <Banknote className="h-5 w-5 text-muted-foreground" />
                             <div>
                               <div className="font-medium">{t.donations.cash}</div>

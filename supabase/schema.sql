@@ -192,7 +192,7 @@ CREATE TABLE IF NOT EXISTS donations (
   donor_email VARCHAR(320) NOT NULL,
   donor_phone VARCHAR(20),
   amount DECIMAL(10,2) NOT NULL,
-  payment_method VARCHAR(20) NOT NULL CHECK (payment_method IN ('transfer', 'on_site')),
+  payment_method VARCHAR(20) NOT NULL CHECK (payment_method IN ('transfer', 'cheque', 'cash')),
   status VARCHAR(20) NOT NULL DEFAULT 'promised' CHECK (status IN ('promised', 'pending', 'received', 'cancelled')),
   message TEXT,
   is_anonymous BOOLEAN NOT NULL DEFAULT false,
