@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { inventoryRouter } from "./inventory-router";
 import {
   sendEmail,
   generateVolunteerConfirmationEmail,
@@ -5367,6 +5368,7 @@ export const appRouter = router({
   restaurantModule: restaurantModuleRouter,
   terroirModule: terroirModuleRouter,
   volunteerProfile: volunteerProfileRouter,
+  inventory: inventoryRouter,
 });
 
 // ============================================
