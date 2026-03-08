@@ -33,12 +33,7 @@ const UNITS = [
 const emptyForm = {
   productType: "goodie",
   name: "",
-  sku: "",
-  barcode: "",
-  category: "",
   unit: "piece",
-  sourceProductId: "",
-  sourceVariantId: "",
 };
 
 export default function AdminInventoryProducts() {
@@ -102,12 +97,12 @@ export default function AdminInventoryProducts() {
     const payload = {
       productType: form.productType,
       name: form.name,
-      sku: form.sku || null,
-      barcode: form.barcode || null,
-      category: form.category || null,
+      sku: null,
+      barcode: null,
+      category: form.name || null,
       unit: form.unit,
-      sourceProductId: form.sourceProductId ? parseInt(form.sourceProductId) : null,
-      sourceVariantId: form.sourceVariantId ? parseInt(form.sourceVariantId) : null,
+      sourceProductId: null,
+      sourceVariantId: null,
     };
     if (editingId !== null) {
       updateProduct.mutate({ id: editingId, ...payload });
@@ -120,12 +115,7 @@ export default function AdminInventoryProducts() {
     setForm({
       productType: p.product_type,
       name: p.name,
-      sku: p.sku ?? "",
-      barcode: p.barcode ?? "",
-      category: p.category ?? "",
       unit: p.unit ?? "piece",
-      sourceProductId: p.source_product_id?.toString() ?? "",
-      sourceVariantId: p.source_variant_id?.toString() ?? "",
     });
     setEditingId(p.id);
     setShowCreate(true);
@@ -278,18 +268,8 @@ export default function AdminInventoryProducts() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>SKU</Label>
-                  <Input value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))} placeholder="SKU-001" />
-                </div>
-                <div>
-                  <Label>Code-barres</Label>
-                  <Input value={form.barcode} onChange={e => setForm(f => ({ ...f, barcode: e.target.value }))} placeholder="1234567890" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Catégorie</Label>
-                  <Input value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="Ex: huile, confiserie..." />
+                  <Label>Nom du produit</Label>
+                  <Input value={form.name} disabled placeholder="Nom du produit" />
                 </div>
                 <div>
                   <Label>Unité</Label>
@@ -299,16 +279,6 @@ export default function AdminInventoryProducts() {
                       {UNITS.map(u => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>ID produit source</Label>
-                  <Input type="number" value={form.sourceProductId} onChange={e => setForm(f => ({ ...f, sourceProductId: e.target.value }))} placeholder="Ex: 12" />
-                </div>
-                <div>
-                  <Label>ID variante source</Label>
-                  <Input type="number" value={form.sourceVariantId} onChange={e => setForm(f => ({ ...f, sourceVariantId: e.target.value }))} placeholder="Ex: 5" />
                 </div>
               </div>
               <div className="flex justify-end gap-2 pt-2">
