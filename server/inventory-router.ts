@@ -3,6 +3,15 @@ import { z } from 'zod';
 import { router, protectedProcedure } from './_core/trpc';
 import * as inv from './inventory-services';
 
+// Allow only super_admin and admin for destructive bootstrap operation
+const bootstrapProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const allowed = ['admin', 'super_admin', 'admin_ops'];
+  if (!ctx.user || !allowed.includes(ctx.user.role)) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Réservé aux administrateurs' });
+  }
+  return next({ ctx });
+});
+
 // ============================================================
 // ROLE GUARD — admin + toutes les variantes admin
 // ============================================================
@@ -428,6 +437,18 @@ export const inventoryRouter = router({
           throw new TRPCError({ code: 'BAD_REQUEST', message: e.message });
         }
       }),
+  }),
+
+  // ----------------------------------------------------------
+  // BOOTSTRAP
+  // ----------------------------------------------------------
+
+  bootstrap: bootstrapProcedure.mutation(async ({ ctx }) => {
+    try {
+      return await inv.bootstrapInventory(ctx.user?.id);
+    } catch (e: any) {
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+    }
   }),
 });
 

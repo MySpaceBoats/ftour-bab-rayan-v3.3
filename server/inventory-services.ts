@@ -705,3 +705,228 @@ export async function getInventoryCountWithLines(countId: number) {
   if (error) throw new Error(parseError(error));
   return data;
 }
+
+// ============================================================
+// BOOTSTRAP — Initialisation depuis les produits existants
+// ============================================================
+
+/**
+ * Synchronise tous les produits existants (goodies, pastries, terroir)
+ * dans le catalogue inventory_products, crée l'événement "Ftour Bab Rayan",
+ * le buffer intermédiaire et les points de vente Stand Bénévole / Stand Restaurant.
+ */
+export async function bootstrapInventory(performedBy?: number) {
+  const client = db();
+
+  const results = {
+    products: { synced: 0, errors: [] as string[] },
+    event: null as any,
+    buffer: null as any,
+    pos: [] as any[],
+  };
+
+  // ----------------------------------------------------------
+  // 1. Synchroniser les goodies
+  // ----------------------------------------------------------
+  const { data: goodies } = await client
+    .from('goodies')
+    .select('id, name, category, is_active')
+    .eq('is_active', true);
+
+  for (const g of goodies ?? []) {
+    try {
+      await syncInventoryProduct({
+        productType: 'goodie',
+        sourceProductId: g.id,
+        name: g.name,
+        category: g.category ?? null,
+      });
+      results.products.synced++;
+    } catch (e: any) {
+      results.products.errors.push(`Goodie #${g.id} "${g.name}": ${e.message}`);
+    }
+  }
+
+  // ----------------------------------------------------------
+  // 2. Synchroniser les variantes de goodies
+  // ----------------------------------------------------------
+  const { data: variants } = await client
+    .from('goodie_variants')
+    .select('id, goodie_id, size, color, is_available, goodies(name, category)')
+    .eq('is_available', true);
+
+  for (const v of variants ?? []) {
+    const parent = (v as any).goodies;
+    const variantLabel = [v.size, v.color].filter(Boolean).join(' / ');
+    const name = `${parent?.name ?? `Goodie #${v.goodie_id}`}${variantLabel ? ` — ${variantLabel}` : ''}`;
+    try {
+      await syncInventoryProduct({
+        productType: 'goodie_variant',
+        sourceProductId: v.goodie_id,
+        sourceVariantId: v.id,
+        name,
+        category: parent?.category ?? null,
+      });
+      results.products.synced++;
+    } catch (e: any) {
+      results.products.errors.push(`Variante #${v.id}: ${e.message}`);
+    }
+  }
+
+  // ----------------------------------------------------------
+  // 3. Synchroniser les pâtisseries
+  // ----------------------------------------------------------
+  const { data: pastries } = await client
+    .from('pastries')
+    .select('id, name, category, active')
+    .eq('active', true);
+
+  for (const p of pastries ?? []) {
+    try {
+      await syncInventoryProduct({
+        productType: 'pastry',
+        sourceProductId: p.id,
+        name: p.name,
+        category: (p as any).category ?? null,
+      });
+      results.products.synced++;
+    } catch (e: any) {
+      results.products.errors.push(`Pâtisserie #${p.id} "${p.name}": ${e.message}`);
+    }
+  }
+
+  // ----------------------------------------------------------
+  // 4. Synchroniser les produits terroir (avec variantes)
+  // ----------------------------------------------------------
+  const { data: terroirProducts } = await client
+    .from('terroir_products')
+    .select('id, name, category, is_active')
+    .eq('is_active', true);
+
+  for (const tp of terroirProducts ?? []) {
+    try {
+      await syncInventoryProduct({
+        productType: 'terroir_product',
+        sourceProductId: tp.id,
+        name: tp.name,
+        category: tp.category ?? null,
+      });
+      results.products.synced++;
+    } catch (e: any) {
+      results.products.errors.push(`Terroir #${tp.id} "${tp.name}": ${e.message}`);
+    }
+  }
+
+  const { data: terroirVariants } = await client
+    .from('terroir_product_variants')
+    .select('id, product_id, label, sku, is_active, terroir_products(name, category)')
+    .eq('is_active', true);
+
+  for (const tv of terroirVariants ?? []) {
+    const parent = (tv as any).terroir_products;
+    const name = `${parent?.name ?? `Terroir #${tv.product_id}`} — ${tv.label}`;
+    try {
+      await syncInventoryProduct({
+        productType: 'terroir_variant',
+        sourceProductId: tv.product_id,
+        sourceVariantId: tv.id,
+        name,
+        sku: tv.sku ?? null,
+        category: parent?.category ?? null,
+      });
+      results.products.synced++;
+    } catch (e: any) {
+      results.products.errors.push(`Variante terroir #${tv.id}: ${e.message}`);
+    }
+  }
+
+  // ----------------------------------------------------------
+  // 5. Créer l'événement "Ftour Bab Rayan" (si absent)
+  // ----------------------------------------------------------
+  const { data: existingEvent } = await client
+    .from('inventory_events')
+    .select('*')
+    .ilike('name', 'Ftour Bab Rayan%')
+    .maybeSingle();
+
+  let event = existingEvent;
+  if (!event) {
+    const { data: newEvent, error: evtErr } = await client
+      .from('inventory_events')
+      .insert({
+        name: 'Ftour Bab Rayan',
+        description: 'Événement principal — stock intermédiaire et points de vente',
+        status: 'open',
+      })
+      .select()
+      .single();
+    if (evtErr) throw new Error(`Création événement: ${parseError(evtErr)}`);
+    event = newEvent;
+  }
+  results.event = event;
+
+  // ----------------------------------------------------------
+  // 6. Créer le buffer de l'événement (si absent)
+  // ----------------------------------------------------------
+  const bufferCode = `BUFFER-FBR-${event.id}`;
+  const { data: existingBuffer } = await client
+    .from('inventory_locations')
+    .select('*')
+    .eq('code', bufferCode)
+    .maybeSingle();
+
+  let buffer = existingBuffer;
+  if (!buffer) {
+    const { data: newBuffer, error: bufErr } = await client
+      .from('inventory_locations')
+      .insert({
+        type: 'EVENT_BUFFER',
+        code: bufferCode,
+        name: 'Stock Intermédiaire — Ftour Bab Rayan',
+        event_id: event.id,
+        is_active: true,
+      })
+      .select()
+      .single();
+    if (bufErr) throw new Error(`Création buffer: ${parseError(bufErr)}`);
+    buffer = newBuffer;
+  }
+  results.buffer = buffer;
+
+  // ----------------------------------------------------------
+  // 7. Créer les points de vente (si absents)
+  // ----------------------------------------------------------
+  const posToCreate = [
+    { code: `POS-BENEVOLE-FBR-${event.id}`, name: 'Stand Bénévole' },
+    { code: `POS-RESTAURANT-FBR-${event.id}`, name: 'Stand Restaurant' },
+  ];
+
+  for (const pos of posToCreate) {
+    const { data: existingPos } = await client
+      .from('inventory_locations')
+      .select('*')
+      .eq('code', pos.code)
+      .maybeSingle();
+
+    if (existingPos) {
+      results.pos.push(existingPos);
+    } else {
+      const { data: newPos, error: posErr } = await client
+        .from('inventory_locations')
+        .insert({
+          type: 'POS',
+          code: pos.code,
+          name: pos.name,
+          event_id: event.id,
+          parent_location_id: buffer.id,
+          is_active: true,
+        })
+        .select()
+        .single();
+      if (posErr) throw new Error(`Création POS "${pos.name}": ${parseError(posErr)}`);
+      results.pos.push(newPos);
+    }
+  }
+
+  return results;
+}

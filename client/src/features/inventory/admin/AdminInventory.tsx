@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,7 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import RequireRole from "@/components/RequireRole";
 import {
   Package, Warehouse, MapPin, ArrowLeftRight, BarChart3,
-  AlertTriangle, TrendingDown, History, Plus,
+  AlertTriangle, TrendingDown, History, Zap, CheckCircle2,
+  ChevronDown, ChevronUp, XCircle,
 } from "lucide-react";
 
 function StockLevelCard({
@@ -31,12 +34,26 @@ function StockLevelCard({
 }
 
 export default function AdminInventory() {
-  const { data: overview, isLoading } = trpc.inventory.stock.overview.useQuery();
-  const { data: movements } = trpc.inventory.movements.list.useQuery({
+  const [bootstrapResult, setBootstrapResult] = useState<any>(null);
+  const [showBootstrapErrors, setShowBootstrapErrors] = useState(false);
+
+  const { data: overview, isLoading, refetch: refetchOverview } = trpc.inventory.stock.overview.useQuery();
+  const { data: movements, refetch: refetchMovements } = trpc.inventory.movements.list.useQuery({
     limit: 10,
     offset: 0,
   });
-  const { data: products } = trpc.inventory.products.list.useQuery({ isActive: true });
+  const { data: products, refetch: refetchProducts } = trpc.inventory.products.list.useQuery({ isActive: true });
+
+  const bootstrap = trpc.inventory.bootstrap.useMutation({
+    onSuccess: (data) => {
+      setBootstrapResult(data);
+      toast.success(`Bootstrap terminé : ${data.products.synced} produits synchronisés`);
+      refetchOverview();
+      refetchMovements();
+      refetchProducts();
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   // Aggregation côté client
   const globalQty = (overview ?? [])
@@ -78,6 +95,82 @@ export default function AdminInventory() {
             <Button variant="outline" size="sm">Retour dashboard</Button>
           </Link>
         </div>
+
+        {/* Bootstrap / Setup initial */}
+        <Card className="border-green-200 bg-green-50/50">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="font-semibold text-green-900 flex items-center gap-2">
+                  <Zap className="h-4 w-4" />
+                  Initialisation automatique
+                </p>
+                <p className="text-sm text-green-700 mt-0.5">
+                  Importe tous les produits existants (goodies, pâtisseries, terroir), crée l'événement
+                  <strong> Ftour Bab Rayan</strong> avec son buffer intermédiaire et les points de vente
+                  <strong> Stand Bénévole</strong> et <strong>Stand Restaurant</strong>.
+                  Les entités déjà présentes ne sont pas dupliquées.
+                </p>
+              </div>
+              <Button
+                onClick={() => bootstrap.mutate()}
+                disabled={bootstrap.isPending}
+                className="shrink-0 bg-green-700 hover:bg-green-800 text-white"
+              >
+                {bootstrap.isPending ? "Initialisation..." : "Lancer le setup"}
+              </Button>
+            </div>
+
+            {/* Résultat du bootstrap */}
+            {bootstrapResult && (
+              <div className="mt-4 space-y-2 border-t border-green-200 pt-4">
+                <div className="flex flex-wrap gap-3 text-sm">
+                  <span className="flex items-center gap-1 text-green-800">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <strong>{bootstrapResult.products.synced}</strong> produits synchronisés
+                  </span>
+                  {bootstrapResult.event && (
+                    <span className="flex items-center gap-1 text-green-800">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Événement : <strong>{bootstrapResult.event.name}</strong>
+                    </span>
+                  )}
+                  {bootstrapResult.buffer && (
+                    <span className="flex items-center gap-1 text-green-800">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Buffer : <strong>{bootstrapResult.buffer.name}</strong>
+                    </span>
+                  )}
+                  {(bootstrapResult.pos ?? []).map((p: any) => (
+                    <span key={p.id} className="flex items-center gap-1 text-green-800">
+                      <MapPin className="h-4 w-4" />
+                      POS : <strong>{p.name}</strong>
+                    </span>
+                  ))}
+                </div>
+                {bootstrapResult.products.errors?.length > 0 && (
+                  <div>
+                    <button
+                      className="flex items-center gap-1 text-amber-700 text-xs font-medium"
+                      onClick={() => setShowBootstrapErrors(v => !v)}
+                    >
+                      <XCircle className="h-3.5 w-3.5" />
+                      {bootstrapResult.products.errors.length} erreur(s)
+                      {showBootstrapErrors ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    </button>
+                    {showBootstrapErrors && (
+                      <ul className="mt-1 text-xs text-amber-800 list-disc list-inside space-y-0.5">
+                        {bootstrapResult.products.errors.map((err: string, i: number) => (
+                          <li key={i}>{err}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Navigation rapide */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
