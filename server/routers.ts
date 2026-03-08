@@ -5,6 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { inventoryRouter } from "./inventory-router";
+import * as inv from "./inventory-services";
 import {
   sendEmail,
   generateVolunteerConfirmationEmail,
@@ -1925,6 +1926,17 @@ const goodiesRouter = router({
     )
     .mutation(async ({ input }) => {
       const goodie = await supabaseServices.createGoodieSupabase(input);
+      // Sync to inventory (best-effort, does not block goodie creation)
+      try {
+        await inv.syncInventoryProduct({
+          productType: 'goodie',
+          sourceProductId: goodie.id,
+          name: goodie.name,
+          category: (goodie as any).category ?? null,
+        });
+      } catch (e) {
+        console.error('[Inventory] Failed to sync goodie to inventory:', e);
+      }
       return { id: goodie.id };
     }),
 
@@ -4797,6 +4809,17 @@ const terroirModuleRouter = router({
           code: "INTERNAL_SERVER_ERROR",
           message: error.message,
         });
+      // Sync to inventory (best-effort)
+      try {
+        await inv.syncInventoryProduct({
+          productType: 'terroir_product',
+          sourceProductId: data.id,
+          name: data.name,
+          category: input.category ?? null,
+        });
+      } catch (e) {
+        console.error('[Inventory] Failed to sync terroir product:', e);
+      }
       return data;
     }),
 
@@ -4878,6 +4901,25 @@ const terroirModuleRouter = router({
           code: "INTERNAL_SERVER_ERROR",
           message: error.message,
         });
+      // Sync variant to inventory (best-effort)
+      try {
+        // Fetch parent product name for the inventory product name
+        const { data: parentProduct } = await supabase
+          .from('terroir_products')
+          .select('name, category')
+          .eq('id', input.productId)
+          .single();
+        await inv.syncInventoryProduct({
+          productType: 'terroir_variant',
+          sourceProductId: input.productId,
+          sourceVariantId: data.id,
+          name: parentProduct ? `${parentProduct.name} – ${input.label}` : input.label,
+          sku: input.sku ?? null,
+          category: parentProduct?.category ?? null,
+        });
+      } catch (e) {
+        console.error('[Inventory] Failed to sync terroir variant:', e);
+      }
       return data;
     }),
 

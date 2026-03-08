@@ -4,6 +4,7 @@ import { z } from "zod";
 import { sendEmail } from "./email";
 import * as supabaseServices from "./supabase-services";
 import { getSupabaseAdminClient } from "./supabase";
+import * as inv from "./inventory-services";
 
 // ============================================
 // ROLE-BASED PROCEDURES
@@ -82,6 +83,17 @@ export const pastriesRouter = router({
             throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: PASTRIES_TABLE_MISSING_MSG });
           }
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
+        // Sync to inventory (best-effort)
+        try {
+          await inv.syncInventoryProduct({
+            productType: 'pastry',
+            sourceProductId: data.id,
+            name: data.name,
+            category: input.category ?? null,
+          });
+        } catch (e) {
+          console.error('[Inventory] Failed to sync pastry to inventory:', e);
         }
         return data;
       } catch (error: any) {
