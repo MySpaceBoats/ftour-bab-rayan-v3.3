@@ -509,7 +509,7 @@ export interface DonationEmailData {
   lastName: string;
   email: string;
   amount: number;
-  paymentMethod: 'transfer' | 'on_site';
+  paymentMethod: 'transfer' | 'on_site' | 'cheque';
   donationId: string;
   baseUrl: string;
 }
@@ -528,6 +528,25 @@ export function generateDonationConfirmationEmail(data: DonationEmailData): { su
           <p style="margin: 5px 0; color: #374151;"><strong>IBAN :</strong> MA64 007 780 0003 401 000 100 238 97</p>
           <p style="margin: 15px 0 0 0; color: #6b7280; font-size: 14px;">
             <strong>Important :</strong> Mentionnez votre référence <strong>${data.donationId}</strong> dans le motif du virement.
+          </p>
+        </td>
+      </tr>
+    </table>
+  `;
+  } else if (data.paymentMethod === 'cheque') {
+    paymentInstructions = `
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fefce8; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #854d0e; margin: 0 0 15px 0; font-size: 18px;">📝 Paiement par chèque</h3>
+          <p style="margin: 0; color: #374151;">
+            Veuillez envoyer votre chèque à l'ordre de <strong>« Association Bab Rayan »</strong> à l'adresse suivante :
+          </p>
+          <p style="margin: 10px 0; color: #374151;">
+            Association Bab Rayan, 4 rue Bayt Lahm, Quartier Palmier, Casablanca
+          </p>
+          <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;">
+            <strong>Important :</strong> Mentionnez votre référence <strong>${data.donationId}</strong> au dos du chèque.
           </p>
         </td>
       </tr>
