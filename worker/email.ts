@@ -353,7 +353,7 @@ export interface DonationEmailData {
   donorEmail: string;
   donationReference: string;
   amount: string;
-  paymentMethod: 'transfer' | 'on_site';
+  paymentMethod: 'transfer' | 'on_site' | 'cheque';
   message?: string;
 }
 
@@ -368,6 +368,19 @@ export function generateDonationConfirmationEmail(data: DonationEmailData): { su
           <p style="margin: 5px 0; color: #374151;"><strong>RIB :</strong> 007 780 0003851000000217 97</p>
           <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;">
             Merci d'indiquer la référence <strong>${data.donationReference}</strong> dans le motif du virement.
+          </p>
+        </td>
+      </tr>
+    </table>
+  ` : data.paymentMethod === 'cheque' ? `
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f3e8ff; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #6b21a8; margin: 0 0 15px 0; font-size: 18px;">📝 Paiement par chèque</h3>
+          <p style="margin: 5px 0; color: #374151;">Veuillez établir votre chèque à l'ordre de :</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Association Bab Rayan</strong></p>
+          <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;">
+            Mentionnez la référence <strong>${data.donationReference}</strong> au dos du chèque.
           </p>
         </td>
       </tr>
