@@ -4314,7 +4314,7 @@ const terroirModuleRouter = router({
       .select("*")
       .in("product_id", productIds)
       .eq("is_active", true)
-      .order("sort_order", { ascending: true });
+      .order("id", { ascending: true });
 
     if (variantsError)
       throw new TRPCError({
