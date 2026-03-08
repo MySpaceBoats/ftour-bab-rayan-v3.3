@@ -95,6 +95,14 @@ export default function AdminTerroirProducts() {
     onError: (err: any) => toast.error(err.message),
   });
 
+  const deleteProduct = trpc.terroirModule.adminDeleteProduct.useMutation({
+    onSuccess: () => {
+      toast.success("Produit supprimé");
+      refetch();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
   const resetForm = () => {
     setForm({
       name: "",
@@ -526,7 +534,7 @@ export default function AdminTerroirProducts() {
                               <AlertDialogCancel>Annuler</AlertDialogCancel>
                               <AlertDialogAction
                                 className="bg-red-600 hover:bg-red-700"
-                                onClick={() => updateProduct.mutate({ id: product.id, isActive: false })}
+                                onClick={() => deleteProduct.mutate({ id: product.id })}
                               >
                                 Supprimer
                               </AlertDialogAction>
