@@ -8178,7 +8178,120 @@ const inventoryRouter = router({
   products: inventoryProductsRouter,
   locations: inventoryLocationsRouter,
   stock: inventoryStockRouter,
-  movements: inventoryMovementsRouter,
+
+  syncAllCatalogs: adminProcedure.mutation(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+    let synced = 0;
+    let errors = 0;
+    const details: string[] = [];
+
+    // Helper: upsert one catalog item into inventory_products
+    async function syncOne(args: {
+      productType: string;
+      sourceProductId: number;
+      sourceVariantId?: number | null;
+      name: string;
+      sku?: string | null;
+      category?: string | null;
+    }) {
+      let q = supabase
+        .from('inventory_products')
+        .select('id')
+        .eq('product_type', args.productType)
+        .eq('source_product_id', args.sourceProductId);
+      q = args.sourceVariantId
+        ? q.eq('source_variant_id', args.sourceVariantId)
+        : q.is('source_variant_id', null);
+      const { data: existing } = await q.maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from('inventory_products')
+          .update({ name: args.name, sku: args.sku ?? null, category: args.category ?? null })
+          .eq('id', existing.id);
+        if (error) throw new Error(error.message);
+      } else {
+        const { error } = await supabase.from('inventory_products').insert({
+          product_type: args.productType,
+          source_product_id: args.sourceProductId,
+          source_variant_id: args.sourceVariantId ?? null,
+          name: args.name,
+          sku: args.sku ?? null,
+          category: args.category ?? null,
+          unit: 'piece',
+          is_active: true,
+        });
+        if (error) throw new Error(error.message);
+      }
+    }
+
+    // Goodies
+    const { data: goodies } = await supabase.from('goodies').select('id, name, category');
+    for (const g of goodies ?? []) {
+      try {
+        await syncOne({ productType: 'goodie', sourceProductId: g.id, name: g.name, category: g.category ?? null });
+        synced++;
+      } catch (e: any) { errors++; details.push(`goodie#${g.id}: ${e.message}`); }
+    }
+
+    // Goodie variants
+    const { data: goodieVariants } = await supabase
+      .from('goodie_variants')
+      .select('id, goodie_id, name, sku, goodies(name, category)');
+    for (const v of goodieVariants ?? []) {
+      try {
+        const parent = (v as any).goodies;
+        await syncOne({
+          productType: 'goodie_variant',
+          sourceProductId: (v as any).goodie_id,
+          sourceVariantId: v.id,
+          name: parent ? `${parent.name} – ${v.name}` : v.name,
+          sku: v.sku ?? null,
+          category: parent?.category ?? null,
+        });
+        synced++;
+      } catch (e: any) { errors++; details.push(`goodie_variant#${v.id}: ${e.message}`); }
+    }
+
+    // Terroir products
+    const { data: terroirProducts } = await supabase.from('terroir_products').select('id, name, category');
+    for (const t of terroirProducts ?? []) {
+      try {
+        await syncOne({ productType: 'terroir_product', sourceProductId: t.id, name: t.name, category: t.category ?? null });
+        synced++;
+      } catch (e: any) { errors++; details.push(`terroir_product#${t.id}: ${e.message}`); }
+    }
+
+    // Terroir variants
+    const { data: terroirVariants } = await supabase
+      .from('terroir_product_variants')
+      .select('id, product_id, label, sku, terroir_products(name, category)');
+    for (const v of terroirVariants ?? []) {
+      try {
+        const parent = (v as any).terroir_products;
+        await syncOne({
+          productType: 'terroir_variant',
+          sourceProductId: (v as any).product_id,
+          sourceVariantId: v.id,
+          name: parent ? `${parent.name} – ${v.label}` : v.label,
+          sku: v.sku ?? null,
+          category: parent?.category ?? null,
+        });
+        synced++;
+      } catch (e: any) { errors++; details.push(`terroir_variant#${v.id}: ${e.message}`); }
+    }
+
+    // Pastries
+    const { data: pastries } = await supabase.from('pastries').select('id, name, category');
+    for (const p of pastries ?? []) {
+      try {
+        await syncOne({ productType: 'pastry', sourceProductId: p.id, name: p.name, category: p.category ?? null });
+        synced++;
+      } catch (e: any) { errors++; details.push(`pastry#${p.id}: ${e.message}`); }
+    }
+
+    return { synced, errors, details };
+  }),
 });
 
 // ============================================
