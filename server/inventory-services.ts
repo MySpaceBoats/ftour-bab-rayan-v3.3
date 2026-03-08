@@ -362,7 +362,13 @@ export async function getStockEntryBySlug(slug: string) {
 }
 
 export async function listStockEntryProducts(filters?: { search?: string; isActive?: boolean }) {
-  const globalLoc = await getGlobalLocation();
+  // Global location is optional — products still load even if no location is configured yet
+  let globalLoc: { id: number } | null = null;
+  try {
+    globalLoc = await getGlobalLocation();
+  } catch {
+    // No global location configured yet; stock balances will default to 0
+  }
 
   let q = db()
     .from('inventory_products')
@@ -387,11 +393,16 @@ export async function listStockEntryProducts(filters?: { search?: string; isActi
   );
 
   const productIds = rows.map((p: any) => p.id);
-  const { data: balances } = await db()
-    .from('inventory_stock_balances')
-    .select('product_id, quantity_on_hand')
-    .eq('location_id', globalLoc.id)
-    .in('product_id', productIds.length ? productIds : [-1]);
+
+  let balances: Array<{ product_id: number; quantity_on_hand: number }> = [];
+  if (globalLoc) {
+    const { data } = await db()
+      .from('inventory_stock_balances')
+      .select('product_id, quantity_on_hand')
+      .eq('location_id', globalLoc.id)
+      .in('product_id', productIds.length ? productIds : [-1]);
+    balances = data ?? [];
+  }
 
   const { data: qrMovements } = await db()
     .from('inventory_movements')
@@ -400,7 +411,7 @@ export async function listStockEntryProducts(filters?: { search?: string; isActi
     .in('product_id', productIds.length ? productIds : [-1])
     .order('created_at', { ascending: false });
 
-  const byBalance = new Map<number, number>((balances ?? []).map((b: any) => [b.product_id, b.quantity_on_hand]));
+  const byBalance = new Map<number, number>(balances.map((b: any) => [b.product_id, b.quantity_on_hand]));
   const byLastMovement = new Map<number, any>();
   for (const m of qrMovements ?? []) {
     if (!byLastMovement.has(m.product_id)) byLastMovement.set(m.product_id, m);
@@ -416,7 +427,7 @@ export async function listStockEntryProducts(filters?: { search?: string; isActi
     };
   }));
 
-  return { globalLocationId: globalLoc.id, products: normalized };
+  return { globalLocationId: globalLoc?.id ?? null, products: normalized };
 }
 
 export async function getStockEntryProductDetail(productId: number) {

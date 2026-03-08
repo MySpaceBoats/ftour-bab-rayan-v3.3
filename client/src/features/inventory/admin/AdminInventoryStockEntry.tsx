@@ -39,11 +39,12 @@ export default function AdminInventoryStockEntry() {
     link.click();
   };
 
-  const printOne = (slug: string) => {
+  const printOne = async (slug: string) => {
     const url = qrUrl(slug);
+    const dataUrl = await QRCode.toDataURL(url, { margin: 2, width: 320, errorCorrectionLevel: "H" });
     const w = window.open("", "_blank");
     if (!w) return;
-    w.document.write(`<html><body style='font-family:sans-serif;padding:24px'><h2>QR Entrée Stock</h2><img src='https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(url)}'/><p>${url}</p><script>window.print()</script></body></html>`);
+    w.document.write(`<html><body style='font-family:sans-serif;padding:24px'><h2>QR Entrée Stock</h2><img src='${dataUrl}'/><p>${url}</p><script>window.print()</script></body></html>`);
     w.document.close();
   };
 
@@ -85,7 +86,7 @@ export default function AdminInventoryStockEntry() {
                 <div className="flex flex-wrap gap-2 pt-1">
                   <Link href={`/admin/inventory/stock-entry/${p.id}`}><Button size="sm" variant="outline"><Eye className="h-3 w-3 mr-1" />Voir</Button></Link>
                   <Button size="sm" variant="outline" onClick={() => void downloadQr(p.name, p.stock_entry_qr_slug)}>Télécharger</Button>
-                  <Button size="sm" variant="outline" onClick={() => printOne(p.stock_entry_qr_slug)}>Imprimer</Button>
+                  <Button size="sm" variant="outline" onClick={() => void printOne(p.stock_entry_qr_slug)}>Imprimer</Button>
                   <Button size="sm" variant="outline" onClick={() => regenerate.mutate({ productId: p.id })}><RefreshCw className="h-3 w-3 mr-1" />Régénérer</Button>
                   <Button size="sm" variant="outline" onClick={() => toggle.mutate({ productId: p.id, enabled: !p.stock_entry_qr_enabled })}><Power className="h-3 w-3 mr-1" />{p.stock_entry_qr_enabled ? "Désactiver" : "Activer"}</Button>
                 </div>

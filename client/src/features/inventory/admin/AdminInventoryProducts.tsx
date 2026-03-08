@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Plus, Package, Search, Edit, BarChart3, RefreshCw } from "lucide-react";
+import { ArrowLeft, Plus, Package, Search, Edit, BarChart3, RefreshCw, QrCode } from "lucide-react";
 
 const PRODUCT_TYPES = [
   { value: "goodie",          label: "Goodie" },
@@ -235,6 +235,11 @@ export default function AdminInventoryProducts() {
                             <Button variant="ghost" size="sm" onClick={() => openEdit(p)}>
                               <Edit className="h-3.5 w-3.5" />
                             </Button>
+                            <Link href={`/admin/inventory/stock-entry/${p.id}`}>
+                              <Button variant="ghost" size="sm" title="QR entrée stock">
+                                <QrCode className="h-3.5 w-3.5" />
+                              </Button>
+                            </Link>
                           </div>
                         </TableCell>
                       </TableRow>
