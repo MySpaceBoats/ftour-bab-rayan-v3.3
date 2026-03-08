@@ -31,6 +31,8 @@ export default function AdminTerroirProducts() {
   const [showCreate, setShowCreate] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [showVariant, setShowVariant] = useState<number | null>(null);
+  const [editingVariant, setEditingVariant] = useState<any>(null);
+  const [editVariantForm, setEditVariantForm] = useState({ label: "", sku: "", priceUnit: 0, stockTotal: 0, isActive: true });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -79,6 +81,15 @@ export default function AdminTerroirProducts() {
       toast.success("Variante créée");
       setShowVariant(null);
       setVariantForm({ label: "", sku: "", priceUnit: 0, stockTotal: 0, isActive: true });
+      refetch();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const updateVariant = trpc.terroirModule.adminUpdateVariant.useMutation({
+    onSuccess: () => {
+      toast.success("Variante mise à jour");
+      setEditingVariant(null);
       refetch();
     },
     onError: (err: any) => toast.error(err.message),
@@ -177,6 +188,29 @@ export default function AdminTerroirProducts() {
     updateProduct.mutate({
       id: product.id,
       isActive: !product.is_active,
+    });
+  };
+
+  const openEditVariant = (v: any) => {
+    setEditingVariant(v);
+    setEditVariantForm({
+      label: v.label,
+      sku: v.sku ?? "",
+      priceUnit: parseFloat(v.price_unit),
+      stockTotal: v.stock_total,
+      isActive: v.is_active,
+    });
+  };
+
+  const handleUpdateVariant = () => {
+    if (!editingVariant) return;
+    updateVariant.mutate({
+      id: editingVariant.id,
+      label: editVariantForm.label,
+      sku: editVariantForm.sku || undefined,
+      priceUnit: editVariantForm.priceUnit,
+      stockTotal: editVariantForm.stockTotal,
+      isActive: editVariantForm.isActive,
     });
   };
 
@@ -513,6 +547,7 @@ export default function AdminTerroirProducts() {
                             <TableHead>Stock dispo</TableHead>
                             <TableHead>Réservé</TableHead>
                             <TableHead>Statut</TableHead>
+                            <TableHead />
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -521,12 +556,21 @@ export default function AdminTerroirProducts() {
                               <TableCell className="font-medium">{v.label}</TableCell>
                               <TableCell className="text-sm text-muted-foreground">{v.sku || "-"}</TableCell>
                               <TableCell>{parseFloat(v.price_unit).toFixed(2)} DH</TableCell>
-                              <TableCell>{v.stock_total - v.stock_reserved}</TableCell>
+                              <TableCell>
+                                <span className={(v.stock_total - v.stock_reserved) <= 0 ? "text-red-500 font-medium" : "text-green-700 font-medium"}>
+                                  {v.stock_total - v.stock_reserved}
+                                </span>
+                              </TableCell>
                               <TableCell>{v.stock_reserved}</TableCell>
                               <TableCell>
                                 <Badge className={v.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}>
                                   {v.is_active ? "Actif" : "Inactif"}
                                 </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Button variant="ghost" size="sm" onClick={() => openEditVariant(v)}>
+                                  <Edit className="h-3.5 w-3.5" />
+                                </Button>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -551,6 +595,39 @@ export default function AdminTerroirProducts() {
           )}
         </main>
       </div>
+
+      {/* Edit variant dialog */}
+      <Dialog open={editingVariant !== null} onOpenChange={(v) => { if (!v) setEditingVariant(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Modifier la variante</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Label</Label>
+              <Input value={editVariantForm.label} onChange={(e) => setEditVariantForm(prev => ({ ...prev, label: e.target.value }))} />
+            </div>
+            <div>
+              <Label>SKU (optionnel)</Label>
+              <Input value={editVariantForm.sku} onChange={(e) => setEditVariantForm(prev => ({ ...prev, sku: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Prix unitaire (DH)</Label>
+              <Input type="number" min="0" value={editVariantForm.priceUnit} onChange={(e) => setEditVariantForm(prev => ({ ...prev, priceUnit: parseFloat(e.target.value) || 0 }))} />
+            </div>
+            <div>
+              <Label>Stock total</Label>
+              <Input type="number" min="0" value={editVariantForm.stockTotal} onChange={(e) => setEditVariantForm(prev => ({ ...prev, stockTotal: parseInt(e.target.value) || 0 }))} />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label>Actif</Label>
+              <Switch checked={editVariantForm.isActive} onCheckedChange={(checked) => setEditVariantForm(prev => ({ ...prev, isActive: checked }))} />
+            </div>
+            <Button className="w-full" onClick={handleUpdateVariant} disabled={!editVariantForm.label || updateVariant.isPending}>
+              {updateVariant.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Edit className="h-4 w-4 mr-2" />}
+              Enregistrer
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </RequireRole>
   );
 }
