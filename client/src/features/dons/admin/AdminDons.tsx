@@ -86,8 +86,10 @@ export default function AdminDons() {
     switch (method) {
       case 'transfer':
         return <Badge variant="outline"><Building2 className="h-3 w-3 mr-1" />Virement</Badge>;
-      case 'on_site':
-        return <Badge variant="outline"><CreditCard className="h-3 w-3 mr-1" />Sur place</Badge>;
+      case 'cheque':
+        return <Badge variant="outline"><CreditCard className="h-3 w-3 mr-1" />Chèque</Badge>;
+      case 'cash':
+        return <Badge variant="outline"><CreditCard className="h-3 w-3 mr-1" />Espèces</Badge>;
       default:
         return <Badge variant="outline">{method}</Badge>;
     }
@@ -106,7 +108,7 @@ export default function AdminDons() {
       d.donorEmail,
       d.donorPhone || "",
       `${d.amount} DH`,
-      d.paymentMethod === 'transfer' ? 'Virement' : 'Sur place',
+      d.paymentMethod === 'transfer' ? 'Virement' : d.paymentMethod === 'cheque' ? 'Chèque' : 'Espèces',
       d.status,
       new Date(d.createdAt).toLocaleDateString('fr-FR'),
     ]);
@@ -206,7 +208,8 @@ export default function AdminDons() {
                 <SelectContent>
                   <SelectItem value="all">Tous les modes</SelectItem>
                   <SelectItem value="transfer">Virement</SelectItem>
-                  <SelectItem value="on_site">Sur place</SelectItem>
+                  <SelectItem value="cheque">Chèque</SelectItem>
+                  <SelectItem value="cash">Espèces</SelectItem>
                 </SelectContent>
               </Select>
               <Button variant="outline" onClick={handleExportCSV}>

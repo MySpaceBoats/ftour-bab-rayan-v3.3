@@ -2216,7 +2216,7 @@ const donationsRouter = router({
           .union([z.number(), z.string()])
           .transform(val => (typeof val === "string" ? parseInt(val, 10) : val))
           .pipe(z.number().min(1)),
-        paymentMethod: z.enum(["transfer", "on_site"]),
+        paymentMethod: z.enum(["transfer", "cheque", "cash"]),
         message: z.string().optional(),
         isAnonymous: z.boolean().default(false),
         acceptsUpdates: z.boolean().default(false),
