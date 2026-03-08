@@ -6123,6 +6123,7 @@ export const appRouterUpdated = router({
   scanner: scannerRouter,
   ramadan: ramadanRouter,
   volunteerProfile: volunteerProfileRouter,
+  inventory: inventoryRouter,
 });
 
 export type AppRouter = typeof appRouterUpdated;

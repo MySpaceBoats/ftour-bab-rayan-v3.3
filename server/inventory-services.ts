@@ -193,17 +193,18 @@ export async function syncAllCatalogProducts(): Promise<{
   // --- Goodie variants ---
   const { data: goodieVariants } = await db()
     .from('goodie_variants')
-    .select('id, goodie_id, name, sku, goodies(name, category)');
+    .select('id, goodie_id, size, color, sku, goodies(name, category)');
   for (const v of goodieVariants ?? []) {
     try {
       const parent = (v as any).goodies;
+      const variantLabel = [(v as any).size, (v as any).color].filter(Boolean).join(' / ') || `#${v.id}`;
       await syncInventoryProduct({
         productType: 'goodie_variant',
         sourceProductId: (v as any).goodie_id,
         sourceVariantId: v.id,
-        name: parent ? `${parent.name} – ${v.name}` : v.name,
+        name: parent ? `${parent.name} – ${variantLabel}` : variantLabel,
         sku: v.sku ?? null,
-        category: parent?.category ?? null,
+        category: (parent as any)?.category ?? null,
       });
       synced++;
     } catch (e: any) {
