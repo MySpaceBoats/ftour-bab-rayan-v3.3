@@ -69,7 +69,14 @@ export async function createInventoryProduct(input: {
     .single();
 
   if (error) throw new Error(parseError(error));
-  return data;
+
+  // Generate QR slug immediately so the stock-entry page always has a code ready
+  try {
+    const slug = await ensureStockEntryQrSlug(data.id);
+    return { ...data, stock_entry_qr_slug: slug };
+  } catch {
+    return data;
+  }
 }
 
 export async function updateInventoryProduct(id: number, input: {
