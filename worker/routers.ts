@@ -8140,6 +8140,39 @@ const inventoryStockRouter = router({
     }),
 });
 
+const inventoryMovementsRouter = router({
+  list: adminProcedure
+    .input(z.object({
+      productId: z.number().optional(),
+      locationId: z.number().optional(),
+      eventId: z.number().optional(),
+      movementType: z.string().optional(),
+      dateFrom: z.string().optional(),
+      dateTo: z.string().optional(),
+      limit: z.number().optional(),
+      offset: z.number().optional(),
+    }).optional())
+    .query(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const limit = Math.min(input?.limit ?? 50, 500);
+      const offset = input?.offset ?? 0;
+      let q = supabase
+        .from('inventory_movements')
+        .select(`*, inventory_products(id, name, category, product_type, sku), from_location:inventory_locations!inventory_movements_from_location_id_fkey(id, name, type, code), to_location:inventory_locations!inventory_movements_to_location_id_fkey(id, name, type, code), inventory_events(id, name)`, { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+      if (input?.productId) q = q.eq('product_id', input.productId);
+      if (input?.eventId) q = q.eq('event_id', input.eventId);
+      if (input?.movementType) q = q.eq('movement_type', input.movementType);
+      if (input?.dateFrom) q = q.gte('created_at', input.dateFrom);
+      if (input?.dateTo) q = q.lte('created_at', input.dateTo);
+      if (input?.locationId) q = q.or(`from_location_id.eq.${input.locationId},to_location_id.eq.${input.locationId},pos_location_id.eq.${input.locationId}`);
+      const { data, error, count } = await q;
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      return { movements: data ?? [], total: count ?? 0 };
+    }),
+});
+
 const inventoryRouter = router({
   events: inventoryEventsRouter,
   products: inventoryProductsRouter,
