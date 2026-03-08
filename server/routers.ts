@@ -38,6 +38,7 @@ import { scannerRouter } from "./scanner-router";
 import * as galleryServices from "./gallery-services";
 import * as volunteerProfileServices from "./volunteer-profile-services";
 import { randomBytes } from "crypto";
+import QRCode from "qrcode";
 import {
   parseGroupVolunteersFromSpreadsheet,
   processGroupVolunteerRows,
@@ -6003,8 +6004,8 @@ const qrRouter = router({
         .order("sort_order", { ascending: true }),
     ]);
 
-    const makeQrImageUrl = (url: string) =>
-      `https://api.qrserver.com/v1/create-qr-code/?size=400x400&ecc=H&data=${encodeURIComponent(url)}`;
+    const makeQrDataUrl = (url: string) =>
+      QRCode.toDataURL(url, { errorCorrectionLevel: "H", margin: 2, width: 400 });
 
     const items: Array<{
       id: number;
@@ -6025,7 +6026,7 @@ const qrRouter = router({
         price: g.price,
         category: "goodies",
         qrUrl: url,
-        qrDataUrl: makeQrImageUrl(url),
+        qrDataUrl: await makeQrDataUrl(url),
       });
     }
 
@@ -6038,7 +6039,7 @@ const qrRouter = router({
         price: p.price,
         category: "patisserie",
         qrUrl: url,
-        qrDataUrl: makeQrImageUrl(url),
+        qrDataUrl: await makeQrDataUrl(url),
       });
     }
 
@@ -6052,7 +6053,7 @@ const qrRouter = router({
         price: firstVariant?.price_unit ?? null,
         category: "terroir",
         qrUrl: url,
-        qrDataUrl: makeQrImageUrl(url),
+        qrDataUrl: await makeQrDataUrl(url),
       });
     }
 
@@ -6064,7 +6065,7 @@ const qrRouter = router({
       price: null,
       category: "dons",
       qrUrl: donsUrl,
-      qrDataUrl: makeQrImageUrl(donsUrl),
+      qrDataUrl: await makeQrDataUrl(donsUrl),
     });
 
     return items;
