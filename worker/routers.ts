@@ -7758,6 +7758,396 @@ const partnerLeadsRouter = router({
 });
 
 // ============================================
+// INVENTORY ROUTER
+// ============================================
+
+function parseInvError(error: any): string {
+  return error?.message || error?.details || 'Erreur interne';
+}
+
+const inventoryEventsRouter = router({
+  list: adminProcedure
+    .input(z.object({ status: z.enum(['draft', 'open', 'closed', 'archived']).optional() }))
+    .query(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      let q = supabase.from('inventory_events').select('*').order('created_at', { ascending: false });
+      if (input.status) q = q.eq('status', input.status);
+      const { data, error } = await q;
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      return data ?? [];
+    }),
+
+  create: adminProcedure
+    .input(z.object({
+      name: z.string().min(1),
+      description: z.string().optional(),
+      startsAt: z.string().optional(),
+      endsAt: z.string().optional(),
+      status: z.enum(['draft', 'open', 'closed', 'archived']).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('inventory_events')
+        .insert({
+          name: input.name,
+          description: input.description ?? null,
+          starts_at: input.startsAt ?? null,
+          ends_at: input.endsAt ?? null,
+          status: input.status ?? 'draft',
+        })
+        .select()
+        .single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      return data;
+    }),
+
+  update: adminProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      description: z.string().nullable().optional(),
+      startsAt: z.string().nullable().optional(),
+      endsAt: z.string().nullable().optional(),
+      status: z.enum(['draft', 'open', 'closed', 'archived']).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const patch: Record<string, unknown> = {};
+      if (input.name !== undefined) patch.name = input.name;
+      if (input.description !== undefined) patch.description = input.description;
+      if (input.startsAt !== undefined) patch.starts_at = input.startsAt;
+      if (input.endsAt !== undefined) patch.ends_at = input.endsAt;
+      if (input.status !== undefined) patch.status = input.status;
+      const { data, error } = await supabase
+        .from('inventory_events')
+        .update(patch)
+        .eq('id', input.id)
+        .select()
+        .single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      return data;
+    }),
+
+  report: adminProcedure
+    .input(z.object({ eventId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data: locations, error: locErr } = await supabase
+        .from('inventory_locations')
+        .select('*')
+        .eq('event_id', input.eventId);
+      if (locErr) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(locErr) });
+
+      const posLocations = (locations ?? []).filter((l: any) => l.type === 'POS');
+      const bufferLocation = (locations ?? []).find((l: any) => l.type === 'EVENT_BUFFER') ?? null;
+
+      const locationIds = (locations ?? []).map((l: any) => l.id);
+      const { data: balances } = locationIds.length
+        ? await supabase.from('inventory_stock_balances').select('*, inventory_products(*), inventory_locations(*)').in('location_id', locationIds)
+        : { data: [] };
+
+      const { data: movements } = await supabase
+        .from('inventory_movements')
+        .select('*')
+        .eq('event_id', input.eventId);
+
+      const posReports = posLocations.map((pos: any) => {
+        const dispatched = (movements ?? [])
+          .filter((m: any) => m.movement_type === 'TRANSFER_IN' && m.to_location_id === pos.id)
+          .reduce((s: number, m: any) => s + m.quantity, 0);
+        const sold = (movements ?? [])
+          .filter((m: any) => m.movement_type === 'SALE' && m.pos_location_id === pos.id)
+          .reduce((s: number, m: any) => s + m.quantity, 0);
+        const returned = (movements ?? [])
+          .filter((m: any) => m.movement_type === 'RETURN_OUT' && m.from_location_id === pos.id)
+          .reduce((s: number, m: any) => s + m.quantity, 0);
+        const currentStock = (balances ?? [])
+          .filter((b: any) => b.location_id === pos.id)
+          .reduce((s: number, b: any) => s + b.quantity_on_hand, 0);
+        return {
+          location: pos,
+          dispatched,
+          sold,
+          returned,
+          theoreticalRemaining: dispatched - sold - returned,
+          currentStock,
+          variance: currentStock - (dispatched - sold - returned),
+        };
+      });
+
+      return { eventId: input.eventId, bufferLocation, posReports, balances: balances ?? [] };
+    }),
+});
+
+const inventoryProductsRouter = router({
+  list: adminProcedure
+    .input(z.object({ isActive: z.boolean().optional(), productType: z.string().optional(), search: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      let q = supabase.from('inventory_products').select('*').order('name');
+      if (input.isActive !== undefined) q = q.eq('is_active', input.isActive);
+      if (input.productType) q = q.eq('product_type', input.productType);
+      if (input.search) q = q.ilike('name', `%${input.search}%`);
+      const { data, error } = await q;
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      return data ?? [];
+    }),
+
+  create: adminProcedure
+    .input(z.object({
+      productType: z.string(),
+      name: z.string().min(1),
+      sku: z.string().nullable().optional(),
+      barcode: z.string().nullable().optional(),
+      category: z.string().nullable().optional(),
+      unit: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('inventory_products')
+        .insert({
+          product_type: input.productType,
+          name: input.name,
+          sku: input.sku ?? null,
+          barcode: input.barcode ?? null,
+          category: input.category ?? null,
+          unit: input.unit ?? 'piece',
+          is_active: true,
+        })
+        .select()
+        .single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      return data;
+    }),
+
+  update: adminProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      sku: z.string().nullable().optional(),
+      barcode: z.string().nullable().optional(),
+      category: z.string().nullable().optional(),
+      unit: z.string().optional(),
+      isActive: z.boolean().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const patch: Record<string, unknown> = {};
+      if (input.name !== undefined) patch.name = input.name;
+      if (input.sku !== undefined) patch.sku = input.sku;
+      if (input.barcode !== undefined) patch.barcode = input.barcode;
+      if (input.category !== undefined) patch.category = input.category;
+      if (input.unit !== undefined) patch.unit = input.unit;
+      if (input.isActive !== undefined) patch.is_active = input.isActive;
+      const { data, error } = await supabase
+        .from('inventory_products')
+        .update(patch)
+        .eq('id', input.id)
+        .select()
+        .single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      return data;
+    }),
+});
+
+const inventoryLocationsRouter = router({
+  list: adminProcedure
+    .input(z.object({ type: z.string().optional(), eventId: z.number().optional(), isActive: z.boolean().optional() }))
+    .query(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      let q = supabase.from('inventory_locations').select('*').order('name');
+      if (input.type) q = q.eq('type', input.type);
+      if (input.eventId !== undefined) q = q.eq('event_id', input.eventId);
+      if (input.isActive !== undefined) q = q.eq('is_active', input.isActive);
+      const { data, error } = await q;
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      return data ?? [];
+    }),
+
+  create: adminProcedure
+    .input(z.object({
+      type: z.enum(['GLOBAL', 'EVENT_BUFFER', 'POS']),
+      code: z.string(),
+      name: z.string().min(1),
+      eventId: z.number().nullable().optional(),
+      parentLocationId: z.number().nullable().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('inventory_locations')
+        .insert({
+          type: input.type,
+          code: input.code,
+          name: input.name,
+          event_id: input.eventId ?? null,
+          parent_location_id: input.parentLocationId ?? null,
+          is_active: true,
+        })
+        .select()
+        .single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      return data;
+    }),
+
+  globalLocation: adminProcedure
+    .query(async ({ ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('inventory_locations')
+        .select('*')
+        .eq('type', 'GLOBAL')
+        .eq('is_active', true)
+        .limit(1)
+        .single();
+      if (error) throw new TRPCError({ code: 'NOT_FOUND', message: 'Emplacement global non trouvé.' });
+      return data;
+    }),
+});
+
+const inventoryStockRouter = router({
+  transfer: adminProcedure
+    .input(z.object({
+      productId: z.number(),
+      quantity: z.number().positive(),
+      fromLocationId: z.number(),
+      toLocationId: z.number(),
+      eventId: z.number().nullable().optional(),
+      reason: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase.rpc('inventory_transfer_stock', {
+        p_product_id:    input.productId,
+        p_quantity:      input.quantity,
+        p_from_location: input.fromLocationId,
+        p_to_location:   input.toLocationId,
+        p_event_id:      input.eventId ?? null,
+        p_reason:        input.reason ?? null,
+        p_note:          null,
+        p_performed_by:  null,
+      });
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      return { movementIds: data as number[] };
+    }),
+
+  addStock: adminProcedure
+    .input(z.object({
+      productId: z.number(),
+      locationId: z.number(),
+      quantity: z.number().positive(),
+      movementType: z.enum(['INITIAL_LOAD', 'PURCHASE_IN', 'DONATION_IN', 'PRODUCTION_IN']),
+      reason: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase.rpc('inventory_add_stock', {
+        p_product_id:     input.productId,
+        p_location_id:    input.locationId,
+        p_quantity:       input.quantity,
+        p_movement_type:  input.movementType,
+        p_reason:         input.reason ?? null,
+        p_note:           null,
+        p_performed_by:   null,
+        p_reference_type: null,
+        p_reference_id:   null,
+      });
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      return { movementId: data as number };
+    }),
+
+  recordReturn: adminProcedure
+    .input(z.object({
+      productId: z.number(),
+      quantity: z.number().positive(),
+      fromPosLocationId: z.number(),
+      toBufferLocationId: z.number(),
+      eventId: z.number().nullable().optional(),
+      reason: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase.rpc('inventory_record_return', {
+        p_product_id:         input.productId,
+        p_quantity:           input.quantity,
+        p_from_pos_location:  input.fromPosLocationId,
+        p_to_buffer_location: input.toBufferLocationId,
+        p_event_id:           input.eventId ?? null,
+        p_reason:             input.reason ?? null,
+        p_note:               null,
+        p_performed_by:       null,
+      });
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      return { movementIds: data as number[] };
+    }),
+
+  adjust: adminProcedure
+    .input(z.object({
+      productId: z.number(),
+      locationId: z.number(),
+      qtyDelta: z.number(),
+      reason: z.string().min(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase.rpc('inventory_adjust_stock', {
+        p_product_id:   input.productId,
+        p_location_id:  input.locationId,
+        p_qty_delta:    input.qtyDelta,
+        p_reason:       input.reason,
+        p_note:         null,
+        p_performed_by: null,
+      });
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      return { movementId: data as number };
+    }),
+
+  overview: adminProcedure
+    .query(async ({ ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('inventory_stock_balances')
+        .select('quantity_on_hand, inventory_products(id, name, category, product_type), inventory_locations(id, type, name, event_id)');
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      return data ?? [];
+    }),
+
+  movements: adminProcedure
+    .input(z.object({
+      productId: z.number().optional(),
+      locationId: z.number().optional(),
+      eventId: z.number().optional(),
+      limit: z.number().optional(),
+      offset: z.number().optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const limit = Math.min(input.limit ?? 50, 500);
+      const offset = input.offset ?? 0;
+      let q = supabase
+        .from('inventory_movements')
+        .select(`*, inventory_products(id, name, category, product_type, sku), from_location:inventory_locations!inventory_movements_from_location_id_fkey(id, name, type, code), to_location:inventory_locations!inventory_movements_to_location_id_fkey(id, name, type, code), inventory_events(id, name)`, { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+      if (input.productId) q = q.eq('product_id', input.productId);
+      if (input.eventId) q = q.eq('event_id', input.eventId);
+      if (input.locationId) q = q.or(`from_location_id.eq.${input.locationId},to_location_id.eq.${input.locationId}`);
+      const { data, error, count } = await q;
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      return { movements: data ?? [], total: count ?? 0 };
+    }),
+});
+
+const inventoryRouter = router({
+  events: inventoryEventsRouter,
+  products: inventoryProductsRouter,
+  locations: inventoryLocationsRouter,
+  stock: inventoryStockRouter,
+});
+
+// ============================================
 // MAIN APP ROUTER
 // ============================================
 
@@ -7785,6 +8175,7 @@ export const appRouter = router({
   qr: qrRouter,
   ramadan: ramadanRouter,
   terroirModule: terroirModuleRouter,
+  inventory: inventoryRouter,
 });
 
 export type AppRouter = typeof appRouter;
