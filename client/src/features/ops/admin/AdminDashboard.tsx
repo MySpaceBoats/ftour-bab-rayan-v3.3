@@ -26,6 +26,7 @@ import {
   CakeSlice,
   CalendarDays,
   Images,
+  Warehouse,
   type LucideIcon,
 } from "lucide-react";
 
@@ -207,6 +208,24 @@ const sections: SectionDefinition[] = [
         iconColor: "text-emerald-700",
         iconBg: "bg-emerald-100",
         allowedRoles: ["admin", "super_admin", "admin_terroir", "admin_ops", "admin_operations"],
+      },
+      {
+        label: "Gestion de Stock",
+        description:
+          "Suivi multi-niveaux du stock (global, buffer, POS), mouvements, alertes et transferts entre emplacements",
+        route: "/admin/inventory",
+        icon: Warehouse,
+        iconColor: "text-green-700",
+        iconBg: "bg-green-100",
+        allowedRoles: [
+          "admin",
+          "super_admin",
+          "admin_boutique",
+          "admin_patisserie",
+          "admin_terroir",
+          "admin_ops",
+          "admin_operations",
+        ],
       },
       {
         label: "Paiements",
