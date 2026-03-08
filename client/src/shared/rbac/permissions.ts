@@ -146,6 +146,7 @@ export const ROUTE_ROLES: Record<string, readonly Role[]> = {
   '/admin/inventory/products': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.ADMIN_BOUTIQUE, ROLES.ADMIN_PATISSERIE, ROLES.ADMIN_TERROIR],
   '/admin/inventory/events': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.ADMIN_BOUTIQUE, ROLES.ADMIN_PATISSERIE, ROLES.ADMIN_TERROIR],
   '/admin/inventory/movements': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.ADMIN_BOUTIQUE, ROLES.ADMIN_PATISSERIE, ROLES.ADMIN_TERROIR],
+  '/admin/inventory/stock-entry': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.ADMIN_BOUTIQUE, ROLES.ADMIN_PATISSERIE, ROLES.ADMIN_TERROIR],
 };
 
 // ============================================

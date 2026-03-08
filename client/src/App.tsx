@@ -127,6 +127,9 @@ import AdminInventory from "@/features/inventory/admin/AdminInventory";
 import AdminInventoryProducts from "@/features/inventory/admin/AdminInventoryProducts";
 import AdminInventoryEvents from "@/features/inventory/admin/AdminInventoryEvents";
 import AdminInventoryMovements from "@/features/inventory/admin/AdminInventoryMovements";
+import AdminInventoryStockEntry from "@/features/inventory/admin/AdminInventoryStockEntry";
+import AdminInventoryStockEntryProduct from "@/features/inventory/admin/AdminInventoryStockEntryProduct";
+import StockEntryScanPage from "@/features/inventory/pages/StockEntryScanPage";
 
 // ============================================
 // CONTENU — features/contenu
@@ -282,6 +285,8 @@ function LocalizedRoutes() {
       <Route path="/admin/inventory/products" component={AdminInventoryProducts} />
       <Route path="/admin/inventory/events" component={AdminInventoryEvents} />
       <Route path="/admin/inventory/movements" component={AdminInventoryMovements} />
+      <Route path="/admin/inventory/stock-entry" component={AdminInventoryStockEntry} />
+      <Route path="/admin/inventory/stock-entry/:productId" component={AdminInventoryStockEntryProduct} />
 
       {/* Admin Contenu */}
       <Route path="/admin/contenu" component={AdminContenu} />
@@ -304,6 +309,8 @@ function LocalizedRoutes() {
 
       {/* QR Code commande terroir */}
       <Route path="/qr/terroir/:reference" component={TerroirQRPage} />
+
+      <Route path="/stock-entry/:slug" component={StockEntryScanPage} />
 
       {/* ================================================
           PUBLIC CHECK-IN — sans :lang

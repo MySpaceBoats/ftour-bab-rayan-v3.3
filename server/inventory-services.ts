@@ -1,4 +1,5 @@
 import { getSupabaseAdminClient } from './supabase';
+import crypto from 'crypto';
 
 // ============================================================
 // TYPES
@@ -17,6 +18,8 @@ export type MovementType =
   | 'ADJUSTMENT_PLUS'
   | 'ADJUSTMENT_MINUS';
 
+export type StockEntryMovementType = 'INITIAL_LOAD' | 'PURCHASE_IN' | 'DONATION_IN' | 'PRODUCTION_IN';
+
 export type LocationType = 'GLOBAL' | 'EVENT_BUFFER' | 'POS';
 export type EventStatus = 'draft' | 'open' | 'closed' | 'archived';
 
@@ -29,6 +32,10 @@ function db() {
 function parseError(error: any): string {
   // PostgREST wraps PL/pgSQL RAISE EXCEPTION messages in "message"
   return error?.message || error?.details || 'Erreur interne';
+}
+
+function makeStockEntrySlug(productId: number): string {
+  return `stk_${productId}_${crypto.randomBytes(10).toString('hex')}`;
 }
 
 // ============================================================
@@ -273,6 +280,174 @@ export async function syncAllCatalogProducts(): Promise<{
   }
 
   return { synced, errors, details };
+}
+
+
+export async function ensureStockEntryQrSlug(productId: number): Promise<string> {
+  const { data: existing, error: existingErr } = await db()
+    .from('inventory_products')
+    .select('id, stock_entry_qr_slug')
+    .eq('id', productId)
+    .single();
+
+  if (existingErr) throw new Error(parseError(existingErr));
+  if (existing?.stock_entry_qr_slug) return existing.stock_entry_qr_slug;
+
+  for (let i = 0; i < 5; i++) {
+    const slug = makeStockEntrySlug(productId);
+    const { data, error } = await db()
+      .from('inventory_products')
+      .update({ stock_entry_qr_slug: slug })
+      .eq('id', productId)
+      .is('stock_entry_qr_slug', null)
+      .select('stock_entry_qr_slug')
+      .single();
+
+    if (!error && data?.stock_entry_qr_slug) return data.stock_entry_qr_slug;
+
+    const { data: refreshed } = await db()
+      .from('inventory_products')
+      .select('stock_entry_qr_slug')
+      .eq('id', productId)
+      .single();
+
+    if (refreshed?.stock_entry_qr_slug) return refreshed.stock_entry_qr_slug;
+  }
+
+  throw new Error('Impossible de générer un QR d’entrée de stock pour ce produit');
+}
+
+export async function regenerateStockEntryQrSlug(productId: number): Promise<string> {
+  for (let i = 0; i < 5; i++) {
+    const slug = makeStockEntrySlug(productId);
+    const { data, error } = await db()
+      .from('inventory_products')
+      .update({ stock_entry_qr_slug: slug, stock_entry_qr_enabled: true })
+      .eq('id', productId)
+      .select('stock_entry_qr_slug')
+      .single();
+    if (!error && data?.stock_entry_qr_slug) return data.stock_entry_qr_slug;
+  }
+  throw new Error('Impossible de régénérer le QR d’entrée de stock');
+}
+
+export async function setStockEntryQrEnabled(productId: number, enabled: boolean) {
+  const { data, error } = await db()
+    .from('inventory_products')
+    .update({ stock_entry_qr_enabled: enabled })
+    .eq('id', productId)
+    .select('id, stock_entry_qr_enabled')
+    .single();
+  if (error) throw new Error(parseError(error));
+  return data;
+}
+
+export async function getStockEntryBySlug(slug: string) {
+  const { data, error } = await db()
+    .from('inventory_products')
+    .select('*')
+    .eq('stock_entry_qr_slug', slug)
+    .maybeSingle();
+  if (error) throw new Error(parseError(error));
+  if (!data) throw new Error('Produit introuvable');
+  if (!data.stock_entry_qr_enabled) throw new Error('QR inactif');
+  return data;
+}
+
+export async function listStockEntryProducts(filters?: { search?: string; isActive?: boolean }) {
+  const globalLoc = await getGlobalLocation();
+
+  let q = db()
+    .from('inventory_products')
+    .select('*')
+    .order('name');
+
+  if (filters?.isActive !== undefined) q = q.eq('is_active', filters.isActive);
+  if (filters?.search) {
+    const pattern = `%${filters.search}%`;
+    q = q.or(`name.ilike.${pattern},sku.ilike.${pattern},category.ilike.${pattern},barcode.ilike.${pattern}`);
+  }
+
+  const { data: products, error } = await q;
+  if (error) throw new Error(parseError(error));
+
+  const rows = products ?? [];
+
+  await Promise.all(
+    rows
+      .filter((p: any) => !p.stock_entry_qr_slug)
+      .map((p: any) => ensureStockEntryQrSlug(p.id)),
+  );
+
+  const productIds = rows.map((p: any) => p.id);
+  const { data: balances } = await db()
+    .from('inventory_stock_balances')
+    .select('product_id, quantity_on_hand')
+    .eq('location_id', globalLoc.id)
+    .in('product_id', productIds.length ? productIds : [-1]);
+
+  const { data: qrMovements } = await db()
+    .from('inventory_movements')
+    .select('id, product_id, quantity, movement_type, created_at, performed_by, reason, note, reference_type')
+    .eq('reference_type', 'QR_STOCK_ENTRY')
+    .in('product_id', productIds.length ? productIds : [-1])
+    .order('created_at', { ascending: false });
+
+  const byBalance = new Map<number, number>((balances ?? []).map((b: any) => [b.product_id, b.quantity_on_hand]));
+  const byLastMovement = new Map<number, any>();
+  for (const m of qrMovements ?? []) {
+    if (!byLastMovement.has(m.product_id)) byLastMovement.set(m.product_id, m);
+  }
+
+  const normalized = await Promise.all(rows.map(async (p: any) => {
+    const slug = p.stock_entry_qr_slug ?? await ensureStockEntryQrSlug(p.id);
+    return {
+      ...p,
+      stock_entry_qr_slug: slug,
+      global_stock: byBalance.get(p.id) ?? 0,
+      last_qr_entry: byLastMovement.get(p.id) ?? null,
+    };
+  }));
+
+  return { globalLocationId: globalLoc.id, products: normalized };
+}
+
+export async function getStockEntryProductDetail(productId: number) {
+  const globalLoc = await getGlobalLocation();
+  const product = await getInventoryProductById(productId);
+  const slug = product.stock_entry_qr_slug ?? await ensureStockEntryQrSlug(productId);
+  const current = await getStockBalance(productId, globalLoc.id);
+
+  const { data: history } = await db()
+    .from('inventory_movements')
+    .select('*, users(id, username, email)')
+    .eq('product_id', productId)
+    .eq('reference_type', 'QR_STOCK_ENTRY')
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  return {
+    product: { ...product, stock_entry_qr_slug: slug },
+    globalLocation: globalLoc,
+    globalStock: current,
+    history: history ?? [],
+    lastEntry: (history ?? [])[0] ?? null,
+  };
+}
+
+export async function getQrStockEntryHistory(limit = 100) {
+  const { data, error } = await db()
+    .from('inventory_movements')
+    .select(`
+      *,
+      inventory_products ( id, name, category, sku ),
+      users ( id, username, email )
+    `)
+    .eq('reference_type', 'QR_STOCK_ENTRY')
+    .order('created_at', { ascending: false })
+    .limit(Math.min(limit, 300));
+  if (error) throw new Error(parseError(error));
+  return data ?? [];
 }
 
 // ============================================================
@@ -535,6 +710,49 @@ export async function addStock(input: {
   });
   if (error) throw new Error(parseError(error));
   return { movementId: data as number };
+}
+
+
+export async function recordStockEntry(input: {
+  productId: number;
+  qty: number;
+  entryType?: StockEntryMovementType;
+  note?: string;
+  reason?: string;
+  userId?: number;
+  source?: 'QR_STOCK_ENTRY';
+}) {
+  const qty = Number(input.qty);
+  if (!Number.isInteger(qty) || qty <= 0) {
+    throw new Error('Quantité invalide: entier positif requis');
+  }
+
+  const product = await getInventoryProductById(input.productId);
+  if (!product) throw new Error('Produit introuvable');
+  if (!product.stock_entry_qr_enabled) throw new Error('QR inactif');
+
+  const globalLocation = await getGlobalLocation();
+  const movementType = input.entryType ?? 'PURCHASE_IN';
+
+  const res = await addStock({
+    productId: input.productId,
+    locationId: globalLocation.id,
+    quantity: qty,
+    movementType,
+    reason: input.reason ?? 'Entrée stock via QR',
+    note: input.note,
+    performedBy: input.userId,
+    referenceType: input.source ?? 'QR_STOCK_ENTRY',
+    referenceId: product.stock_entry_qr_slug ?? await ensureStockEntryQrSlug(input.productId),
+  });
+
+  const newGlobalBalance = await getStockBalance(input.productId, globalLocation.id);
+
+  return {
+    movementId: res.movementId,
+    globalLocationId: globalLocation.id,
+    newGlobalBalance,
+  };
 }
 
 /**

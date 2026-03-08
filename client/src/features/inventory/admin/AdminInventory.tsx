@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import RequireRole from "@/components/RequireRole";
 import {
   Package, Warehouse, MapPin, ArrowLeftRight, BarChart3,
-  AlertTriangle, TrendingDown, History,
+  AlertTriangle, TrendingDown, History, QrCode,
 } from "lucide-react";
 
 function StockLevelCard({
@@ -49,6 +49,7 @@ export default function AdminInventory() {
     { href: "/admin/inventory/products",  label: "Produits & Stock",          icon: Package },
     { href: "/admin/inventory/events",    label: "Événements & Buffers",       icon: Warehouse },
     { href: "/admin/inventory/movements", label: "Journal des mouvements",     icon: History },
+    { href: "/admin/inventory/stock-entry", label: "QR Entrée Stock", icon: QrCode },
   ];
 
   return (
@@ -71,7 +72,7 @@ export default function AdminInventory() {
         </div>
 
         {/* Navigation rapide */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {navLinks.map(({ href, label, icon: Icon }) => (
             <Link key={href} href={href}>
               <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
