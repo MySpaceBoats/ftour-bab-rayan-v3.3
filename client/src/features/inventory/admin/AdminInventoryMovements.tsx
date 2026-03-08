@@ -62,8 +62,8 @@ export default function AdminInventoryMovements() {
   const [addStockMode, setAddStockMode] = useState(false);
   const [addStockForm, setAddStockForm] = useState({ productId: "", locationId: "", quantity: "", movementType: "INITIAL_LOAD", reason: "" });
 
-  const { data: products } = trpc.inventory.products.list.useQuery({ isActive: true });
-  const { data: locations } = trpc.inventory.locations.list.useQuery({ isActive: true });
+  const { data: products } = trpc.inventory.products.list.useQuery({ isActive: true }, { staleTime: 60_000 });
+  const { data: locations } = trpc.inventory.locations.list.useQuery({ isActive: true }, { staleTime: 60_000 });
 
   const { data, isLoading, refetch } = trpc.inventory.movements.list.useQuery({
     movementType: filters.movementType as any || undefined,
@@ -71,7 +71,7 @@ export default function AdminInventoryMovements() {
     dateTo: filters.dateTo || undefined,
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
-  });
+  }, { staleTime: 30_000 });
 
   const adjust = trpc.inventory.stock.adjust.useMutation({
     onSuccess: () => { toast.success("Ajustement effectué"); setShowAdjust(false); setAdjustForm(emptyAdjustForm); refetch(); },
