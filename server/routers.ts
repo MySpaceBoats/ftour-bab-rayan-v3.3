@@ -5017,6 +5017,51 @@ const terroirModuleRouter = router({
         });
       return data;
     }),
+
+  // --- Public: get order by reference (for QR page) ---
+  getOrderByReference: publicProcedure
+    .input(z.object({ reference: z.string().min(1) }))
+    .query(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+      const { data, error } = await supabase
+        .from("terroir_orders")
+        .select("*, terroir_order_items(*, terroir_products(name), terroir_product_variants(label))")
+        .eq("order_reference", input.reference)
+        .single();
+      if (error || !data)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Commande introuvable",
+        });
+      return data;
+    }),
+
+  // --- Admin: delete product ---
+  adminDeleteProduct: adminTerroirProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+      const { error } = await supabase
+        .from("terroir_products")
+        .delete()
+        .eq("id", input.id);
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      return { success: true };
+    }),
 });
 
 // ============================================

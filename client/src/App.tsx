@@ -66,6 +66,7 @@ import AdminPastryCatalog from "@/features/patisserie/admin/AdminPastryCatalog";
 // TERROIR — features/terroir
 // ============================================
 import ProduitsTerroir from "@/features/terroir/pages/ProduitsTerroir";
+import TerroirQRPage from "@/features/terroir/pages/TerroirQRPage";
 import AdminTerroirProducts from "@/features/terroir/admin/AdminTerroirProducts";
 import AdminTerroirOrders from "@/features/terroir/admin/AdminTerroirOrders";
 
@@ -300,6 +301,9 @@ function LocalizedRoutes() {
 
       {/* QR Code commande goodies */}
       <Route path="/qr/goodies/:reference" component={GoodiesQRPage} />
+
+      {/* QR Code commande terroir */}
+      <Route path="/qr/terroir/:reference" component={TerroirQRPage} />
 
       {/* ================================================
           PUBLIC CHECK-IN — sans :lang
