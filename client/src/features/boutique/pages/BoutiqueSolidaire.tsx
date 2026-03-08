@@ -3,12 +3,12 @@ import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useI18n } from "@/i18n";
-import { ShoppingBag, Utensils, ArrowRight, Heart } from "lucide-react";
+import { ShoppingBag, Utensils, ArrowRight, Heart, Leaf } from "lucide-react";
 
 export default function BoutiqueSolidaire() {
   const { t, dir, lang } = useI18n();
 
-  const categories = [
+  const topCategories = [
     {
       key: "goodies" as const,
       href: `/${lang}/goodies`,
@@ -17,7 +17,6 @@ export default function BoutiqueSolidaire() {
       title: t.boutique.goodiesTitle,
       description: t.boutique.goodiesDesc,
       cta: t.boutique.goodiesCta,
-      desktopClassName: "lg:justify-self-end",
     },
     {
       key: "pastries" as const,
@@ -27,9 +26,18 @@ export default function BoutiqueSolidaire() {
       title: t.boutique.pastriesTitle,
       description: t.boutique.pastriesDesc,
       cta: t.boutique.pastriesCta,
-      desktopClassName: "lg:justify-self-start",
     },
   ];
+
+  const terroirCategory = {
+    key: "terroir" as const,
+    href: `/${lang}/terroir`,
+    icon: Leaf,
+    color: "#8BAF6A",
+    title: t.boutique.terroirTitle,
+    description: t.boutique.terroirDesc,
+    cta: t.boutique.terroirCta,
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#5E5B34]" dir={dir}>
@@ -55,16 +63,17 @@ export default function BoutiqueSolidaire() {
           </div>
         </section>
 
-        {/* Categories Grid */}
+        {/* Categories Grid — triangle layout */}
         <section className="py-20 bg-[#5E5B34]">
           <div className="container">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {categories.map((cat) => {
+            {/* Top row: Goodies & Patisserie */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+              {topCategories.map((cat) => {
                 const Icon = cat.icon;
                 return (
                   <div
                     key={cat.key}
-                    className={`bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#F2E9D3]/30 transition-all ${cat.desktopClassName}`}
+                    className="bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#F2E9D3]/30 transition-all"
                   >
                     <div className="h-1" style={{ backgroundColor: cat.color }} />
                     <div className="p-8 space-y-4">
@@ -89,6 +98,32 @@ export default function BoutiqueSolidaire() {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Bottom row: Produits du Terroir — centré pour former le triangle */}
+            <div className="flex justify-center">
+              <div className="w-full lg:w-1/2 bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#F2E9D3]/30 transition-all">
+                <div className="h-1" style={{ backgroundColor: terroirCategory.color }} />
+                <div className="p-8 space-y-4">
+                  <div
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"
+                    style={{ backgroundColor: `${terroirCategory.color}20` }}
+                  >
+                    <terroirCategory.icon className="h-7 w-7" style={{ color: terroirCategory.color }} />
+                  </div>
+                  <h2 className="text-xl font-bold text-[#F2E9D3]">{terroirCategory.title}</h2>
+                  <p className="text-[#E6DCC3]">{terroirCategory.description}</p>
+                  <Link href={terroirCategory.href}>
+                    <Button
+                      variant="outline"
+                      className="w-full mt-4 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
+                    >
+                      {terroirCategory.cta}
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
         </section>

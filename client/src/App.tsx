@@ -65,6 +65,7 @@ import AdminPastryCatalog from "@/features/patisserie/admin/AdminPastryCatalog";
 // ============================================
 // TERROIR — features/terroir
 // ============================================
+import ProduitsTerroir from "@/features/terroir/pages/ProduitsTerroir";
 import AdminTerroirProducts from "@/features/terroir/admin/AdminTerroirProducts";
 import AdminTerroirOrders from "@/features/terroir/admin/AdminTerroirOrders";
 
@@ -365,9 +366,7 @@ function LocalizedRoutes() {
 
       {/* Commerce public */}
       <Route path="/:lang/patisserie" component={Pastries} />
-      <Route path="/:lang/terroir">
-        {() => <Redirect to={`/${lang}/boutique`} />}
-      </Route>
+      <Route path="/:lang/terroir" component={ProduitsTerroir} />
       <Route path="/:lang/goodies" component={Goodies} />
       <Route path="/:lang/cart/:type" component={Cart} />
       <Route path="/:lang/checkout/:type" component={UnifiedCheckout} />
