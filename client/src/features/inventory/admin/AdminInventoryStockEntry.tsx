@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, QrCode, Search, RefreshCw, Eye, Power } from "lucide-react";
+import QrImage from "@/shared/components/QrImage";
 
 function qrUrl(slug: string) {
   return `${window.location.origin}/stock-entry/${slug}`;
@@ -80,7 +81,7 @@ export default function AdminInventoryStockEntry() {
                   <Badge variant={p.stock_entry_qr_enabled ? "default" : "destructive"}>{p.stock_entry_qr_enabled ? "QR actif" : "QR inactif"}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">SKU: {p.sku || "—"}</p>
-                <img alt={`QR entrée stock ${p.name}`} className="w-28 h-28 border rounded" src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrUrl(p.stock_entry_qr_slug))}`} />
+                <QrImage data={qrUrl(p.stock_entry_qr_slug)} size={220} alt={`QR entrée stock ${p.name}`} className="w-28 h-28 border rounded" />
                 <div className="flex flex-wrap gap-2 pt-1">
                   <Link href={`/admin/inventory/stock-entry/${p.id}`}><Button size="sm" variant="outline"><Eye className="h-3 w-3 mr-1" />Voir</Button></Link>
                   <Button size="sm" variant="outline" onClick={() => void downloadQr(p.name, p.stock_entry_qr_slug)}>Télécharger</Button>

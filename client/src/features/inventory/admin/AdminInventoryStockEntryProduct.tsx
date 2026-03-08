@@ -3,6 +3,7 @@ import { Link, useRoute } from "wouter";
 import { toast } from "sonner";
 import RequireRole from "@/components/RequireRole";
 import { trpc } from "@/lib/trpc";
+import QrImage from "@/shared/components/QrImage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,7 +59,7 @@ export default function AdminInventoryStockEntryProduct() {
             <p>Catégorie: {data?.product?.category || "—"}</p>
             <p>SKU: {data?.product?.sku || "—"}</p>
             <p className="font-semibold">Stock global actuel: {data?.globalStock ?? 0}</p>
-            <img className="w-32 h-32 border rounded" src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`${window.location.origin}/stock-entry/${data?.product?.stock_entry_qr_slug || ""}`)}`} />
+            <QrImage data={`${window.location.origin}/stock-entry/${data?.product?.stock_entry_qr_slug || ""}`} size={220} className="w-32 h-32 border rounded" />
           </CardContent>
         </Card>
 
