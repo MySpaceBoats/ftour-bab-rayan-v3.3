@@ -11,7 +11,7 @@ import { trpc } from "@/lib/trpc";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
-import { Heart, CreditCard, Building2, CheckCircle, Loader2, ArrowRight, HandHeart, Users, Utensils, Gift } from "lucide-react";
+import { Heart, CreditCard, Building2, CheckCircle, Loader2, ArrowRight, HandHeart, Users, Utensils, Gift, Banknote, FileText } from "lucide-react";
 import { useI18n } from "@/i18n";
 
 const suggestedAmounts = [25, 100, 200, 500, 650, 1000, 2000, 5000];
@@ -31,7 +31,7 @@ export default function Dons() {
     donorPhone: "",
     amount: "",
     customAmount: "",
-    paymentMethod: "transfer" as "transfer" | "on_site",
+    paymentMethod: "transfer" as "transfer" | "cheque" | "cash",
     message: "",
     isAnonymous: false,
     acceptsUpdates: false,
@@ -112,21 +112,26 @@ export default function Dons() {
 
                 <div className="bg-primary/5 rounded-lg p-4 text-left space-y-3">
                   <h3 className="font-semibold">
-                    {donationSuccess.paymentMethod === 'transfer' ? t.donations.transferInstructions : t.donations.onSitePayment}
+                    {donationSuccess.paymentMethod === 'transfer' ? t.donations.transferInstructions : donationSuccess.paymentMethod === 'cheque' ? t.donations.chequePayment : t.donations.cashPayment}
                   </h3>
                   {donationSuccess.paymentMethod === 'transfer' ? (
                     <div className="text-sm text-muted-foreground space-y-2">
                       <p>{t.donations.transferDetails}</p>
                       <div className="bg-white rounded p-3 space-y-1 font-mono text-xs">
-                        <p><strong>{t.donations.bank}:</strong> Banque Populaire</p>
-                        <p><strong>RIB:</strong> XXXX XXXX XXXX XXXX XXXX XXXX</p>
+                        <p><strong>{t.donations.bank}:</strong> Attijariwafa Bank</p>
+                        <p><strong>RIB:</strong> 007 780 0003 401 000 100 238 97</p>
                         <p><strong>{t.donations.label}:</strong> DON-{donationSuccess.reference}</p>
                       </div>
                       <p className="text-xs">{t.donations.emailSent}</p>
                     </div>
+                  ) : donationSuccess.paymentMethod === 'cheque' ? (
+                    <div className="text-sm text-muted-foreground space-y-2">
+                      <p>{t.donations.chequeDetails}</p>
+                      <p>{t.donations.showReference}: <strong>{donationSuccess.reference}</strong></p>
+                    </div>
                   ) : (
                     <div className="text-sm text-muted-foreground space-y-2">
-                      <p>{t.donations.onSiteDetails}</p>
+                      <p>{t.donations.cashDetails}</p>
                       <p>{t.donations.showReference}: <strong>{donationSuccess.reference}</strong></p>
                     </div>
                   )}
@@ -267,8 +272,8 @@ export default function Dons() {
                       <Label>{t.donations.paymentMethod} *</Label>
                       <RadioGroup
                         value={formData.paymentMethod}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value as "transfer" | "on_site" }))}
-                        className="grid md:grid-cols-2 gap-4"
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value as "transfer" | "cheque" | "cash" }))}
+                        className="grid md:grid-cols-3 gap-4"
                       >
                         <div className={`flex items-center space-x-3 border rounded-lg p-4 cursor-pointer transition-colors ${formData.paymentMethod === 'transfer' ? 'border-primary bg-primary/5' : 'border-border'}`}>
                           <RadioGroupItem value="transfer" id="transfer" />
@@ -280,13 +285,23 @@ export default function Dons() {
                             </div>
                           </Label>
                         </div>
-                        <div className={`flex items-center space-x-3 border rounded-lg p-4 cursor-pointer transition-colors ${formData.paymentMethod === 'on_site' ? 'border-primary bg-primary/5' : 'border-border'}`}>
-                          <RadioGroupItem value="on_site" id="on_site" />
-                          <Label htmlFor="on_site" className="flex items-center gap-3 cursor-pointer flex-1">
-                            <CreditCard className="h-5 w-5 text-muted-foreground" />
+                        <div className={`flex items-center space-x-3 border rounded-lg p-4 cursor-pointer transition-colors ${formData.paymentMethod === 'cheque' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                          <RadioGroupItem value="cheque" id="cheque" />
+                          <Label htmlFor="cheque" className="flex items-center gap-3 cursor-pointer flex-1">
+                            <FileText className="h-5 w-5 text-muted-foreground" />
                             <div>
-                              <div className="font-medium">{t.donations.onSite}</div>
-                              <div className="text-xs text-muted-foreground">{t.donations.duringFtour}</div>
+                              <div className="font-medium">{t.donations.cheque}</div>
+                              <div className="text-xs text-muted-foreground">{t.donations.chequeDesc}</div>
+                            </div>
+                          </Label>
+                        </div>
+                        <div className={`flex items-center space-x-3 border rounded-lg p-4 cursor-pointer transition-colors ${formData.paymentMethod === 'cash' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                          <RadioGroupItem value="cash" id="cash" />
+                          <Label htmlFor="cash" className="flex items-center gap-3 cursor-pointer flex-1">
+                            <Banknote className="h-5 w-5 text-muted-foreground" />
+                            <div>
+                              <div className="font-medium">{t.donations.cash}</div>
+                              <div className="text-xs text-muted-foreground">{t.donations.cashDesc}</div>
                             </div>
                           </Label>
                         </div>

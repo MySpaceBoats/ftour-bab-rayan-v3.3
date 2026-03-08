@@ -509,13 +509,15 @@ export interface DonationEmailData {
   lastName: string;
   email: string;
   amount: number;
-  paymentMethod: 'transfer' | 'on_site';
+  paymentMethod: 'transfer' | 'cheque' | 'cash';
   donationId: string;
   baseUrl: string;
 }
 
 export function generateDonationConfirmationEmail(data: DonationEmailData): { subject: string; html: string } {
-  const paymentInstructions = data.paymentMethod === 'transfer' ? `
+  let paymentInstructions: string;
+  if (data.paymentMethod === 'transfer') {
+    paymentInstructions = `
     <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #eff6ff; border-radius: 8px; margin: 20px 0;">
       <tr>
         <td style="padding: 20px;">
@@ -530,19 +532,41 @@ export function generateDonationConfirmationEmail(data: DonationEmailData): { su
         </td>
       </tr>
     </table>
-  ` : `
-    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f0fdf4; border-radius: 8px; margin: 20px 0;">
+  `;
+  } else if (data.paymentMethod === 'cheque') {
+    paymentInstructions = `
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fefce8; border-radius: 8px; margin: 20px 0;">
       <tr>
         <td style="padding: 20px;">
-          <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">📍 Don sur place</h3>
-          <p style="margin: 0; color: #374151;">
-            Vous avez choisi de faire votre don sur place. Présentez cette confirmation 
-            lors de votre visite à l'association ou pendant un événement Ftour.
+          <h3 style="color: #854d0e; margin: 0 0 15px 0; font-size: 18px;">✉️ Paiement par chèque</h3>
+          <p style="margin: 0 0 10px 0; color: #374151;">
+            Veuillez envoyer un chèque à l'ordre de <strong>« Association Bab Rayan »</strong>.
+          </p>
+          <p style="margin: 5px 0; color: #6b7280; font-size: 14px;">
+            <strong>Important :</strong> Inscrivez votre référence <strong>${data.donationId}</strong> au dos du chèque.
           </p>
         </td>
       </tr>
     </table>
   `;
+  } else {
+    paymentInstructions = `
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f0fdf4; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">💵 Paiement en espèces</h3>
+          <p style="margin: 0; color: #374151;">
+            Vous avez choisi de payer en espèces. Présentez cette confirmation
+            lors de votre visite à l'association ou pendant un événement Ftour.
+          </p>
+          <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;">
+            Référence : <strong>${data.donationId}</strong>
+          </p>
+        </td>
+      </tr>
+    </table>
+  `;
+  }
 
   const content = `
     <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
