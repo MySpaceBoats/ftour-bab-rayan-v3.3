@@ -444,6 +444,61 @@ export function generateDonationConfirmationEmail(data: DonationEmailData): { su
 }
 
 /**
+ * Generate donation received confirmation email (validated by admin)
+ */
+export interface DonationReceivedEmailData {
+  donorName: string;
+  donorEmail: string;
+  donationReference: string;
+  amount: number | string;
+  paymentMethod: string;
+}
+
+export function generateDonationReceivedEmail(data: DonationReceivedEmailData): { subject: string; html: string } {
+  const paymentMethodLabel =
+    data.paymentMethod === 'transfer' ? 'virement bancaire'
+    : data.paymentMethod === 'cheque' ? 'chèque'
+    : 'espèces / sur place';
+
+  const content = `
+    <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
+      Votre don a bien été reçu !
+    </h2>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Cher(e) <strong>${data.donorName}</strong>,
+    </p>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Nous avons bien reçu votre don pour le <strong>Ftour Bab Rayan</strong> et nous vous en remercions chaleureusement.
+      Votre générosité contribue directement à offrir des repas aux enfants de l'association.
+    </p>
+
+    <!-- Récapitulatif -->
+    <div style="background-color: #f0fdf4; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center; border: 2px solid #166534;">
+      <p style="margin: 0; color: #166534; font-size: 14px; font-weight: 600;">DON REÇU ET CONFIRMÉ</p>
+      <p style="margin: 10px 0; color: #166534; font-size: 36px; font-weight: bold;">${data.amount} MAD</p>
+      <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;">
+        Référence : <strong>${data.donationReference}</strong>
+      </p>
+      <p style="margin: 6px 0 0 0; color: #6b7280; font-size: 14px;">
+        Mode de paiement : <strong>${paymentMethodLabel}</strong>
+      </p>
+    </div>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
+      Que Dieu vous récompense pour votre générosité !<br>
+      <strong>L'équipe Ftour Bab Rayan</strong>
+    </p>
+  `;
+
+  return {
+    subject: `✅ Don reçu ${data.donationReference} - Merci pour votre générosité !`,
+    html: baseTemplate(content),
+  };
+}
+
+/**
  * Generate contact form confirmation email
  */
 

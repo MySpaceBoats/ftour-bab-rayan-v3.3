@@ -1161,7 +1161,7 @@ const scannerRouter = router({
       if (input.type === "donation") {
         const { data: donation } = await supabase
           .from("donations")
-          .select("status")
+          .select("status, donor_name, donor_email, donation_reference, amount, payment_method")
           .eq("id", input.entityId)
           .single();
         if (!donation)
@@ -1178,6 +1178,27 @@ const scannerRouter = router({
           .from("donations")
           .update({ status: "received" })
           .eq("id", input.entityId);
+
+        // Envoyer un email de confirmation de réception
+        try {
+          const { sendEmail, generateDonationReceivedEmail } = await import("./email");
+          const emailData = generateDonationReceivedEmail({
+            donorName: donation.donor_name,
+            donorEmail: donation.donor_email,
+            donationReference: donation.donation_reference,
+            amount: typeof donation.amount === "string" ? parseFloat(donation.amount) || 0 : (donation.amount ?? 0),
+            paymentMethod: donation.payment_method,
+          });
+          await sendEmail({
+            to: donation.donor_email,
+            subject: emailData.subject,
+            html: emailData.html,
+            apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
+          });
+        } catch (emailError) {
+          console.error("[Worker] Error sending donation received email (scanner):", emailError);
+        }
+
         return { success: true, message: "Don marqué comme reçu !" };
       }
 
@@ -4607,6 +4628,37 @@ const donationsRouter = router({
 
       if (error) {
         throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      }
+
+      // Envoyer un email de confirmation quand le don passe au statut "reçu"
+      if (input.status === "received") {
+        try {
+          const { data: donation } = await supabase
+            .from("donations")
+            .select("donor_name, donor_email, donation_reference, amount, payment_method")
+            .eq("id", input.donationId)
+            .single();
+
+          if (donation) {
+            const { sendEmail, generateDonationReceivedEmail } = await import("./email");
+            const emailData = generateDonationReceivedEmail({
+              donorName: donation.donor_name,
+              donorEmail: donation.donor_email,
+              donationReference: donation.donation_reference,
+              amount: typeof donation.amount === "string" ? parseFloat(donation.amount) || 0 : (donation.amount ?? 0),
+              paymentMethod: donation.payment_method,
+            });
+            await sendEmail({
+              to: donation.donor_email,
+              subject: emailData.subject,
+              html: emailData.html,
+              apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
+            });
+          }
+        } catch (emailError) {
+          console.error("[Worker] Error sending donation received email:", emailError);
+          // Don't throw - status update was successful
+        }
       }
 
       return { success: true };
