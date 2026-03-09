@@ -186,9 +186,13 @@ export async function syncAllCatalogProducts(): Promise<{
   const details: string[] = [];
 
   // --- Goodies ---
-  const { data: goodies } = await db()
+  const { data: goodies, error: goodiesErr } = await db()
     .from('goodies')
     .select('id, name, category');
+  if (goodiesErr) {
+    errors++;
+    details.push(`goodies fetch error: ${goodiesErr.message}`);
+  }
   for (const g of goodies ?? []) {
     try {
       await syncInventoryProduct({
@@ -205,18 +209,25 @@ export async function syncAllCatalogProducts(): Promise<{
   }
 
   // --- Goodie variants ---
-  const { data: goodieVariants } = await db()
+  const { data: goodieVariants, error: gvErr } = await db()
     .from('goodie_variants')
-    .select('id, goodie_id, name, sku, goodies(name, category)');
+    .select('id, goodie_id, name, sku, size, color, goodies(name, category)');
+  if (gvErr) {
+    errors++;
+    details.push(`goodie_variants fetch error: ${gvErr.message}`);
+  }
   for (const v of goodieVariants ?? []) {
     try {
       const parent = (v as any).goodies;
+      const variantLabel = (v as any).name
+        || [(v as any).size, (v as any).color].filter(Boolean).join(' / ')
+        || `#${v.id}`;
       await syncInventoryProduct({
         productType: 'goodie_variant',
         sourceProductId: (v as any).goodie_id,
         sourceVariantId: v.id,
-        name: parent ? `${parent.name} – ${v.name}` : v.name,
-        sku: v.sku ?? null,
+        name: parent ? `${parent.name} – ${variantLabel}` : variantLabel,
+        sku: (v as any).sku ?? null,
         category: parent?.category ?? null,
       });
       synced++;
@@ -227,9 +238,13 @@ export async function syncAllCatalogProducts(): Promise<{
   }
 
   // --- Terroir products ---
-  const { data: terroirProducts } = await db()
+  const { data: terroirProducts, error: terroirErr } = await db()
     .from('terroir_products')
     .select('id, name, category');
+  if (terroirErr) {
+    errors++;
+    details.push(`terroir_products fetch error: ${terroirErr.message}`);
+  }
   for (const t of terroirProducts ?? []) {
     try {
       await syncInventoryProduct({
@@ -246,9 +261,13 @@ export async function syncAllCatalogProducts(): Promise<{
   }
 
   // --- Terroir variants ---
-  const { data: terroirVariants } = await db()
+  const { data: terroirVariants, error: terroirVarErr } = await db()
     .from('terroir_product_variants')
     .select('id, product_id, label, sku, terroir_products(name, category)');
+  if (terroirVarErr) {
+    errors++;
+    details.push(`terroir_product_variants fetch error: ${terroirVarErr.message}`);
+  }
   for (const v of terroirVariants ?? []) {
     try {
       const parent = (v as any).terroir_products;
@@ -268,9 +287,13 @@ export async function syncAllCatalogProducts(): Promise<{
   }
 
   // --- Pastries ---
-  const { data: pastries } = await db()
+  const { data: pastries, error: pastriesErr } = await db()
     .from('pastries')
     .select('id, name, category');
+  if (pastriesErr) {
+    errors++;
+    details.push(`pastries fetch error: ${pastriesErr.message}`);
+  }
   for (const p of pastries ?? []) {
     try {
       await syncInventoryProduct({
