@@ -150,6 +150,12 @@ import VolunteerProfilePage from "@/features/volunteer/pages/VolunteerProfile";
 import WhatsAppFloatingButton from "./components/WhatsAppFloatingButton";
 
 // ============================================
+// FTOUR BÉNÉVOLES — features/ftour
+// ============================================
+import AdminFtour from "@/features/ftour/admin/AdminFtour";
+import FtourConfirmation from "@/features/ftour/pages/FtourConfirmation";
+
+// ============================================
 // ROUTES
 // ============================================
 
@@ -294,6 +300,9 @@ function LocalizedRoutes() {
       {/* Admin Messages */}
       <Route path="/admin/messages" component={AdminMessages} />
 
+      {/* Admin Ftour Bénévoles */}
+      <Route path="/admin/ftour" component={AdminFtour} />
+
       {/* ================================================
           SCANNER — route unique (section 4.3)
           ================================================ */}
@@ -315,6 +324,9 @@ function LocalizedRoutes() {
       {/* ================================================
           PUBLIC CHECK-IN — sans :lang
           ================================================ */}
+      {/* Ftour Bénévoles — confirmation publique */}
+      <Route path="/ftour/confirm/:token" component={FtourConfirmation} />
+
       <Route path="/checkin/:token" component={Checkin} />
       <Route path="/cancel-volunteer/:token" component={CancelVolunteer} />
       <Route
