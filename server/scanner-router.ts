@@ -4,6 +4,44 @@ import { TRPCError } from "@trpc/server";
 import { getSupabaseAdminClient } from "./supabase";
 import * as supabaseServices from "./supabase-services";
 import * as reservationServices from "./reservation-services";
+import { getTimeInMinutesInTimeZone, DEFAULT_RAMADAN_TIMEZONE } from "@shared/ramadan";
+
+// ============================================
+// VOLUNTEER SLOT TIME WINDOWS
+// ============================================
+const PREP_START_MINUTES = 15 * 60;        // 15:00
+const PREP_END_MINUTES = 16 * 60 + 30;     // 16:30
+const SERVICE_START_MINUTES = 16 * 60 + 30; // 16:30
+const SERVICE_END_MINUTES = 17 * 60 + 30;   // 17:30
+
+function checkVolunteerSlotTime(volunteerSlots: string[]): { valid: boolean; errorMessage?: string } {
+  const hasPrep = volunteerSlots.includes("preparation_ftour");
+  const hasService = volunteerSlots.includes("service_ftour");
+
+  // If volunteer has no specific ftour slot, skip time restriction
+  if (!hasPrep && !hasService) {
+    return { valid: true };
+  }
+
+  const nowMinutes = getTimeInMinutesInTimeZone(new Date(), DEFAULT_RAMADAN_TIMEZONE);
+  const prepValid = hasPrep && nowMinutes >= PREP_START_MINUTES && nowMinutes < PREP_END_MINUTES;
+  const serviceValid = hasService && nowMinutes >= SERVICE_START_MINUTES && nowMinutes < SERVICE_END_MINUTES;
+
+  if (prepValid || serviceValid) {
+    return { valid: true };
+  }
+
+  let errorMessage: string;
+  if (hasPrep && hasService) {
+    errorMessage = "QR code valide uniquement entre 15h00–16h30 (préparation) ou 16h30–17h30 (service)";
+  } else if (hasPrep) {
+    errorMessage = "QR code préparation valide uniquement entre 15h00 et 16h30";
+  } else {
+    errorMessage = "QR code service valide uniquement entre 16h30 et 17h30";
+  }
+
+  return { valid: false, errorMessage };
+}
 
 const scannerProcedure = publicProcedure;
 
@@ -301,6 +339,36 @@ export const scannerRouter = router({
         const volunteer =
           await supabaseServices.getVolunteerByTokenSupabase(token);
         if (volunteer) {
+          // Check time window based on volunteer slots
+          const timeCheck = checkVolunteerSlotTime(volunteer.volunteerSlots ?? []);
+          if (!timeCheck.valid) {
+            const fullName = `${volunteer.firstName} ${volunteer.lastName}`;
+            return {
+              type: "volunteer" as QrType,
+              typeLabel: QR_TYPE_LABELS.volunteer,
+              token,
+              found: true,
+              autoValidated: true,
+              validationState: "time_invalid",
+              validationMessage: timeCheck.errorMessage!,
+              validationSuccess: false,
+              entity: {
+                id: volunteer.id,
+                name: fullName,
+                email: volunteer.email,
+                phone: volunteer.phone,
+                status: volunteer.status,
+                qrStatus: volunteer.qrStatus,
+                dayNumber: volunteer.day?.dayNumber,
+                dayDate: volunteer.day?.date,
+                location: volunteer.day?.location,
+                iftarTime: volunteer.day?.iftarTime,
+                alreadyValidated: false,
+                scannedAt: volunteer.scannedAt,
+              },
+            };
+          }
+
           // Auto-validate: immediately confirm the volunteer on scan
           const validationResult =
             await supabaseServices.scanAndValidateTokenSupabase(
