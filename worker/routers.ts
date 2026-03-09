@@ -80,6 +80,139 @@ const scannerProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
+// ============================================
+// GROUP VOLUNTEER FILE PROCESSING HELPERS
+// ============================================
+
+const GROUP_MAIL_DISPATCH_CC = [
+  "naylabennani@hotmail.com",
+  "ratibhind3@gmail.com",
+  "rsebbani@myspace.boats",
+] as const;
+
+/** Strips a potential data:...;base64, prefix from a base64 payload */
+const _decodeBase64Payload = (payload: string): Uint8Array => {
+  const clean = payload.includes(",") ? (payload.split(",").pop() ?? "") : payload;
+  return Uint8Array.from(atob(clean), c => c.charCodeAt(0));
+};
+
+const _normalizeStr = (value: unknown): string =>
+  String(value ?? "")
+    .toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+type ParsedGroupRow = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  city?: string;
+};
+
+/**
+ * Parse volunteer group rows from a base64-encoded spreadsheet.
+ * - Handles all sheets (not just the first)
+ * - Auto-detects the header row (prioritises row 6, the standard template row)
+ * - Searches multiple sample rows for column detection (robust to merged cells)
+ * - Deduplicates by email across all sheets
+ */
+const _parseGroupVolunteersFromSpreadsheet = (fileBase64: string): ParsedGroupRow[] => {
+  const buffer = _decodeBase64Payload(fileBase64);
+  const workbook = XLSX.read(buffer, { type: "array", raw: false, FS: ";" });
+  const seenEmails = new Set<string>();
+  const allRows: ParsedGroupRow[] = [];
+
+  for (const sheetName of workbook.SheetNames) {
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) continue;
+
+    const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, {
+      header: 1,
+      defval: "",
+      blankrows: false,
+    });
+
+    const TEMPLATE_HEADER_ROW = 6;
+    let headerRowIndex = rawRows.length > TEMPLATE_HEADER_ROW ? TEMPLATE_HEADER_ROW : 0;
+    let bestScore = -1;
+
+    for (let i = 0; i < Math.min(rawRows.length, 30); i++) {
+      const row = rawRows[i] ?? [];
+      let hasEmail = false, hasName = false, score = 0;
+      for (const cell of row) {
+        const n = _normalizeStr(cell);
+        if (!n) continue;
+        if (n.includes("email") || n.includes("mail") || n.includes("courriel")) { hasEmail = true; score += 3; }
+        if (n.includes("nom") || n.includes("name") || n.includes("prenom") || n.includes("first") || n.includes("last")) { hasName = true; score += 2; }
+        if (n.includes("tel") || n.includes("phone") || n.includes("ville") || n.includes("city")) score += 1;
+      }
+      if (hasEmail && hasName) {
+        if (i === TEMPLATE_HEADER_ROW) { headerRowIndex = i; break; }
+        if (score > bestScore) { bestScore = score; headerRowIndex = i; }
+      }
+    }
+
+    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, {
+      defval: "",
+      range: headerRowIndex,
+      blankrows: false,
+    });
+    if (!rows.length) continue;
+
+    // Search first 5 data rows for column keys (robust to merged-header cells)
+    const sampleRows = rows.slice(0, 5);
+    const findCol = (candidates: string[], exclude: string[] = []): string => {
+      for (const r of sampleRows) {
+        for (const key of Object.keys(r)) {
+          if (!key || exclude.includes(key)) continue;
+          const n = _normalizeStr(key);
+          if (candidates.some(c => n.includes(c))) return key;
+        }
+      }
+      return "";
+    };
+
+    const colEmail = findCol(["email", "mail", "courriel"]);
+    const colFirst = findCol(["prenom", "first", "firstname"], [colEmail]);
+    const colLast  = findCol(["nom", "last", "lastname", "family"], [colEmail, colFirst].filter(Boolean));
+    const colFull  = (!colFirst || !colLast)
+      ? findCol(["nom", "name", "prenom"], [colEmail].filter(Boolean))
+      : "";
+    const used     = [colEmail, colFirst, colLast, colFull].filter(Boolean);
+    const colPhone = findCol(["telephone", "tel", "phone", "mobile", "gsm"], used);
+    const colCity  = findCol(["ville", "city"], [...used, colPhone].filter(Boolean));
+
+    if ((!colFirst || !colLast) && !colFull) continue;
+    if (!colEmail) continue;
+
+    for (const row of rows) {
+      let firstName: string, lastName: string;
+      if (colFull) {
+        const parts = String(row[colFull] ?? "").trim().split(/\s+/).filter(Boolean);
+        if (parts.length >= 2) { lastName = parts[0]; firstName = parts.slice(1).join(" "); }
+        else { firstName = parts[0] ?? ""; lastName = parts[0] ?? ""; }
+      } else {
+        firstName = String(row[colFirst] ?? "").trim();
+        lastName  = String(row[colLast]  ?? "").trim();
+      }
+      const email = String(row[colEmail] ?? "").toLowerCase().trim();
+      const phone = colPhone ? String(row[colPhone] ?? "").trim() : "";
+      const city  = colCity  ? (String(row[colCity] ?? "").trim() || undefined) : undefined;
+
+      if (!firstName || !lastName || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) continue;
+      if (seenEmails.has(email)) continue;
+      seenEmails.add(email);
+      allRows.push({ firstName, lastName, email, phone, city });
+    }
+  }
+
+  return allRows;
+};
+
+// ============================================
+
 type WorkerQrType =
   | "volunteer"
   | "reservation_particulier"
@@ -3394,6 +3527,114 @@ const volunteersRouter = router({
               html,
               apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
             });
+
+            // Process Excel file with participant list
+            const requestFileBase64 = String(request.file_base64 ?? "").trim();
+            if (requestFileBase64 && validationDay) {
+              try {
+                const parsedRows = _parseGroupVolunteersFromSpreadsheet(requestFileBase64);
+                if (parsedRows.length > 0) {
+                  let emailsSent = 0, emailsFailed = 0, qrCreated = 0;
+                  const CHUNK_SIZE = 50;
+
+                  for (let chunkStart = 0; chunkStart < parsedRows.length; chunkStart += CHUNK_SIZE) {
+                    const chunk = parsedRows.slice(chunkStart, chunkStart + CHUNK_SIZE);
+                    for (const row of chunk) {
+                      try {
+                        // Skip if already registered for this day
+                        const { data: existing } = await supabase
+                          .from("volunteers")
+                          .select("id")
+                          .eq("email", row.email)
+                          .eq("day_id", dayId)
+                          .limit(1)
+                          .maybeSingle();
+                        if (existing) continue;
+
+                        const qrToken = crypto.randomUUID();
+                        const { error: insertErr } = await supabase.from("volunteers").insert({
+                          first_name: row.firstName,
+                          last_name: row.lastName,
+                          email: row.email,
+                          phone: row.phone,
+                          city: row.city ?? null,
+                          day_id: dayId,
+                          volunteer_slots: request.volunteer_slots || [],
+                          qr_token: qrToken,
+                          qr_status: "generated",
+                          status: "registered",
+                          accepted_terms: true,
+                          email_sent: false,
+                        });
+                        if (insertErr) {
+                          console.error("[ReviewGroupRequest] Insert error:", insertErr.message);
+                          continue;
+                        }
+                        qrCreated++;
+
+                        // Send confirmation email with QR code
+                        const participantEmailData = generateVolunteerConfirmationEmail({
+                          firstName: row.firstName,
+                          lastName: row.lastName,
+                          email: row.email,
+                          dayNumber: validationDay.day_number,
+                          dayDate: new Date(validationDay.date).toLocaleDateString("fr-FR", {
+                            weekday: "long",
+                            month: "long",
+                            day: "numeric",
+                          }),
+                          location: validationDay.location || "Association Bab Rayan, Casablanca",
+                          startTime: validationDay.iftar_time || "18h00",
+                          volunteerSlots: (request.volunteer_slots || []) as string[],
+                          qrToken,
+                          baseUrl: "https://www.ftourbabrayan.ma",
+                        });
+                        const emailResult = await sendEmail({
+                          to: row.email,
+                          subject: participantEmailData.subject,
+                          html: participantEmailData.html,
+                          apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
+                        });
+                        if (emailResult.success) {
+                          emailsSent++;
+                          await supabase.from("volunteers").update({ email_sent: true }).eq("qr_token", qrToken);
+                        } else {
+                          emailsFailed++;
+                        }
+                      } catch (rowErr) {
+                        console.error("[ReviewGroupRequest] Row processing error:", rowErr);
+                      }
+                    }
+                    // Delay between chunks to respect Resend rate limits
+                    if (chunkStart + CHUNK_SIZE < parsedRows.length) {
+                      await new Promise(resolve => setTimeout(resolve, 800));
+                    }
+                  }
+
+                  // Send dispatch summary to admins
+                  try {
+                    const summaryDayDate = new Date(validationDay.date).toLocaleDateString("fr-FR", {
+                      weekday: "long",
+                      month: "long",
+                      day: "numeric",
+                    });
+                    await sendEmail({
+                      to: "contact@ftourbabrayan.ma",
+                      cc: [...GROUP_MAIL_DISPATCH_CC],
+                      subject: `QR groupe envoyés - ${groupName} (${emailsSent} emails envoyés)`,
+                      html: `<p>Bonjour,</p><p>Les emails d'inscription du groupe ont été traités.</p><ul><li><strong>Groupe :</strong> ${groupName}</li><li><strong>Responsable :</strong> ${responsibleName}</li><li><strong>Email responsable :</strong> ${normalizedResponsibleEmail}</li><li><strong>Jour Ramadan :</strong> ${validationDay.day_number} (${summaryDayDate})</li><li><strong>QR codes produits :</strong> ${qrCreated}</li><li><strong>Emails envoyés :</strong> ${emailsSent}</li><li><strong>Emails en échec :</strong> ${emailsFailed}</li></ul><p>Ceci est un message d'information automatique.</p>`,
+                      apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
+                    });
+                  } catch (summaryErr) {
+                    console.error("[ReviewGroupRequest] Failed to send dispatch summary:", summaryErr);
+                  }
+
+                  console.log(`[ReviewGroupRequest] File processed for request ${input.requestId}: ${qrCreated} QR created, ${emailsSent} sent, ${emailsFailed} failed`);
+                }
+              } catch (fileErr) {
+                console.error(`[ReviewGroupRequest] Failed to process attachment for request ${input.requestId}:`, fileErr);
+              }
+            }
           } else {
             const refusalEmailData = generateGroupRefusalEmail({
               responsibleName,
@@ -3460,13 +3701,10 @@ const volunteersRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
       }
 
-      // Parse the Excel file from base64
-      const fileBuffer = Uint8Array.from(atob(input.fileBase64), c =>
-        c.charCodeAt(0)
-      );
-      let workbook: XLSX.WorkBook;
+      // Parse the Excel file using the shared robust parser
+      let parsedRows: ParsedGroupRow[];
       try {
-        workbook = XLSX.read(fileBuffer, { type: "array" });
+        parsedRows = _parseGroupVolunteersFromSpreadsheet(input.fileBase64);
       } catch {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -3474,286 +3712,112 @@ const volunteersRouter = router({
         });
       }
 
-      const sheetName = workbook.SheetNames[0];
-      if (!sheetName) {
+      if (parsedRows.length === 0) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Le fichier Excel est vide.",
+          message:
+            "Colonnes requises introuvables (Nom/Prénom, Email) ou aucune ligne valide dans le fichier.",
         });
       }
 
-      const sheet = workbook.Sheets[sheetName];
-
-      // Find the actual header row (template has title/info rows before column headers)
-      // Headers can be: "NOM PRENOM" + "EMAIL ADRESS" or "Prénom" + "Nom" + "Email"
-      const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, {
-        header: 1,
-        defval: "",
-      });
-      let headerRowIndex = 0;
-      for (let i = 0; i < Math.min(rawRows.length, 20); i++) {
-        const row = rawRows[i] || [];
-        let hasNameCol = false,
-          hasEmailCol = false;
-        for (const cell of row) {
-          const val = String(cell || "").trim();
-          if (val.length === 0 || val.length > 30) continue;
-          const n = val
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "");
-          if (
-            n.includes("email") ||
-            n.includes("mail") ||
-            n.includes("courriel")
-          )
-            hasEmailCol = true;
-          if (
-            n.includes("nom") ||
-            n.includes("name") ||
-            n.includes("prenom") ||
-            n.includes("first") ||
-            n.includes("last")
-          )
-            hasNameCol = true;
-        }
-        if (hasNameCol && hasEmailCol) {
-          headerRowIndex = i;
-          break;
-        }
-      }
-
-      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, {
-        defval: "",
-        range: headerRowIndex,
-      });
-
-      if (rows.length === 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Aucune ligne trouvée dans le fichier Excel.",
-        });
-      }
-
-      // Normalize column names (exclude already-matched keys to avoid collisions)
-      function findColumn(
-        row: Record<string, any>,
-        candidates: string[],
-        exclude: string[] = []
-      ): string {
-        for (const key of Object.keys(row)) {
-          if (exclude.includes(key)) continue;
-          const normalized = key
-            .toLowerCase()
-            .trim()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "");
-          for (const candidate of candidates) {
-            if (normalized.includes(candidate)) return key;
-          }
-        }
-        return "";
-      }
-
-      // Detect column mapping from first row
-      const sampleRow = rows[0];
-      const colEmail = findColumn(sampleRow, ["email", "mail", "courriel"]);
-
-      // Try separate Prénom/Nom columns first
-      const colFirstName = findColumn(
-        sampleRow,
-        ["prenom", "first", "firstname"],
-        [colEmail]
-      );
-      const colLastName = findColumn(
-        sampleRow,
-        ["nom", "last", "lastname", "family"],
-        [colEmail, colFirstName].filter(Boolean)
-      );
-
-      // Fall back to combined name column (e.g., "NOM PRENOM", "NOM ET PRENOM")
-      const colFullName =
-        !colFirstName || !colLastName
-          ? findColumn(
-              sampleRow,
-              ["nom", "name", "prenom"],
-              [colEmail].filter(Boolean)
-            )
-          : "";
-
-      const usedCols = [
-        colEmail,
-        colFirstName,
-        colLastName,
-        colFullName,
-      ].filter(Boolean);
-      const colPhone = findColumn(
-        sampleRow,
-        ["telephone", "tel", "phone", "mobile", "gsm"],
-        usedCols
-      );
-      const colCity = findColumn(
-        sampleRow,
-        ["ville", "city"],
-        [...usedCols, colPhone].filter(Boolean)
-      );
-
-      const hasNames = (colFirstName && colLastName) || colFullName;
-      if (!hasNames || !colEmail) {
-        const detectedCols = Object.keys(sampleRow).join(", ");
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Colonnes requises introuvables (Nom/Prénom, Email). Colonnes détectées : ${detectedCols}`,
-        });
-      }
-
+      const { generateVolunteerConfirmationEmail } = await import("./email");
       const results: { email: string; success: boolean; error?: string }[] = [];
+      const CHUNK_SIZE = 50;
 
-      for (const row of rows) {
-        let firstName: string, lastName: string;
-        if (colFullName) {
-          const fullName = String(row[colFullName] || "").trim();
-          const parts = fullName.split(/\s+/);
-          if (parts.length >= 2) {
-            lastName = parts[0];
-            firstName = parts.slice(1).join(" ");
-          } else {
-            lastName = fullName;
-            firstName = fullName;
-          }
-        } else {
-          firstName = String(row[colFirstName] || "").trim();
-          lastName = String(row[colLastName] || "").trim();
-        }
-        const email = String(row[colEmail] || "")
-          .toLowerCase()
-          .trim();
-        const phone = colPhone ? String(row[colPhone] || "").trim() : "";
-        const city = colCity ? String(row[colCity] || "").trim() : undefined;
+      for (let chunkStart = 0; chunkStart < parsedRows.length; chunkStart += CHUNK_SIZE) {
+        const chunk = parsedRows.slice(chunkStart, chunkStart + CHUNK_SIZE);
 
-        // Skip empty rows
-        if (!firstName || !lastName || !email) {
-          results.push({
-            email: email || "(vide)",
-            success: false,
-            error: "Données incomplètes (prénom, nom ou email manquant)",
-          });
-          continue;
-        }
-
-        // Basic email validation
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          results.push({ email, success: false, error: "Email invalide" });
-          continue;
-        }
-
-        try {
-          // Check if already registered for this day
-          const { data: existing } = await supabase
-            .from("volunteers")
-            .select("id")
-            .eq("email", email)
-            .eq("day_id", input.dayId)
-            .maybeSingle();
-
-          if (existing) {
-            results.push({
-              email,
-              success: false,
-              error: "Déjà inscrit pour ce jour",
-            });
-            continue;
-          }
-
-          // Generate QR token
-          const qrToken = crypto.randomUUID();
-
-          // Create volunteer entry
-          const { data: volunteer, error: volError } = await supabase
-            .from("volunteers")
-            .insert({
-              first_name: firstName,
-              last_name: lastName,
-              email,
-              phone,
-              city,
-              day_id: input.dayId,
-              volunteer_slots: input.volunteerSlots,
-              qr_token: qrToken,
-              qr_status: "generated",
-              status: "registered",
-              accepted_terms: true,
-              email_sent: false,
-            })
-            .select()
-            .single();
-
-          if (volError) {
-            results.push({ email, success: false, error: volError.message });
-            continue;
-          }
-
-          // Send confirmation email with QR code
+        for (const row of chunk) {
           try {
-            const { sendEmail, generateVolunteerConfirmationEmail } =
-              await import("./email");
-            const emailData = generateVolunteerConfirmationEmail({
-              firstName,
-              lastName,
-              email,
-              dayNumber: day.day_number,
-              dayDate: new Date(day.date).toLocaleDateString("fr-FR", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              }),
-              location: day.location || "Association Bab Rayan, Casablanca",
-              startTime: day.iftar_time || "18h00",
-              volunteerSlots: input.volunteerSlots,
-              qrToken,
-              baseUrl: "https://www.ftourbabrayan.ma",
-            });
+            // Check if already registered for this day
+            const { data: existing } = await supabase
+              .from("volunteers")
+              .select("id")
+              .eq("email", row.email)
+              .eq("day_id", input.dayId)
+              .maybeSingle();
 
-            const emailResult = await sendEmail({
-              to: email,
-              subject: emailData.subject,
-              html: emailData.html,
-              apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
-            });
-
-            if (emailResult.success) {
-              await supabase
-                .from("volunteers")
-                .update({ email_sent: true })
-                .eq("id", volunteer.id);
-              results.push({ email, success: true });
-              console.log(`[ProcessGroupExcel] Email sent to ${email}`);
-            } else {
-              results.push({
-                email,
-                success: true,
-                error: `Inscrit mais email non envoyé: ${emailResult.error}`,
-              });
-              console.warn(
-                `[ProcessGroupExcel] Volunteer created but email failed for ${email}: ${emailResult.error}`
-              );
+            if (existing) {
+              results.push({ email: row.email, success: false, error: "Déjà inscrit pour ce jour" });
+              continue;
             }
-          } catch (emailError) {
-            results.push({
-              email,
-              success: true,
-              error: "Inscrit mais email non envoyé",
-            });
-            console.error(
-              `[ProcessGroupExcel] Email error for ${email}:`,
-              emailError
-            );
+
+            // Generate QR token and create volunteer entry
+            const qrToken = crypto.randomUUID();
+            const { data: volunteer, error: volError } = await supabase
+              .from("volunteers")
+              .insert({
+                first_name: row.firstName,
+                last_name: row.lastName,
+                email: row.email,
+                phone: row.phone,
+                city: row.city ?? null,
+                day_id: input.dayId,
+                volunteer_slots: input.volunteerSlots,
+                qr_token: qrToken,
+                qr_status: "generated",
+                status: "registered",
+                accepted_terms: true,
+                email_sent: false,
+              })
+              .select()
+              .single();
+
+            if (volError) {
+              results.push({ email: row.email, success: false, error: volError.message });
+              continue;
+            }
+
+            // Send confirmation email with QR code
+            try {
+              const emailData = generateVolunteerConfirmationEmail({
+                firstName: row.firstName,
+                lastName: row.lastName,
+                email: row.email,
+                dayNumber: day.day_number,
+                dayDate: new Date(day.date).toLocaleDateString("fr-FR", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                }),
+                location: day.location || "Association Bab Rayan, Casablanca",
+                startTime: day.iftar_time || "18h00",
+                volunteerSlots: input.volunteerSlots,
+                qrToken,
+                baseUrl: "https://www.ftourbabrayan.ma",
+              });
+
+              const emailResult = await sendEmail({
+                to: row.email,
+                subject: emailData.subject,
+                html: emailData.html,
+                apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
+              });
+
+              if (emailResult.success) {
+                await supabase.from("volunteers").update({ email_sent: true }).eq("id", volunteer!.id);
+                results.push({ email: row.email, success: true });
+              } else {
+                results.push({
+                  email: row.email,
+                  success: true,
+                  error: `Inscrit mais email non envoyé: ${emailResult.error}`,
+                });
+              }
+            } catch (emailError) {
+              results.push({ email: row.email, success: true, error: "Inscrit mais email non envoyé" });
+              console.error(`[ProcessGroupExcel] Email error for ${row.email}:`, emailError);
+            }
+          } catch (error) {
+            const errMsg = error instanceof Error ? error.message : "Erreur inconnue";
+            results.push({ email: row.email, success: false, error: errMsg });
+            console.error(`[ProcessGroupExcel] Error for ${row.email}:`, error);
           }
-        } catch (error) {
-          const errMsg =
-            error instanceof Error ? error.message : "Erreur inconnue";
-          results.push({ email, success: false, error: errMsg });
-          console.error(`[ProcessGroupExcel] Error for ${email}:`, error);
+        }
+
+        // Delay between chunks to respect Resend rate limits
+        if (chunkStart + CHUNK_SIZE < parsedRows.length) {
+          await new Promise(resolve => setTimeout(resolve, 800));
         }
       }
 
@@ -3761,10 +3825,10 @@ const volunteersRouter = router({
       const failCount = results.filter(r => !r.success).length;
 
       console.log(
-        `[ProcessGroupExcel] Completed: ${successCount} success, ${failCount} failures out of ${rows.length} rows`
+        `[ProcessGroupExcel] Completed: ${successCount} success, ${failCount} failures out of ${parsedRows.length} rows`
       );
 
-      return { results, successCount, failCount, totalRows: rows.length };
+      return { results, successCount, failCount, totalRows: parsedRows.length };
     }),
 });
 
