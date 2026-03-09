@@ -35,6 +35,7 @@ import { companyBookingsRouter } from "./company-booking-routers";
 import { restaurantReservationsRouter } from "./restaurant-reservation-routers";
 import { contentRouter } from "./content-router";
 import { scannerRouter } from "./scanner-router";
+import { ftourRouter } from "./ftour-router";
 import * as galleryServices from "./gallery-services";
 import * as volunteerProfileServices from "./volunteer-profile-services";
 import { randomBytes } from "crypto";
@@ -5509,6 +5510,7 @@ export const appRouter = router({
   terroirModule: terroirModuleRouter,
   volunteerProfile: volunteerProfileRouter,
   inventory: inventoryRouter,
+  ftour: ftourRouter,
 });
 
 // ============================================
@@ -6222,6 +6224,7 @@ export const appRouterUpdated = router({
   ramadan: ramadanRouter,
   volunteerProfile: volunteerProfileRouter,
   inventory: inventoryRouter,
+  ftour: ftourRouter,
 });
 
 export type AppRouter = typeof appRouterUpdated;

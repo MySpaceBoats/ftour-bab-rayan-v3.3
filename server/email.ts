@@ -2185,3 +2185,95 @@ export function generateGroupRegistrationEmail(data: GroupRegistrationEmailData)
     html: baseTemplate(content),
   };
 }
+
+// ============================================
+// EMAIL INVITATION FTOUR BÉNÉVOLES
+// ============================================
+
+export interface FtourInvitationEmailData {
+  firstName: string;
+  lastName: string;
+  eventTitle: string;
+  eventDate: string;
+  eventLocation: string;
+  confirmationUrl: string;
+}
+
+/**
+ * Génère l'email d'invitation au Ftour spécial bénévoles
+ */
+export function generateFtourInvitationEmail(data: FtourInvitationEmailData): string {
+  const safeName = escapeHtml(`${data.firstName} ${data.lastName}`);
+  const safeFirstName = escapeHtml(data.firstName);
+  const safeTitle = escapeHtml(data.eventTitle);
+  const safeDate = escapeHtml(data.eventDate);
+  const safeLocation = escapeHtml(data.eventLocation);
+  const safeUrl = escapeHtml(data.confirmationUrl);
+
+  const content = `
+    <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 22px;">
+      Invitation spéciale – Ftour des bénévoles 🌙
+    </h2>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">
+      Cher/Chère <strong>${safeFirstName}</strong>,
+    </p>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">
+      Nous avons le plaisir de t'inviter à un <strong>Ftour spécial bénévoles</strong>
+      suivi d'une <strong>remise de certificat personnalisé de bénévolat</strong>.
+    </p>
+
+    <!-- Détails de l'événement -->
+    <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 24px 0; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+      <tr>
+        <td style="padding: 20px 24px;">
+          <p style="margin: 0 0 12px 0; color: #15803d; font-size: 15px;">
+            <strong>📍 Lieu :</strong><br>
+            <span style="color: #374151;">${safeLocation}</span>
+          </p>
+          <p style="margin: 0; color: #15803d; font-size: 15px;">
+            <strong>📅 Date :</strong><br>
+            <span style="color: #374151;">${safeDate}</span>
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">
+      Ce moment sera l'occasion de se retrouver et de célébrer l'engagement des bénévoles
+      autour d'un repas convivial.
+    </p>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 28px 0;">
+      Pour confirmer ta présence et indiquer ce que tu souhaites ramener à partager,
+      merci de cliquer sur le bouton ci-dessous :
+    </p>
+
+    <!-- Bouton CTA -->
+    <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 0 0 28px 0;">
+      <tr>
+        <td align="center">
+          <a href="${safeUrl}"
+             style="display: inline-block; background: linear-gradient(135deg, #166534 0%, #15803d 100%); color: #ffffff; text-decoration: none; padding: 16px 36px; border-radius: 8px; font-size: 16px; font-weight: bold; letter-spacing: 0.5px;">
+            ✅ Confirmer ma présence
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <p style="color: #6b7280; font-size: 13px; margin: 0 0 16px 0; text-align: center;">
+      Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :<br>
+      <a href="${safeUrl}" style="color: #15803d; word-break: break-all;">${safeUrl}</a>
+    </p>
+
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0;">
+      BarakAllah fik pour ton engagement 🙏<br>
+      <strong>L'équipe Bab Rayan</strong>
+    </p>
+  `;
+
+  return baseTemplate(content);
+}
