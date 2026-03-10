@@ -36,6 +36,7 @@ import { restaurantReservationsRouter } from "./restaurant-reservation-routers";
 import { contentRouter } from "./content-router";
 import { scannerRouter } from "./scanner-router";
 import { ftourRouter } from "./ftour-router";
+import { electionRouter } from "./election-router";
 import * as galleryServices from "./gallery-services";
 import * as volunteerProfileServices from "./volunteer-profile-services";
 import { randomBytes } from "crypto";
@@ -6225,6 +6226,7 @@ export const appRouterUpdated = router({
   volunteerProfile: volunteerProfileRouter,
   inventory: inventoryRouter,
   ftour: ftourRouter,
+  election: electionRouter,
 });
 
 export type AppRouter = typeof appRouterUpdated;
