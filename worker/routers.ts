@@ -8620,12 +8620,6 @@ const electionRouter = router({
       const userEmail = ctx.user.email ?? input.email;
       const year = ELECTION_CURRENT_YEAR;
       const count = await getElectionParticipationCount(userEmail, ctx.env);
-      if (count < ELECTION_MIN_PARTICIPATIONS) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: `Vous devez avoir participé à au moins ${ELECTION_MIN_PARTICIPATIONS} événements Bab Rayan pour vous présenter.`,
-        });
-      }
       const { data: existing } = await admin
         .from("manager_candidates")
         .select("id")

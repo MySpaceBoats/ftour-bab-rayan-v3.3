@@ -329,14 +329,8 @@ export const electionRouter = router({
       const userEmail = ctx.user.email ?? input.email;
       const year = CURRENT_YEAR;
 
-      // Vérifier l'éligibilité
+      // Compter les participations (sans vérification minimale)
       const count = await getParticipationCount(userEmail);
-      if (count < MIN_PARTICIPATIONS) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: `Vous devez avoir participé à au moins ${MIN_PARTICIPATIONS} événements Bab Rayan pour vous présenter.`,
-        });
-      }
 
       // Vérifier si candidature déjà soumise
       const { data: existing } = await admin

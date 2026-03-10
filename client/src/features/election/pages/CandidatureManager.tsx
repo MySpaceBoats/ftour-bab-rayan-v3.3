@@ -6,21 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Loader2,
-  Camera,
   CheckCircle,
-  AlertCircle,
   Trophy,
-  Star,
   Upload,
 } from "lucide-react";
 import PrivateRoute from "@/features/volunteer/components/PrivateRoute";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
-  useMyEligibility,
   useSubmitCandidacyMutation,
   useGetPhotoUploadUrl,
 } from "../electionApi";
@@ -38,7 +33,6 @@ export default function CandidatureManager() {
 
 function CandidatureManagerContent() {
   const { user } = useAuth();
-  const eligibilityQuery = useMyEligibility();
   const submitMutation = useSubmitCandidacyMutation();
   const getUploadUrl = useGetPhotoUploadUrl();
 
@@ -104,11 +98,6 @@ function CandidatureManagerContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!eligibilityQuery.data?.eligible) {
-      toast.error("Vous n'êtes pas éligible pour vous présenter.");
-      return;
-    }
-
     try {
       await submitMutation.mutateAsync({
         first_name: form.first_name,
@@ -125,11 +114,6 @@ function CandidatureManagerContent() {
       toast.error(msg);
     }
   };
-
-  const isLoading = eligibilityQuery.isLoading;
-  const eligible = eligibilityQuery.data?.eligible ?? false;
-  const participationCount = eligibilityQuery.data?.participationCount ?? 0;
-  const minRequired = eligibilityQuery.data?.minRequired ?? 3;
 
   if (submitted) {
     return (
@@ -171,39 +155,7 @@ function CandidatureManagerContent() {
           </p>
         </div>
 
-        {isLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-stone-400" />
-          </div>
-        ) : !eligible ? (
-          <Alert className="border-red-200 bg-red-50">
-            <AlertCircle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-red-800">
-              <strong>Candidature non éligible.</strong>
-              <br />
-              Vous devez avoir participé à au moins {minRequired} événements Bab Rayan.
-              <br />
-              Vos participations actuelles : <strong>{participationCount}/{minRequired}</strong>
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <>
-            {/* Eligibility badge */}
-            <Alert className="mb-6 border-green-200 bg-green-50">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.min(3, Math.floor(participationCount / 3)) }).map((_, i) => (
-                    <Star key={i} className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
-                  ))}
-                  <span className="font-medium ml-1">
-                    Éligible — {participationCount} participations confirmées
-                  </span>
-                </div>
-              </AlertDescription>
-            </Alert>
-
-            <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
               <Card>
                 <CardHeader>
                   <CardTitle>Votre candidature</CardTitle>
@@ -330,8 +282,6 @@ function CandidatureManagerContent() {
                 </CardContent>
               </Card>
             </form>
-          </>
-        )}
       </main>
       <Footer />
     </div>
