@@ -1031,10 +1031,10 @@ export default function Benevole() {
                     </h3>
                     <p className="text-sm text-muted-foreground">
                       {lang === "ar"
-                        ? "يمكن للمتطوعين رفع صور الحدث مباشرة. سيتم النشر بعد التحقق."
+                        ? "يمكن للمتطوعين رفع صور الحدث مباشرة. تُنشر الصور فوراً في المعرض."
                         : lang === "en"
-                          ? "Volunteers can upload event photos directly. Publication happens after moderation."
-                          : "Les bénévoles peuvent uploader directement leurs photos de l'événement. Publication après validation."}
+                          ? "Volunteers can upload event photos directly. Photos are published immediately in the gallery."
+                          : "Les bénévoles peuvent uploader directement leurs photos de l'événement. Publication immédiate dans la galerie."}
                     </p>
                     <Button
                       type="button"
