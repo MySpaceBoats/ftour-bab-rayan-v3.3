@@ -14,12 +14,11 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Vote, Trophy, Star, Lock, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, Vote, Trophy, Star, Lock, CheckCircle } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
   useElectionSettings,
   useElectionCandidates,
-  useMyEligibility,
   useMyVote,
   useVoteMutation,
 } from "../electionApi";
@@ -46,7 +45,6 @@ export default function ElectionManagers() {
 
   const settingsQuery = useElectionSettings();
   const candidatesQuery = useElectionCandidates();
-  const eligibilityQuery = useMyEligibility();
   const myVoteQuery = useMyVote();
   const voteMutation = useVoteMutation();
 
@@ -63,7 +61,6 @@ export default function ElectionManagers() {
     }
     if (!isOpen) return;
     if (myVoteQuery.data?.hasVoted) return;
-    if (!eligibilityQuery.data?.eligible) return;
     setConfirmCandidate({ id: candidateId, name: candidateName });
   };
 
@@ -98,7 +95,6 @@ export default function ElectionManagers() {
           </h1>
           <p className="text-stone-600 max-w-2xl mx-auto">
             Choisissez les managers qui guideront notre action solidaire durant le Ramadan.
-            Seuls les bénévoles ayant participé à au moins 3 événements peuvent voter.
           </p>
         </div>
 
@@ -118,36 +114,15 @@ export default function ElectionManagers() {
               </Alert>
             )}
 
-            {/* Auth status for connected users */}
-            {isAuthenticated && isOpen && (
+            {/* Confirmation vote */}
+            {isAuthenticated && isOpen && myVoteQuery.data?.hasVoted && (
               <div className="mb-8 max-w-2xl mx-auto">
-                {myVoteQuery.data?.hasVoted ? (
-                  <Alert className="border-green-200 bg-green-50">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <AlertDescription className="text-green-800 font-medium">
-                      Votre vote a été enregistré. Merci pour votre participation !
-                    </AlertDescription>
-                  </Alert>
-                ) : eligibilityQuery.data && !eligibilityQuery.data.eligible ? (
-                  <Alert className="border-red-200 bg-red-50">
-                    <AlertCircle className="h-4 w-4 text-red-600" />
-                    <AlertDescription className="text-red-800">
-                      Seuls les bénévoles ayant participé à au moins 3 actions Bab Rayan peuvent voter.
-                      <br />
-                      <span className="font-medium">
-                        Vos participations : {eligibilityQuery.data.participationCount}/{eligibilityQuery.data.minRequired}
-                      </span>
-                    </AlertDescription>
-                  </Alert>
-                ) : eligibilityQuery.data?.eligible ? (
-                  <Alert className="border-blue-200 bg-blue-50">
-                    <Vote className="h-4 w-4 text-blue-600" />
-                    <AlertDescription className="text-blue-800">
-                      Vous êtes éligible pour voter ({eligibilityQuery.data.participationCount} participations).
-                      Cliquez sur "Voter" pour choisir votre candidat préféré.
-                    </AlertDescription>
-                  </Alert>
-                ) : null}
+                <Alert className="border-green-200 bg-green-50">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-800 font-medium">
+                    Votre vote a été enregistré. Merci pour votre participation !
+                  </AlertDescription>
+                </Alert>
               </div>
             )}
 
@@ -183,7 +158,7 @@ export default function ElectionManagers() {
                 {candidates.map(candidate => {
                   const hasVoted = myVoteQuery.data?.hasVoted;
                   const votedForThis = myVoteQuery.data?.candidateId === candidate.id;
-                  const canVote = isOpen && isAuthenticated && !hasVoted && eligibilityQuery.data?.eligible;
+                  const canVote = isOpen && isAuthenticated && !hasVoted;
 
                   return (
                     <Card

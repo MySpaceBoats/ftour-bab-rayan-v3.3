@@ -261,15 +261,6 @@ export const electionRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "L'élection n'est pas ouverte." });
       }
 
-      // Vérifier l'éligibilité
-      const count = await getParticipationCount(email);
-      if (count < MIN_PARTICIPATIONS) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: `Seuls les bénévoles ayant participé à au moins ${MIN_PARTICIPATIONS} actions Bab Rayan peuvent voter.`,
-        });
-      }
-
       // Vérifier si déjà voté
       const { data: existing } = await admin
         .from("manager_votes")
