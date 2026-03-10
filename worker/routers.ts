@@ -8451,6 +8451,385 @@ const inventoryRouter = router({
 });
 
 // ============================================
+// ELECTION MANAGERS ROUTER
+// Système d'élection annuelle des managers du Ramadan
+// ============================================
+
+const ELECTION_MIN_PARTICIPATIONS = 3;
+const ELECTION_CURRENT_YEAR = new Date().getFullYear();
+
+const electionAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const allowed = ["admin", "super_admin", "admin_ops", "admin_operations"];
+  if (!ctx.user || !allowed.includes(ctx.user.role)) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Accès administrateur requis" });
+  }
+  return next({ ctx });
+});
+
+async function getElectionParticipationCount(email: string, env: any): Promise<number> {
+  const admin = createSupabaseAdmin(env);
+  const { count, error } = await admin
+    .from("volunteers")
+    .select("*", { count: "exact", head: true })
+    .ilike("email", email.trim())
+    .in("status", ["present", "confirmed", "registered"]);
+  if (error) return 0;
+  return count ?? 0;
+}
+
+const electionRouter = router({
+  getSettings: publicProcedure.query(async ({ ctx }) => {
+    const admin = createSupabaseAdmin(ctx.env);
+    const year = ELECTION_CURRENT_YEAR;
+    const { data, error } = await admin
+      .from("election_settings")
+      .select("*")
+      .eq("election_year", year)
+      .maybeSingle();
+    if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+    if (!data) {
+      const { data: created, error: err2 } = await admin
+        .from("election_settings")
+        .insert({ election_year: year, is_open: false, max_managers: 10 })
+        .select()
+        .single();
+      if (err2) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: err2.message });
+      return created;
+    }
+    return data;
+  }),
+
+  listCandidates: publicProcedure
+    .input(z.object({ year: z.number().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const admin = createSupabaseAdmin(ctx.env);
+      const year = input?.year ?? ELECTION_CURRENT_YEAR;
+      const { data, error } = await admin
+        .from("manager_candidates")
+        .select("*")
+        .eq("election_year", year)
+        .eq("status", "approved")
+        .order("created_at", { ascending: true });
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      return data ?? [];
+    }),
+
+  getResults: publicProcedure
+    .input(z.object({ year: z.number().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const admin = createSupabaseAdmin(ctx.env);
+      const year = input?.year ?? ELECTION_CURRENT_YEAR;
+      const { data: candidates, error: candErr } = await admin
+        .from("manager_candidates")
+        .select("id, first_name, last_name, photo_url, participation_count")
+        .eq("election_year", year)
+        .eq("status", "approved");
+      if (candErr) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: candErr.message });
+      if (!candidates?.length) return [];
+      const { data: votes } = await admin
+        .from("manager_votes")
+        .select("candidate_id")
+        .eq("election_year", year);
+      const voteCounts: Record<string, number> = {};
+      for (const v of votes ?? []) {
+        voteCounts[v.candidate_id] = (voteCounts[v.candidate_id] ?? 0) + 1;
+      }
+      return candidates
+        .map((c: any) => ({ ...c, votes: voteCounts[c.id] ?? 0 }))
+        .sort((a: any, b: any) => b.votes - a.votes);
+    }),
+
+  getManagersHistory: publicProcedure.query(async ({ ctx }) => {
+    const admin = createSupabaseAdmin(ctx.env);
+    const { data: settings } = await admin
+      .from("election_settings")
+      .select("election_year, max_managers")
+      .order("election_year", { ascending: false });
+    const history: any[] = [];
+    for (const s of settings ?? []) {
+      const { data: candidates } = await admin
+        .from("manager_candidates")
+        .select("id, first_name, last_name, photo_url")
+        .eq("election_year", s.election_year)
+        .eq("status", "approved");
+      if (!candidates?.length) continue;
+      const { data: votes } = await admin
+        .from("manager_votes")
+        .select("candidate_id")
+        .eq("election_year", s.election_year);
+      const voteCounts: Record<string, number> = {};
+      for (const v of votes ?? []) {
+        voteCounts[v.candidate_id] = (voteCounts[v.candidate_id] ?? 0) + 1;
+      }
+      const ranked = candidates
+        .map((c: any) => ({ ...c, votes: voteCounts[c.id] ?? 0 }))
+        .sort((a: any, b: any) => b.votes - a.votes)
+        .slice(0, s.max_managers);
+      history.push({ year: s.election_year, managers: ranked });
+    }
+    return history;
+  }),
+
+  checkMyEligibility: protectedProcedure.query(async ({ ctx }) => {
+    const email = ctx.user.email;
+    if (!email) return { eligible: false, participationCount: 0, minRequired: ELECTION_MIN_PARTICIPATIONS };
+    const count = await getElectionParticipationCount(email, ctx.env);
+    return { eligible: count >= ELECTION_MIN_PARTICIPATIONS, participationCount: count, minRequired: ELECTION_MIN_PARTICIPATIONS };
+  }),
+
+  checkMyVote: protectedProcedure.query(async ({ ctx }) => {
+    const admin = createSupabaseAdmin(ctx.env);
+    const email = ctx.user.email;
+    if (!email) return { hasVoted: false, candidateId: null };
+    const { data } = await admin
+      .from("manager_votes")
+      .select("candidate_id")
+      .eq("voter_email", email.toLowerCase().trim())
+      .eq("election_year", ELECTION_CURRENT_YEAR)
+      .maybeSingle();
+    return { hasVoted: !!data, candidateId: data?.candidate_id ?? null };
+  }),
+
+  vote: protectedProcedure
+    .input(z.object({ candidateId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const admin = createSupabaseAdmin(ctx.env);
+      const email = ctx.user.email;
+      if (!email) throw new TRPCError({ code: "UNAUTHORIZED", message: "Email introuvable" });
+      const year = ELECTION_CURRENT_YEAR;
+      const { data: settings } = await admin
+        .from("election_settings")
+        .select("is_open")
+        .eq("election_year", year)
+        .maybeSingle();
+      if (!settings?.is_open) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "L'élection n'est pas ouverte." });
+      }
+      const count = await getElectionParticipationCount(email, ctx.env);
+      if (count < ELECTION_MIN_PARTICIPATIONS) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: `Seuls les bénévoles ayant participé à au moins ${ELECTION_MIN_PARTICIPATIONS} actions Bab Rayan peuvent voter.`,
+        });
+      }
+      const { data: existing } = await admin
+        .from("manager_votes")
+        .select("id")
+        .eq("voter_email", email.toLowerCase().trim())
+        .eq("election_year", year)
+        .maybeSingle();
+      if (existing) throw new TRPCError({ code: "CONFLICT", message: "Vous avez déjà voté." });
+      const { data: candidate } = await admin
+        .from("manager_candidates")
+        .select("id")
+        .eq("id", input.candidateId)
+        .eq("election_year", year)
+        .eq("status", "approved")
+        .maybeSingle();
+      if (!candidate) throw new TRPCError({ code: "NOT_FOUND", message: "Candidat introuvable." });
+      const { error } = await admin.from("manager_votes").insert({
+        voter_email: email.toLowerCase().trim(),
+        candidate_id: input.candidateId,
+        election_year: year,
+      });
+      if (error) {
+        if (error.code === "23505") throw new TRPCError({ code: "CONFLICT", message: "Vous avez déjà voté." });
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      }
+      return { success: true };
+    }),
+
+  submitCandidacy: protectedProcedure
+    .input(z.object({
+      first_name: z.string().min(2).max(100),
+      last_name: z.string().min(2).max(100),
+      email: z.string().email(),
+      phone: z.string().optional(),
+      photo_url: z.string().url().optional(),
+      motivation_text: z.string().max(500).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const admin = createSupabaseAdmin(ctx.env);
+      const userEmail = ctx.user.email ?? input.email;
+      const year = ELECTION_CURRENT_YEAR;
+      const count = await getElectionParticipationCount(userEmail, ctx.env);
+      if (count < ELECTION_MIN_PARTICIPATIONS) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: `Vous devez avoir participé à au moins ${ELECTION_MIN_PARTICIPATIONS} événements Bab Rayan pour vous présenter.`,
+        });
+      }
+      const { data: existing } = await admin
+        .from("manager_candidates")
+        .select("id")
+        .ilike("email", userEmail.trim())
+        .eq("election_year", year)
+        .maybeSingle();
+      if (existing) throw new TRPCError({ code: "CONFLICT", message: "Vous avez déjà soumis une candidature pour cette année." });
+      const { data, error } = await admin
+        .from("manager_candidates")
+        .insert({
+          first_name: input.first_name,
+          last_name: input.last_name,
+          email: userEmail.toLowerCase().trim(),
+          phone: input.phone ?? null,
+          photo_url: input.photo_url ?? null,
+          motivation_text: input.motivation_text ?? null,
+          participation_count: count,
+          election_year: year,
+          status: "pending",
+        })
+        .select()
+        .single();
+      if (error) {
+        if (error.code === "23505") throw new TRPCError({ code: "CONFLICT", message: "Candidature déjà soumise." });
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      }
+      return data;
+    }),
+
+  getPhotoUploadUrl: protectedProcedure
+    .input(z.object({ fileName: z.string(), contentType: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const admin = createSupabaseAdmin(ctx.env);
+      const userId = ctx.user.openId ?? ctx.user.id.toString();
+      const ext = input.fileName.split(".").pop() ?? "jpg";
+      const path = `${userId}/${Date.now()}.${ext}`;
+      const { data, error } = await admin.storage
+        .from("manager-candidates")
+        .createSignedUploadUrl(path);
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      const publicUrl = admin.storage.from("manager-candidates").getPublicUrl(path).data.publicUrl;
+      return { signedUrl: data.signedUrl, token: data.token, path, publicUrl };
+    }),
+
+  admin_listCandidates: electionAdminProcedure
+    .input(z.object({ year: z.number().optional(), status: z.string().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const admin = createSupabaseAdmin(ctx.env);
+      const year = input?.year ?? ELECTION_CURRENT_YEAR;
+      let query = admin
+        .from("manager_candidates")
+        .select("*")
+        .eq("election_year", year)
+        .order("created_at", { ascending: false });
+      if (input?.status) query = query.eq("status", input.status);
+      const { data, error } = await query;
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      return data ?? [];
+    }),
+
+  admin_updateCandidateStatus: electionAdminProcedure
+    .input(z.object({ candidateId: z.string().uuid(), status: z.enum(["approved", "rejected", "pending"]) }))
+    .mutation(async ({ ctx, input }) => {
+      const admin = createSupabaseAdmin(ctx.env);
+      const { data, error } = await admin
+        .from("manager_candidates")
+        .update({ status: input.status })
+        .eq("id", input.candidateId)
+        .select()
+        .single();
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      return data;
+    }),
+
+  admin_getStats: electionAdminProcedure
+    .input(z.object({ year: z.number().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const admin = createSupabaseAdmin(ctx.env);
+      const year = input?.year ?? ELECTION_CURRENT_YEAR;
+      const [
+        { count: totalCandidates },
+        { count: approvedCandidates },
+        { count: pendingCandidates },
+        { count: totalVotes },
+      ] = await Promise.all([
+        admin.from("manager_candidates").select("*", { count: "exact", head: true }).eq("election_year", year),
+        admin.from("manager_candidates").select("*", { count: "exact", head: true }).eq("election_year", year).eq("status", "approved"),
+        admin.from("manager_candidates").select("*", { count: "exact", head: true }).eq("election_year", year).eq("status", "pending"),
+        admin.from("manager_votes").select("*", { count: "exact", head: true }).eq("election_year", year),
+      ]);
+      return {
+        totalCandidates: totalCandidates ?? 0,
+        approvedCandidates: approvedCandidates ?? 0,
+        pendingCandidates: pendingCandidates ?? 0,
+        totalVotes: totalVotes ?? 0,
+      };
+    }),
+
+  admin_getLiveRanking: electionAdminProcedure
+    .input(z.object({ year: z.number().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const admin = createSupabaseAdmin(ctx.env);
+      const year = input?.year ?? ELECTION_CURRENT_YEAR;
+      const { data: candidates, error } = await admin
+        .from("manager_candidates")
+        .select("id, first_name, last_name, photo_url, participation_count, status")
+        .eq("election_year", year)
+        .eq("status", "approved");
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      const { data: votes } = await admin
+        .from("manager_votes")
+        .select("candidate_id")
+        .eq("election_year", year);
+      const voteCounts: Record<string, number> = {};
+      for (const v of votes ?? []) {
+        voteCounts[v.candidate_id] = (voteCounts[v.candidate_id] ?? 0) + 1;
+      }
+      return (candidates ?? [])
+        .map((c: any) => ({ ...c, votes: voteCounts[c.id] ?? 0 }))
+        .sort((a: any, b: any) => b.votes - a.votes);
+    }),
+
+  admin_updateSettings: electionAdminProcedure
+    .input(z.object({
+      year: z.number().optional(),
+      is_open: z.boolean().optional(),
+      max_managers: z.number().int().min(1).max(50).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const admin = createSupabaseAdmin(ctx.env);
+      const year = input.year ?? ELECTION_CURRENT_YEAR;
+      const updates: Record<string, unknown> = {};
+      if (input.is_open !== undefined) updates.is_open = input.is_open;
+      if (input.max_managers !== undefined) updates.max_managers = input.max_managers;
+      const { data, error } = await admin
+        .from("election_settings")
+        .upsert({ election_year: year, ...updates }, { onConflict: "election_year" })
+        .select()
+        .single();
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      return data;
+    }),
+
+  admin_listVotes: electionAdminProcedure
+    .input(z.object({ year: z.number().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const admin = createSupabaseAdmin(ctx.env);
+      const year = input?.year ?? ELECTION_CURRENT_YEAR;
+      const { data, error } = await admin
+        .from("manager_votes")
+        .select("id, voter_email, candidate_id, created_at")
+        .eq("election_year", year)
+        .order("created_at", { ascending: false });
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      return data ?? [];
+    }),
+
+  admin_deleteCandidate: electionAdminProcedure
+    .input(z.object({ candidateId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const admin = createSupabaseAdmin(ctx.env);
+      const { error } = await admin
+        .from("manager_candidates")
+        .delete()
+        .eq("id", input.candidateId);
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      return { success: true };
+    }),
+});
+
+// ============================================
 // MAIN APP ROUTER
 // ============================================
 
@@ -8479,6 +8858,7 @@ export const appRouter = router({
   ramadan: ramadanRouter,
   terroirModule: terroirModuleRouter,
   inventory: inventoryRouter,
+  election: electionRouter,
 });
 
 export type AppRouter = typeof appRouter;

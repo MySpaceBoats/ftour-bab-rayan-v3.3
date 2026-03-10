@@ -26,6 +26,7 @@ import {
   CakeSlice,
   CalendarDays,
   Images,
+  Trophy,
   type LucideIcon,
 } from "lucide-react";
 
@@ -314,6 +315,16 @@ const sections: SectionDefinition[] = [
         icon: Users,
         iconColor: "text-primary",
         iconBg: "bg-primary/10",
+        allowedRoles: ["admin", "super_admin", "admin_ops", "admin_operations"],
+      },
+      {
+        label: "Election Managers",
+        description:
+          "Valider les candidatures, suivre les votes et piloter l'élection annuelle des managers",
+        route: "/admin/elections",
+        icon: Trophy,
+        iconColor: "text-amber-600",
+        iconBg: "bg-amber-100",
         allowedRoles: ["admin", "super_admin", "admin_ops", "admin_operations"],
       },
       {
