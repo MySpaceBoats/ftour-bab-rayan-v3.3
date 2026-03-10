@@ -27,7 +27,7 @@ export const publicProcedure = t.procedure;
 // Protected procedure - requires authenticated user
 export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
   if (!ctx.user) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Non authentifié" });
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Please login (10001)" });
   }
   return next({ ctx: { ...ctx, user: ctx.user } });
 });
@@ -1443,7 +1443,7 @@ const GALLERY_ALLOWED_MIME_TYPES = [
   "image/webp",
 ] as const;
 const GALLERY_MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024;
-const GALLERY_MAX_BATCH = 10;
+const GALLERY_MAX_BATCH = 20;
 
 const galleryRouter = router({
   listAlbums: adminProcedure.query(async ({ ctx }) => {

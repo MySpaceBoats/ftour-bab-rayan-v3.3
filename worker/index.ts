@@ -145,6 +145,36 @@ export default {
     }
 
 
+    // Token refresh endpoint — used by the client when the access token is expiring soon
+    if (url.pathname === '/api/auth/refresh' && request.method === 'POST') {
+      const body = await request.json().catch(() => ({} as any));
+      const refreshToken = typeof body?.refreshToken === 'string' ? body.refreshToken.trim() : null;
+      if (!refreshToken) {
+        return new Response(JSON.stringify({ error: 'refreshToken requis' }), {
+          status: 400,
+          headers: { ...baseCorsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const supabase = createSupabaseAdmin(env);
+      const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
+      if (error || !data.session) {
+        return new Response(JSON.stringify({ error: error?.message || 'Session expirée' }), {
+          status: 401,
+          headers: { ...baseCorsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(
+        JSON.stringify({
+          session: {
+            accessToken: data.session.access_token,
+            refreshToken: data.session.refresh_token,
+            expiresAt: data.session.expires_at ?? null,
+          },
+        }),
+        { status: 200, headers: { ...baseCorsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (url.pathname === '/api/reservations/proof/init' && request.method === 'POST') {
       const supabase = createSupabaseAdmin(env);
       const body = await request.json().catch(() => ({} as any));
