@@ -15,7 +15,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Upload, X } from "lucide-react";
+import { CheckCircle, Images, Loader2, Upload, X } from "lucide-react";
+import { Link } from "wouter";
+import { useI18n } from "@/i18n";
 
 type UploadItem = {
   file: File;
@@ -32,8 +34,10 @@ type EditionAlbumOption = {
 const CURRENT_YEAR = new Date().getFullYear();
 
 export default function VolunteerGalleryUploadModule() {
+  const { lang } = useI18n();
   const [items, setItems] = useState<UploadItem[]>([]);
   const [selectedAlbumId, setSelectedAlbumId] = useState<string>("none");
+  const [uploadedAlbumSlug, setUploadedAlbumSlug] = useState<string | null>(null);
   const albums = trpc.public.galleryAlbums.useQuery();
 
   const editionOptions = useMemo<EditionAlbumOption[]>(() => {
@@ -56,6 +60,7 @@ export default function VolunteerGalleryUploadModule() {
               ? album.name
               : "Album sans titre",
           year,
+          slug: album.slug as string,
         };
       })
       .sort((a, b) => {
@@ -78,11 +83,14 @@ export default function VolunteerGalleryUploadModule() {
   }, [editionOptions, selectedAlbumId]);
 
   const upload = trpc.gallery.uploadPhotos.useMutation({
-    onSuccess: () => {
-      toast.success("Vos photos sont enregistrées et publiées.");
+    onSuccess: (_data, variables) => {
+      // Find the album slug for the gallery link
+      const albumId = variables.photos[0]?.albumId;
+      const album = (editionOptions as any[]).find((e: any) => e.id === albumId);
+      setUploadedAlbumSlug(album?.slug ?? `edition-${CURRENT_YEAR}`);
       setItems([]);
-      // Reset album selection to trigger auto-select of current year
       setSelectedAlbumId("none");
+      toast.success("Vos photos sont enregistrées et publiées.");
     },
     onError: e => toast.error(e.message),
   });
@@ -158,15 +166,51 @@ export default function VolunteerGalleryUploadModule() {
       );
     }
 
-    await upload.mutateAsync({
-      photos,
-    });
+    try {
+      await upload.mutateAsync({ photos });
+    } catch {
+      // Error already handled by onError callback
+    }
   };
 
   const totalSize = useMemo(
     () => items.reduce((acc, i) => acc + i.file.size, 0),
     [items]
   );
+
+  // Success state after upload
+  if (uploadedAlbumSlug) {
+    return (
+      <Card className="border-green-200 bg-green-50">
+        <CardContent className="p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="h-8 w-8 text-green-600 shrink-0" />
+            <div>
+              <h3 className="font-semibold text-green-900">Photos publiées avec succès !</h3>
+              <p className="text-sm text-green-700 mt-1">
+                Vos photos sont maintenant visibles dans la galerie.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link href={`/${lang}/galerie`}>
+              <Button>
+                <Images className="h-4 w-4 mr-2" />
+                Voir la galerie
+              </Button>
+            </Link>
+            <Button
+              variant="outline"
+              onClick={() => setUploadedAlbumSlug(null)}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Uploader d'autres photos
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -183,6 +227,7 @@ export default function VolunteerGalleryUploadModule() {
             type="file"
             accept="image/jpeg,image/png,image/webp"
             multiple
+            disabled={upload.isPending}
             onChange={e => onFiles(e.target.files)}
           />
           <div className="text-sm text-muted-foreground">
@@ -201,7 +246,11 @@ export default function VolunteerGalleryUploadModule() {
                 Impossible de charger les éditions
               </div>
             ) : (
-              <Select value={selectedAlbumId} onValueChange={setSelectedAlbumId}>
+              <Select
+                value={selectedAlbumId}
+                onValueChange={setSelectedAlbumId}
+                disabled={upload.isPending}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Choisir une édition" />
                 </SelectTrigger>
@@ -266,6 +315,7 @@ export default function VolunteerGalleryUploadModule() {
               <Button
                 variant="outline"
                 className="w-full"
+                disabled={upload.isPending}
                 onClick={() =>
                   setItems(prev => prev.filter((_, i) => i !== idx))
                 }
@@ -278,12 +328,30 @@ export default function VolunteerGalleryUploadModule() {
         ))}
       </div>
 
+      {upload.isPending && (
+        <div className="flex items-center gap-3 p-4 rounded-lg border bg-muted/30 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+          <span>Upload en cours, merci de patienter…</span>
+        </div>
+      )}
+
       <Button
         onClick={submit}
         disabled={items.length === 0 || upload.isPending}
       >
-        <Upload className="h-4 w-4 mr-2" />
-        Envoyer {items.length} photo(s)
+        {upload.isPending ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Envoi en cours…
+          </>
+        ) : (
+          <>
+            <Upload className="h-4 w-4 mr-2" />
+            {items.length === 0
+              ? "Sélectionnez des photos"
+              : `Envoyer ${items.length} photo(s)`}
+          </>
+        )}
       </Button>
     </div>
   );
