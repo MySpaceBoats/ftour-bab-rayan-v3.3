@@ -14,7 +14,7 @@ import { randomBytes } from "crypto";
 // CONSTANTES
 // ============================================
 
-const ADMIN_NOTIFICATION_EMAILS = ["contact@babrayan.org", "feedback@babrayan.org"];
+const ADMIN_NOTIFICATION_EMAILS = ["contact@ftourbabrayan.ma", "feedback@ftourbabrayan.ma"];
 
 function generateToken(): string {
   return randomBytes(32).toString("hex");
