@@ -210,16 +210,6 @@ const sections: SectionDefinition[] = [
         allowedRoles: ["admin", "super_admin", "admin_terroir", "admin_ops", "admin_operations"],
       },
       {
-        label: "Cartes membres",
-        description:
-          "Suivre les statuts, paiements et livraisons des cartes membres",
-        route: "/admin/cards",
-        icon: FileText,
-        iconColor: "text-teal-700",
-        iconBg: "bg-teal-100",
-        allowedRoles: ALL_ADMIN_ROLES,
-      },
-      {
         label: "QR Codes Catalogue",
         description:
           "Tous les QR codes produits (goodies, pâtisserie, terroir, dons)",
@@ -362,6 +352,16 @@ const sections: SectionDefinition[] = [
         iconColor: "text-sky-700",
         iconBg: "bg-sky-100",
         allowedRoles: ["admin", "super_admin", "admin_ops"],
+      },
+      {
+        label: "Cartes membres",
+        description:
+          "Suivre les statuts, paiements et livraisons des cartes membres",
+        route: "/admin/cards",
+        icon: FileText,
+        iconColor: "text-teal-700",
+        iconBg: "bg-teal-100",
+        allowedRoles: ALL_ADMIN_ROLES,
       },
     ],
   },
