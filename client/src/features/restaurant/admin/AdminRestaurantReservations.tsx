@@ -30,6 +30,8 @@ import {
   Percent,
   Pencil,
   Trash2,
+  Link2,
+  Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -78,6 +80,8 @@ export default function AdminRestaurantReservations() {
   );
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [downloadingProofId, setDownloadingProofId] = useState<number | null>(null);
+  const [generatingLinkId, setGeneratingLinkId] = useState<number | null>(null);
+  const [generatedLink, setGeneratedLink] = useState<{ id: number; url: string } | null>(null);
   const [editForm, setEditForm] = useState<{
     id: number;
     name: string;
@@ -325,6 +329,24 @@ export default function AdminRestaurantReservations() {
     } finally {
       setDownloadingProofId(null);
     }
+  };
+
+  const handleGenerateProofLink = async (reservationId: number) => {
+    try {
+      setGeneratingLinkId(reservationId);
+      setGeneratedLink(null);
+      const result = await trpcUtils.client.restaurantReservations.adminGenerateProofLink.mutate({ reservationId });
+      setGeneratedLink({ id: reservationId, url: result.proofUploadUrl });
+      toast.success(`Lien généré pour ${result.reservationRef}`);
+    } catch (error: any) {
+      toast.error(error?.message || "Impossible de générer le lien");
+    } finally {
+      setGeneratingLinkId(null);
+    }
+  };
+
+  const handleCopyLink = (url: string) => {
+    navigator.clipboard.writeText(url).then(() => toast.success("Lien copié")).catch(() => toast.error("Impossible de copier"));
   };
 
   const exportCsv = () => {
@@ -742,6 +764,42 @@ export default function AdminRestaurantReservations() {
                     )}
                     Télécharger preuve de virement
                   </Button>
+                )}
+
+                {/* Generate proof upload link */}
+                {!["refused", "cancelled", "paid_confirmed", "completed"].includes(
+                  selectedReservation.status
+                ) && (
+                  <div className="space-y-2">
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => handleGenerateProofLink(selectedReservation.id)}
+                      disabled={generatingLinkId === selectedReservation.id}
+                    >
+                      {generatingLinkId === selectedReservation.id ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Link2 className="h-4 w-4 mr-2" />
+                      )}
+                      Générer lien de dépôt de preuve
+                    </Button>
+                    {generatedLink?.id === selectedReservation.id && (
+                      <div className="rounded-lg border border-green-200 bg-green-50 p-3 space-y-2">
+                        <p className="text-xs font-medium text-green-800">Lien généré (valide 7 jours) :</p>
+                        <p className="break-all text-xs text-green-700 font-mono">{generatedLink.url}</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-xs"
+                          onClick={() => handleCopyLink(generatedLink.url)}
+                        >
+                          <Copy className="h-3 w-3 mr-1" />
+                          Copier le lien
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {/* Deposit percentage section */}

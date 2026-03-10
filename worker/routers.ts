@@ -7014,6 +7014,39 @@ const restaurantReservationsRouter = router({
 
       return { success: true };
     }),
+
+  adminGenerateProofLink: protectedProcedure
+    .input(z.object({ reservationId: z.number().int().positive() }))
+    .mutation(async ({ input, ctx }) => {
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
+      if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
+      }
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const { data: reservation, error: resError } = await supabase
+        .from("restaurant_reservations")
+        .select("id, reference, email, name")
+        .eq("id", input.reservationId)
+        .single();
+
+      if (resError || !reservation) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Réservation introuvable" });
+      }
+
+      const baseUrl = (ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma");
+      const ttlDays = Math.max(1, Number(ctx.env.RESERVATION_PROOF_TOKEN_TTL_DAYS || "7"));
+      const proofUploadUrl = await createProofUploadToken(supabase, input.reservationId, baseUrl, ttlDays);
+
+      if (!proofUploadUrl) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Impossible de générer le lien de dépôt",
+        });
+      }
+
+      return { proofUploadUrl, reservationRef: reservation.reference };
+    }),
 });
 
 // ============================================
