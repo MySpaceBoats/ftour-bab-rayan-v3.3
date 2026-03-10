@@ -130,6 +130,7 @@ async function verifyToken(rawToken: string, type: 'order' | 'payment', env: Env
     .eq('type', type)
     .maybeSingle();
   if (!row) return { valid: false as const, reason: 'not_found' };
+  if (row.used_at) return { valid: false as const, reason: 'already_used', row };
   if (isTokenExpired(row.expires_at)) return { valid: false as const, reason: 'expired', row };
   return { valid: true as const, row };
 }
@@ -319,8 +320,12 @@ export async function handleMemberCardRequest(request: Request, env: Env): Promi
     const { data: order } = await supabase.from('member_card_orders').select('*').eq('id', verified.row.order_id).single();
     if (!order) return json({ error: 'order introuvable' }, 404);
 
-    let paymentProofPath: string | null = order.payment_proof_path;
     const maybeFile = form.get('file');
+    if (paymentMethod === 'bank_transfer' && !(maybeFile instanceof File && maybeFile.size > 0)) {
+      return json({ error: 'preuve de virement requise' }, 400);
+    }
+
+    let paymentProofPath: string | null = order.payment_proof_path;
     if (maybeFile && maybeFile instanceof File && maybeFile.size > 0) {
       const ext = maybeFile.name.split('.').pop()?.toLowerCase() || '';
       if (!ALLOWED_MIME.has(maybeFile.type) || !ALLOWED_EXT.has(ext)) return json({ error: 'type de fichier non autorisé' }, 400);
