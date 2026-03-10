@@ -156,6 +156,13 @@ import AdminFtour from "@/features/ftour/admin/AdminFtour";
 import FtourConfirmation from "@/features/ftour/pages/FtourConfirmation";
 
 // ============================================
+// FEEDBACK — features/feedback
+// ============================================
+import FeedbackPage from "@/features/feedback/pages/FeedbackPage";
+import AdminFeedback from "@/features/feedback/admin/AdminFeedback";
+import AdminFeedbackCampagnes from "@/features/feedback/admin/AdminFeedbackCampagnes";
+
+// ============================================
 // ELECTION MANAGERS — features/election
 // ============================================
 import ElectionManagers from "@/features/election/pages/ElectionManagers";
@@ -315,6 +322,10 @@ function LocalizedRoutes() {
       {/* Admin Election Managers */}
       <Route path="/admin/elections" component={AdminElections} />
 
+      {/* Admin Feedback */}
+      <Route path="/admin/feedback/campagnes" component={AdminFeedbackCampagnes} />
+      <Route path="/admin/feedback" component={AdminFeedback} />
+
       {/* ================================================
           SCANNER — route unique (section 4.3)
           ================================================ */}
@@ -363,6 +374,9 @@ function LocalizedRoutes() {
           REDIRECT ROOT → default locale
           ================================================ */}
       <Route path="/">{() => <Redirect to={`/${lang}`} />}</Route>
+
+      {/* Page feedback publique */}
+      <Route path="/feedback" component={FeedbackPage} />
 
       {/* Menu solidaire QR unique */}
       <Route path="/menu" component={MenuSolidaire} />

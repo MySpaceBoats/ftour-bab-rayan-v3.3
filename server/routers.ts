@@ -37,6 +37,7 @@ import { contentRouter } from "./content-router";
 import { scannerRouter } from "./scanner-router";
 import { ftourRouter } from "./ftour-router";
 import { electionRouter } from "./election-router";
+import { feedbackRouter } from "./feedback-router";
 import * as galleryServices from "./gallery-services";
 import * as volunteerProfileServices from "./volunteer-profile-services";
 import { randomBytes } from "crypto";
@@ -6227,6 +6228,7 @@ export const appRouterUpdated = router({
   inventory: inventoryRouter,
   ftour: ftourRouter,
   election: electionRouter,
+  feedback: feedbackRouter,
 });
 
 export type AppRouter = typeof appRouterUpdated;

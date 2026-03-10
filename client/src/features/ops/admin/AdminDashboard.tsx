@@ -403,6 +403,29 @@ const sections: SectionDefinition[] = [
     ],
   },
   {
+    title: "Feedback",
+    modules: [
+      {
+        label: "Dashboard Feedbacks",
+        description: "Consulter et analyser les retours de bénévoles et clients avec statistiques et graphiques",
+        route: "/admin/feedback",
+        icon: MessageSquare,
+        iconColor: "text-amber-600",
+        iconBg: "bg-amber-100",
+        allowedRoles: ["admin", "super_admin", "admin_ops"],
+      },
+      {
+        label: "Campagnes email",
+        description: "Créer et envoyer des campagnes de demande de feedback par email aux bénévoles et clients",
+        route: "/admin/feedback/campagnes",
+        icon: BarChart3,
+        iconColor: "text-amber-600",
+        iconBg: "bg-amber-100",
+        allowedRoles: ["admin", "super_admin", "admin_ops"],
+      },
+    ],
+  },
+  {
     title: "Système",
     modules: [
       {

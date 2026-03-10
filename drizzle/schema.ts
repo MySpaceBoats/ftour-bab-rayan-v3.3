@@ -923,3 +923,127 @@ export const bookingHolds = mysqlTable("booking_holds", {
 
 export type BookingHold = typeof bookingHolds.$inferSelect;
 export type InsertBookingHold = typeof bookingHolds.$inferInsert;
+
+// ============================================
+// FEEDBACK MODULE
+// ============================================
+
+export const feedbackTargetTypeEnum = mysqlEnum("feedbackTargetType", [
+  "global",
+  "volunteers",
+  "restaurant_clients",
+  "foodstore_clients",
+]);
+
+export const feedbackForms = mysqlTable("feedback_forms", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  targetType: feedbackTargetTypeEnum.notNull().default("global"),
+  isAnonymousAllowed: boolean("isAnonymousAllowed").notNull().default(true),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type FeedbackForm = typeof feedbackForms.$inferSelect;
+export type InsertFeedbackForm = typeof feedbackForms.$inferInsert;
+
+export const feedbackQuestionTypeEnum = mysqlEnum("feedbackQuestionType", [
+  "rating",
+  "text",
+  "multiple_choice",
+  "yes_no",
+]);
+
+export const feedbackQuestions = mysqlTable("feedback_questions", {
+  id: int("id").autoincrement().primaryKey(),
+  formId: int("formId").notNull(),
+  question: text("question").notNull(),
+  type: feedbackQuestionTypeEnum.notNull(),
+  options: json("options").$type<string[]>(),
+  orderIndex: int("orderIndex").notNull().default(0),
+  required: boolean("required").notNull().default(false),
+});
+
+export type FeedbackQuestion = typeof feedbackQuestions.$inferSelect;
+export type InsertFeedbackQuestion = typeof feedbackQuestions.$inferInsert;
+
+export const feedbackSourceEnum = mysqlEnum("feedbackSource", [
+  "public_page",
+  "email_campaign",
+]);
+
+export const feedbackModerationEnum = mysqlEnum("feedbackModeration", [
+  "pending",
+  "processed",
+  "to_analyze",
+  "important",
+]);
+
+export const feedbackResponses = mysqlTable("feedback_responses", {
+  id: int("id").autoincrement().primaryKey(),
+  formId: int("formId").notNull(),
+  userId: int("userId"),
+  userEmail: varchar("userEmail", { length: 320 }),
+  userName: varchar("userName", { length: 255 }),
+  isAnonymous: boolean("isAnonymous").notNull().default(false),
+  source: feedbackSourceEnum.notNull().default("public_page"),
+  moderation: feedbackModerationEnum.notNull().default("pending"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type FeedbackResponse = typeof feedbackResponses.$inferSelect;
+export type InsertFeedbackResponse = typeof feedbackResponses.$inferInsert;
+
+export const feedbackAnswers = mysqlTable("feedback_answers", {
+  id: int("id").autoincrement().primaryKey(),
+  responseId: int("responseId").notNull(),
+  questionId: int("questionId").notNull(),
+  answerText: text("answerText"),
+  answerRating: int("answerRating"),
+  answerChoice: varchar("answerChoice", { length: 500 }),
+});
+
+export type FeedbackAnswer = typeof feedbackAnswers.$inferSelect;
+export type InsertFeedbackAnswer = typeof feedbackAnswers.$inferInsert;
+
+export const feedbackCampaignStatusEnum = mysqlEnum("feedbackCampaignStatus", [
+  "draft",
+  "scheduled",
+  "sent",
+]);
+
+export const feedbackTargetGroupEnum = mysqlEnum("feedbackTargetGroup", [
+  "volunteers",
+  "restaurant_clients",
+  "foodstore_clients",
+  "all",
+]);
+
+export const feedbackCampaigns = mysqlTable("feedback_campaigns", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  targetGroup: feedbackTargetGroupEnum.notNull(),
+  formId: int("formId").notNull(),
+  emailSubject: varchar("emailSubject", { length: 500 }).notNull(),
+  emailContent: text("emailContent").notNull(),
+  status: feedbackCampaignStatusEnum.notNull().default("draft"),
+  sentAt: timestamp("sentAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type FeedbackCampaign = typeof feedbackCampaigns.$inferSelect;
+export type InsertFeedbackCampaign = typeof feedbackCampaigns.$inferInsert;
+
+export const feedbackCampaignRecipients = mysqlTable("feedback_campaign_recipients", {
+  id: int("id").autoincrement().primaryKey(),
+  campaignId: int("campaignId").notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  userId: int("userId"),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  openedAt: timestamp("openedAt"),
+  submittedAt: timestamp("submittedAt"),
+});
+
+export type FeedbackCampaignRecipient = typeof feedbackCampaignRecipients.$inferSelect;
+export type InsertFeedbackCampaignRecipient = typeof feedbackCampaignRecipients.$inferInsert;
