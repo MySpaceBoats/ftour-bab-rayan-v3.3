@@ -8,9 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -256,45 +254,14 @@ export default function VolunteerGalleryUploadModule() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">— Choisir une édition —</SelectItem>
-                  {(() => {
-                    const pastAndCurrentEditions = editionOptions.filter(
-                      e => e.year !== null && e.year <= CURRENT_YEAR
-                    );
-                    const recentEditions = pastAndCurrentEditions.filter(
-                      e => e.year! >= CURRENT_YEAR - 2
-                    );
-                    const olderEditions = pastAndCurrentEditions.filter(
-                      e => e.year! < CURRENT_YEAR - 2
-                    );
-                    if (pastAndCurrentEditions.length === 0) {
-                      return null;
-                    }
-                    return (
-                      <>
-                        {recentEditions.length > 0 && (
-                          <SelectGroup>
-                            <SelectLabel>Éditions récentes</SelectLabel>
-                            {recentEditions.map(edition => (
-                              <SelectItem key={edition.id} value={edition.id}>
-                                {edition.label}
-                                {edition.year === CURRENT_YEAR ? " (en cours)" : ""}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        )}
-                        {olderEditions.length > 0 && (
-                          <SelectGroup>
-                            <SelectLabel>Anciennes éditions</SelectLabel>
-                            {olderEditions.map(edition => (
-                              <SelectItem key={edition.id} value={edition.id}>
-                                {edition.label}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        )}
-                      </>
-                    );
-                  })()}
+                  {editionOptions
+                    .filter(e => e.year !== null && e.year <= CURRENT_YEAR)
+                    .map(edition => (
+                      <SelectItem key={edition.id} value={edition.id}>
+                        {edition.label}
+                        {edition.year === CURRENT_YEAR ? " (en cours)" : ""}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             )}
