@@ -207,14 +207,8 @@ export const electionRouter = router({
   // ----------------------------------------------------------
   checkMyEligibility: protectedProcedure.query(async ({ ctx }) => {
     const email = ctx.user.email;
-    if (!email) return { eligible: false, participationCount: 0, minRequired: MIN_PARTICIPATIONS };
-
-    const count = await getParticipationCount(email);
-    return {
-      eligible: count >= MIN_PARTICIPATIONS,
-      participationCount: count,
-      minRequired: MIN_PARTICIPATIONS,
-    };
+    const count = email ? await getParticipationCount(email) : 0;
+    return { eligible: true, participationCount: count, minRequired: 0 };
   }),
 
   // ----------------------------------------------------------

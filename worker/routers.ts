@@ -8539,9 +8539,8 @@ const electionRouter = router({
 
   checkMyEligibility: protectedProcedure.query(async ({ ctx }) => {
     const email = ctx.user.email;
-    if (!email) return { eligible: false, participationCount: 0, minRequired: ELECTION_MIN_PARTICIPATIONS };
-    const count = await getElectionParticipationCount(email, ctx.env);
-    return { eligible: count >= ELECTION_MIN_PARTICIPATIONS, participationCount: count, minRequired: ELECTION_MIN_PARTICIPATIONS };
+    const count = email ? await getElectionParticipationCount(email, ctx.env) : 0;
+    return { eligible: true, participationCount: count, minRequired: 0 };
   }),
 
   checkMyVote: protectedProcedure.query(async ({ ctx }) => {
