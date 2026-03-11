@@ -960,7 +960,7 @@ export function generateGroupRegistrationAcknowledgementEmail(
 
   const content = `
     <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
-      Votre demande groupe a bien été reçue ✅
+      Votre demande de groupe est <strong>en cours de traitement ⏳</strong>
     </h2>
 
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
@@ -968,25 +968,39 @@ export function generateGroupRegistrationAcknowledgementEmail(
     </p>
 
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-      Nous confirmons la bonne réception de votre demande d'inscription pour le groupe
-      <strong>${safeGroupName}</strong>. Notre équipe va l'étudier et vous recontacter rapidement.
+      Nous avons bien reçu votre <strong>demande d'inscription pour le groupe ${safeGroupName}</strong>.
     </p>
 
+    <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 4px; padding: 16px 20px; margin: 20px 0;">
+      <p style="margin: 0; color: #374151; font-size: 15px; line-height: 1.6;">
+        ⚠️ <strong>Votre demande est actuellement en cours d'étude par notre équipe.</strong><br>
+        La participation n'est pas encore confirmée à ce stade. Nous reviendrons vers vous prochainement
+        pour vous informer de la <strong>validation ou des éventuelles disponibilités alternatives.</strong>
+      </p>
+    </div>
+
     <div style="background-color: #f0fdf4; border-radius: 8px; padding: 20px; margin: 20px 0;">
-      <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">📋 Récapitulatif</h3>
+      <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">📋 Récapitulatif de votre demande</h3>
       ${data.dayNumber ? `<p style="margin: 5px 0; color: #374151;"><strong>Jour :</strong> ${safeDayNumber} du Ramadan</p>` : ''}
       ${data.dayDate ? `<p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${safeDayDate}</p>` : ''}
       ${data.estimatedSize ? `<p style="margin: 5px 0; color: #374151;"><strong>Nombre estimé :</strong> ${safeEstimatedSize} personnes</p>` : ''}
-      <p style="margin: 5px 0; color: #374151;"><strong>Créneaux demandés :</strong> ${slotsDisplay}</p>
+      <p style="margin: 5px 0; color: #374151;"><strong>Créneaux demandés :</strong></p>
+      <ul style="margin: 5px 0 0 0; padding-left: 20px; color: #374151;">
+        ${data.volunteerSlots.map(s => `<li style="margin: 3px 0;">${escapeHtml(slotLabels[s] || s)}</li>`).join('')}
+      </ul>
     </div>
 
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">
-      Merci pour votre engagement solidaire ❤️
+      Nous vous remercions pour votre engagement et votre intérêt pour cette action solidaire.
+    </p>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 10px 0 0 0;">
+      <strong>L'équipe Bab Rayan</strong>
     </p>
   `;
 
   return {
-    subject: `✅ Demande groupe reçue - ${safeGroupName}`,
+    subject: `Votre demande de groupe est en cours de traitement ⏳`,
     html: baseTemplate(content),
   };
 }
