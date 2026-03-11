@@ -6816,6 +6816,69 @@ const restaurantReservationsRouter = router({
       return { success: true, reservation: data };
     }),
 
+  adminSendDepositLink: protectedProcedure
+    .input(
+      z.object({
+        reservationId: z.number(),
+        sendEmail: z.boolean().optional().default(true),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
+      if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
+      }
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const { data: reservation, error: resErr } = await supabase
+        .from("restaurant_reservations")
+        .select("id, reference, name, email, deposit, deposit_deadline")
+        .eq("id", input.reservationId)
+        .single();
+      if (resErr || !reservation) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Réservation introuvable" });
+      }
+
+      // Invalidate any existing unused tokens for this reservation
+      await supabase
+        .from("reservation_payment_tokens")
+        .update({ used_at: new Date().toISOString() })
+        .eq("reservation_id", input.reservationId)
+        .is("used_at", null);
+
+      // Create a new token
+      const baseUrl = (ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma").replace(/\/$/, "");
+      const proofUploadUrl = await createProofUploadToken(supabase, reservation.id, baseUrl);
+      if (!proofUploadUrl) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Impossible de générer le lien de dépôt" });
+      }
+
+      // Send email to customer if requested
+      if (input.sendEmail && reservation.email) {
+        try {
+          const { sendEmail } = await import("./email");
+          await sendEmail({
+            to: reservation.email,
+            subject: `Déposer votre preuve de virement – ${reservation.reference}`,
+            html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+<p>Bonjour ${reservation.name},</p>
+<p>Afin de confirmer votre réservation <strong>${reservation.reference}</strong>, nous vous remercions de bien vouloir déposer votre preuve de virement en cliquant sur le bouton ci-dessous :</p>
+<p style="margin:20px 0"><a href="${proofUploadUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background-color:#166534;color:#ffffff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:15px;font-weight:600;">Déposer ma preuve de virement</a></p>
+<p style="font-size:12px;color:#6b7280;">Ce lien est personnel, à usage unique et valide 7 jours.</p>
+<p>Cordialement,<br>L'équipe de La Table du Jardin</p>
+</div>`,
+            apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
+          });
+        } catch (emailErr) {
+          console.error("[adminSendDepositLink] Email error:", emailErr);
+          // Return the link even if email fails
+          return { success: true, link: proofUploadUrl, emailSent: false };
+        }
+      }
+
+      return { success: true, link: proofUploadUrl, emailSent: input.sendEmail && !!reservation.email };
+    }),
+
   adminGetLatestProofUrl: protectedProcedure
     .input(z.object({ reservationId: z.number() }))
     .query(async ({ input, ctx }) => {

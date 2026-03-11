@@ -30,6 +30,9 @@ import {
   Percent,
   Pencil,
   Trash2,
+  Link as LinkIcon,
+  Copy,
+  Mail,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -78,6 +81,8 @@ export default function AdminRestaurantReservations() {
   );
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [downloadingProofId, setDownloadingProofId] = useState<number | null>(null);
+  const [depositLinkState, setDepositLinkState] = useState<{ reservationId: number; link: string } | null>(null);
+  const [sendingDepositLinkId, setSendingDepositLinkId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<{
     id: number;
     name: string;
@@ -324,6 +329,28 @@ export default function AdminRestaurantReservations() {
       toast.error(error?.message || "Impossible de récupérer la preuve de virement");
     } finally {
       setDownloadingProofId(null);
+    }
+  };
+
+  const handleSendDepositLink = async (reservationId: number, sendEmail: boolean) => {
+    try {
+      setSendingDepositLinkId(reservationId);
+      const result = await trpcUtils.client.restaurantReservations.adminSendDepositLink.mutate({
+        reservationId,
+        sendEmail,
+      });
+      setDepositLinkState({ reservationId, link: result.link });
+      if (sendEmail && result.emailSent) {
+        toast.success("Lien de dépôt envoyé par email au client");
+      } else if (sendEmail && !result.emailSent) {
+        toast.warning("Lien généré, mais l'envoi email a échoué — copiez le lien manuellement");
+      } else {
+        toast.success("Lien de dépôt généré");
+      }
+    } catch (error: any) {
+      toast.error(error?.message || "Impossible de générer le lien de dépôt");
+    } finally {
+      setSendingDepositLinkId(null);
     }
   };
 
@@ -742,6 +769,64 @@ export default function AdminRestaurantReservations() {
                     )}
                     Télécharger preuve de virement
                   </Button>
+                )}
+
+                {/* Send deposit proof link */}
+                {!["refused", "cancelled", "paid_confirmed", "completed", "no_show"].includes(
+                  selectedReservation.status
+                ) && (
+                  <div className="border rounded-lg p-3 space-y-2 bg-blue-50/50 border-blue-200">
+                    <p className="text-xs font-medium text-blue-800">
+                      Lien de dépôt de preuve de virement
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-100"
+                        onClick={() => handleSendDepositLink(selectedReservation.id, true)}
+                        disabled={sendingDepositLinkId === selectedReservation.id}
+                      >
+                        {sendingDepositLinkId === selectedReservation.id ? (
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        ) : (
+                          <Mail className="h-3 w-3 mr-1" />
+                        )}
+                        Envoyer par email
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                        onClick={() => handleSendDepositLink(selectedReservation.id, false)}
+                        disabled={sendingDepositLinkId === selectedReservation.id}
+                      >
+                        <LinkIcon className="h-3 w-3 mr-1" />
+                        Générer
+                      </Button>
+                    </div>
+                    {depositLinkState?.reservationId === selectedReservation.id && (
+                      <div className="flex gap-2 items-center mt-1">
+                        <input
+                          readOnly
+                          value={depositLinkState.link}
+                          className="flex-1 text-xs border rounded px-2 py-1 bg-white text-gray-700 overflow-hidden"
+                          onFocus={e => e.target.select()}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2"
+                          onClick={() => {
+                            navigator.clipboard.writeText(depositLinkState.link);
+                            toast.success("Lien copié");
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {/* Deposit percentage section */}
