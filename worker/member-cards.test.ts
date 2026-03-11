@@ -51,6 +51,72 @@ describe('token expiration', () => {
 });
 
 // ---------------------------------------------------------------------------
+// used_at check – verifyToken must reject already-used tokens
+// ---------------------------------------------------------------------------
+describe('used token rejection (simulates verifyToken logic)', () => {
+  function simulateVerifyToken(row: {
+    used_at: string | null;
+    expires_at: string;
+  }, nowTs = Date.now()) {
+    if (row.used_at) return { valid: false as const, reason: 'already_used' };
+    if (isTokenExpired(row.expires_at, nowTs)) return { valid: false as const, reason: 'expired' };
+    return { valid: true as const };
+  }
+
+  it('rejects a token that has been used', () => {
+    const row = { used_at: new Date().toISOString(), expires_at: new Date(Date.now() + 60_000).toISOString() };
+    const result = simulateVerifyToken(row);
+    expect(result.valid).toBe(false);
+    expect(result.reason).toBe('already_used');
+  });
+
+  it('accepts a fresh unused token', () => {
+    const row = { used_at: null, expires_at: new Date(Date.now() + 60_000).toISOString() };
+    const result = simulateVerifyToken(row);
+    expect(result.valid).toBe(true);
+  });
+
+  it('rejects used token even when not yet expired', () => {
+    const farFuture = new Date(Date.now() + 1000 * 60 * 60 * 72).toISOString();
+    const row = { used_at: new Date(Date.now() - 5000).toISOString(), expires_at: farFuture };
+    const result = simulateVerifyToken(row);
+    expect(result.valid).toBe(false);
+    expect(result.reason).toBe('already_used');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Bank-transfer server-side proof requirement
+// ---------------------------------------------------------------------------
+describe('bank_transfer proof requirement', () => {
+  function validatePaymentSubmission(paymentMethod: string, hasFile: boolean) {
+    if (!['on_site', 'bank_transfer'].includes(paymentMethod)) return { ok: false, reason: 'invalid_method' };
+    if (paymentMethod === 'bank_transfer' && !hasFile) return { ok: false, reason: 'proof_required' };
+    return { ok: true };
+  }
+
+  it('accepts on_site without a file', () => {
+    expect(validatePaymentSubmission('on_site', false)).toEqual({ ok: true });
+  });
+
+  it('accepts bank_transfer with a file', () => {
+    expect(validatePaymentSubmission('bank_transfer', true)).toEqual({ ok: true });
+  });
+
+  it('rejects bank_transfer without a file', () => {
+    const result = validatePaymentSubmission('bank_transfer', false);
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe('proof_required');
+  });
+
+  it('rejects unknown payment method', () => {
+    const result = validatePaymentSubmission('crypto', false);
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe('invalid_method');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Idempotence tests
 // ---------------------------------------------------------------------------
 describe('idempotence – simulate worker handler logic', () => {

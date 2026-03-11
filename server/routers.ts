@@ -36,6 +36,8 @@ import { restaurantReservationsRouter } from "./restaurant-reservation-routers";
 import { contentRouter } from "./content-router";
 import { scannerRouter } from "./scanner-router";
 import { ftourRouter } from "./ftour-router";
+import { electionRouter } from "./election-router";
+import { feedbackRouter } from "./feedback-router";
 import * as galleryServices from "./gallery-services";
 import * as volunteerProfileServices from "./volunteer-profile-services";
 import { randomBytes } from "crypto";
@@ -391,6 +393,11 @@ const galleryRouter = router({
         }
       }
 
+      // Generate a single validation token for the whole batch (used for non-admin volunteers)
+      const batchValidationToken = canManageGallery
+        ? null
+        : randomBytes(32).toString("hex");
+
       const results = [];
       for (const photo of input.photos) {
         if (
@@ -446,8 +453,11 @@ const galleryRouter = router({
           albumId: photo.albumId,
           sortOrder: photo.sortOrder,
           isFeatured: canManageGallery ? photo.isFeatured : false,
-          status: "published",
-          validatedAt: new Date().toISOString(),
+          status: canManageGallery ? "published" : "draft",
+          validatedAt: canManageGallery ? new Date().toISOString() : undefined,
+          validationEmail: canManageGallery ? undefined : (ctx.user?.email ?? undefined),
+          validationToken: canManageGallery ? undefined : batchValidationToken,
+          validationSentAt: canManageGallery ? undefined : new Date().toISOString(),
           imageOriginalUrl: originalUrl,
           imageThumbUrl: thumbUrl,
           storagePath: originalPath,
@@ -461,7 +471,22 @@ const galleryRouter = router({
         results.push(created);
       }
 
-      return results;
+      // Send validation email for non-admin volunteers
+      if (!canManageGallery && batchValidationToken && ctx.user?.email) {
+        const validationUrl = `${resolveAppBaseUrl().replace(/\/$/, "")}/galerie/validation/${batchValidationToken}`;
+        const emailPayload = generateGalleryUploadValidationEmail({
+          email: ctx.user.email,
+          validationUrl,
+        });
+        await sendEmail({
+          to: ctx.user.email,
+          subject: emailPayload.subject,
+          html: emailPayload.html,
+        });
+        return { needsValidation: true, count: results.length };
+      }
+
+      return { needsValidation: false, count: results.length };
     }),
 
   validateUploadByEmail: publicProcedure
@@ -5284,7 +5309,7 @@ const paymentsRouter = router({
 });
 
 const volunteerProfileRouter = router({
-  me: protectedProcedure.query(async ({ ctx }) => {
+  me: publicProcedure.query(async ({ ctx }) => {
     const authHeader = ctx.req.headers.authorization;
     const accessToken = authHeader?.startsWith("Bearer ")
       ? authHeader.substring(7)
@@ -5294,17 +5319,22 @@ const volunteerProfileRouter = router({
       throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
     }
 
+    const authUser = await getUserFromToken(accessToken);
+    if (!authUser) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Token invalide" });
+    }
+
     await volunteerProfileServices.ensureVolunteerProfile({
-      id: String(ctx.user.id),
-      email: ctx.user.email,
-      name: ctx.user.name,
-      phone: ctx.user.phone,
+      id: authUser.id,
+      email: authUser.email,
+      name: authUser.name,
+      phone: authUser.phone,
     });
 
     return volunteerProfileServices.getMyVolunteerProfile(accessToken);
   }),
 
-  updateMe: protectedProcedure
+  updateMe: publicProcedure
     .input(
       z.object({
         first_name: z.string().min(1),
@@ -5322,6 +5352,11 @@ const volunteerProfileRouter = router({
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
       }
 
+      const authUser = await getUserFromToken(accessToken);
+      if (!authUser) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token invalide" });
+      }
+
       return volunteerProfileServices.updateMyVolunteerProfile(accessToken, {
         first_name: input.first_name,
         last_name: input.last_name,
@@ -5329,7 +5364,7 @@ const volunteerProfileRouter = router({
       });
     }),
 
-  attendance: protectedProcedure
+  attendance: publicProcedure
     .input(
       z.object({
         limit: z.number().min(1).max(30).default(20),
@@ -5346,11 +5381,16 @@ const volunteerProfileRouter = router({
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
       }
 
+      const authUser = await getUserFromToken(accessToken);
+      if (!authUser) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token invalide" });
+      }
+
       await volunteerProfileServices.ensureVolunteerProfile({
-        id: String(ctx.user.id),
-        email: ctx.user.email,
-        name: ctx.user.name,
-        phone: ctx.user.phone,
+        id: authUser.id,
+        email: authUser.email,
+        name: authUser.name,
+        phone: authUser.phone,
       });
 
       return volunteerProfileServices.getMyAttendance(
@@ -6225,6 +6265,8 @@ export const appRouterUpdated = router({
   volunteerProfile: volunteerProfileRouter,
   inventory: inventoryRouter,
   ftour: ftourRouter,
+  election: electionRouter,
+  feedback: feedbackRouter,
 });
 
 export type AppRouter = typeof appRouterUpdated;

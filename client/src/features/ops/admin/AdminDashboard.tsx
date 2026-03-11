@@ -26,6 +26,7 @@ import {
   CakeSlice,
   CalendarDays,
   Images,
+  Trophy,
   type LucideIcon,
 } from "lucide-react";
 
@@ -209,16 +210,6 @@ const sections: SectionDefinition[] = [
         allowedRoles: ["admin", "super_admin", "admin_terroir", "admin_ops", "admin_operations"],
       },
       {
-        label: "Cartes membres",
-        description:
-          "Suivre les statuts, paiements et livraisons des cartes membres",
-        route: "/admin/cards",
-        icon: FileText,
-        iconColor: "text-teal-700",
-        iconBg: "bg-teal-100",
-        allowedRoles: ALL_ADMIN_ROLES,
-      },
-      {
         label: "QR Codes Catalogue",
         description:
           "Tous les QR codes produits (goodies, pâtisserie, terroir, dons)",
@@ -317,6 +308,16 @@ const sections: SectionDefinition[] = [
         allowedRoles: ["admin", "super_admin", "admin_ops", "admin_operations"],
       },
       {
+        label: "Election Managers",
+        description:
+          "Valider les candidatures, suivre les votes et piloter l'élection annuelle des managers",
+        route: "/admin/elections",
+        icon: Trophy,
+        iconColor: "text-amber-600",
+        iconBg: "bg-amber-100",
+        allowedRoles: ["admin", "super_admin", "admin_ops", "admin_operations"],
+      },
+      {
         label: "Stats Ramadan",
         description:
           "Saisie quotidienne et cumuls des indicateurs Ftour Ramadan",
@@ -351,6 +352,16 @@ const sections: SectionDefinition[] = [
         iconColor: "text-sky-700",
         iconBg: "bg-sky-100",
         allowedRoles: ["admin", "super_admin", "admin_ops"],
+      },
+      {
+        label: "Cartes membres",
+        description:
+          "Suivre les statuts, paiements et livraisons des cartes membres",
+        route: "/admin/cards",
+        icon: FileText,
+        iconColor: "text-teal-700",
+        iconBg: "bg-teal-100",
+        allowedRoles: ALL_ADMIN_ROLES,
       },
     ],
   },
@@ -388,6 +399,29 @@ const sections: SectionDefinition[] = [
           "admin_patisserie",
           "admin_terroir",
         ],
+      },
+    ],
+  },
+  {
+    title: "Feedback",
+    modules: [
+      {
+        label: "Dashboard Feedbacks",
+        description: "Consulter et analyser les retours de bénévoles et clients avec statistiques et graphiques",
+        route: "/admin/feedback",
+        icon: MessageSquare,
+        iconColor: "text-amber-600",
+        iconBg: "bg-amber-100",
+        allowedRoles: ["admin", "super_admin", "admin_ops"],
+      },
+      {
+        label: "Campagnes email",
+        description: "Créer et envoyer des campagnes de demande de feedback par email aux bénévoles et clients",
+        route: "/admin/feedback/campagnes",
+        icon: BarChart3,
+        iconColor: "text-amber-600",
+        iconBg: "bg-amber-100",
+        allowedRoles: ["admin", "super_admin", "admin_ops"],
       },
     ],
   },

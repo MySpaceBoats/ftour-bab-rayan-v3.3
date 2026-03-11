@@ -26,6 +26,7 @@ import {
   ShoppingCart,
   UtensilsCrossed,
   UserCircle2,
+  Trophy,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -73,6 +74,11 @@ export default function Navbar() {
     { href: localizedHref("/"), label: t.nav.home, icon: Home },
     { href: localizedHref("/evenement"), label: t.nav.event, icon: Info },
     { href: localizedHref("/benevole"), label: t.nav.volunteer, icon: Users },
+    {
+      href: localizedHref("/election-managers"),
+      label: "Election Managers",
+      icon: Trophy,
+    },
     {
       href: localizedHref("/reservation"),
       label: t.nav.restaurant,

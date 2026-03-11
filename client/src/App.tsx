@@ -156,6 +156,22 @@ import AdminFtour from "@/features/ftour/admin/AdminFtour";
 import FtourConfirmation from "@/features/ftour/pages/FtourConfirmation";
 
 // ============================================
+// FEEDBACK — features/feedback
+// ============================================
+import FeedbackPage from "@/features/feedback/pages/FeedbackPage";
+import AdminFeedback from "@/features/feedback/admin/AdminFeedback";
+import AdminFeedbackCampagnes from "@/features/feedback/admin/AdminFeedbackCampagnes";
+
+// ============================================
+// ELECTION MANAGERS — features/election
+// ============================================
+import ElectionManagers from "@/features/election/pages/ElectionManagers";
+import CandidatureManager from "@/features/election/pages/CandidatureManager";
+import ResultatsElection from "@/features/election/pages/ResultatsElection";
+import ManagersHistory from "@/features/election/pages/ManagersHistory";
+import AdminElections from "@/features/election/admin/AdminElections";
+
+// ============================================
 // ROUTES
 // ============================================
 
@@ -303,6 +319,13 @@ function LocalizedRoutes() {
       {/* Admin Ftour Bénévoles */}
       <Route path="/admin/ftour" component={AdminFtour} />
 
+      {/* Admin Election Managers */}
+      <Route path="/admin/elections" component={AdminElections} />
+
+      {/* Admin Feedback */}
+      <Route path="/admin/feedback/campagnes" component={AdminFeedbackCampagnes} />
+      <Route path="/admin/feedback" component={AdminFeedback} />
+
       {/* ================================================
           SCANNER — route unique (section 4.3)
           ================================================ */}
@@ -352,6 +375,9 @@ function LocalizedRoutes() {
           ================================================ */}
       <Route path="/">{() => <Redirect to={`/${lang}`} />}</Route>
 
+      {/* Page feedback publique */}
+      <Route path="/feedback" component={FeedbackPage} />
+
       {/* Menu solidaire QR unique */}
       <Route path="/menu" component={MenuSolidaire} />
       <Route path="/shop">{() => <Redirect to="/menu" />}</Route>
@@ -380,6 +406,12 @@ function LocalizedRoutes() {
         component={ForgotPassword}
       />
       <Route path="/:lang/profil-benevole" component={VolunteerProfilePage} />
+
+      {/* Election Managers */}
+      <Route path="/:lang/election-managers" component={ElectionManagers} />
+      <Route path="/:lang/candidature-manager" component={CandidatureManager} />
+      <Route path="/:lang/resultats-election" component={ResultatsElection} />
+      <Route path="/:lang/managers" component={ManagersHistory} />
 
       {/* Restaurant public */}
       <Route
@@ -466,6 +498,18 @@ function LocalizedRoutes() {
       </Route>
       <Route path="/profil-benevole">
         {() => <Redirect to={`/${lang}/profil-benevole`} />}
+      </Route>
+      <Route path="/election-managers">
+        {() => <Redirect to={`/${lang}/election-managers`} />}
+      </Route>
+      <Route path="/candidature-manager">
+        {() => <Redirect to={`/${lang}/candidature-manager`} />}
+      </Route>
+      <Route path="/resultats-election">
+        {() => <Redirect to={`/${lang}/resultats-election`} />}
+      </Route>
+      <Route path="/managers">
+        {() => <Redirect to={`/${lang}/managers`} />}
       </Route>
       <Route path="/reservation">
         {() => <Redirect to={`/${lang}/reservation`} />}
