@@ -5309,7 +5309,7 @@ const paymentsRouter = router({
 });
 
 const volunteerProfileRouter = router({
-  me: protectedProcedure.query(async ({ ctx }) => {
+  me: publicProcedure.query(async ({ ctx }) => {
     const authHeader = ctx.req.headers.authorization;
     const accessToken = authHeader?.startsWith("Bearer ")
       ? authHeader.substring(7)
@@ -5319,17 +5319,22 @@ const volunteerProfileRouter = router({
       throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
     }
 
+    const authUser = await getUserFromToken(accessToken);
+    if (!authUser) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Token invalide" });
+    }
+
     await volunteerProfileServices.ensureVolunteerProfile({
-      id: String(ctx.user.id),
-      email: ctx.user.email,
-      name: ctx.user.name,
-      phone: ctx.user.phone,
+      id: authUser.id,
+      email: authUser.email,
+      name: authUser.name,
+      phone: authUser.phone,
     });
 
     return volunteerProfileServices.getMyVolunteerProfile(accessToken);
   }),
 
-  updateMe: protectedProcedure
+  updateMe: publicProcedure
     .input(
       z.object({
         first_name: z.string().min(1),
@@ -5347,6 +5352,11 @@ const volunteerProfileRouter = router({
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
       }
 
+      const authUser = await getUserFromToken(accessToken);
+      if (!authUser) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token invalide" });
+      }
+
       return volunteerProfileServices.updateMyVolunteerProfile(accessToken, {
         first_name: input.first_name,
         last_name: input.last_name,
@@ -5354,7 +5364,7 @@ const volunteerProfileRouter = router({
       });
     }),
 
-  attendance: protectedProcedure
+  attendance: publicProcedure
     .input(
       z.object({
         limit: z.number().min(1).max(30).default(20),
@@ -5371,11 +5381,16 @@ const volunteerProfileRouter = router({
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
       }
 
+      const authUser = await getUserFromToken(accessToken);
+      if (!authUser) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token invalide" });
+      }
+
       await volunteerProfileServices.ensureVolunteerProfile({
-        id: String(ctx.user.id),
-        email: ctx.user.email,
-        name: ctx.user.name,
-        phone: ctx.user.phone,
+        id: authUser.id,
+        email: authUser.email,
+        name: authUser.name,
+        phone: authUser.phone,
       });
 
       return volunteerProfileServices.getMyAttendance(
