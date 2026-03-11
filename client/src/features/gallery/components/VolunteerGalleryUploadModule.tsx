@@ -13,9 +13,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { CheckCircle, Images, Loader2, Upload, X } from "lucide-react";
+import { CheckCircle, Images, Loader2, Mail, Upload, X } from "lucide-react";
 import { Link } from "wouter";
 import { useI18n } from "@/i18n";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 type UploadItem = {
   file: File;
@@ -33,10 +34,16 @@ const CURRENT_YEAR = new Date().getFullYear();
 
 export default function VolunteerGalleryUploadModule() {
   const { lang } = useI18n();
+  const { user } = useAuth();
   const [items, setItems] = useState<UploadItem[]>([]);
   const [selectedAlbumId, setSelectedAlbumId] = useState<string>("none");
   const [uploadedAlbumSlug, setUploadedAlbumSlug] = useState<string | null>(null);
+  const [needsEmailValidation, setNeedsEmailValidation] = useState(false);
   const albums = trpc.public.galleryAlbums.useQuery();
+  const resendValidation = trpc.gallery.resendValidationEmail.useMutation({
+    onSuccess: () => toast.success("Email de validation renvoyé !"),
+    onError: e => toast.error(e.message),
+  });
 
   const editionOptions = useMemo<EditionAlbumOption[]>(() => {
     const parseYear = (album: any) => {
@@ -81,14 +88,19 @@ export default function VolunteerGalleryUploadModule() {
   }, [editionOptions, selectedAlbumId]);
 
   const upload = trpc.gallery.uploadPhotos.useMutation({
-    onSuccess: (_data, variables) => {
+    onSuccess: (data, variables) => {
       // Find the album slug for the gallery link
       const albumId = variables.photos[0]?.albumId;
       const album = (editionOptions as any[]).find((e: any) => e.id === albumId);
       setUploadedAlbumSlug(album?.slug ?? `edition-${CURRENT_YEAR}`);
+      setNeedsEmailValidation(data.needsValidation);
       setItems([]);
       setSelectedAlbumId("none");
-      toast.success("Vos photos sont enregistrées et publiées.");
+      if (data.needsValidation) {
+        toast.success("Photos reçues ! Vérifiez votre email pour les publier.");
+      } else {
+        toast.success("Vos photos sont enregistrées et publiées.");
+      }
     },
     onError: e => toast.error(e.message),
   });
@@ -178,6 +190,48 @@ export default function VolunteerGalleryUploadModule() {
 
   // Success state after upload
   if (uploadedAlbumSlug) {
+    if (needsEmailValidation) {
+      return (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <Mail className="h-8 w-8 text-amber-600 shrink-0" />
+              <div>
+                <h3 className="font-semibold text-amber-900">Photos reçues – validation requise</h3>
+                <p className="text-sm text-amber-800 mt-1">
+                  Un email de confirmation a été envoyé à <strong>{user?.email}</strong>.
+                  Cliquez sur le lien dans l'email pour publier vos photos sur la galerie.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (user?.email) resendValidation.mutate({ email: user.email });
+                }}
+                disabled={resendValidation.isPending}
+              >
+                {resendValidation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Mail className="h-4 w-4 mr-2" />
+                )}
+                Renvoyer l'email
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => { setUploadedAlbumSlug(null); setNeedsEmailValidation(false); }}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Uploader d'autres photos
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
     return (
       <Card className="border-green-200 bg-green-50">
         <CardContent className="p-6 space-y-4">

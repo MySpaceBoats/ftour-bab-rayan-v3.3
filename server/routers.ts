@@ -393,6 +393,11 @@ const galleryRouter = router({
         }
       }
 
+      // Generate a single validation token for the whole batch (used for non-admin volunteers)
+      const batchValidationToken = canManageGallery
+        ? null
+        : randomBytes(32).toString("hex");
+
       const results = [];
       for (const photo of input.photos) {
         if (
@@ -448,8 +453,11 @@ const galleryRouter = router({
           albumId: photo.albumId,
           sortOrder: photo.sortOrder,
           isFeatured: canManageGallery ? photo.isFeatured : false,
-          status: "published",
-          validatedAt: new Date().toISOString(),
+          status: canManageGallery ? "published" : "draft",
+          validatedAt: canManageGallery ? new Date().toISOString() : undefined,
+          validationEmail: canManageGallery ? undefined : (ctx.user?.email ?? undefined),
+          validationToken: canManageGallery ? undefined : batchValidationToken,
+          validationSentAt: canManageGallery ? undefined : new Date().toISOString(),
           imageOriginalUrl: originalUrl,
           imageThumbUrl: thumbUrl,
           storagePath: originalPath,
@@ -463,7 +471,22 @@ const galleryRouter = router({
         results.push(created);
       }
 
-      return results;
+      // Send validation email for non-admin volunteers
+      if (!canManageGallery && batchValidationToken && ctx.user?.email) {
+        const validationUrl = `${resolveAppBaseUrl().replace(/\/$/, "")}/galerie/validation/${batchValidationToken}`;
+        const emailPayload = generateGalleryUploadValidationEmail({
+          email: ctx.user.email,
+          validationUrl,
+        });
+        await sendEmail({
+          to: ctx.user.email,
+          subject: emailPayload.subject,
+          html: emailPayload.html,
+        });
+        return { needsValidation: true, count: results.length };
+      }
+
+      return { needsValidation: false, count: results.length };
     }),
 
   validateUploadByEmail: publicProcedure
