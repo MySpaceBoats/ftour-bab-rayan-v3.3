@@ -30,8 +30,9 @@ import {
   Percent,
   Pencil,
   Trash2,
-  Link2,
+  Link as LinkIcon,
   Copy,
+  Mail,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -80,8 +81,8 @@ export default function AdminRestaurantReservations() {
   );
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [downloadingProofId, setDownloadingProofId] = useState<number | null>(null);
-  const [generatingLinkId, setGeneratingLinkId] = useState<number | null>(null);
-  const [generatedLink, setGeneratedLink] = useState<{ id: number; url: string } | null>(null);
+  const [depositLinkState, setDepositLinkState] = useState<{ reservationId: number; link: string } | null>(null);
+  const [sendingDepositLinkId, setSendingDepositLinkId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<{
     id: number;
     name: string;
@@ -331,22 +332,26 @@ export default function AdminRestaurantReservations() {
     }
   };
 
-  const handleGenerateProofLink = async (reservationId: number) => {
+  const handleSendDepositLink = async (reservationId: number, sendEmail: boolean) => {
     try {
-      setGeneratingLinkId(reservationId);
-      setGeneratedLink(null);
-      const result = await trpcUtils.client.restaurantReservations.adminGenerateProofLink.mutate({ reservationId });
-      setGeneratedLink({ id: reservationId, url: result.proofUploadUrl });
-      toast.success(`Lien généré pour ${result.reservationRef}`);
+      setSendingDepositLinkId(reservationId);
+      const result = await trpcUtils.client.restaurantReservations.adminSendDepositLink.mutate({
+        reservationId,
+        sendEmail,
+      });
+      setDepositLinkState({ reservationId, link: result.link });
+      if (sendEmail && result.emailSent) {
+        toast.success("Lien de dépôt envoyé par email au client");
+      } else if (sendEmail && !result.emailSent) {
+        toast.warning("Lien généré, mais l'envoi email a échoué — copiez le lien manuellement");
+      } else {
+        toast.success("Lien de dépôt généré");
+      }
     } catch (error: any) {
-      toast.error(error?.message || "Impossible de générer le lien");
+      toast.error(error?.message || "Impossible de générer le lien de dépôt");
     } finally {
-      setGeneratingLinkId(null);
+      setSendingDepositLinkId(null);
     }
-  };
-
-  const handleCopyLink = (url: string) => {
-    navigator.clipboard.writeText(url).then(() => toast.success("Lien copié")).catch(() => toast.error("Impossible de copier"));
   };
 
   const exportCsv = () => {
@@ -766,36 +771,58 @@ export default function AdminRestaurantReservations() {
                   </Button>
                 )}
 
-                {/* Generate proof upload link */}
-                {!["refused", "cancelled", "paid_confirmed", "completed"].includes(
+                {/* Send deposit proof link */}
+                {!["refused", "cancelled", "paid_confirmed", "completed", "no_show"].includes(
                   selectedReservation.status
                 ) && (
-                  <div className="space-y-2">
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => handleGenerateProofLink(selectedReservation.id)}
-                      disabled={generatingLinkId === selectedReservation.id}
-                    >
-                      {generatingLinkId === selectedReservation.id ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Link2 className="h-4 w-4 mr-2" />
-                      )}
-                      Générer lien de dépôt de preuve
-                    </Button>
-                    {generatedLink?.id === selectedReservation.id && (
-                      <div className="rounded-lg border border-green-200 bg-green-50 p-3 space-y-2">
-                        <p className="text-xs font-medium text-green-800">Lien généré (valide 7 jours) :</p>
-                        <p className="break-all text-xs text-green-700 font-mono">{generatedLink.url}</p>
+                  <div className="border rounded-lg p-3 space-y-2 bg-blue-50/50 border-blue-200">
+                    <p className="text-xs font-medium text-blue-800">
+                      Lien de dépôt de preuve de virement
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-100"
+                        onClick={() => handleSendDepositLink(selectedReservation.id, true)}
+                        disabled={sendingDepositLinkId === selectedReservation.id}
+                      >
+                        {sendingDepositLinkId === selectedReservation.id ? (
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        ) : (
+                          <Mail className="h-3 w-3 mr-1" />
+                        )}
+                        Envoyer par email
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                        onClick={() => handleSendDepositLink(selectedReservation.id, false)}
+                        disabled={sendingDepositLinkId === selectedReservation.id}
+                      >
+                        <LinkIcon className="h-3 w-3 mr-1" />
+                        Générer
+                      </Button>
+                    </div>
+                    {depositLinkState?.reservationId === selectedReservation.id && (
+                      <div className="flex gap-2 items-center mt-1">
+                        <input
+                          readOnly
+                          value={depositLinkState.link}
+                          className="flex-1 text-xs border rounded px-2 py-1 bg-white text-gray-700 overflow-hidden"
+                          onFocus={e => e.target.select()}
+                        />
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
-                          className="w-full text-xs"
-                          onClick={() => handleCopyLink(generatedLink.url)}
+                          className="h-7 px-2"
+                          onClick={() => {
+                            navigator.clipboard.writeText(depositLinkState.link);
+                            toast.success("Lien copié");
+                          }}
                         >
-                          <Copy className="h-3 w-3 mr-1" />
-                          Copier le lien
+                          <Copy className="h-3 w-3" />
                         </Button>
                       </div>
                     )}
