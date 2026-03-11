@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft,
@@ -10,6 +10,8 @@ import {
   CheckCircle,
   Eye,
   AlertTriangle,
+  Search,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -31,23 +34,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
 // ============================================
-// TYPES
+// CONSTANTES
 // ============================================
 
 const STATUS_CONFIG = {
@@ -212,6 +205,195 @@ function CreateCampaignDialog({
 }
 
 // ============================================
+// SEND SELECTION DIALOG — sélection multi email
+// ============================================
+
+function SendSelectionDialog({
+  campaign,
+  onClose,
+  onSent,
+}: {
+  campaign: any;
+  onClose: () => void;
+  onSent: () => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [initialized, setInitialized] = useState(false);
+
+  const emailsQuery = trpc.feedback.getGroupEmails.useQuery(
+    { targetGroup: campaign.target_group },
+    {
+      onSuccess: (emails: string[]) => {
+        if (!initialized) {
+          setSelected(new Set(emails)); // tout coché par défaut
+          setInitialized(true);
+        }
+      },
+    }
+  );
+
+  const allEmails: string[] = emailsQuery.data ?? [];
+
+  const filtered = useMemo(
+    () => allEmails.filter((e) => e.toLowerCase().includes(search.toLowerCase())),
+    [allEmails, search]
+  );
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((e) => selected.has(e));
+
+  const toggle = (email: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(email) ? next.delete(email) : next.add(email);
+      return next;
+    });
+  };
+
+  const toggleAllFiltered = () => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allFilteredSelected) {
+        filtered.forEach((e) => next.delete(e));
+      } else {
+        filtered.forEach((e) => next.add(e));
+      }
+      return next;
+    });
+  };
+
+  const sendMutation = trpc.feedback.sendCampaign.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Campagne envoyée : ${data.sent} emails envoyés${data.failed > 0 ? `, ${data.failed} échecs` : ""}`);
+      onSent();
+      onClose();
+    },
+    onError: (err: any) => toast.error(err.message || "Erreur lors de l'envoi"),
+  });
+
+  const handleSend = () => {
+    if (selected.size === 0) {
+      toast.error("Sélectionnez au moins un destinataire");
+      return;
+    }
+    sendMutation.mutate({
+      campaignId: campaign.id,
+      selectedEmails: Array.from(selected),
+    });
+  };
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="bg-[#2D2B15] border-[#F2E9D3]/20 text-[#F2E9D3] max-w-xl max-h-[85vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="text-[#F2E9D3] flex items-center gap-2">
+            <Send className="w-5 h-5 text-[#C9B97A]" />
+            Sélectionner les destinataires
+          </DialogTitle>
+          <p className="text-[#C9B97A]/70 text-sm">
+            {campaign.title} — <span className="text-[#C9B97A]">{TARGET_GROUP_LABELS[campaign.target_group] ?? campaign.target_group}</span>
+          </p>
+        </DialogHeader>
+
+        {emailsQuery.isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-7 h-7 animate-spin text-[#C9B97A]" />
+          </div>
+        ) : allEmails.length === 0 ? (
+          <div className="py-10 text-center">
+            <p className="text-[#C9B97A]/60">Aucun email trouvé pour ce groupe.</p>
+          </div>
+        ) : (
+          <>
+            {/* Barre de recherche + compteurs */}
+            <div className="space-y-3 px-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#C9B97A]/50" />
+                <Input
+                  placeholder="Rechercher une adresse…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 bg-[#3D3B1E] border-[#F2E9D3]/20 text-[#F2E9D3] placeholder:text-[#F2E9D3]/30"
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#C9B97A]/50 hover:text-[#C9B97A]"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between text-sm">
+                <button
+                  type="button"
+                  onClick={toggleAllFiltered}
+                  className="flex items-center gap-2 text-[#C9B97A] hover:text-[#F2E9D3] transition-colors"
+                >
+                  <Checkbox
+                    checked={allFilteredSelected}
+                    className="border-[#C9B97A] data-[state=checked]:bg-[#C9B97A] pointer-events-none"
+                  />
+                  {allFilteredSelected ? "Tout désélectionner" : "Tout sélectionner"}
+                  {search && <span className="text-[#C9B97A]/50">({filtered.length} visibles)</span>}
+                </button>
+                <span className="text-[#C9B97A]/60">
+                  <span className="text-[#F2E9D3] font-semibold">{selected.size}</span> / {allEmails.length} sélectionné{selected.size > 1 ? "s" : ""}
+                </span>
+              </div>
+            </div>
+
+            {/* Liste scrollable */}
+            <div className="flex-1 overflow-y-auto border border-[#F2E9D3]/10 rounded-lg divide-y divide-[#F2E9D3]/5 min-h-0 max-h-[340px]">
+              {filtered.length === 0 ? (
+                <p className="text-center text-[#C9B97A]/40 py-6 text-sm">Aucun résultat pour "{search}"</p>
+              ) : (
+                filtered.map((email) => (
+                  <button
+                    key={email}
+                    type="button"
+                    onClick={() => toggle(email)}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[#3D3B1E]/60 ${
+                      selected.has(email) ? "bg-[#C9B97A]/5" : ""
+                    }`}
+                  >
+                    <Checkbox
+                      checked={selected.has(email)}
+                      className="border-[#C9B97A] data-[state=checked]:bg-[#C9B97A] pointer-events-none shrink-0"
+                    />
+                    <span className={`text-sm font-mono ${selected.has(email) ? "text-[#F2E9D3]" : "text-[#F2E9D3]/50"}`}>
+                      {email}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </>
+        )}
+
+        <DialogFooter className="gap-2 pt-2">
+          <Button variant="ghost" onClick={onClose} className="text-[#C9B97A]/60" disabled={sendMutation.isPending}>
+            Annuler
+          </Button>
+          <Button
+            onClick={handleSend}
+            disabled={sendMutation.isPending || selected.size === 0 || emailsQuery.isLoading}
+            className="bg-[#C9B97A] hover:bg-[#B5A56A] text-[#2D2B15] font-semibold"
+          >
+            {sendMutation.isPending ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Envoi en cours…</>
+            ) : (
+              <><Send className="w-4 h-4 mr-2" />Envoyer à {selected.size} destinataire{selected.size > 1 ? "s" : ""}</>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ============================================
 // CAMPAIGN STATS DIALOG
 // ============================================
 
@@ -263,23 +445,11 @@ function CampaignStatsDialog({ campaignId, onClose }: { campaignId: number; onCl
 
 export default function AdminFeedbackCampagnes() {
   const [showCreate, setShowCreate] = useState(false);
-  const [sendConfirm, setSendConfirm] = useState<number | null>(null);
+  const [sendTarget, setSendTarget] = useState<any | null>(null); // campaign object
   const [viewStats, setViewStats] = useState<number | null>(null);
 
   const campaignsQuery = trpc.feedback.listCampaigns.useQuery();
   const formsQuery = trpc.feedback.listForms.useQuery();
-
-  const sendMutation = trpc.feedback.sendCampaign.useMutation({
-    onSuccess: (data) => {
-      toast.success(`Campagne envoyée : ${data.sent} emails envoyés, ${data.failed} échecs`);
-      campaignsQuery.refetch();
-      setSendConfirm(null);
-    },
-    onError: (err: any) => {
-      toast.error(err.message || "Erreur lors de l'envoi");
-      setSendConfirm(null);
-    },
-  });
 
   const campaigns = campaignsQuery.data ?? [];
   const forms = formsQuery.data ?? [];
@@ -317,9 +487,8 @@ export default function AdminFeedbackCampagnes() {
         <CardContent className="p-4 flex gap-3 items-start">
           <AlertTriangle className="w-5 h-5 text-[#C9B97A] shrink-0 mt-0.5" />
           <div className="text-sm text-[#F2E9D3]/80">
-            <strong className="text-[#C9B97A]">Comment ça marche :</strong> Créez une campagne, choisissez un groupe de destinataires et un formulaire.
-            En cliquant "Envoyer", chaque destinataire reçoit un email personnalisé avec un lien unique sécurisé.
-            Le lien permet de pré-remplir l'email et de suivre les réponses, tout en permettant l'anonymat.
+            <strong className="text-[#C9B97A]">Comment ça marche :</strong> Créez une campagne, puis cliquez "Envoyer campagne" pour choisir précisément les destinataires.
+            Chaque personne reçoit un lien unique sécurisé. Vous pouvez cocher/décocher individuellement ou par groupe.
           </div>
         </CardContent>
       </Card>
@@ -401,7 +570,7 @@ export default function AdminFeedbackCampagnes() {
                         <Button
                           size="sm"
                           className="bg-[#C9B97A] hover:bg-[#B5A56A] text-[#2D2B15] font-semibold"
-                          onClick={() => setSendConfirm(campaign.id)}
+                          onClick={() => setSendTarget(campaign)}
                         >
                           <Send className="w-3.5 h-3.5 mr-1.5" />
                           Envoyer campagne
@@ -425,35 +594,13 @@ export default function AdminFeedbackCampagnes() {
         />
       )}
 
-      {/* Send confirm dialog */}
-      {sendConfirm !== null && (
-        <AlertDialog open onOpenChange={() => setSendConfirm(null)}>
-          <AlertDialogContent className="bg-[#2D2B15] border-[#F2E9D3]/20 text-[#F2E9D3]">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="text-[#F2E9D3]">Confirmer l'envoi</AlertDialogTitle>
-              <AlertDialogDescription className="text-[#C9B97A]/80">
-                Cette action enverra des emails à tous les destinataires du groupe sélectionné.
-                Cette opération est irréversible.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="border-[#F2E9D3]/20 text-[#F2E9D3] bg-transparent hover:bg-[#3D3B1E]">
-                Annuler
-              </AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-[#C9B97A] hover:bg-[#B5A56A] text-[#2D2B15] font-semibold"
-                onClick={() => sendMutation.mutate({ campaignId: sendConfirm! })}
-                disabled={sendMutation.isPending}
-              >
-                {sendMutation.isPending ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Envoi en cours...</>
-                ) : (
-                  <><Send className="w-4 h-4 mr-2" />Envoyer</>
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+      {/* Multi-select send dialog */}
+      {sendTarget !== null && (
+        <SendSelectionDialog
+          campaign={sendTarget}
+          onClose={() => setSendTarget(null)}
+          onSent={() => campaignsQuery.refetch()}
+        />
       )}
 
       {/* Stats dialog */}

@@ -451,8 +451,22 @@ export const feedbackRouter = router({
       return data;
     }),
 
+  // Returns all available emails for a given target group (for pre-send selection UI)
+  getGroupEmails: adminProcedure
+    .input(z.object({ targetGroup: z.enum(["volunteers", "restaurant_clients", "foodstore_clients", "all", "test"]) }))
+    .query(async ({ input }) => {
+      const db = getSupabaseAdminClient();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB non configurée" });
+      const emails = await collectTargetEmails(db, input.targetGroup);
+      return emails.map((e) => e.email);
+    }),
+
   sendCampaign: adminProcedure
-    .input(z.object({ campaignId: z.number() }))
+    .input(z.object({
+      campaignId: z.number(),
+      // If provided, only send to these addresses (subset of the group)
+      selectedEmails: z.array(z.string().email()).optional(),
+    }))
     .mutation(async ({ input }) => {
       const db = getSupabaseAdminClient();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB non configurée" });
@@ -467,8 +481,11 @@ export const feedbackRouter = router({
       if (campError || !campaign) throw new TRPCError({ code: "NOT_FOUND", message: "Campagne non trouvée" });
       if (campaign.status === "sent") throw new TRPCError({ code: "BAD_REQUEST", message: "Campagne déjà envoyée" });
 
-      // Collect target emails
-      const emails = await collectTargetEmails(db, campaign.target_group);
+      // Collect target emails then optionally filter to selected ones
+      const allEmails = await collectTargetEmails(db, campaign.target_group);
+      const emails = input.selectedEmails && input.selectedEmails.length > 0
+        ? allEmails.filter((e) => input.selectedEmails!.includes(e.email))
+        : allEmails;
 
       if (emails.length === 0) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Aucun destinataire trouvé pour ce groupe" });
