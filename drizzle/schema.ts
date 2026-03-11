@@ -1018,6 +1018,7 @@ export const feedbackTargetGroupEnum = mysqlEnum("feedbackTargetGroup", [
   "restaurant_clients",
   "foodstore_clients",
   "all",
+  "test",
 ]);
 
 export const feedbackCampaigns = mysqlTable("feedback_campaigns", {

@@ -61,6 +61,7 @@ const TARGET_GROUP_LABELS: Record<string, string> = {
   restaurant_clients: "Clients restaurant",
   foodstore_clients: "Clients foodstore",
   all: "Tous",
+  test: "Test (équipe interne)",
 };
 
 const DEFAULT_EMAIL_CONTENT = `Merci d'avoir participé aux actions de Bab Rayan pendant ce Ramadan.
@@ -144,6 +145,7 @@ function CreateCampaignDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-[#2D2B15] border-[#F2E9D3]/20">
+                <SelectItem value="test" className="text-[#F2E9D3] focus:bg-[#3D3B1E]">🧪 Test (équipe interne)</SelectItem>
                 <SelectItem value="volunteers" className="text-[#F2E9D3] focus:bg-[#3D3B1E]">Bénévoles</SelectItem>
                 <SelectItem value="restaurant_clients" className="text-[#F2E9D3] focus:bg-[#3D3B1E]">Clients restaurant</SelectItem>
                 <SelectItem value="foodstore_clients" className="text-[#F2E9D3] focus:bg-[#3D3B1E]">Clients foodstore</SelectItem>

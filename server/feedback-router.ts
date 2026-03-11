@@ -424,7 +424,7 @@ export const feedbackRouter = router({
     .input(
       z.object({
         title: z.string().min(1),
-        targetGroup: z.enum(["volunteers", "restaurant_clients", "foodstore_clients", "all"]),
+        targetGroup: z.enum(["volunteers", "restaurant_clients", "foodstore_clients", "all", "test"]),
         formId: z.number(),
         emailSubject: z.string().min(1),
         emailContent: z.string().min(1),
@@ -542,11 +542,23 @@ export const feedbackRouter = router({
 // HELPERS
 // ============================================
 
+const TEST_EMAILS = [
+  "reda.sebbani@gmail.com",
+  "sebbani.reda@gmail.com",
+  "rsebbani@myspace.boats",
+  "contact@ftourbabrayan.ma",
+  "digital@myspace.boats",
+];
+
 async function collectTargetEmails(
   db: any,
   targetGroup: string
 ): Promise<Array<{ email: string; userId?: number | null }>> {
   const emails: Array<{ email: string; userId?: number | null }> = [];
+
+  if (targetGroup === "test") {
+    return TEST_EMAILS.map((email) => ({ email, userId: null }));
+  }
 
   const includeVolunteers = targetGroup === "volunteers" || targetGroup === "all";
   const includeRestaurant = targetGroup === "restaurant_clients" || targetGroup === "all";
