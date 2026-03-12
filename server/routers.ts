@@ -176,7 +176,7 @@ const adminPatisserieProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 const adminTerroirProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ["admin", "super_admin", "admin_terroir", "admin_ops", "admin_operations"];
+  const allowedRoles = ["admin", "super_admin", "admin_terroir", "admin_boutique", "admin_ops", "admin_operations"];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({
       code: "FORBIDDEN",

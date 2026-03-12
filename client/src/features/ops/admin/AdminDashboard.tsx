@@ -198,7 +198,7 @@ const sections: SectionDefinition[] = [
         icon: Package,
         iconColor: "text-emerald-700",
         iconBg: "bg-emerald-100",
-        allowedRoles: ["admin", "super_admin", "admin_terroir", "admin_ops", "admin_operations"],
+        allowedRoles: ["admin", "super_admin", "admin_terroir", "admin_boutique", "admin_ops", "admin_operations"],
       },
       {
         label: "Catalogue Terroir",
@@ -207,7 +207,7 @@ const sections: SectionDefinition[] = [
         icon: ShoppingBag,
         iconColor: "text-emerald-700",
         iconBg: "bg-emerald-100",
-        allowedRoles: ["admin", "super_admin", "admin_terroir", "admin_ops", "admin_operations"],
+        allowedRoles: ["admin", "super_admin", "admin_terroir", "admin_boutique", "admin_ops", "admin_operations"],
       },
       {
         label: "QR Codes Catalogue",
