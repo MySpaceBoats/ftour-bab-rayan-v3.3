@@ -446,7 +446,7 @@ function LocalizedRoutes() {
         {() => <Redirect to={`/${lang}/patisserie`} />}
       </Route>
       <Route path="/:lang/buy/terroir/:id">
-        {() => <Redirect to={`/${lang}/boutique`} />}
+        {() => <Redirect to={`/${lang}/terroir`} />}
       </Route>
 
       {/* Dons public */}
@@ -466,6 +466,9 @@ function LocalizedRoutes() {
       </Route>
       <Route path="/pastries">
         {() => <Redirect to={`/${lang}/patisserie`} />}
+      </Route>
+      <Route path="/terroir">
+        {() => <Redirect to={`/${lang}/terroir`} />}
       </Route>
       <Route path="/dons">{() => <Redirect to={`/${lang}/dons`} />}</Route>
       <Route path="/evenement">
