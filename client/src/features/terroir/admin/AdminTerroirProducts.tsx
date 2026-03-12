@@ -44,6 +44,7 @@ export default function AdminTerroirProducts() {
     imageUrl: "",
     isActive: true,
     sortOrder: 0,
+    stockTotal: 0,
   });
   const [variantForm, setVariantForm] = useState({ label: "", sku: "", priceUnit: 0, stockTotal: 0, isActive: true });
 
@@ -111,6 +112,7 @@ export default function AdminTerroirProducts() {
       imageUrl: "",
       isActive: true,
       sortOrder: 0,
+      stockTotal: 0,
     });
     setImagePreview(null);
   };
@@ -181,6 +183,8 @@ export default function AdminTerroirProducts() {
 
   const openEditDialog = (product: any) => {
     setEditingProduct(product);
+    const firstVariant = product.terroir_product_variants?.[0];
+
     setForm({
       name: product.name,
       description: product.description || "",
@@ -188,6 +192,7 @@ export default function AdminTerroirProducts() {
       imageUrl: product.image_url || "",
       isActive: product.is_active ?? true,
       sortOrder: product.sort_order || 0,
+      stockTotal: firstVariant?.stock_total || 0,
     });
     setImagePreview(product.image_url || null);
   };
@@ -336,6 +341,18 @@ export default function AdminTerroirProducts() {
             min="0"
           />
         </div>
+        {editingProduct && (
+          <div className="space-y-2">
+            <Label>Stock total (bouteilles)</Label>
+            <Input
+              type="number"
+              value={form.stockTotal}
+              onChange={(e) => setForm(prev => ({ ...prev, stockTotal: parseInt(e.target.value) || 0 }))}
+              placeholder="0"
+              min="0"
+            />
+          </div>
+        )}
       </div>
 
       {imageUploadField}
