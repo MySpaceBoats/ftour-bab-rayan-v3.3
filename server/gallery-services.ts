@@ -7,6 +7,8 @@ export const GALLERY_ALLOWED_MIME_TYPES = [
 ] as const;
 export const GALLERY_MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024;
 export const GALLERY_MAX_BATCH = 20;
+export const GALLERY_EDITION_YEAR_START = 2015;
+export const GALLERY_EDITION_YEAR_END = 2026;
 
 export type GalleryStatus = "draft" | "published" | "rejected";
 
@@ -119,6 +121,38 @@ export async function createGalleryPhoto(input: GalleryPhotoCreateInput) {
 export async function listGalleryAlbums(publicOnly = false) {
   const client = getSupabaseAdminClient();
   if (!client) return [];
+
+  const expectedYears: number[] = [];
+  for (let year = GALLERY_EDITION_YEAR_START; year <= GALLERY_EDITION_YEAR_END; year += 1) {
+    expectedYears.push(year);
+  }
+
+  const expectedSlugs = expectedYears.map(year => `edition-${year}`);
+
+  const { data: existingEditionAlbums, error: existingEditionAlbumsError } = await client
+    .from("gallery_albums")
+    .select("slug")
+    .in("slug", expectedSlugs);
+
+  if (existingEditionAlbumsError) throw new Error(existingEditionAlbumsError.message);
+
+  const existingSlugs = new Set(
+    (existingEditionAlbums ?? []).map((album: { slug: string | null }) => album.slug).filter(Boolean)
+  );
+
+  const missingYears = expectedYears.filter(year => !existingSlugs.has(`edition-${year}`));
+
+  if (missingYears.length > 0) {
+    const rows = missingYears.map(year => ({
+      name: `Édition ${year}`,
+      slug: `edition-${year}`,
+      sort_order: year,
+      status: "published",
+    }));
+
+    const { error: insertError } = await client.from("gallery_albums").insert(rows);
+    if (insertError) throw new Error(insertError.message);
+  }
 
   let query = client
     .from("gallery_albums")
