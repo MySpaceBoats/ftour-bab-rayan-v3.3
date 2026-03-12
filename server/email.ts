@@ -1345,22 +1345,34 @@ export function generateReservationRequestEmail(data: ReservationRequestEmailDat
 
   const content = `
     <h2 style="color: #5d5a3c; margin: 0 0 20px 0; font-size: 24px;">
-      Demande de réservation reçue ✅
+      Demande de réservation reçue
     </h2>
-    
+
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
       Cher(e) <strong>${data.firstName}</strong>,
     </p>
-    
+
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-      Merci pour votre demande de réservation. Nous avons bien reçu votre demande et notre équipe organisatrice l'étudiera dans les plus brefs délais.
+      Nous avons bien reçu votre demande de réservation et notre équipe la traitera dans les plus brefs délais.
     </p>
-    
+
+    <!-- Avertissement : pas une confirmation définitive -->
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #92400e; margin: 0 0 10px 0; font-size: 17px;">⚠️ Ceci n'est pas une confirmation définitive</h3>
+          <p style="margin: 0; color: #374151; font-size: 15px; line-height: 1.6;">
+            Votre demande est en cours d'étude. Vous recevrez un second email de notre équipe pour confirmer votre réservation et vous communiquer les détails de paiement de l'acompte.
+          </p>
+        </td>
+      </tr>
+    </table>
+
     <!-- Détails de la demande -->
     <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f0; border-radius: 8px; margin: 20px 0;">
       <tr>
         <td style="padding: 20px;">
-          <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de votre demande</h3>
+          <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">📋 Récapitulatif de votre demande</h3>
           <p style="margin: 5px 0; color: #374151;"><strong>Type :</strong> ${typeLabel}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Nombre de participants :</strong> ${data.participantsCount}</p>
@@ -1370,49 +1382,31 @@ export function generateReservationRequestEmail(data: ReservationRequestEmailDat
     </table>
 
     <!-- Prochaines étapes -->
-    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fef3c7; border-radius: 8px; margin: 20px 0;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f0fdf4; border-radius: 8px; margin: 20px 0;">
       <tr>
         <td style="padding: 20px;">
-          <h3 style="color: #92400e; margin: 0 0 15px 0; font-size: 18px;">⏱️ Prochaines étapes</h3>
-          <p style="margin: 0; color: #374151; line-height: 1.6;">
-            Vous recevrez une confirmation par email sous <strong>48 heures</strong> avec les détails finaux et votre QR code d'accès.
-          </p>
+          <h3 style="color: #166534; margin: 0 0 12px 0; font-size: 17px;">📬 Prochaines étapes</h3>
+          <ol style="margin: 0; padding-left: 20px; color: #374151; font-size: 15px; line-height: 1.8;">
+            <li>Notre équipe étudie votre demande.</li>
+            <li>Vous recevrez un email de validation avec les instructions de paiement de l'acompte.</li>
+            <li>Une fois l'acompte reçu, votre réservation sera définitivement confirmée.</li>
+          </ol>
         </td>
       </tr>
     </table>
-
-    <!-- Conditions de réservation -->
-    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; margin: 20px 0;">
-      <tr>
-        <td style="padding: 20px;">
-          <h3 style="color: #9a3412; margin: 0 0 15px 0; font-size: 18px;">⚠️ Conditions de réservation</h3>
-          <p style="margin: 0 0 12px 0; color: #374151; font-size: 15px; line-height: 1.6;">
-            <strong>Le nombre de personnes réservées sera facturé dans sa totalité, même en cas d'absence ou de modification le jour même.</strong>
-          </p>
-          <p style="margin: 0; color: #374151; font-size: 15px; line-height: 1.6;">
-            Afin de confirmer votre réservation à Table du Jardin, nous vous remercions de bien vouloir verser <strong>50 % du montant</strong> à l'avance.
-          </p>
-        </td>
-      </tr>
-    </table>
-
-    <!-- RIB -->
-    <div style="text-align: center; margin: 20px 0;">
-      <p style="margin: 0; color: #374151; font-size: 14px;"><strong>RIB :</strong> 007 780 0003 401 000 100 238 97<br/><strong>IBAN :</strong> MA64 007 780 0003 401 000 100 238 97</p>
-    </div>
 
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
-      Merci pour votre soutien à notre restaurant solidaire 💚
+      Pour toute question, contactez-nous à <a href="mailto:contact@ftourbabrayan.ma" style="color: #166534;">contact@ftourbabrayan.ma</a>.
     </p>
 
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">
-      À très bientôt.<br>
-      <strong>L'équipe Ftour Bab Rayan</strong>
+      Merci pour votre confiance.<br>
+      <strong>L'équipe La Table du Jardin — Ftour Bab Rayan</strong>
     </p>
   `;
 
   return {
-    subject: `✅ Demande de réservation reçue - Référence ${data.reference}`,
+    subject: `Demande de réservation reçue — Réf. ${data.reference}`,
     html: baseTemplate(content),
   };
 }
@@ -2044,6 +2038,190 @@ export function generateAdminReservationValidationEmail(data: AdminReservationVa
 
   return {
     subject: `[Action requise] Nouvelle reservation ${typeLabel} - ${data.date} - Ref. ${data.reference}`,
+    html: baseTemplate(content),
+  };
+}
+
+// ============================================
+// EMAIL NOTIFICATION ADMIN : RÉSERVATION VALIDÉE + ACOMPTE ENVOYÉ
+// ============================================
+
+export interface AdminValidatedDepositSentEmailData {
+  type: 'particulier' | 'entreprise' | 'groupe';
+  date: string;
+  participantsCount: number;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+  reference: string;
+  companyName?: string;
+  groupName?: string;
+  displayChoice?: string;
+  validatedBy?: string;
+  adminDashboardUrl?: string;
+}
+
+export function generateAdminValidatedDepositSentEmail(data: AdminValidatedDepositSentEmailData): { subject: string; html: string } {
+  const typeLabel = {
+    particulier: 'Particulier',
+    entreprise: 'Entreprise',
+    groupe: 'Groupe',
+  }[data.type];
+
+  const content = `
+    <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
+      ✅ Réservation validée — Email d'acompte envoyé
+    </h2>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      La réservation ci-dessous a été validée. Un email demandant le versement de l'acompte a été envoyé automatiquement au client.
+    </p>
+
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f0fdf4; border-radius: 8px; margin: 20px 0; border: 1px solid #86efac;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de la réservation</h3>
+          <p style="margin: 5px 0; color: #374151;"><strong>Type :</strong> ${typeLabel}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Participants :</strong> ${data.participantsCount}</p>
+          ${data.displayChoice ? `<p style="margin: 5px 0; color: #374151;"><strong>Salle :</strong> ${data.displayChoice}</p>` : ''}
+          ${data.companyName ? `<p style="margin: 5px 0; color: #374151;"><strong>Entreprise :</strong> ${data.companyName}</p>` : ''}
+          ${data.groupName ? `<p style="margin: 5px 0; color: #374151;"><strong>Groupe :</strong> ${data.groupName}</p>` : ''}
+          <p style="margin: 5px 0; color: #374151;"><strong>Contact :</strong> ${data.contactName}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Email :</strong> <a href="mailto:${data.contactEmail}" style="color: #166534;">${data.contactEmail}</a></p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Téléphone :</strong> ${data.contactPhone}</p>
+          <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;"><strong>Référence :</strong> ${data.reference}</p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="color: #374151; font-size: 15px; line-height: 1.6; margin: 20px 0;">
+      Le client dispose de <strong>48h</strong> pour verser l'acompte. Sans règlement dans ce délai, la réservation sera annulée automatiquement.
+    </p>
+
+    ${data.adminDashboardUrl ? `
+    <p style="margin: 20px 0;">
+      <a href="${data.adminDashboardUrl}" style="display: inline-block; background-color: #166534; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-size: 15px; font-weight: 600;">
+        Voir le tableau de bord réservations
+      </a>
+    </p>` : ''}
+  `;
+
+  return {
+    subject: `✅ Réservation validée — Acompte demandé — ${typeLabel} — Réf. ${data.reference}`,
+    html: baseTemplate(content),
+  };
+}
+
+// ============================================
+// EMAIL CLIENT : CONFIRMATION RÉCEPTION DE PREUVE D'ACOMPTE
+// ============================================
+
+export interface DepositProofReceivedEmailData {
+  firstName: string;
+  reference: string;
+  reservationDateLong: string;
+}
+
+export function generateDepositProofReceivedEmail(data: DepositProofReceivedEmailData): { subject: string; html: string } {
+  const content = `
+    <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
+      Preuve d'acompte reçue ✅
+    </h2>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Cher(e) <strong>${data.firstName}</strong>,
+    </p>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Nous avons bien reçu votre preuve de virement pour la réservation <strong>${data.reference}</strong> prévue le <strong>${data.reservationDateLong}</strong>.
+    </p>
+
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f0fdf4; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #166534; margin: 0 0 12px 0; font-size: 17px;">📬 Prochaine étape</h3>
+          <p style="margin: 0; color: #374151; font-size: 15px; line-height: 1.6;">
+            Notre équipe va vérifier votre virement dans les plus brefs délais. Vous recevrez un email de confirmation définitive dès que le paiement aura été validé.
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
+      Pour toute question, contactez-nous à <a href="mailto:contact@ftourbabrayan.ma" style="color: #166534;">contact@ftourbabrayan.ma</a>.
+    </p>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">
+      Merci pour votre confiance.<br>
+      <strong>L'équipe La Table du Jardin — Ftour Bab Rayan</strong>
+    </p>
+  `;
+
+  return {
+    subject: `Preuve d'acompte reçue — Réf. ${data.reference}`,
+    html: baseTemplate(content),
+  };
+}
+
+// ============================================
+// EMAIL NOTIFICATION ADMIN : PREUVE D'ACOMPTE REÇUE
+// ============================================
+
+export interface AdminProofReceivedNotificationEmailData {
+  reference: string;
+  contactName: string;
+  contactEmail: string;
+  reservationDate: string;
+  uploadedAt: string;
+  note?: string;
+  proofLink?: string;
+  adminDashboardUrl?: string;
+}
+
+export function generateAdminProofReceivedNotificationEmail(data: AdminProofReceivedNotificationEmailData): { subject: string; html: string } {
+  const content = `
+    <h2 style="color: #166534; margin: 0 0 20px 0; font-size: 24px;">
+      🔔 Nouvelle preuve d'acompte reçue
+    </h2>
+
+    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+      Une preuve de virement vient d'être déposée pour la réservation suivante :
+    </p>
+
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f0fdf4; border-radius: 8px; margin: 20px 0; border: 1px solid #86efac;">
+      <tr>
+        <td style="padding: 20px;">
+          <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">📋 Détails</h3>
+          <p style="margin: 5px 0; color: #374151;"><strong>Référence :</strong> ${data.reference}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Client :</strong> ${data.contactName}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Email :</strong> <a href="mailto:${data.contactEmail}" style="color: #166534;">${data.contactEmail}</a></p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Date réservation :</strong> ${data.reservationDate}</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Preuve déposée le :</strong> ${data.uploadedAt}</p>
+          ${data.note ? `<p style="margin: 5px 0; color: #374151;"><strong>Note client :</strong> ${data.note}</p>` : ''}
+        </td>
+      </tr>
+    </table>
+
+    ${data.proofLink ? `
+    <p style="margin: 20px 0;">
+      <a href="${data.proofLink}" style="display: inline-block; background-color: #15803d; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-size: 15px; font-weight: 600;">
+        📎 Consulter la preuve de virement
+      </a>
+    </p>` : ''}
+
+    ${data.adminDashboardUrl ? `
+    <p style="margin: 12px 0 0 0;">
+      <a href="${data.adminDashboardUrl}" style="color: #166534; font-size: 14px;">Ouvrir le tableau de bord des réservations</a>
+    </p>` : ''}
+
+    <p style="color: #374151; font-size: 15px; line-height: 1.6; margin: 24px 0 0 0;">
+      Veuillez vérifier le virement et mettre à jour le statut de la réservation dans le tableau de bord.
+    </p>
+  `;
+
+  return {
+    subject: `🔔 Preuve d'acompte reçue — Réf. ${data.reference} — ${data.contactName}`,
     html: baseTemplate(content),
   };
 }

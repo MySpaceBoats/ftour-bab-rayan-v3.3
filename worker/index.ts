@@ -286,16 +286,11 @@ export default {
       });
 
       const signed = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 60 * 24);
-      const dashboardUrl = env.RESERVATION_ADMIN_DASHBOARD_URL || `${(env.PUBLIC_APP_URL || 'https://www.ftourbabrayan.ma').replace(/\/$/, '')}/admin/restaurant-reservations`;
+      const dashboardUrl = env.RESERVATION_ADMIN_DASHBOARD_URL || `${(env.PUBLIC_APP_URL || 'https://www.ftourbabrayan.ma').replace(/\/$/, '')}/admin/restaurant/groupes`;
       const uploadedAt = new Date().toLocaleString('fr-FR', { timeZone: 'Africa/Casablanca', dateStyle: 'full', timeStyle: 'short' });
       const proofLink = signed.data?.signedUrl ? `<p style="margin:16px 0"><a href="${signed.data.signedUrl}" style="background:#15803d;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600">📎 Consulter la preuve de virement</a></p>` : '';
-      await sendEmail({
-        to: 'ratibhind3@gmail.com',
-        cc: ['reda.sebbani@gmail.com', 'admin@ftourbabrayan.ma'],
-        apiKey: env.RESEND_API_KEY || env.EMAIL_PROVIDER_KEY || "",
-        subject: `🔔 Nouvelle preuve de virement – [${reservation.reference}]`,
-        html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
-<h2 style="color:#15803d">Nouvelle preuve de virement reçue</h2>
+      const adminNotifHtml = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+<h2 style="color:#15803d">🔔 Nouvelle preuve d'acompte reçue</h2>
 <table style="width:100%;border-collapse:collapse;margin:16px 0">
 <tr><td style="padding:8px;background:#f0fdf4;font-weight:600;width:40%">Référence</td><td style="padding:8px;background:#f0fdf4">${reservation.reference}</td></tr>
 <tr><td style="padding:8px;font-weight:600">Nom</td><td style="padding:8px">${reservation.name}</td></tr>
@@ -304,9 +299,51 @@ export default {
 ${note ? `<tr><td style="padding:8px;background:#f0fdf4;font-weight:600">Note</td><td style="padding:8px;background:#f0fdf4">${note}</td></tr>` : ''}
 </table>
 ${proofLink}
-<p style="margin:16px 0"><a href="${dashboardUrl}" style="color:#15803d">Ouvrir le dashboard des réservations</a></p>
-</div>`,
-      });
+<p style="margin:16px 0"><a href="${dashboardUrl}" style="color:#15803d">Ouvrir le tableau de bord des réservations</a></p>
+<p style="color:#374151;font-size:14px">Veuillez vérifier le virement et mettre à jour le statut dans le tableau de bord.</p>
+</div>`;
+
+      // Notification à tous les admins (Hind, Reda restaurant, Nayla, La Table du Jardin)
+      const adminRecipients = [
+        'ratibehind3@gmail.com',
+        'restaurantbabrayan@ftourbabrayan.ma',
+        'naylabennani@hotmail.com',
+        'dir.cfi@babrayan.ma',
+      ];
+      const apiKey = env.RESEND_API_KEY || env.EMAIL_PROVIDER_KEY || "";
+      for (const adminEmail of adminRecipients) {
+        await sendEmail({
+          to: adminEmail,
+          apiKey,
+          subject: `🔔 Preuve d'acompte reçue — [${reservation.reference}] — ${reservation.name}`,
+          html: adminNotifHtml,
+        }).catch(err => console.error('[proof/upload] Failed to notify admin', adminEmail, err));
+      }
+
+      // Email de confirmation au client
+      const clientConfirmHtml = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#fff">
+<div style="background:linear-gradient(135deg,#166534 0%,#15803d 100%);padding:30px;text-align:center;border-radius:8px 8px 0 0">
+  <h1 style="color:#fff;margin:0;font-size:26px">La Table du Jardin — <span style="color:#fbbf24">Ftour Bab Rayan</span></h1>
+</div>
+<div style="padding:32px 24px">
+  <h2 style="color:#166534;margin:0 0 16px">Preuve d'acompte reçue ✅</h2>
+  <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 16px">Nous avons bien reçu votre preuve de virement pour la réservation <strong>${reservation.reference}</strong>.</p>
+  <div style="background:#f0fdf4;border-radius:8px;padding:16px;margin:16px 0">
+    <p style="margin:0;color:#374151;font-size:15px;line-height:1.6">Notre équipe va vérifier votre virement dans les plus brefs délais. Vous recevrez un email de confirmation définitive dès validation de votre paiement.</p>
+  </div>
+  <p style="color:#374151;font-size:15px;line-height:1.6;margin:16px 0">Pour toute question, contactez-nous à <a href="mailto:contact@ftourbabrayan.ma" style="color:#166534">contact@ftourbabrayan.ma</a>.</p>
+  <p style="color:#374151;font-size:16px;line-height:1.6;margin:16px 0 0">Merci pour votre confiance.<br><strong>L'équipe La Table du Jardin — Ftour Bab Rayan</strong></p>
+</div>
+<div style="background:#f8f9fa;padding:16px 24px;text-align:center;border-radius:0 0 8px 8px;border-top:1px solid #e5e7eb">
+  <p style="margin:0;font-size:12px;color:#9ca3af">Association Bab Rayan — 4 rue Bayt Lahm, quartier Palmier, Casablanca<br>Tél: +212 (0) 666-690534 | contact@ftourbabrayan.ma</p>
+</div>
+</div>`;
+      await sendEmail({
+        to: reservation.email,
+        apiKey,
+        subject: `Preuve d'acompte reçue — Réf. ${reservation.reference}`,
+        html: clientConfirmHtml,
+      }).catch(err => console.error('[proof/upload] Failed to send client confirmation', err));
 
       return jsonResponse({ success: true });
     }

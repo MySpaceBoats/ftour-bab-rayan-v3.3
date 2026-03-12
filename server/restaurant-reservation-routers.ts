@@ -12,6 +12,8 @@ import {
   formatCasablancaDateTimeLong,
   generateRestaurantGroupVerificationEmail,
   generateAdminReservationValidationEmail,
+  generateReservationRequestEmail,
+  generateAdminValidatedDepositSentEmail,
 } from "./email";
 import * as reservationServices from "./restaurant-reservation-services";
 import crypto from "crypto";
@@ -38,13 +40,16 @@ const GROUP_RESERVATION_CONFIRMATION_TTL_MS = 1000 * 60 * 60 * 24 * 2; // 48h
 const GROUP_NOTIFICATION_TO = "contact@ftourbabrayan.ma";
 const GROUP_NOTIFICATION_BCC_RECIPIENTS = [
   "digital@myspace.boats",
-  "nailabennani@hotmail.com",
-  "reda.sebbani@gmail.com",
+  "naylabennani@hotmail.com",
+  "restaurantbabrayan@ftourbabrayan.ma",
 ] as const;
 
-const ADMIN_VALIDATION_NOTIFICATION_RECIPIENTS = [
-  "ratibhind3@gmail.com",
-  "reda.sebbani@gmail.com",
+// Hind, Reda (restaurant), Nayla, La Table du Jardin (Kamal)
+const ADMIN_NOTIFICATION_RECIPIENTS = [
+  "ratibehind3@gmail.com",
+  "restaurantbabrayan@ftourbabrayan.ma",
+  "naylabennani@hotmail.com",
+  "dir.cfi@babrayan.ma",
 ] as const;
 
 const ADMIN_VALIDATION_TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
@@ -188,7 +193,7 @@ async function sendAdminValidationNotifications(params: {
   const token = createAdminValidationToken(params.reference);
   const validationUrl = `${getPublicAppBaseUrl()}/reservation/valider/${token}`;
 
-  for (const recipient of ADMIN_VALIDATION_NOTIFICATION_RECIPIENTS) {
+  for (const recipient of ADMIN_NOTIFICATION_RECIPIENTS) {
     try {
       const notifEmail = generateAdminReservationValidationEmail({
         ...params,
@@ -201,6 +206,36 @@ async function sendAdminValidationNotifications(params: {
       });
     } catch (err) {
       console.error("[sendAdminValidationNotifications] Failed to send to", recipient, err);
+    }
+  }
+}
+
+async function sendAdminDepositSentNotifications(params: {
+  type: "particulier" | "entreprise" | "groupe";
+  date: string;
+  participantsCount: number;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+  reference: string;
+  companyName?: string;
+  groupName?: string;
+  displayChoice?: string;
+}) {
+  const adminDashboardUrl = `${getPublicAppBaseUrl()}/admin/restaurant/groupes`;
+  for (const recipient of ADMIN_NOTIFICATION_RECIPIENTS) {
+    try {
+      const notifEmail = generateAdminValidatedDepositSentEmail({
+        ...params,
+        adminDashboardUrl,
+      });
+      await sendEmail({
+        to: recipient,
+        subject: notifEmail.subject,
+        html: notifEmail.html,
+      });
+    } catch (err) {
+      console.error("[sendAdminDepositSentNotifications] Failed to send to", recipient, err);
     }
   }
 }
@@ -289,52 +324,23 @@ export const restaurantReservationsRouter = router({
               displayChoice: input.displayChoice,
             });
 
-          const proofUploadUrl = await createProofUploadUrl(reservation.id);
-          const requestEmail =
-            generateRestaurantReservationDepositRequiredEmail({
-              firstName: input.firstName,
-              reference,
-              reservationDateLong: formatReservationDateLong(input.date),
-              partySize: input.participantsCount,
-              depositDeadlineFormatted: reservation.depositDeadline
-                ? formatCasablancaDateTimeLong(
-                    reservation.depositDeadline.toISOString()
-                  )
-                : undefined,
-              proofUploadUrl,
-            });
-
+          // Étape 1 : Email au client — accusé de réception (pas une confirmation définitive)
+          const requestReceivedEmail = generateReservationRequestEmail({
+            firstName: input.firstName,
+            email: input.email,
+            reservationType: "particulier",
+            date: input.date,
+            time: "",
+            participantsCount: input.participantsCount,
+            reference,
+          });
           await sendEmail({
             to: input.email,
-            subject: requestEmail.subject,
-            html: requestEmail.html,
-            text: requestEmail.text,
+            subject: requestReceivedEmail.subject,
+            html: requestReceivedEmail.html,
           });
 
-          await sendEmail({
-            to: "digital@myspace.boats",
-            subject: generateNewBookingNotificationEmail({
-              type: "particulier",
-              date: input.date,
-              participantsCount: input.participantsCount,
-              contactName: input.firstName,
-              contactEmail: input.email,
-              contactPhone: input.phone,
-              reference,
-              displayChoice: input.displayChoice,
-            }).subject,
-            html: generateNewBookingNotificationEmail({
-              type: "particulier",
-              date: input.date,
-              participantsCount: input.participantsCount,
-              contactName: input.firstName,
-              contactEmail: input.email,
-              contactPhone: input.phone,
-              reference,
-              displayChoice: input.displayChoice,
-            }).html,
-          });
-
+          // Étape 1 : Notification à tous les admins avec lien de validation
           await sendAdminValidationNotifications({
             type: "particulier",
             date: input.date,
@@ -415,55 +421,30 @@ export const restaurantReservationsRouter = router({
               displayChoice: input.displayChoice,
             });
 
-          const proofUploadUrl = await createProofUploadUrl(reservation.id);
-          const customerRequestEmail =
-            generateRestaurantReservationDepositRequiredEmail({
-              firstName: input.contactName,
-              reference,
-              reservationDateLong: formatReservationDateLong(input.date),
-              partySize: input.participantsCount,
-              depositDeadlineFormatted: reservation.depositDeadline
-                ? formatCasablancaDateTimeLong(
-                    reservation.depositDeadline.toISOString()
-                  )
-                : undefined,
-              proofUploadUrl,
-            });
-
+          // Étape 1 : Email au client — accusé de réception (pas une confirmation définitive)
+          const requestReceivedEmail = generateReservationRequestEmail({
+            firstName: input.contactName,
+            email: input.email,
+            reservationType: "entreprise",
+            date: input.date,
+            time: "",
+            participantsCount: input.participantsCount,
+            reference,
+          });
           const customerEmailResult = await sendEmail({
             to: input.email,
-            subject: customerRequestEmail.subject,
-            html: customerRequestEmail.html,
-            text: customerRequestEmail.text,
+            subject: requestReceivedEmail.subject,
+            html: requestReceivedEmail.html,
           });
 
-          const internalEmailResult = await sendEmail({
-            to: "digital@myspace.boats",
-            subject: `📬 Nouvelle demande Entreprise - ${input.date}`,
-            html: generateNewBookingNotificationEmail({
-              type: "entreprise",
-              date: input.date,
-              participantsCount: input.participantsCount,
-              contactName: input.contactName,
-              contactEmail: input.email,
-              contactPhone: input.phone,
-              reference,
-              companyName: input.companyName,
-              displayChoice: input.displayChoice,
-            }).html,
-          });
-
-          if (!customerEmailResult.success || !internalEmailResult.success) {
+          if (!customerEmailResult.success) {
             console.warn(
-              "[Entreprise Reservation] Reservation created but one or more emails failed",
-              {
-                reference,
-                customerEmailResult,
-                internalEmailResult,
-              }
+              "[Entreprise Reservation] Reservation created but customer email failed",
+              { reference, customerEmailResult }
             );
           }
 
+          // Étape 1 : Notification à tous les admins avec lien de validation
           await sendAdminValidationNotifications({
             type: "entreprise",
             date: input.date,
@@ -644,57 +625,29 @@ export const restaurantReservationsRouter = router({
           "pending_validation"
         );
 
-        const proofUploadUrl = await createProofUploadUrl(reservation.id);
-        const customerRequestEmail =
-          generateRestaurantReservationDepositRequiredEmail({
-            firstName: reservation.name,
-            reference: reservation.reference,
-            reservationDateLong: formatReservationDateLong(
-              reservation.date ? reservation.date.toISOString().split("T")[0] : ""
-            ),
-            partySize: reservation.seatsTotal,
-            depositDeadlineFormatted: reservation.depositDeadline
-              ? formatCasablancaDateTimeLong(
-                  reservation.depositDeadline.toISOString()
-                )
-              : undefined,
-            proofUploadUrl,
-          });
-
+        // Étape 1 : Email au client — accusé de réception (pas une confirmation définitive)
+        const reservationDateStr = reservation.date
+          ? reservation.date.toISOString().split("T")[0]
+          : "";
+        const requestReceivedEmail = generateReservationRequestEmail({
+          firstName: reservation.name,
+          email: reservation.email,
+          reservationType: "groupe",
+          date: reservationDateStr,
+          time: "",
+          participantsCount: reservation.seatsTotal,
+          reference: reservation.reference,
+        });
         await sendEmail({
           to: reservation.email,
-          subject: customerRequestEmail.subject,
-          html: customerRequestEmail.html,
-          text: customerRequestEmail.text,
+          subject: requestReceivedEmail.subject,
+          html: requestReceivedEmail.html,
         });
 
-        const groupNotificationDate = reservation.date
-          ? reservation.date.toISOString().split("T")[0]
-          : "date inconnue";
-        const groupNotificationHtml = generateNewBookingNotificationEmail({
-          type: "groupe",
-          date: reservation.date
-            ? reservation.date.toISOString().split("T")[0]
-            : "",
-          participantsCount: reservation.seatsTotal,
-          contactName: reservation.name,
-          contactEmail: reservation.email,
-          contactPhone: reservation.phone,
-          reference: reservation.reference,
-          displayChoice:
-            reservation.displayChoice === "jardin" ? "jardin" : "brasserie",
-        }).html;
-
-        await sendEmail({
-          to: GROUP_NOTIFICATION_TO,
-          bcc: [...GROUP_NOTIFICATION_BCC_RECIPIENTS],
-          subject: `Nouvelle demande Groupe - ${groupNotificationDate}`,
-          html: groupNotificationHtml,
-        });
-
+        // Étape 1 : Notification à tous les admins avec lien de validation
         await sendAdminValidationNotifications({
           type: "groupe",
-          date: reservation.date ? reservation.date.toISOString().split("T")[0] : "",
+          date: reservationDateStr,
           participantsCount: reservation.seatsTotal,
           contactName: reservation.name,
           contactEmail: reservation.email,
@@ -755,24 +708,43 @@ export const restaurantReservationsRouter = router({
         const reservationDateIso = reservation.date
           ? reservation.date.toISOString().split("T")[0]
           : "";
-        const confirmedEmail = generateRestaurantReservationConfirmedEmail({
+
+        // Étape 2 : Email au client — demande d'acompte
+        const proofUploadUrl = await createProofUploadUrl(reservation.id);
+        const depositEmail = generateRestaurantReservationDepositRequiredEmail({
           firstName: reservation.name,
           reference: reservation.reference,
           reservationDateLong: formatReservationDateLong(reservationDateIso),
           partySize: reservation.seatsTotal,
-          partySizeConfirmed: reservation.seatsTotal,
+          depositDeadlineFormatted: reservation.depositDeadline
+            ? formatCasablancaDateTimeLong(reservation.depositDeadline.toISOString())
+            : undefined,
+          proofUploadUrl,
         });
-
         await sendEmail({
           to: reservation.email,
-          subject: confirmedEmail.subject,
-          html: confirmedEmail.html,
-          text: confirmedEmail.text,
+          subject: depositEmail.subject,
+          html: depositEmail.html,
+          text: depositEmail.text,
+        });
+
+        // Étape 2 : Notification à tous les admins — acompte demandé
+        await sendAdminDepositSentNotifications({
+          type: reservation.type ?? "particulier",
+          date: reservationDateIso,
+          participantsCount: reservation.seatsTotal,
+          contactName: reservation.name,
+          contactEmail: reservation.email,
+          contactPhone: reservation.phone,
+          reference: reservation.reference,
+          companyName: reservation.companyName ?? undefined,
+          groupName: reservation.groupName ?? undefined,
+          displayChoice: reservation.displayChoice ?? undefined,
         });
 
         return {
           success: true,
-          message: "Réservation validée et marquée en attente de paiement.",
+          message: "Réservation validée. Email d'acompte envoyé au client.",
         };
       } catch (error) {
         console.error("[Validate Reservation] Error:", error);
@@ -1429,19 +1401,38 @@ export const restaurantReservationsRouter = router({
         const reservationDateIso = reservation.date
           ? reservation.date.toISOString().split("T")[0]
           : "";
-        const confirmedEmail = generateRestaurantReservationConfirmedEmail({
+
+        // Étape 2 : Email au client — demande d'acompte
+        const proofUploadUrl = await createProofUploadUrl(reservation.id);
+        const depositEmail = generateRestaurantReservationDepositRequiredEmail({
           firstName: reservation.name,
           reference: reservation.reference,
           reservationDateLong: formatReservationDateLong(reservationDateIso),
           partySize: reservation.seatsTotal,
-          partySizeConfirmed: reservation.seatsTotal,
+          depositDeadlineFormatted: reservation.depositDeadline
+            ? formatCasablancaDateTimeLong(reservation.depositDeadline.toISOString())
+            : undefined,
+          proofUploadUrl,
         });
-
         await sendEmail({
           to: reservation.email,
-          subject: confirmedEmail.subject,
-          html: confirmedEmail.html,
-          text: confirmedEmail.text,
+          subject: depositEmail.subject,
+          html: depositEmail.html,
+          text: depositEmail.text,
+        });
+
+        // Étape 2 : Notification à tous les admins — acompte demandé
+        await sendAdminDepositSentNotifications({
+          type: reservation.type ?? "particulier",
+          date: reservationDateIso,
+          participantsCount: reservation.seatsTotal,
+          contactName: reservation.name,
+          contactEmail: reservation.email,
+          contactPhone: reservation.phone,
+          reference: reservation.reference,
+          companyName: reservation.companyName ?? undefined,
+          groupName: reservation.groupName ?? undefined,
+          displayChoice: reservation.displayChoice ?? undefined,
         });
       }
 
