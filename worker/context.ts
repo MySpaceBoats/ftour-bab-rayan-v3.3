@@ -12,7 +12,7 @@ export interface WorkerUser {
   name: string | null;
   email: string;
   phone: string | null;
-  role: 'user' | 'admin' | 'super_admin' | 'scanner' | 'admin_operations' | 'admin_boutique' | 'admin_dons';
+  role: 'user' | 'admin' | 'super_admin' | 'scanner' | 'admin_ops' | 'admin_boutique' | 'admin_dons' | 'admin_restaurant' | 'vue_restaurant' | 'manager_restaurant' | 'admin_patisserie' | 'admin_terroir' | 'admin_contenu' | 'admin_messages';
   createdAt: Date;
   updatedAt: Date;
   lastSignedIn: Date;

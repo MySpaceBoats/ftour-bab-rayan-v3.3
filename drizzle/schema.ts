@@ -6,8 +6,8 @@ import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, decimal,
 
 export const userRoleEnum = mysqlEnum("role", [
   "user", "admin", "super_admin", "admin_ops", "admin_boutique", "admin_dons", "scanner",
-  "admin_restaurant",
-  "admin_patisserie", "admin_terroir"
+  "admin_restaurant", "vue_restaurant", "manager_restaurant",
+  "admin_patisserie", "admin_terroir", "admin_contenu", "admin_messages"
 ]);
 
 export const users = mysqlTable("users", {
