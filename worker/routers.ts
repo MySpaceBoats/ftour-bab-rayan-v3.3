@@ -7569,6 +7569,24 @@ const terroirModuleRouter = router({
       return data;
     }),
 
+  adminDeleteProduct: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { error } = await supabase
+        .from("terroir_products")
+        .delete()
+        .eq("id", input.id);
+
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+
+      return { success: true };
+    }),
+
 
   adminListOrders: adminProcedure
     .input(
@@ -7657,6 +7675,24 @@ const terroirModuleRouter = router({
           message: error.message,
         });
       return data;
+    }),
+
+  adminDeleteOrder: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { error } = await supabase
+        .from("terroir_orders")
+        .delete()
+        .eq("id", input.id);
+
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+
+      return { success: true };
     }),
 });
 
