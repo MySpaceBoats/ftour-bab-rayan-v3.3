@@ -47,6 +47,9 @@ describe("Restaurant reservation transactional emails", () => {
     expect(email.html).not.toContain("<strong>Heure");
     expect(email.text).not.toContain("Heure:");
     expect(email.html).toContain("Politique d’annulation");
+    expect(email.html).toContain("Prix Ftour / personne");
+    expect(email.html).toContain("Montant total");
+    expect(email.text).toContain("8700 MAD");
   });
 
   it("formats casablanca date in french locale", () => {

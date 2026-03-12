@@ -1148,6 +1148,10 @@ export function generateRestaurantReservationDepositRequiredEmail(data: Restaura
 export function generateRestaurantReservationConfirmedEmail(data: RestaurantReservationEmailData): { subject: string; html: string; text: string } {
   const branding = normalizeRestaurantBranding(data);
   const confirmedSize = data.partySizeConfirmed ?? data.partySize;
+  const ftourPricePerPerson = 290;
+  const reservationTotal = confirmedSize * ftourPricePerPerson;
+  const depositPercent = data.depositPercent ?? 50;
+  const depositAmount = Math.round((reservationTotal * depositPercent) / 100);
 
   const layout: RestaurantEmailLayoutData = {
     preheader:
@@ -1167,6 +1171,9 @@ export function generateRestaurantReservationConfirmedEmail(data: RestaurantRese
           { label: "Date", value: data.reservationDateLong },
           ...(data.reservationTime ? [{ label: "Heure", value: data.reservationTime }] : []),
           { label: "Nombre de personnes", value: String(confirmedSize) },
+          { label: "Prix Ftour / personne", value: `${ftourPricePerPerson} MAD` },
+          { label: "Montant total", value: `${reservationTotal} MAD` },
+          { label: `Acompte (${depositPercent}%)`, value: `${depositAmount} MAD` },
           { label: "Référence", value: data.reference },
           { label: "Statut", value: "Confirmée" },
         ],
@@ -1177,6 +1184,7 @@ export function generateRestaurantReservationConfirmedEmail(data: RestaurantRese
         text: [
           "Annulation à moins de 72h : acompte de 50% conservé.",
           "Le nombre de personnes confirmé sera facturé en totalité, même en cas d’absence ou de modification le jour même.",
+          `Tarif Ftour : ${ftourPricePerPerson} MAD par personne (${confirmedSize} × ${ftourPricePerPerson} = ${reservationTotal} MAD).`,
         ],
       },
     ],
