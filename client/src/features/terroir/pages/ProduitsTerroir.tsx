@@ -220,7 +220,7 @@ export default function ProduitsTerroir() {
                           {product.description && <p className="text-sm text-muted-foreground">{product.description}</p>}
                           <div className="space-y-2">
                             {variants.map((variant: any) => {
-                              const hasStockTracking = variant.stock_total != null || variant.stock_reserved != null;
+                              const hasStockTracking = variant.stock_total != null;
                               const totalStock = Number(variant.stock_total ?? variant.stock ?? 0);
                               const reservedStock = Number(variant.stock_reserved ?? 0);
                               const availableStock = Math.max(0, totalStock - reservedStock);
