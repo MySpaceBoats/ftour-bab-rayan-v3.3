@@ -5260,8 +5260,12 @@ const usersRouter = router({
             "admin_dons",
             "scanner",
             "admin_restaurant",
+            "vue_restaurant",
+            "manager_restaurant",
             "admin_patisserie",
             "admin_terroir",
+            "admin_contenu",
+            "admin_messages",
           ])
           .default("user"),
       })
@@ -5339,8 +5343,12 @@ const usersRouter = router({
           "admin_dons",
           "scanner",
           "admin_restaurant",
+          "vue_restaurant",
+          "manager_restaurant",
           "admin_patisserie",
           "admin_terroir",
+          "admin_contenu",
+          "admin_messages",
         ]),
       })
     )
