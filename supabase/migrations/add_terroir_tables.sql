@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS terroir_product_variants (
   id SERIAL PRIMARY KEY,
   product_id INTEGER NOT NULL REFERENCES terroir_products(id) ON DELETE CASCADE,
   label VARCHAR(100) NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
   sku VARCHAR(50),
   price_unit DECIMAL(10,2) NOT NULL,
   stock_total INTEGER NOT NULL DEFAULT 0,
