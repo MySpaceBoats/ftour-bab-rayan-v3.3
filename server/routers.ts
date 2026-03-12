@@ -4338,6 +4338,10 @@ const restaurantModuleRouter = router({
 // TERROIR MODULE ROUTER
 // ============================================
 
+const isMissingTerroirVariantSortOrder = (
+  error: { message?: string } | null | undefined
+) => /sort_order.*terroir_product_variants/i.test(error?.message || "");
+
 const terroirModuleRouter = router({
   // --- Public: list active products ---
   listProducts: publicProcedure.query(async () => {
@@ -4841,16 +4845,70 @@ const terroirModuleRouter = router({
         code: "INTERNAL_SERVER_ERROR",
         message: "Supabase non configuré",
       });
-    const { data, error } = await supabase
+    const joinQuery = await supabase
       .from("terroir_products")
       .select("*, terroir_product_variants(*)")
       .order("sort_order", { ascending: true });
-    if (error)
+
+    if (!joinQuery.error) {
+      return joinQuery.data || [];
+    }
+
+    if (!isMissingTerroirVariantSortOrder(joinQuery.error))
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: error.message,
+        message: joinQuery.error.message,
       });
-    return data || [];
+
+    console.warn(
+      "[Terroir] Legacy schema detected (missing terroir_product_variants.sort_order). Falling back for adminListProducts.",
+      joinQuery.error.message
+    );
+
+    const { data: products, error: productsError } = await supabase
+      .from("terroir_products")
+      .select("*")
+      .order("sort_order", { ascending: true });
+
+    if (productsError) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: productsError.message,
+      });
+    }
+
+    const productIds = (products || []).map(product => product.id);
+    if (productIds.length === 0) {
+      return [];
+    }
+
+    const { data: variants, error: variantsError } = await supabase
+      .from("terroir_product_variants")
+      .select("*")
+      .in("product_id", productIds)
+      .order("id", { ascending: true });
+
+    if (variantsError)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: variantsError.message,
+      });
+
+    const variantsByProductId = (variants || []).reduce(
+      (acc, variant) => {
+        if (!acc[variant.product_id]) {
+          acc[variant.product_id] = [];
+        }
+        acc[variant.product_id].push(variant);
+        return acc;
+      },
+      {} as Record<number, typeof variants>
+    );
+
+    return (products || []).map(product => ({
+      ...product,
+      terroir_product_variants: variantsByProductId[product.id] || [],
+    }));
   }),
 
   adminCreateProduct: adminTerroirProcedure
