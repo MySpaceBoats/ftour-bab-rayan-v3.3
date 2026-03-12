@@ -44,7 +44,7 @@ export default function AdminUnifiedDashboard() {
   const { user } = useAuth();
   const canReadGoodies = ['admin', 'super_admin', 'admin_boutique'].includes(user?.role || '');
   const canReadPastry = ['admin', 'super_admin', 'admin_boutique', 'admin_patisserie'].includes(user?.role || '');
-  const canReadTerroir = ['admin', 'super_admin', 'admin_terroir'].includes(user?.role || '');
+  const canReadTerroir = ['admin', 'super_admin', 'admin_terroir', 'admin_boutique'].includes(user?.role || '');
   const canReadDonations = ['admin', 'super_admin', 'admin_dons'].includes(user?.role || '');
   const canReadEntrees = ['admin', 'super_admin', 'admin_ops', 'scanner', 'admin_boutique', 'admin_dons', 'admin_terroir'].includes(user?.role || '');
 
