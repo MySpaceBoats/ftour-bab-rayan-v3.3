@@ -349,11 +349,6 @@ export default function Benevole() {
       !isIndividualDayOpenSoon(day) &&
       !isDayFull(day)
   );
-  const serviceOnlyDefaultDayId = availableDays[0]?.id?.toString() ?? "";
-  const isServiceOnlyWithoutPreparation =
-    !isGroup &&
-    !formData.slots.preparation_ftour &&
-    formData.slots.service_ftour;
   const selectedDay = days?.find(day => day.id.toString() === formData.dayId);
   const selectedDayIsFull = selectedDay ? isDayFull(selectedDay) : false;
   const selectedGroupSize = Number(groupData.estimatedSize || 0);
@@ -367,23 +362,6 @@ export default function Benevole() {
     selectedGroupSize > selectedDayRemainingSeats;
   const dateLocale =
     lang === "ar" ? "ar-MA" : lang === "en" ? "en-US" : "fr-FR";
-
-  useEffect(() => {
-    if (!isServiceOnlyWithoutPreparation) return;
-
-    const selectedDayStillAvailable = availableDays.some(
-      day => day.id.toString() === formData.dayId
-    );
-
-    if (!selectedDayStillAvailable && serviceOnlyDefaultDayId) {
-      setFormData(prev => ({ ...prev, dayId: serviceOnlyDefaultDayId }));
-    }
-  }, [
-    availableDays,
-    formData.dayId,
-    isServiceOnlyWithoutPreparation,
-    serviceOnlyDefaultDayId,
-  ]);
 
   // Success screen translations
   const successTexts = {
@@ -1202,7 +1180,6 @@ export default function Benevole() {
                               onValueChange={value =>
                                 setFormData(prev => ({ ...prev, dayId: value }))
                               }
-                              disabled={isServiceOnlyWithoutPreparation}
                             >
                               <SelectTrigger>
                                 <SelectValue
@@ -1246,15 +1223,6 @@ export default function Benevole() {
                                 )}
                               </SelectContent>
                             </Select>
-                            {isServiceOnlyWithoutPreparation && (
-                              <p className="text-xs text-muted-foreground">
-                                {lang === "ar"
-                                  ? "في حالة اختيار خدمة الفطور فقط، لا حاجة لاختيار تاريخ. رمز QR صالح لدخول واحد في أي يوم للخدمة."
-                                  : lang === "en"
-                                    ? "When only the service slot is selected, no date selection is required. The QR code remains valid for a single service entry on any day."
-                                    : "Si seul le créneau service est coché, la date est désactivée. Le QR code reste valable une seule fois pour le service, quel que soit le jour."}
-                              </p>
-                            )}
                           </>
                         ) : (
                           <Select
