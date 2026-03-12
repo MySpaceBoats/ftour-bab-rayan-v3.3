@@ -4912,6 +4912,7 @@ const terroirModuleRouter = router({
         imageUrl: z.string().optional(),
         isActive: z.boolean().optional(),
         sortOrder: z.number().optional(),
+        stockTotal: z.number().min(0).optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -4921,7 +4922,7 @@ const terroirModuleRouter = router({
           code: "INTERNAL_SERVER_ERROR",
           message: "Supabase non configuré",
         });
-      const { id, ...fields } = input;
+      const { id, stockTotal, ...fields } = input;
       const updateData: any = {};
       if (fields.name !== undefined) updateData.name = fields.name;
       if (fields.description !== undefined)
@@ -4940,6 +4941,35 @@ const terroirModuleRouter = router({
           code: "INTERNAL_SERVER_ERROR",
           message: error.message,
         });
+
+      if (stockTotal !== undefined) {
+        const { data: firstVariant, error: variantError } = await supabase
+          .from("terroir_product_variants")
+          .select("id")
+          .eq("product_id", id)
+          .order("id", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (variantError)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: variantError.message,
+          });
+
+        if (firstVariant?.id) {
+          const { error: updateVariantError } = await supabase
+            .from("terroir_product_variants")
+            .update({ stock_total: stockTotal })
+            .eq("id", firstVariant.id);
+          if (updateVariantError)
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: updateVariantError.message,
+            });
+        }
+      }
+
       return { success: true };
     }),
 
