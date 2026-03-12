@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,78 +24,44 @@ type UploadItem = {
   progress: number;
 };
 
-type EditionAlbumOption = {
-  id: string;
-  label: string;
-  year: number | null;
-};
-
+const YEAR_START = 2015;
 const CURRENT_YEAR = new Date().getFullYear();
+// Descending list of edition years to display: [CURRENT_YEAR, ..., YEAR_START]
+const EDITION_YEARS = Array.from(
+  { length: CURRENT_YEAR - YEAR_START + 1 },
+  (_, i) => CURRENT_YEAR - i
+);
 
 export default function VolunteerGalleryUploadModule() {
   const { lang } = useI18n();
   const { user } = useAuth();
   const [items, setItems] = useState<UploadItem[]>([]);
-  const [selectedAlbumId, setSelectedAlbumId] = useState<string>("none");
+  const [selectedYear, setSelectedYear] = useState<number | null>(CURRENT_YEAR);
   const [uploadedAlbumSlug, setUploadedAlbumSlug] = useState<string | null>(null);
   const [needsEmailValidation, setNeedsEmailValidation] = useState(false);
+  // Albums are fetched only to resolve UUID at upload time; display uses hardcoded years
   const albums = trpc.public.galleryAlbums.useQuery();
   const resendValidation = trpc.gallery.resendValidationEmail.useMutation({
     onSuccess: () => toast.success("Email de validation renvoyé !"),
     onError: e => toast.error(e.message),
   });
 
-  const editionOptions = useMemo<EditionAlbumOption[]>(() => {
-    const parseYear = (album: any) => {
-      const fields = [
-        typeof album?.name === "string" ? album.name : "",
-        typeof album?.slug === "string" ? album.slug : "",
-      ];
-      const yearMatch = fields.join(" ").match(/\b(20\d{2}|19\d{2})\b/);
-      return yearMatch ? Number(yearMatch[1]) : null;
-    };
-
-    return (albums.data ?? [])
-      .map((album: any) => {
-        const year = parseYear(album);
-        return {
-          id: album.id as string,
-          label:
-            typeof album?.name === "string" && album.name.trim().length > 0
-              ? album.name
-              : "Album sans titre",
-          year,
-          slug: album.slug as string,
-        };
-      })
-      .sort((a, b) => {
-        if (a.year && b.year) {
-          return b.year - a.year;
-        }
-        if (a.year) return -1;
-        if (b.year) return 1;
-        return a.label.localeCompare(b.label, "fr");
-      });
-  }, [albums.data]);
-
-  // Auto-select current year's album when albums load
-  useEffect(() => {
-    if (selectedAlbumId !== "none" || editionOptions.length === 0) return;
-    const currentEdition = editionOptions.find(e => e.year === CURRENT_YEAR);
-    if (currentEdition) {
-      setSelectedAlbumId(currentEdition.id);
-    }
-  }, [editionOptions, selectedAlbumId]);
+  // Look up album UUID by slug (edition-YYYY) from the API response
+  const getAlbumIdForYear = (year: number): string | null => {
+    const slug = `edition-${year}`;
+    const album = (albums.data ?? []).find((a: any) => a.slug === slug);
+    return album?.id ?? null;
+  };
 
   const upload = trpc.gallery.uploadPhotos.useMutation({
     onSuccess: (data, variables) => {
-      // Find the album slug for the gallery link
-      const albumId = variables.photos[0]?.albumId;
-      const album = (editionOptions as any[]).find((e: any) => e.id === albumId);
-      setUploadedAlbumSlug(album?.slug ?? `edition-${CURRENT_YEAR}`);
+      const albumSlug = variables.photos[0]?.albumId
+        ? (albums.data ?? []).find((a: any) => a.id === variables.photos[0]?.albumId)?.slug
+        : undefined;
+      setUploadedAlbumSlug(albumSlug ?? `edition-${selectedYear ?? CURRENT_YEAR}`);
       setNeedsEmailValidation(data.needsValidation);
       setItems([]);
-      setSelectedAlbumId("none");
+      setSelectedYear(CURRENT_YEAR);
       if (data.needsValidation) {
         toast.success("Photos reçues ! Vérifiez votre email pour les publier.");
       } else {
@@ -131,16 +97,24 @@ export default function VolunteerGalleryUploadModule() {
   };
 
   const submit = async () => {
-    if (selectedAlbumId === "none") {
+    if (!selectedYear) {
       toast.error("Merci de choisir l'édition (album) avant l'envoi.");
       return;
     }
     if (items.length === 0) return;
-    const photos: any[] = [];
 
-    const selectedEdition = editionOptions.find(
-      album => album.id === selectedAlbumId
-    );
+    const albumId = getAlbumIdForYear(selectedYear);
+    if (!albumId) {
+      if (albums.isLoading) {
+        toast.error("Chargement des données en cours, réessayez dans un instant.");
+      } else {
+        toast.error("Album introuvable pour cette édition. Veuillez réessayer.");
+        albums.refetch();
+      }
+      return;
+    }
+
+    const photos: any[] = [];
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
@@ -163,10 +137,8 @@ export default function VolunteerGalleryUploadModule() {
         fileName: item.file.name,
         fileType: item.file.type,
         fileData: dataUrl,
-        eventDate: selectedEdition?.year
-          ? String(selectedEdition.year)
-          : undefined,
-        albumId: selectedAlbumId,
+        eventDate: String(selectedYear),
+        albumId,
         sortOrder: 0,
         status: "draft",
         isFeatured: false,
@@ -183,10 +155,7 @@ export default function VolunteerGalleryUploadModule() {
     }
   };
 
-  const totalSize = useMemo(
-    () => items.reduce((acc, i) => acc + i.file.size, 0),
-    [items]
-  );
+  const totalSize = items.reduce((acc, i) => acc + i.file.size, 0);
 
   // Success state after upload
   if (uploadedAlbumSlug) {
@@ -289,36 +258,26 @@ export default function VolunteerGalleryUploadModule() {
 
           <div className="space-y-2">
             <Label>Édition (album)</Label>
-            {albums.isLoading ? (
-              <div className="h-9 flex items-center px-3 border rounded-md text-sm text-muted-foreground bg-muted/30">
-                Chargement des éditions…
-              </div>
-            ) : albums.isError ? (
-              <div className="h-9 flex items-center px-3 border border-destructive/50 rounded-md text-sm text-destructive">
-                Impossible de charger les éditions
-              </div>
-            ) : (
-              <Select
-                value={selectedAlbumId}
-                onValueChange={setSelectedAlbumId}
-                disabled={upload.isPending}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choisir une édition" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">— Choisir une édition —</SelectItem>
-                  {editionOptions
-                    .filter(e => e.year !== null && e.year <= CURRENT_YEAR)
-                    .map(edition => (
-                      <SelectItem key={edition.id} value={edition.id}>
-                        {edition.label}
-                        {edition.year === CURRENT_YEAR ? " (en cours)" : ""}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            )}
+            <Select
+              value={selectedYear ? String(selectedYear) : "none"}
+              onValueChange={v =>
+                setSelectedYear(v === "none" ? null : parseInt(v, 10))
+              }
+              disabled={upload.isPending}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choisir une édition" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— Choisir une édition —</SelectItem>
+                {EDITION_YEARS.map(year => (
+                  <SelectItem key={year} value={String(year)}>
+                    Édition {year}
+                    {year === CURRENT_YEAR ? " (en cours)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>

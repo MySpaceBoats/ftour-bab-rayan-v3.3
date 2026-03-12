@@ -1577,6 +1577,10 @@ const galleryRouter = router({
       }
 
       const results = [];
+      // Non-admin volunteers must validate uploads via email
+      const batchValidationToken = canManageGallery
+        ? null
+        : crypto.randomUUID();
 
       for (const photo of input.photos) {
         if (!GALLERY_ALLOWED_MIME_TYPES.includes(photo.fileType as any)) {
@@ -1650,7 +1654,7 @@ const galleryRouter = router({
             album_id: photo.albumId,
             sort_order: photo.sortOrder,
             is_featured: canManageGallery ? photo.isFeatured : false,
-            status: "published",
+            status: canManageGallery ? "published" : "draft",
             image_original_url: originalUrl,
             image_thumb_url: thumbUrl,
             storage_path: originalPath,
@@ -1660,7 +1664,10 @@ const galleryRouter = router({
             size_bytes: buffer.length,
             mime_type: photo.fileType,
             uploaded_by: ctx.user?.email,
-            validated_at: new Date().toISOString(),
+            validation_email: canManageGallery ? null : (ctx.user?.email ?? null),
+            validation_token: batchValidationToken,
+            validation_sent_at: batchValidationToken ? new Date().toISOString() : null,
+            validated_at: canManageGallery ? new Date().toISOString() : null,
           })
           .select("*")
           .single();
@@ -1670,7 +1677,23 @@ const galleryRouter = router({
         results.push(data);
       }
 
-      return results;
+      // Send validation email for non-admin volunteers
+      if (!canManageGallery && batchValidationToken && ctx.user?.email) {
+        const baseUrl = (ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma").replace(/\/$/, "");
+        const validationUrl = `${baseUrl}/galerie/validation/${batchValidationToken}`;
+        const emailPayload = generateGalleryUploadValidationEmail({
+          email: ctx.user.email,
+          validationUrl,
+        });
+        await sendEmail({
+          to: ctx.user.email,
+          subject: emailPayload.subject,
+          html: emailPayload.html,
+        });
+        return { needsValidation: true, count: results.length };
+      }
+
+      return { needsValidation: false, count: results.length };
     }),
 
   validateUploadByEmail: publicProcedure
