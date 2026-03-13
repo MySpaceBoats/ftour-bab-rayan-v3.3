@@ -117,6 +117,7 @@ export default function AdminBenevoles() {
     phone: "",
     city: "",
     dayId: "",
+    groupMembersCount: "1",
     status: "registered",
   });
 
@@ -179,6 +180,7 @@ export default function AdminBenevoles() {
         phone: "",
         city: "",
         dayId: "",
+        groupMembersCount: "1",
         status: "registered",
       });
       refetch();
@@ -245,6 +247,10 @@ export default function AdminBenevoles() {
       phone: manualForm.phone,
       city: manualForm.city,
       dayId: parseInt(manualForm.dayId),
+      groupMembersCount: Math.max(
+        1,
+        parseInt(manualForm.groupMembersCount || "1", 10) || 1
+      ),
       volunteerSlots: manualSlots as ("preparation_ftour" | "service_ftour")[],
       status: manualForm.status as
         | "registered"
@@ -342,7 +348,9 @@ export default function AdminBenevoles() {
   // Les indicateurs doivent refléter l'ensemble des bénévoles du jour sélectionné,
   // et non le résultat de recherche / filtrage de statut dans le tableau.
   // Les bénévoles annulés sont exclus des statistiques.
-  const statsSource = volunteersList.filter((v: any) => v.status !== "cancelled");
+  const statsSource = volunteersList.filter(
+    (v: any) => v.status !== "cancelled"
+  );
   const totalCount = statsSource.length;
   const registeredCount = statsSource.filter(
     (v: any) => v.status === "registered" && !isVolunteerPresent(v)
@@ -467,8 +475,8 @@ export default function AdminBenevoles() {
           <div>
             <h1 className="font-bold text-lg">Gestion des bénévoles</h1>
             <p className="text-xs text-muted-foreground">
-              {filteredVolunteers.length} bénévole(s) affiché(s) / {volunteersList.length || 0}{" "}
-              total
+              {filteredVolunteers.length} bénévole(s) affiché(s) /{" "}
+              {volunteersList.length || 0} total
             </p>
           </div>
         </div>
@@ -691,13 +699,12 @@ export default function AdminBenevoles() {
                             <span>
                               Jour {volunteer.day?.dayNumber} —{" "}
                               {volunteer.day?.date
-                                ? new Date(volunteer.day.date).toLocaleDateString(
-                                    "fr-FR",
-                                    {
-                                      day: "numeric",
-                                      month: "long",
-                                    }
-                                  )
+                                ? new Date(
+                                    volunteer.day.date
+                                  ).toLocaleDateString("fr-FR", {
+                                    day: "numeric",
+                                    month: "long",
+                                  })
                                 : "—"}
                             </span>
                           </div>
@@ -1032,6 +1039,27 @@ export default function AdminBenevoles() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>QR code groupe (nombre de personnes)</Label>
+              <Input
+                type="number"
+                min={1}
+                max={100}
+                value={manualForm.groupMembersCount}
+                onChange={e =>
+                  setManualForm(prev => ({
+                    ...prev,
+                    groupMembersCount: e.target.value,
+                  }))
+                }
+                placeholder="1"
+              />
+              <p className="text-xs text-muted-foreground">
+                Mettez une valeur &gt; 1 pour générer un QR code groupe
+                utilisable pour plusieurs bénévoles.
+              </p>
             </div>
 
             <div className="space-y-2">
