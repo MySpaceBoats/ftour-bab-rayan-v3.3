@@ -160,6 +160,7 @@ import FtourConfirmation from "@/features/ftour/pages/FtourConfirmation";
 // FEEDBACK — features/feedback
 // ============================================
 import FeedbackPage from "@/features/feedback/pages/FeedbackPage";
+import SiteFeedbackPage from "@/features/feedback/pages/SiteFeedbackPage";
 import AdminFeedback from "@/features/feedback/admin/AdminFeedback";
 import AdminFeedbackCampagnes from "@/features/feedback/admin/AdminFeedbackCampagnes";
 
@@ -308,11 +309,23 @@ function LocalizedRoutes() {
 
       {/* Admin Inventory */}
       <Route path="/admin/inventory" component={AdminInventory} />
-      <Route path="/admin/inventory/products" component={AdminInventoryProducts} />
+      <Route
+        path="/admin/inventory/products"
+        component={AdminInventoryProducts}
+      />
       <Route path="/admin/inventory/events" component={AdminInventoryEvents} />
-      <Route path="/admin/inventory/movements" component={AdminInventoryMovements} />
-      <Route path="/admin/inventory/stock-entry" component={AdminInventoryStockEntry} />
-      <Route path="/admin/inventory/stock-entry/:productId" component={AdminInventoryStockEntryProduct} />
+      <Route
+        path="/admin/inventory/movements"
+        component={AdminInventoryMovements}
+      />
+      <Route
+        path="/admin/inventory/stock-entry"
+        component={AdminInventoryStockEntry}
+      />
+      <Route
+        path="/admin/inventory/stock-entry/:productId"
+        component={AdminInventoryStockEntryProduct}
+      />
 
       {/* Admin Contenu */}
       <Route path="/admin/contenu" component={AdminContenu} />
@@ -327,7 +340,10 @@ function LocalizedRoutes() {
       <Route path="/admin/elections" component={AdminElections} />
 
       {/* Admin Feedback */}
-      <Route path="/admin/feedback/campagnes" component={AdminFeedbackCampagnes} />
+      <Route
+        path="/admin/feedback/campagnes"
+        component={AdminFeedbackCampagnes}
+      />
       <Route path="/admin/feedback" component={AdminFeedback} />
 
       {/* ================================================
@@ -380,6 +396,7 @@ function LocalizedRoutes() {
       <Route path="/">{() => <Redirect to={`/${lang}`} />}</Route>
 
       {/* Page feedback publique */}
+      <Route path="/feedback/new" component={SiteFeedbackPage} />
       <Route path="/feedback" component={FeedbackPage} />
 
       {/* Menu solidaire QR unique */}
