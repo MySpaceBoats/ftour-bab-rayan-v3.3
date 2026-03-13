@@ -30,7 +30,10 @@ import {
 import * as supabaseServices from "./supabase-services";
 import * as reservationServices from "./reservation-services";
 import { getSupabaseAdminClient } from "./supabase";
-import { DEFAULT_RAMADAN_TIMEZONE, getDateStringInTimeZone } from "@shared/ramadan";
+import {
+  DEFAULT_RAMADAN_TIMEZONE,
+  getDateStringInTimeZone,
+} from "@shared/ramadan";
 import { companyBookingsRouter } from "./company-booking-routers";
 import { restaurantReservationsRouter } from "./restaurant-reservation-routers";
 import { contentRouter } from "./content-router";
@@ -51,13 +54,11 @@ import {
   type ParsedGroupVolunteerRow,
 } from "./volunteer-group-service";
 
-
 const resolveAppBaseUrl = () =>
   process.env.PUBLIC_APP_URL ||
   process.env.APP_BASE_URL ||
   process.env.VITE_APP_URL ||
   "https://ftourbabrayan.ma";
-
 
 const VOLUNTEER_GROUP_REGISTRATION_NOTIFICATION_RECIPIENTS = [
   "naylabennani@hotmail.com",
@@ -79,8 +80,8 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
     "admin_boutique",
     "admin_dons",
     "admin_restaurant",
-            "vue_restaurant",
-            "manager_restaurant",
+    "vue_restaurant",
+    "manager_restaurant",
     "admin_patisserie",
     "admin_terroir",
   ];
@@ -128,7 +129,13 @@ const adminOpsProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 const adminBoutiqueProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ["admin", "super_admin", "admin_boutique", "admin_ops", "admin_operations"];
+  const allowedRoles = [
+    "admin",
+    "super_admin",
+    "admin_boutique",
+    "admin_ops",
+    "admin_operations",
+  ];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -139,7 +146,13 @@ const adminBoutiqueProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 const adminDonsProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ["admin", "super_admin", "admin_dons", "admin_ops", "admin_operations"];
+  const allowedRoles = [
+    "admin",
+    "super_admin",
+    "admin_dons",
+    "admin_ops",
+    "admin_operations",
+  ];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({ code: "FORBIDDEN", message: "Accès dons requis" });
   }
@@ -147,7 +160,13 @@ const adminDonsProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 const adminRestaurantProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
+  const allowedRoles = [
+    "admin",
+    "super_admin",
+    "admin_restaurant",
+    "vue_restaurant",
+    "manager_restaurant",
+  ];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -176,7 +195,14 @@ const adminPatisserieProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 const adminTerroirProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ["admin", "super_admin", "admin_terroir", "admin_boutique", "admin_ops", "admin_operations"];
+  const allowedRoles = [
+    "admin",
+    "super_admin",
+    "admin_terroir",
+    "admin_boutique",
+    "admin_ops",
+    "admin_operations",
+  ];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -370,7 +396,6 @@ const galleryRouter = router({
           message: "Supabase non configuré",
         });
 
-
       const albumIds = Array.from(
         new Set(input.photos.map(photo => photo.albumId).filter(Boolean))
       ) as string[];
@@ -442,7 +467,10 @@ const galleryRouter = router({
           ? albumNameById.get(photo.albumId)
           : undefined;
         const mergedTags = Array.from(
-          new Set([...(photo.tags ?? []), ...(defaultAlbumTag ? [defaultAlbumTag] : [])])
+          new Set([
+            ...(photo.tags ?? []),
+            ...(defaultAlbumTag ? [defaultAlbumTag] : []),
+          ])
         );
 
         const created = await galleryServices.createGalleryPhoto({
@@ -455,9 +483,13 @@ const galleryRouter = router({
           isFeatured: canManageGallery ? photo.isFeatured : false,
           status: canManageGallery ? "published" : "draft",
           validatedAt: canManageGallery ? new Date().toISOString() : undefined,
-          validationEmail: canManageGallery ? undefined : (ctx.user?.email ?? undefined),
+          validationEmail: canManageGallery
+            ? undefined
+            : (ctx.user?.email ?? undefined),
           validationToken: canManageGallery ? undefined : batchValidationToken,
-          validationSentAt: canManageGallery ? undefined : new Date().toISOString(),
+          validationSentAt: canManageGallery
+            ? undefined
+            : new Date().toISOString(),
           imageOriginalUrl: originalUrl,
           imageThumbUrl: thumbUrl,
           storagePath: originalPath,
@@ -509,7 +541,10 @@ const galleryRouter = router({
         .eq("validation_token", input.token);
 
       if (fetchError) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: fetchError.message });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: fetchError.message,
+        });
       }
 
       if (!rows || rows.length === 0) {
@@ -539,7 +574,10 @@ const galleryRouter = router({
         .in("id", photoIdsToPublish);
 
       if (updateError) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: updateError.message });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: updateError.message,
+        });
       }
 
       return {
@@ -554,7 +592,10 @@ const galleryRouter = router({
     .mutation(async ({ input }) => {
       const client = getSupabaseAdminClient();
       if (!client)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Supabase non configuré" });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
 
       const email = input.email.trim().toLowerCase();
 
@@ -578,7 +619,10 @@ const galleryRouter = router({
       const token = rows[0].validation_token;
       const validationUrl = `${resolveAppBaseUrl().replace(/\/$/, "")}/galerie/validation/${token}`;
 
-      const emailPayload = generateGalleryUploadValidationEmail({ email, validationUrl });
+      const emailPayload = generateGalleryUploadValidationEmail({
+        email,
+        validationUrl,
+      });
       const emailResult = await sendEmail({
         to: email,
         subject: emailPayload.subject,
@@ -928,10 +972,7 @@ const volunteersRouter = router({
         typeof input.comment === "string" &&
         input.comment.toUpperCase().includes("DOUZ");
 
-      if (
-        (day.registeredCount ?? 0) >= day.capacity &&
-        !hasBypassCode
-      ) {
+      if ((day.registeredCount ?? 0) >= day.capacity && !hasBypassCode) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Ce jour a atteint le nombre maximum d'inscriptions",
@@ -1029,6 +1070,13 @@ const volunteersRouter = router({
         volunteerSlots: z
           .array(z.enum(["preparation_ftour", "service_ftour"]))
           .min(1, "Veuillez sélectionner au moins un créneau"),
+        groupMembersCount: z
+          .number()
+          .int()
+          .min(1, "Le nombre de personnes doit être supérieur à 0")
+          .max(100, "Le nombre maximum de personnes est 100")
+          .optional()
+          .default(1),
         status: z
           .enum(["registered", "confirmed", "present", "absent", "cancelled"])
           .default("registered"),
@@ -1064,6 +1112,13 @@ const volunteersRouter = router({
         dayId: input.dayId,
         volunteerSlots: input.volunteerSlots,
         acceptedTerms: true,
+        ...(input.groupMembersCount > 1
+          ? {
+              groupLeaderEmail: normalizedEmail,
+              groupMembersCount: input.groupMembersCount,
+              groupRemainingEntries: input.groupMembersCount,
+            }
+          : {}),
       });
 
       if (input.status !== "registered") {
@@ -1094,6 +1149,8 @@ const volunteersRouter = router({
           volunteerSlots: input.volunteerSlots,
           qrToken: volunteer.qrToken,
           baseUrl,
+          groupMembersCount:
+            input.groupMembersCount > 1 ? input.groupMembersCount : undefined,
         });
 
         await sendEmail({
@@ -1234,77 +1291,90 @@ const volunteersRouter = router({
       return { success: true };
     }),
 
-  adminResendConfirmationEmailsLast24h: adminOpsProcedure
-    .mutation(async () => {
-      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      const volunteers = await supabaseServices.getVolunteersRegisteredSinceSupabase(since);
+  adminResendConfirmationEmailsLast24h: adminOpsProcedure.mutation(async () => {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const volunteers =
+      await supabaseServices.getVolunteersRegisteredSinceSupabase(since);
 
-      const baseUrl =
-        process.env.NODE_ENV === "production"
-          ? "https://ftourbabrayan.ma"
-          : "http://localhost:3000";
+    const baseUrl =
+      process.env.NODE_ENV === "production"
+        ? "https://ftourbabrayan.ma"
+        : "http://localhost:3000";
 
-      const details: { email: string; success: boolean; error?: string }[] = [];
+    const details: { email: string; success: boolean; error?: string }[] = [];
 
-      const emailTasks = volunteers.map(volunteer => async () => {
-        if (!volunteer.qrToken) {
-          return { email: volunteer.email, success: false, error: "QR token manquant" };
-        }
-        if (!volunteer.day) {
-          return { email: volunteer.email, success: false, error: "Jour introuvable" };
-        }
-
-        try {
-          const emailData = generateVolunteerConfirmationEmail({
-            firstName: volunteer.firstName,
-            lastName: volunteer.lastName,
-            email: volunteer.email,
-            dayNumber: volunteer.day.dayNumber,
-            dayDate: new Date(volunteer.day.date).toLocaleDateString("fr-FR", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-            }),
-            location: volunteer.day.location || "Association Bab Rayan, Casablanca",
-            startTime: volunteer.day.iftarTime || "18h00",
-            volunteerSlots: volunteer.volunteerSlots,
-            qrToken: volunteer.qrToken,
-            baseUrl,
-          });
-
-          const result = await sendEmail({
-            to: volunteer.email,
-            subject: emailData.subject,
-            html: emailData.html,
-          });
-
-          if (result.success) {
-            return { email: volunteer.email, success: true };
-          }
-          return { email: volunteer.email, success: false, error: result.error || "Envoi échoué" };
-        } catch (err) {
-          return {
-            email: volunteer.email,
-            success: false,
-            error: err instanceof Error ? err.message : "Erreur inconnue",
-          };
-        }
-      });
-
-      const batches = chunkArray(emailTasks, 25);
-      for (let i = 0; i < batches.length; i++) {
-        const results = await runWithConcurrencyLimit(batches[i], 1);
-        details.push(...results);
-        if (i < batches.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 800));
-        }
+    const emailTasks = volunteers.map(volunteer => async () => {
+      if (!volunteer.qrToken) {
+        return {
+          email: volunteer.email,
+          success: false,
+          error: "QR token manquant",
+        };
+      }
+      if (!volunteer.day) {
+        return {
+          email: volunteer.email,
+          success: false,
+          error: "Jour introuvable",
+        };
       }
 
-      const sent = details.filter(d => d.success).length;
-      const failed = details.length - sent;
+      try {
+        const emailData = generateVolunteerConfirmationEmail({
+          firstName: volunteer.firstName,
+          lastName: volunteer.lastName,
+          email: volunteer.email,
+          dayNumber: volunteer.day.dayNumber,
+          dayDate: new Date(volunteer.day.date).toLocaleDateString("fr-FR", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          }),
+          location:
+            volunteer.day.location || "Association Bab Rayan, Casablanca",
+          startTime: volunteer.day.iftarTime || "18h00",
+          volunteerSlots: volunteer.volunteerSlots,
+          qrToken: volunteer.qrToken,
+          baseUrl,
+        });
 
-      return { total: volunteers.length, sent, failed, details };
-    }),
+        const result = await sendEmail({
+          to: volunteer.email,
+          subject: emailData.subject,
+          html: emailData.html,
+        });
+
+        if (result.success) {
+          return { email: volunteer.email, success: true };
+        }
+        return {
+          email: volunteer.email,
+          success: false,
+          error: result.error || "Envoi échoué",
+        };
+      } catch (err) {
+        return {
+          email: volunteer.email,
+          success: false,
+          error: err instanceof Error ? err.message : "Erreur inconnue",
+        };
+      }
+    });
+
+    const batches = chunkArray(emailTasks, 25);
+    for (let i = 0; i < batches.length; i++) {
+      const results = await runWithConcurrencyLimit(batches[i], 1);
+      details.push(...results);
+      if (i < batches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+    }
+
+    const sent = details.filter(d => d.success).length;
+    const failed = details.length - sent;
+
+    return { total: volunteers.length, sent, failed, details };
+  }),
 
   registerGroup: publicProcedure
     .input(
@@ -1367,7 +1437,10 @@ const volunteersRouter = router({
       }
 
       const estimatedGroupSize = Math.max(1, input.estimatedSize ?? 1);
-      const availableSeats = Math.max(0, day.capacity - (day.registeredCount ?? 0));
+      const availableSeats = Math.max(
+        0,
+        day.capacity - (day.registeredCount ?? 0)
+      );
       if (estimatedGroupSize > availableSeats) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -1378,18 +1451,19 @@ const volunteersRouter = router({
 
       const validationToken = randomBytes(32).toString("hex");
 
-      const createdRequest = await supabaseServices.createVolunteerGroupRequestSupabase({
-        groupName: input.groupName,
-        responsibleName: input.responsibleName,
-        responsibleEmail: normalizedGroupEmail,
-        responsiblePhone: input.responsiblePhone,
-        estimatedSize: input.estimatedSize,
-        dayId: input.dayId,
-        volunteerSlots: input.volunteerSlots,
-        fileName: input.fileName,
-        fileBase64: input.fileBase64,
-        validationToken,
-      });
+      const createdRequest =
+        await supabaseServices.createVolunteerGroupRequestSupabase({
+          groupName: input.groupName,
+          responsibleName: input.responsibleName,
+          responsibleEmail: normalizedGroupEmail,
+          responsiblePhone: input.responsiblePhone,
+          estimatedSize: input.estimatedSize,
+          dayId: input.dayId,
+          volunteerSlots: input.volunteerSlots,
+          fileName: input.fileName,
+          fileBase64: input.fileBase64,
+          validationToken,
+        });
 
       const appBaseUrl = resolveAppBaseUrl();
       const validationUrl = `${appBaseUrl}/api/validate-group-request/${validationToken}`;
@@ -1434,7 +1508,8 @@ const volunteersRouter = router({
       return {
         success: true,
         requestId: createdRequest.id,
-        message: "Votre demande groupe a bien été envoyée. Elle sera traitée par l'administration.",
+        message:
+          "Votre demande groupe a bien été envoyée. Elle sera traitée par l'administration.",
       };
     }),
 
@@ -1457,7 +1532,8 @@ const volunteersRouter = router({
       day: row.ramadan_days
         ? {
             id: row.ramadan_days.id,
-            dayNumber: row.ramadan_days.day_number ?? row.ramadan_days.dayNumber,
+            dayNumber:
+              row.ramadan_days.day_number ?? row.ramadan_days.dayNumber,
             date: row.ramadan_days.date,
           }
         : null,
@@ -1467,12 +1543,16 @@ const volunteersRouter = router({
   getGroupRequestAttachment: adminOpsProcedure
     .input(z.object({ requestId: z.number() }))
     .query(async ({ input }) => {
-      const request = await supabaseServices.getVolunteerGroupRequestByIdSupabase(
-        input.requestId
-      );
+      const request =
+        await supabaseServices.getVolunteerGroupRequestByIdSupabase(
+          input.requestId
+        );
 
       if (!request) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Demande introuvable" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Demande introuvable",
+        });
       }
 
       return {
@@ -1491,24 +1571,26 @@ const volunteersRouter = router({
         responsiblePhone: z.string().min(8).optional(),
         estimatedSize: z.number().int().positive().nullable().optional(),
         dayId: z.number().optional(),
-        volunteerSlots: z.array(z.enum(["preparation_ftour", "service_ftour"]))
+        volunteerSlots: z
+          .array(z.enum(["preparation_ftour", "service_ftour"]))
           .min(1)
           .optional(),
       })
     )
     .mutation(async ({ input }) => {
-      const updated = await supabaseServices.updateVolunteerGroupRequestSupabase(
-        input.requestId,
-        {
-          groupName: input.groupName,
-          responsibleName: input.responsibleName,
-          responsibleEmail: input.responsibleEmail,
-          responsiblePhone: input.responsiblePhone,
-          estimatedSize: input.estimatedSize,
-          dayId: input.dayId,
-          volunteerSlots: input.volunteerSlots,
-        }
-      );
+      const updated =
+        await supabaseServices.updateVolunteerGroupRequestSupabase(
+          input.requestId,
+          {
+            groupName: input.groupName,
+            responsibleName: input.responsibleName,
+            responsibleEmail: input.responsibleEmail,
+            responsiblePhone: input.responsiblePhone,
+            estimatedSize: input.estimatedSize,
+            dayId: input.dayId,
+            volunteerSlots: input.volunteerSlots,
+          }
+        );
 
       return { success: true, request: updated };
     }),
@@ -1522,11 +1604,15 @@ const volunteersRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const request = await supabaseServices.getVolunteerGroupRequestByIdSupabase(
-        input.requestId
-      );
+      const request =
+        await supabaseServices.getVolunteerGroupRequestByIdSupabase(
+          input.requestId
+        );
       if (!request) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Demande introuvable" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Demande introuvable",
+        });
       }
       if (request.status !== "pending") {
         throw new TRPCError({
@@ -1541,11 +1627,20 @@ const volunteersRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
       }
 
-      const estimatedSize = Number(request.estimated_size ?? request.estimatedSize ?? 1);
-      const normalizedEstimatedSize = Number.isFinite(estimatedSize) && estimatedSize > 0 ? estimatedSize : 1;
-      const availableSeats = Math.max(0, day.capacity - (day.registeredCount ?? 0));
+      const estimatedSize = Number(
+        request.estimated_size ?? request.estimatedSize ?? 1
+      );
+      const normalizedEstimatedSize =
+        Number.isFinite(estimatedSize) && estimatedSize > 0 ? estimatedSize : 1;
+      const availableSeats = Math.max(
+        0,
+        day.capacity - (day.registeredCount ?? 0)
+      );
 
-      if (input.action === "validate" && normalizedEstimatedSize > availableSeats) {
+      if (
+        input.action === "validate" &&
+        normalizedEstimatedSize > availableSeats
+      ) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Le jour choisi est complet pour cet effectif de groupe.",
@@ -1561,15 +1656,18 @@ const volunteersRouter = router({
       let createdVolunteer: Awaited<
         ReturnType<typeof supabaseServices.createVolunteerShiftSupabase>
       > | null = null;
-      let groupProcessingSummary:
-        | { successCount: number; failCount: number; totalRows: number }
-        | null = null;
+      let groupProcessingSummary: {
+        successCount: number;
+        failCount: number;
+        totalRows: number;
+      } | null = null;
 
       if (input.action === "validate") {
-        const duplicate = await supabaseServices.checkVolunteerEmailExistsForDay(
-          normalizedResponsibleEmail,
-          dayId
-        );
+        const duplicate =
+          await supabaseServices.checkVolunteerEmailExistsForDay(
+            normalizedResponsibleEmail,
+            dayId
+          );
         if (duplicate) {
           throw new TRPCError({
             code: "CONFLICT",
@@ -1579,8 +1677,9 @@ const volunteersRouter = router({
 
         createdVolunteer = await supabaseServices.createVolunteerShiftSupabase({
           firstName:
-            String(request.responsible_name ?? request.responsibleName).split(" ")[0] ||
-            String(request.group_name ?? request.groupName),
+            String(request.responsible_name ?? request.responsibleName).split(
+              " "
+            )[0] || String(request.group_name ?? request.groupName),
           lastName:
             String(request.responsible_name ?? request.responsibleName)
               .split(" ")
@@ -1589,7 +1688,9 @@ const volunteersRouter = router({
           email: normalizedResponsibleEmail,
           phone: String(request.responsible_phone ?? request.responsiblePhone),
           dayId,
-          volunteerSlots: (request.volunteer_slots ?? request.volunteerSlots ?? []) as string[],
+          volunteerSlots: (request.volunteer_slots ??
+            request.volunteerSlots ??
+            []) as string[],
           acceptedTerms: true,
           groupLeaderEmail: normalizedResponsibleEmail,
           groupMembersCount: normalizedEstimatedSize,
@@ -1597,14 +1698,16 @@ const volunteersRouter = router({
         });
       }
 
-      const updated = await supabaseServices.updateVolunteerGroupRequestSupabase(
-        input.requestId,
-        {
-          status: input.action === "validate" ? "validated" : "refused",
-          rejectionReason: input.action === "refuse" ? input.rejectionReason || null : null,
-          reviewedBy: ctx.user?.id ?? null,
-        }
-      );
+      const updated =
+        await supabaseServices.updateVolunteerGroupRequestSupabase(
+          input.requestId,
+          {
+            status: input.action === "validate" ? "validated" : "refused",
+            rejectionReason:
+              input.action === "refuse" ? input.rejectionReason || null : null,
+            reviewedBy: ctx.user?.id ?? null,
+          }
+        );
 
       try {
         if (input.action === "validate") {
@@ -1612,7 +1715,9 @@ const volunteersRouter = router({
             request.responsible_name ?? request.responsibleName
           ).trim();
           const [firstName = "", ...lastNameParts] = responsibleName.split(" ");
-          const fallbackGroupName = String(request.group_name ?? request.groupName);
+          const fallbackGroupName = String(
+            request.group_name ?? request.groupName
+          );
           const baseUrl =
             process.env.NODE_ENV === "production"
               ? "https://ftourbabrayan.ma"
@@ -1632,7 +1737,9 @@ const volunteersRouter = router({
               }),
               location: day.location || "Association Bab Rayan, Casablanca",
               startTime: day.iftarTime || "18h00",
-              volunteerSlots: (request.volunteer_slots ?? request.volunteerSlots ?? []) as string[],
+              volunteerSlots: (request.volunteer_slots ??
+                request.volunteerSlots ??
+                []) as string[],
               qrToken: createdVolunteer.qrToken,
               baseUrl,
               groupMembersCount: normalizedEstimatedSize,
@@ -1653,20 +1760,17 @@ const volunteersRouter = router({
 
           if (requestFileBase64) {
             try {
-              const parsedRows = parseGroupVolunteersFromSpreadsheet(
-                requestFileBase64
-              );
+              const parsedRows =
+                parseGroupVolunteersFromSpreadsheet(requestFileBase64);
 
               if (parsedRows.length > 0) {
                 const processResult = await processGroupVolunteerRows({
                   parsedRows,
                   dayId,
                   day,
-                  volunteerSlots: (
-                    request.volunteer_slots ??
+                  volunteerSlots: (request.volunteer_slots ??
                     request.volunteerSlots ??
-                    []
-                  ) as Array<"preparation_ftour" | "service_ftour">,
+                    []) as Array<"preparation_ftour" | "service_ftour">,
                 });
 
                 groupProcessingSummary = {
@@ -1712,7 +1816,9 @@ const volunteersRouter = router({
           }
         } else {
           const refusalEmailData = generateGroupRefusalEmail({
-            responsibleName: String(request.responsible_name ?? request.responsibleName),
+            responsibleName: String(
+              request.responsible_name ?? request.responsibleName
+            ),
             groupName: String(request.group_name ?? request.groupName),
             dayNumber: day.dayNumber,
             rejectionReason: input.rejectionReason,
@@ -1724,7 +1830,10 @@ const volunteersRouter = router({
           });
         }
       } catch (error) {
-        console.error("[Volunteer Group Request] email notification failed", error);
+        console.error(
+          "[Volunteer Group Request] email notification failed",
+          error
+        );
       }
 
       return { success: true, request: updated, groupProcessingSummary };
@@ -1733,7 +1842,9 @@ const volunteersRouter = router({
   deleteGroupRequest: adminOpsProcedure
     .input(z.object({ requestId: z.number() }))
     .mutation(async ({ input }) => {
-      await supabaseServices.deleteVolunteerGroupRequestSupabase(input.requestId);
+      await supabaseServices.deleteVolunteerGroupRequestSupabase(
+        input.requestId
+      );
       return { success: true };
     }),
 
@@ -1886,7 +1997,9 @@ const checkinRouter = router({
   cancelVolunteer: publicProcedure
     .input(z.object({ token: z.string() }))
     .mutation(async ({ input }) => {
-      const result = await supabaseServices.cancelVolunteerByTokenSupabase(input.token);
+      const result = await supabaseServices.cancelVolunteerByTokenSupabase(
+        input.token
+      );
 
       if (!result) {
         throw new TRPCError({
@@ -1910,7 +2023,8 @@ const checkinRouter = router({
       if (result.alreadyValidated) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Impossible d'annuler : votre présence a déjà été validée sur site.",
+          message:
+            "Impossible d'annuler : votre présence a déjà été validée sur site.",
         });
       }
 
@@ -1957,13 +2071,13 @@ const goodiesRouter = router({
       // Sync to inventory (best-effort, does not block goodie creation)
       try {
         await inv.syncInventoryProduct({
-          productType: 'goodie',
+          productType: "goodie",
           sourceProductId: goodie.id,
           name: goodie.name,
           category: (goodie as any).category ?? null,
         });
       } catch (e) {
-        console.error('[Inventory] Failed to sync goodie to inventory:', e);
+        console.error("[Inventory] Failed to sync goodie to inventory:", e);
       }
       return { id: goodie.id };
     }),
@@ -2104,7 +2218,9 @@ const ordersRouter = router({
             if (goodie) {
               await supabase
                 .from("goodies")
-                .update({ stock: Math.max(0, (goodie.stock ?? 0) - item.quantity) })
+                .update({
+                  stock: Math.max(0, (goodie.stock ?? 0) - item.quantity),
+                })
                 .eq("id", item.goodieId);
             }
           }
@@ -2315,7 +2431,9 @@ const donationsRouter = router({
       // Envoyer un email de confirmation quand le don passe au statut "reçu"
       if (input.status === "received") {
         try {
-          const donation = await supabaseServices.getDonationByIdSupabase(input.donationId);
+          const donation = await supabaseServices.getDonationByIdSupabase(
+            input.donationId
+          );
           const nameParts = donation.donorName.split(" ");
           const emailData = generateDonationReceivedEmail({
             firstName: nameParts[0] || donation.donorName,
@@ -2331,7 +2449,10 @@ const donationsRouter = router({
             html: emailData.html,
           });
         } catch (error) {
-          console.error("[Donation] Email de confirmation de réception échoué:", error);
+          console.error(
+            "[Donation] Email de confirmation de réception échoué:",
+            error
+          );
         }
       }
 
@@ -2348,7 +2469,9 @@ const donationsRouter = router({
 
       // Envoyer un email de confirmation de réception
       try {
-        const donation = await supabaseServices.getDonationByIdSupabase(input.donationId);
+        const donation = await supabaseServices.getDonationByIdSupabase(
+          input.donationId
+        );
         const nameParts = donation.donorName.split(" ");
         const emailData = generateDonationReceivedEmail({
           firstName: nameParts[0] || donation.donorName,
@@ -2364,7 +2487,10 @@ const donationsRouter = router({
           html: emailData.html,
         });
       } catch (error) {
-        console.error("[Donation] Email de confirmation de réception échoué:", error);
+        console.error(
+          "[Donation] Email de confirmation de réception échoué:",
+          error
+        );
       }
 
       return { success: true };
@@ -2432,7 +2558,6 @@ const contactRouter = router({
       return supabaseServices.deleteContactMessageSupabase(input.id);
     }),
 });
-
 
 const partnerLeadsRouter = router({
   create: publicProcedure
@@ -4361,9 +4486,9 @@ const terroirModuleRouter = router({
     if (!joinQuery.error) {
       return (joinQuery.data || []).map((product: any) => ({
         ...product,
-        terroir_product_variants: (product.terroir_product_variants || []).filter(
-          (v: any) => v.is_active !== false
-        ),
+        terroir_product_variants: (
+          product.terroir_product_variants || []
+        ).filter((v: any) => v.is_active !== false),
       }));
     }
 
@@ -4949,13 +5074,13 @@ const terroirModuleRouter = router({
       // Sync to inventory (best-effort)
       try {
         await inv.syncInventoryProduct({
-          productType: 'terroir_product',
+          productType: "terroir_product",
           sourceProductId: data.id,
           name: data.name,
           category: input.category ?? null,
         });
       } catch (e) {
-        console.error('[Inventory] Failed to sync terroir product:', e);
+        console.error("[Inventory] Failed to sync terroir product:", e);
       }
       return data;
     }),
@@ -5072,20 +5197,22 @@ const terroirModuleRouter = router({
       try {
         // Fetch parent product name for the inventory product name
         const { data: parentProduct } = await supabase
-          .from('terroir_products')
-          .select('name, category')
-          .eq('id', input.productId)
+          .from("terroir_products")
+          .select("name, category")
+          .eq("id", input.productId)
           .single();
         await inv.syncInventoryProduct({
-          productType: 'terroir_variant',
+          productType: "terroir_variant",
           sourceProductId: input.productId,
           sourceVariantId: data.id,
-          name: parentProduct ? `${parentProduct.name} – ${input.label}` : input.label,
+          name: parentProduct
+            ? `${parentProduct.name} – ${input.label}`
+            : input.label,
           sku: input.sku ?? null,
           category: parentProduct?.category ?? null,
         });
       } catch (e) {
-        console.error('[Inventory] Failed to sync terroir variant:', e);
+        console.error("[Inventory] Failed to sync terroir variant:", e);
       }
       return data;
     }),
@@ -5197,7 +5324,9 @@ const terroirModuleRouter = router({
         });
       const { data, error } = await supabase
         .from("terroir_orders")
-        .select("*, terroir_order_items(*, terroir_products(name), terroir_product_variants(label))")
+        .select(
+          "*, terroir_order_items(*, terroir_products(name), terroir_product_variants(label))"
+        )
         .eq("order_reference", input.reference)
         .single();
       if (error || !data)
@@ -5437,12 +5566,18 @@ const volunteerProfileRouter = router({
         : null;
 
       if (!accessToken) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Token manquant",
+        });
       }
 
       const authUser = await getUserFromToken(accessToken);
       if (!authUser) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token invalide" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Token invalide",
+        });
       }
 
       return volunteerProfileServices.updateMyVolunteerProfile(accessToken, {
@@ -5466,12 +5601,18 @@ const volunteerProfileRouter = router({
         : null;
 
       if (!accessToken) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Token manquant",
+        });
       }
 
       const authUser = await getUserFromToken(accessToken);
       if (!authUser) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token invalide" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Token invalide",
+        });
       }
 
       await volunteerProfileServices.ensureVolunteerProfile({
@@ -5853,7 +5994,10 @@ const pastryOrdersRouter = router({
             .eq("id", item.pastryId)
             .single();
           if (!pastry) {
-            throw new TRPCError({ code: "NOT_FOUND", message: `Pâtisserie #${item.pastryId} introuvable` });
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: `Pâtisserie #${item.pastryId} introuvable`,
+            });
           }
           if ((pastry.stock ?? 0) < item.quantity) {
             throw new TRPCError({
@@ -5889,7 +6033,9 @@ const pastryOrdersRouter = router({
           if (pastry) {
             await supabase
               .from("pastries")
-              .update({ stock: Math.max(0, (pastry.stock ?? 0) - item.quantity) })
+              .update({
+                stock: Math.max(0, (pastry.stock ?? 0) - item.quantity),
+              })
               .eq("id", item.pastryId);
           }
         }
@@ -6135,7 +6281,11 @@ const qrRouter = router({
     ]);
 
     const makeQrDataUrl = (url: string) =>
-      QRCode.toDataURL(url, { errorCorrectionLevel: "H", margin: 2, width: 400 });
+      QRCode.toDataURL(url, {
+        errorCorrectionLevel: "H",
+        margin: 2,
+        width: 400,
+      });
 
     const items: Array<{
       id: number;
