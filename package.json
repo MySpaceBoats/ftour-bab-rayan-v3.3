@@ -16,7 +16,8 @@
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
     "recover-admin-access": "node scripts/recover-admin-access.mjs",
     "preview:restaurant-emails": "tsx scripts/preview-restaurant-emails.ts",
-    "migrate:gallery-validation": "node scripts/apply-gallery-validation-migration.mjs"
+    "migrate:gallery-validation": "node scripts/apply-gallery-validation-migration.mjs",
+    "audit:cleanup": "tsx scripts/cleanup-audit-logs.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",

@@ -41,6 +41,7 @@ import { scannerRouter } from "./scanner-router";
 import { ftourRouter } from "./ftour-router";
 import { electionRouter } from "./election-router";
 import { feedbackRouter } from "./feedback-router";
+import { auditRouter } from "./audit-router";
 import * as galleryServices from "./gallery-services";
 import * as volunteerProfileServices from "./volunteer-profile-services";
 import { randomBytes } from "crypto";
@@ -5853,6 +5854,7 @@ export const appRouter = router({
   volunteerProfile: volunteerProfileRouter,
   inventory: inventoryRouter,
   ftour: ftourRouter,
+  audit: auditRouter,
 });
 
 // ============================================
@@ -6578,6 +6580,7 @@ export const appRouterUpdated = router({
   ftour: ftourRouter,
   election: electionRouter,
   feedback: feedbackRouter,
+  audit: auditRouter,
 });
 
 export type AppRouter = typeof appRouterUpdated;
