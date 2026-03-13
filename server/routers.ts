@@ -2960,17 +2960,93 @@ const publicRouter = router({
   }),
 
   galleryAlbums: publicProcedure.query(async () => {
-    return galleryServices.listGalleryAlbums(true);
+    const client = getSupabaseAdminClient();
+    if (!client)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Supabase non configuré",
+      });
+
+    const { data: albums, error: albumsError } = await client
+      .from("gallery_albums")
+      .select("id, name, slug, sort_order, cover_photo_id, status")
+      .eq("status", "published")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false });
+
+    if (albumsError) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: albumsError.message,
+      });
+    }
+
+    const albumIds = (albums ?? []).map(album => album.id);
+    if (albumIds.length === 0) return [];
+
+    const { data: publishedPhotos, error: photosError } = await client
+      .from("gallery_photos")
+      .select(
+        "id, album_id, event_date, created_at, image_original_url, image_thumb_url, image_medium_url, storage_path, thumb_storage_path, medium_storage_path"
+      )
+      .eq("status", "published")
+      .in("album_id", albumIds)
+      .order("event_date", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false });
+
+    if (photosError) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: photosError.message,
+      });
+    }
+
+    const photosByAlbum = new Map<string, any[]>();
+    for (const photo of publishedPhotos ?? []) {
+      const key = photo.album_id;
+      if (!key) continue;
+      const list = photosByAlbum.get(key) ?? [];
+      list.push(photo);
+      photosByAlbum.set(key, list);
+    }
+
+    return (albums ?? []).map(album => {
+      const albumPhotos = photosByAlbum.get(album.id) ?? [];
+      const preferredCover = album.cover_photo_id
+        ? albumPhotos.find(photo => photo.id === album.cover_photo_id)
+        : null;
+      const fallbackCover = albumPhotos[0] ?? null;
+      const coverPhoto = preferredCover ?? fallbackCover;
+      const resolvedPhoto = coverPhoto
+        ? withResolvedGalleryUrls(coverPhoto)
+        : null;
+      const resolvedCover = resolvedPhoto
+        ? resolvedPhoto.image_medium_url ||
+          resolvedPhoto.image_thumb_url ||
+          resolvedPhoto.image_original_url
+        : null;
+
+      return {
+        id: album.id,
+        title: album.name,
+        slug: album.slug,
+        description: null,
+        cover_image: resolvedCover,
+        photo_count: albumPhotos.length,
+        event_date:
+          albumPhotos.find(photo => photo.event_date)?.event_date ?? null,
+      };
+    });
   }),
 
   galleryPhotos: publicProcedure
     .input(
       z
         .object({
-          album: z.string().optional(),
+          albumSlug: z.string().optional(),
           tag: z.string().optional(),
           page: z.number().int().min(1).default(1),
-          pageSize: z.number().int().min(1).max(50).default(18),
+          pageSize: z.number().int().min(1).max(30).default(30),
           sort: z.enum(["recent", "oldest", "featured"]).default("recent"),
         })
         .optional()
@@ -2983,7 +3059,7 @@ const publicRouter = router({
           message: "Supabase non configuré",
         });
       const page = input?.page ?? 1;
-      const pageSize = input?.pageSize ?? 18;
+      const pageSize = input?.pageSize ?? 30;
       const start = (page - 1) * pageSize;
       const end = start + pageSize - 1;
 
@@ -2991,20 +3067,17 @@ const publicRouter = router({
         .from("gallery_photos")
         .select("*, gallery_albums(name, slug)", { count: "exact" })
         .eq("status", "published");
-      if (input?.album) {
-        if (input.album.includes("-")) {
-          const { data: album } = await client
-            .from("gallery_albums")
-            .select("id")
-            .eq("slug", input.album)
-            .maybeSingle();
-          if (!album?.id) {
-            return { items: [], total: 0, page, pageSize };
-          }
-          query = query.eq("album_id", album.id);
-        } else {
-          query = query.eq("album_id", input.album);
+      if (input?.albumSlug) {
+        const { data: album } = await client
+          .from("gallery_albums")
+          .select("id")
+          .eq("slug", input.albumSlug)
+          .eq("status", "published")
+          .maybeSingle();
+        if (!album?.id) {
+          return { items: [], total: 0, page, pageSize };
         }
+        query = query.eq("album_id", album.id);
       }
       if (input?.tag) query = query.contains("tags", [input.tag]);
 
