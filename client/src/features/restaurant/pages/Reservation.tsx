@@ -27,9 +27,16 @@ export default function Reservation() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reference, setReference] = useState<string | null>(null);
   const createReservation = trpc.restaurantReservations.particulier.create.useMutation();
+  const isReservationClosed = new Date() >= new Date('2026-03-13T00:00:00');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isReservationClosed) {
+      toast.error('Les réservations restaurant sont désormais fermées.');
+      return;
+    }
+
     const seatsCount = Number.parseInt(formData.seats, 10);
 
     if (!formData.date || !formData.salle || !formData.fullName || !formData.phone || !formData.email) {
@@ -227,7 +234,18 @@ export default function Reservation() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit}>
+            {isReservationClosed && (
+              <Card className="border border-[#e8e5d8] bg-[#f9f7ef]">
+                <CardContent className="py-6 text-center space-y-2">
+                  <p className="text-lg font-semibold text-[#5d5a3c]">Les réservations sont fermées</p>
+                  <p className="text-sm text-[#8b8b7a]">
+                    Le formulaire de réservation restaurant est fermé depuis le 13 mars 2026.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            <form onSubmit={handleSubmit} className={isReservationClosed ? 'hidden' : ''}>
               <Card className="border border-[#e8e5d8]">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base text-[#5d5a3c]">Vos informations</CardTitle>
