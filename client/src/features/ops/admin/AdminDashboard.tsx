@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import {
@@ -474,69 +475,47 @@ export default function Admin() {
     ["admin", "super_admin", "admin_ops", "admin_operations"].includes(
       user.role
     );
-  const canManageOrders =
-    user?.role &&
-    ["admin", "super_admin", "admin_boutique"].includes(user.role);
-  const canManageDonations =
-    user?.role && ["admin", "super_admin", "admin_dons"].includes(user.role);
-  const canManageRestaurant =
+  const canReadAdminDashboard =
     user?.role &&
     [
       "admin",
       "super_admin",
+      "admin_ops",
+      "admin_operations",
+      "admin_boutique",
+      "admin_dons",
       "admin_restaurant",
       "vue_restaurant",
       "manager_restaurant",
-      "admin_ops",
-      "admin_operations",
+      "admin_patisserie",
+      "admin_terroir",
+      "scanner",
     ].includes(user.role);
 
   const { data: volunteerStats } = trpc.volunteers.stats.useQuery(undefined, {
     enabled: isAuthenticated && !!canManageVolunteers,
   });
 
-  const { data: orderStats } = trpc.orders.stats.useQuery(undefined, {
-    enabled: isAuthenticated && !!canManageOrders,
-  });
-
-  const { data: donationStats } = trpc.donations.stats.useQuery(undefined, {
-    enabled: isAuthenticated && !!canManageDonations,
-  });
-
-  const { data: restaurantParticuliers } =
-    trpc.restaurantReservations.adminListParticuliers.useQuery(undefined, {
-      enabled: isAuthenticated && !!canManageRestaurant,
-    });
-  const { data: restaurantGroupes } =
-    trpc.restaurantReservations.adminListGroupes.useQuery(undefined, {
-      enabled: isAuthenticated && !!canManageRestaurant,
-    });
-  const { data: restaurantEntreprises } =
-    trpc.restaurantReservations.adminListEntreprises.useQuery(undefined, {
-      enabled: isAuthenticated && !!canManageRestaurant,
-    });
-
-  const restaurantStats = canManageRestaurant
-    ? {
-        total:
-          (restaurantParticuliers?.length || 0) +
-          (restaurantGroupes?.length || 0) +
-          (restaurantEntreprises?.length || 0),
-        pending: [
-          ...(restaurantParticuliers || []),
-          ...(restaurantGroupes || []),
-          ...(restaurantEntreprises || []),
-        ].filter(
-          (r: any) =>
-            r.status === "pending_validation" || r.status === "submitted"
-        ).length,
-        totalSeats: [
-          ...(restaurantParticuliers || []),
-          ...(restaurantGroupes || []),
-          ...(restaurantEntreprises || []),
-        ].reduce((sum: number, r: any) => sum + (r.seatsTotal || 0), 0),
+  const { data: adminDashboard } = useQuery({
+    queryKey: ["admin-dashboard", 1, 50],
+    enabled: isAuthenticated && !!canReadAdminDashboard,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      const response = await fetch('/api/admin-dashboard?page=1&pageSize=50');
+      if (!response.ok) {
+        throw new Error('Failed to fetch admin dashboard payload');
       }
-    : null;
+      return response.json() as Promise<{
+        stats: {
+          reservations: number;
+          volunteers: number;
+          payments: number;
+          notifications: number;
+        };
+      }>;
+    },
+  });
 
   const { data: days } = trpc.days.list.useQuery();
 
@@ -649,18 +628,16 @@ export default function Admin() {
             </Card>
           )}
 
-          {canManageOrders && (
+          {canReadAdminDashboard && (
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Commandes</p>
+                    <p className="text-sm text-muted-foreground">Paiements</p>
                     <p className="text-3xl font-bold">
-                      {orderStats?.total || 0}
+                      {adminDashboard?.stats?.payments || 0}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {(orderStats as any)?.totalAmount || 0} DH
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Dernières 50 lignes paginées</p>
                   </div>
                   <div className="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center">
                     <ShoppingBag className="h-6 w-6 text-secondary-foreground" />
@@ -670,18 +647,16 @@ export default function Admin() {
             </Card>
           )}
 
-          {canManageDonations && (
+          {canReadAdminDashboard && (
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Dons</p>
+                    <p className="text-sm text-muted-foreground">Notifications</p>
                     <p className="text-3xl font-bold">
-                      {donationStats?.total || 0}
+                      {adminDashboard?.stats?.notifications || 0}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {donationStats?.receivedAmount || 0} DH reçus
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Messages récents</p>
                   </div>
                   <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
                     <Heart className="h-6 w-6 text-accent" />
@@ -691,7 +666,7 @@ export default function Admin() {
             </Card>
           )}
 
-          {canManageRestaurant && restaurantStats && (
+          {canReadAdminDashboard && (
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -700,11 +675,10 @@ export default function Admin() {
                       Réservations
                     </p>
                     <p className="text-3xl font-bold">
-                      {restaurantStats.total}
+                      {adminDashboard?.stats?.reservations || 0}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {restaurantStats.pending} en attente •{" "}
-                      {restaurantStats.totalSeats} places
+                      Sources consolidées (BFF)
                     </p>
                   </div>
                   <div className="w-12 h-12 rounded-full bg-[#5d5a3c]/10 flex items-center justify-center">
