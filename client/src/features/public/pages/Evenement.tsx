@@ -3,17 +3,31 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Heart, Users, Calendar, MapPin, Star, ArrowRight, Target, Sparkles, HandHeart, Utensils, Baby, GraduationCap } from "lucide-react";
+import FeedbackCta from "@/components/FeedbackCta";
+import {
+  Heart,
+  Users,
+  Calendar,
+  MapPin,
+  Star,
+  ArrowRight,
+  Target,
+  Sparkles,
+  HandHeart,
+  Utensils,
+  Baby,
+  GraduationCap,
+} from "lucide-react";
 import { useI18n } from "@/i18n";
 import RamadanImpactLive from "@/components/RamadanImpactLive";
 
 export default function Evenement() {
   const { t, lang } = useI18n();
-  
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      
+
       <main className="flex-1">
         {/* Hero */}
         <section className="py-20 bg-gradient-to-b from-primary/5 to-background">
@@ -24,7 +38,8 @@ export default function Evenement() {
                 {t.event.subtitle}
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground">
-                {t.event.title} <span className="text-primary">Ftour Bab Rayan</span>
+                {t.event.title}{" "}
+                <span className="text-primary">Ftour Bab Rayan</span>
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
                 {t.event.description}
@@ -55,9 +70,13 @@ export default function Evenement() {
                 </p>
                 <div className="bg-primary/5 rounded-xl p-6 border-l-4 border-primary">
                   <p className="text-muted-foreground italic">
-                    "{t.home.heroDescription.split('.')[0]}"
+                    "{t.home.heroDescription.split(".")[0]}"
                   </p>
-                  <p className="text-sm text-primary mt-2 font-medium">— {t.home.pillarsSubtitle.split('-')[1]?.trim() || 'Vision de Bab Rayan'}</p>
+                  <p className="text-sm text-primary mt-2 font-medium">
+                    —{" "}
+                    {t.home.pillarsSubtitle.split("-")[1]?.trim() ||
+                      "Vision de Bab Rayan"}
+                  </p>
                 </div>
               </div>
               <div className="relative">
@@ -70,8 +89,12 @@ export default function Evenement() {
                 </div>
                 <div className="absolute -bottom-6 -right-6 bg-card rounded-xl shadow-lg p-4 border">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">+31 200</div>
-                    <div className="text-xs text-muted-foreground">{t.common.ftours}</div>
+                    <div className="text-2xl font-bold text-primary">
+                      +31 200
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {t.common.ftours}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -86,26 +109,34 @@ export default function Evenement() {
               <h2 className="text-3xl font-bold mb-4">{t.event.impactTitle}</h2>
               <p className="text-white/80">{t.event.impactSubtitle}</p>
             </div>
-            
+
             <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
               <div className="text-center">
                 <div className="text-3xl md:text-4xl font-bold mb-2">+450</div>
                 <p className="text-white/80 text-sm">{t.common.children}</p>
               </div>
               <div className="text-center">
-                <div className="text-3xl md:text-4xl font-bold mb-2">+6 000</div>
+                <div className="text-3xl md:text-4xl font-bold mb-2">
+                  +6 000
+                </div>
                 <p className="text-white/80 text-sm">{t.common.volunteers}</p>
               </div>
               <div className="text-center">
-                <div className="text-3xl md:text-4xl font-bold mb-2">+1 500</div>
+                <div className="text-3xl md:text-4xl font-bold mb-2">
+                  +1 500
+                </div>
                 <p className="text-white/80 text-sm">{t.common.families}</p>
               </div>
               <div className="text-center">
-                <div className="text-3xl md:text-4xl font-bold mb-2">+230 000</div>
+                <div className="text-3xl md:text-4xl font-bold mb-2">
+                  +230 000
+                </div>
                 <p className="text-white/80 text-sm">{t.common.meals}</p>
               </div>
               <div className="text-center col-span-2 md:col-span-1">
-                <div className="text-3xl md:text-4xl font-bold mb-2">+31 200</div>
+                <div className="text-3xl md:text-4xl font-bold mb-2">
+                  +31 200
+                </div>
                 <p className="text-white/80 text-sm">{t.common.ftours}</p>
               </div>
             </div>
@@ -121,7 +152,7 @@ export default function Evenement() {
                 {t.event.valuesSubtitle}
               </p>
             </div>
-            
+
             <div className="grid md:grid-cols-3 gap-8">
               <Card className="border-none shadow-md">
                 <CardContent className="p-8 text-center space-y-4">
@@ -153,9 +184,7 @@ export default function Evenement() {
                     <HandHeart className="h-8 w-8 text-primary" />
                   </div>
                   <h3 className="text-xl font-bold">{t.event.support}</h3>
-                  <p className="text-muted-foreground">
-                    {t.event.supportDesc}
-                  </p>
+                  <p className="text-muted-foreground">{t.event.supportDesc}</p>
                 </CardContent>
               </Card>
             </div>
@@ -171,7 +200,7 @@ export default function Evenement() {
                 {t.event.howItWorksSubtitle}
               </p>
             </div>
-            
+
             <div className="max-w-4xl mx-auto">
               <div className="space-y-8">
                 <div className="flex gap-6">
@@ -180,9 +209,7 @@ export default function Evenement() {
                   </div>
                   <div className="space-y-2">
                     <h3 className="text-xl font-bold">{t.event.step1Title}</h3>
-                    <p className="text-muted-foreground">
-                      {t.event.step1Desc}
-                    </p>
+                    <p className="text-muted-foreground">{t.event.step1Desc}</p>
                   </div>
                 </div>
 
@@ -192,9 +219,7 @@ export default function Evenement() {
                   </div>
                   <div className="space-y-2">
                     <h3 className="text-xl font-bold">{t.event.step2Title}</h3>
-                    <p className="text-muted-foreground">
-                      {t.event.step2Desc}
-                    </p>
+                    <p className="text-muted-foreground">{t.event.step2Desc}</p>
                   </div>
                 </div>
 
@@ -204,12 +229,9 @@ export default function Evenement() {
                   </div>
                   <div className="space-y-2">
                     <h3 className="text-xl font-bold">{t.event.step3Title}</h3>
-                    <p className="text-muted-foreground">
-                      {t.event.step3Desc}
-                    </p>
+                    <p className="text-muted-foreground">{t.event.step3Desc}</p>
                   </div>
                 </div>
-
               </div>
             </div>
           </div>
@@ -225,7 +247,9 @@ export default function Evenement() {
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <Calendar className="h-5 w-5 text-primary" />
                     </div>
-                    <h3 className="font-semibold">{t.programme.subtitle.split(' ')[0] || 'Dates'}</h3>
+                    <h3 className="font-semibold">
+                      {t.programme.subtitle.split(" ")[0] || "Dates"}
+                    </h3>
                   </div>
                   <p className="text-muted-foreground">
                     {t.programme.description}
@@ -275,13 +299,20 @@ export default function Evenement() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href={`/${lang}/benevole`}>
-                <Button size="lg" className="w-full sm:w-auto bg-red-600 text-white hover:bg-red-700 border-2 border-red-600">
+                <Button
+                  size="lg"
+                  className="w-full sm:w-auto bg-red-600 text-white hover:bg-red-700 border-2 border-red-600"
+                >
                   <Users className="h-5 w-5 mr-2" />
                   {t.cta.volunteer}
                 </Button>
               </Link>
               <Link href={`/${lang}/dons`}>
-                <Button size="lg" variant="outline" className="w-full sm:w-auto bg-transparent border-white text-white hover:bg-white/10">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full sm:w-auto bg-transparent border-white text-white hover:bg-white/10"
+                >
                   <Heart className="h-5 w-5 mr-2" />
                   {t.cta.donate}
                 </Button>
@@ -291,6 +322,7 @@ export default function Evenement() {
         </section>
       </main>
 
+      <FeedbackCta type="event" source="event" />
       <Footer />
     </div>
   );
