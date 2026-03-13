@@ -79,6 +79,7 @@ import BoutiqueSolidaire from "@/features/boutique/pages/BoutiqueSolidaire";
 // GOODIES — features/goodies
 // ============================================
 import Goodies from "@/features/goodies/pages/Goodies";
+import BoutiqueProductTypePage from "@/features/boutique/pages/BoutiqueProductTypePage";
 import Cart from "@/features/goodies/pages/Cart";
 import { Checkout as UnifiedCheckout } from "@/features/goodies/pages/Checkout";
 import GoodiesQRPage from "@/features/goodies/pages/GoodiesQRPage";
@@ -276,6 +277,9 @@ function LocalizedRoutes() {
 
       {/* Admin Goodies */}
       <Route path="/admin/goodies" component={AdminGoodies} />
+      <Route path="/admin/catalogue/goodies">{() => <AdminGoodies />}</Route>
+      <Route path="/admin/catalogue/terroir">{() => <AdminTerroirProducts />}</Route>
+      <Route path="/admin/catalogue/patisserie">{() => <AdminPastryCatalog />}</Route>
       <Route path="/admin/commandes" component={AdminCommandes} />
 
       {/* Admin Dons */}
@@ -434,6 +438,9 @@ function LocalizedRoutes() {
       <Route path="/:lang/boutique" component={BoutiqueSolidaire} />
 
       {/* Commerce public */}
+      <Route path="/:lang/boutique/goodies">{() => <BoutiqueProductTypePage productType="goodies" />}</Route>
+      <Route path="/:lang/boutique/terroir">{() => <BoutiqueProductTypePage productType="terroir" />}</Route>
+      <Route path="/:lang/boutique/patisserie">{() => <BoutiqueProductTypePage productType="patisserie" />}</Route>
       <Route path="/:lang/patisserie" component={Pastries} />
       <Route path="/:lang/terroir" component={Terroir} />
       <Route path="/:lang/goodies" component={Goodies} />
@@ -461,6 +468,9 @@ function LocalizedRoutes() {
       <Route path="/benevole">
         {() => <Redirect to={`/${lang}/benevole`} />}
       </Route>
+      <Route path="/boutique/goodies">{() => <Redirect to={`/${lang}/boutique/goodies`} />}</Route>
+      <Route path="/boutique/terroir">{() => <Redirect to={`/${lang}/boutique/terroir`} />}</Route>
+      <Route path="/boutique/patisserie">{() => <Redirect to={`/${lang}/boutique/patisserie`} />}</Route>
       <Route path="/goodies">
         {() => <Redirect to={`/${lang}/goodies`} />}
       </Route>
