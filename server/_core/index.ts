@@ -131,12 +131,25 @@ async function startServer() {
         const productIds = (productsQuery.data || []).map(
           (product: any) => product.id
         );
-        const variantsQuery = await supabase
+        let variantsQuery = await supabase
           .from("terroir_product_variants")
           .select("*")
           .in("product_id", productIds)
           .eq("is_active", true)
           .order("sort_order", { ascending: true });
+
+        const missingSortOrder = /sort_order.*terroir_product_variants/i.test(
+          variantsQuery.error?.message || ""
+        );
+
+        if (missingSortOrder) {
+          variantsQuery = await supabase
+            .from("terroir_product_variants")
+            .select("*")
+            .in("product_id", productIds)
+            .eq("is_active", true)
+            .order("id", { ascending: true });
+        }
 
         const variantsByProductId = (variantsQuery.data || []).reduce(
           (acc: Record<number, any[]>, variant: any) => {
@@ -159,16 +172,28 @@ async function startServer() {
     const terroir = terroirProducts.flatMap((product: any) =>
       (product.terroir_product_variants || [])
         .filter((variant: any) => variant.is_active !== false)
-        .map((variant: any) => ({
-          id: `TERROIR-${product.id}-${variant.id}`,
-          sourceId: product.id,
-          type: "TERROIR",
-          name: `${product.name}${variant.label ? ` - ${variant.label}` : ""}`,
-          description: product.description || "",
-          priceMad: Math.round(Number(variant.price_unit || 0)),
-          imageUrl: product.image_url || null,
-          variantId: variant.id,
-        }))
+        .map((variant: any) => {
+          const stockTotal = Number(
+            variant.stock_total ?? variant.stockTotal ?? variant.stock ?? 0
+          );
+          const stockReserved = Number(
+            variant.stock_reserved ?? variant.stockReserved ?? 0
+          );
+          const availableStock = Math.max(0, stockTotal - stockReserved);
+
+          return {
+            id: `TERROIR-${product.id}-${variant.id}`,
+            sourceId: product.id,
+            type: "TERROIR",
+            name: `${product.name}${variant.label ? ` - ${variant.label}` : ""}`,
+            description: product.description || "",
+            priceMad: Math.round(Number(variant.price_unit || 0)),
+            imageUrl: product.image_url || null,
+            variantId: variant.id,
+            availableStock,
+          };
+        })
+        .filter((variant: any) => variant.availableStock > 0)
     );
 
     const donationProducts =
