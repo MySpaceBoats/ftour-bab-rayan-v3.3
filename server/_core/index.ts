@@ -17,6 +17,7 @@ import {
 } from "../supabase-services";
 import { DONATION_SUGGESTED_AMOUNTS_MAD } from "../../shared/const";
 import { validateGroupRequestByToken } from "../volunteer-group-service";
+import { getAdminDashboardPayload } from "../admin-dashboard-bff";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -200,6 +201,20 @@ async function startServer() {
       terroir,
       donations: { presets },
     });
+  });
+
+  app.get('/api/admin-dashboard', async (req, res) => {
+    const page = Number(req.query.page ?? 1);
+    const pageSize = Number(req.query.pageSize ?? 50);
+
+    try {
+      const payload = await getAdminDashboardPayload({ page, pageSize });
+      res.setHeader('Cache-Control', 'private, max-age=45');
+      res.json(payload);
+    } catch (error) {
+      console.error('[Admin Dashboard API] Failed to build payload', error);
+      res.status(500).json({ error: 'Failed to fetch dashboard payload' });
+    }
   });
 
   // Direct validation link for volunteer group requests (from admin notification email)
