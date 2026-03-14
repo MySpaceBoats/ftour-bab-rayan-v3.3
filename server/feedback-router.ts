@@ -204,7 +204,7 @@ export const feedbackRouter = router({
       let query = db
         .from("feedback_responses")
         .select("*", { count: "exact" })
-        .eq("source", "site");
+        .in("source", ["site", "public_page", "website"]);
 
       if (input?.feedbackType)
         query = query.eq("feedback_type", input.feedbackType);
@@ -227,7 +227,10 @@ export const feedbackRouter = router({
 
       const items = (data ?? []).map((row: any) => ({
         ...row,
-        comment: row.message,
+        name: row.name ?? row.user_name ?? null,
+        email: row.email ?? row.user_email ?? null,
+        comment: row.comment ?? row.message ?? null,
+        page_source: row.page_source ?? row.source ?? null,
         status: row.moderation === "processed" ? "processed" : "new",
       }));
 
