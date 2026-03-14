@@ -109,3 +109,80 @@ export async function getMyAttendance(
   if (error) throw new Error(error.message);
   return (data ?? []) as VolunteerAttendance[];
 }
+
+export interface VolunteerRegistration {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  dayId: number;
+  dayNumber: number | null;
+  dayDate: string | null;
+  location: string | null;
+  volunteerSlots: string[];
+  qrToken: string | null;
+  status: string;
+  createdAt: string;
+}
+
+export async function getMyRegistrations(
+  email: string
+): Promise<VolunteerRegistration[]> {
+  const admin = getSupabaseAdminClient();
+  if (!admin) throw new Error("Supabase admin client not configured");
+
+  const { data, error } = await admin
+    .from("volunteers")
+    .select("*, ramadan_days(id, day_number, date, location)")
+    .eq("email", email.toLowerCase().trim())
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    email: row.email,
+    dayId: row.day_id,
+    dayNumber: row.ramadan_days?.day_number ?? null,
+    dayDate: row.ramadan_days?.date ?? null,
+    location: row.ramadan_days?.location ?? null,
+    volunteerSlots: Array.isArray(row.volunteer_slots)
+      ? row.volunteer_slots
+      : [],
+    qrToken: row.qr_token ?? null,
+    status: row.status ?? "registered",
+    createdAt: row.created_at,
+  }));
+}
+
+export async function updateMyCredentials(
+  userId: string,
+  updates: { email?: string; password?: string }
+): Promise<void> {
+  const admin = getSupabaseAdminClient();
+  if (!admin) throw new Error("Supabase admin client not configured");
+
+  const payload: Record<string, string> = {};
+  if (updates.email) payload.email = updates.email;
+  if (updates.password) payload.password = updates.password;
+
+  if (Object.keys(payload).length === 0) return;
+
+  const { error } = await admin.auth.admin.updateUserById(userId, payload);
+  if (error) throw new Error(error.message);
+
+  // Also update email in users table and volunteer_profiles if changed
+  if (updates.email) {
+    await admin
+      .from("users")
+      .update({ email: updates.email })
+      .eq("open_id", userId);
+
+    await admin
+      .from("volunteer_profiles")
+      .update({ email: updates.email })
+      .eq("id", userId);
+  }
+}
