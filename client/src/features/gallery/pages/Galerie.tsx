@@ -1,7 +1,8 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { trpc } from "@/lib/trpc";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -9,196 +10,226 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-const YEAR_START = 2015;
-const YEAR_END = 2030;
-const CURRENT_YEAR = 2026;
-
-const YEARS = Array.from(
-  { length: YEAR_END - YEAR_START + 1 },
-  (_, i) => YEAR_START + i
-);
+import { ChevronLeft, ChevronRight, Download, X } from "lucide-react";
 
 export default function Galerie() {
-  const [selectedYear, setSelectedYear] = useState<number | null>(CURRENT_YEAR);
+  const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
   const [tag, setTag] = useState<string>("all");
   const [sort, setSort] = useState<"recent" | "oldest" | "featured">("recent");
+  const [page, setPage] = useState(1);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const yearScrollRef = useRef<HTMLDivElement>(null);
+  const [photosList, setPhotosList] = useState<any[]>([]);
 
-  // Build album slug from selected year
-  const albumSlug = selectedYear ? `edition-${selectedYear}` : undefined;
+  const albums = trpc.public.galleryAlbums.useQuery();
 
-  const photos = trpc.public.galleryPhotos.useQuery({
-    album: albumSlug,
-    tag: tag === "all" ? undefined : tag,
-    sort,
-    page: 1,
-    pageSize: 50,
-  });
+  const photos = trpc.public.galleryPhotos.useQuery(
+    {
+      albumSlug: selectedAlbum ?? undefined,
+      tag: tag === "all" ? undefined : tag,
+      sort,
+      page,
+      pageSize: 30,
+    },
+    { enabled: Boolean(selectedAlbum) }
+  );
+
+  useEffect(() => {
+    if (!selectedAlbum) {
+      setPhotosList([]);
+      return;
+    }
+    if (!photos.data?.items) return;
+    setPhotosList(prev =>
+      page === 1 ? photos.data.items : [...prev, ...photos.data.items]
+    );
+  }, [photos.data?.items, page, selectedAlbum]);
+
+  const list = photosList;
+  const total = photos.data?.total ?? 0;
+  const canLoadMore = list.length < total;
+  const current = lightboxIndex !== null ? list[lightboxIndex] : null;
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
-    (photos.data?.items ?? []).forEach((p: any) =>
+    list.forEach((p: any) =>
       (p.tags ?? []).forEach((t: string) => tags.add(t))
     );
     return Array.from(tags).sort();
-  }, [photos.data?.items]);
+  }, [list]);
 
-  const list = photos.data?.items ?? [];
-  const current = lightboxIndex !== null ? list[lightboxIndex] : null;
+  useEffect(() => {
+    setPage(1);
+  }, [tag, sort, selectedAlbum]);
+  const selectedAlbumItem = (albums.data ?? []).find(
+    (a: any) => a.slug === selectedAlbum
+  );
 
-  function scrollYears(direction: "left" | "right") {
-    const el = yearScrollRef.current;
-    if (!el) return;
-    el.scrollBy({ left: direction === "left" ? -200 : 200, behavior: "smooth" });
-  }
+  const downloadCurrentPhoto = () => {
+    if (!current?.image_original_url) return;
+    const anchor = document.createElement("a");
+    anchor.href = current.image_original_url;
+    anchor.download = `${current.slug ?? current.id ?? "photo"}.jpg`;
+    anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+    anchor.click();
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-1 container py-10 space-y-6">
+      <main className="flex-1 container py-10 space-y-8">
         <h1 className="text-3xl font-bold">Galerie</h1>
 
-        {/* Year navigation */}
-        <div className="relative">
-          <button
-            onClick={() => scrollYears("left")}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-background border rounded-full p-1 shadow-sm hover:bg-muted hidden sm:flex items-center justify-center"
-            aria-label="Défiler vers la gauche"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-
-          <div
-            ref={yearScrollRef}
-            className="flex gap-2 overflow-x-auto scroll-smooth px-1 sm:px-8 pb-2 no-scrollbar"
-            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-          >
-            {/* "Tous" button */}
-            <button
-              onClick={() => setSelectedYear(null)}
-              className={cn(
-                "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium border transition-colors whitespace-nowrap",
-                selectedYear === null
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background text-foreground border-border hover:bg-muted"
-              )}
-            >
-              Tous
-            </button>
-
-            {YEARS.map(year => {
-              const isFuture = year > CURRENT_YEAR;
-              return (
-                <button
-                  key={year}
-                  onClick={() => !isFuture && setSelectedYear(year)}
-                  disabled={isFuture}
-                  className={cn(
-                    "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium border transition-colors whitespace-nowrap",
-                    isFuture
-                      ? "bg-muted text-muted-foreground border-border cursor-not-allowed opacity-40"
-                      : selectedYear === year
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-background text-foreground border-border hover:bg-muted"
-                  )}
-                >
-                  {year}
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            onClick={() => scrollYears("right")}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-background border rounded-full p-1 shadow-sm hover:bg-muted hidden sm:flex items-center justify-center"
-            aria-label="Défiler vers la droite"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-
-        {/* Filters */}
-        <div className="grid sm:grid-cols-2 gap-3">
-          <Select value={tag} onValueChange={setTag}>
-            <SelectTrigger>
-              <SelectValue placeholder="Tag" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les tags</SelectItem>
-              {allTags.map(t => (
-                <SelectItem key={t} value={t}>
-                  {t}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={sort} onValueChange={(v: any) => setSort(v)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="recent">Récent</SelectItem>
-              <SelectItem value="oldest">Ancien</SelectItem>
-              <SelectItem value="featured">Mis en avant d'abord</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Album title */}
-        {selectedYear && (
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-semibold">
-              Édition {selectedYear}
-            </h2>
-            <span className="text-sm text-muted-foreground">
-              ({photos.data?.total ?? 0} photo{(photos.data?.total ?? 0) !== 1 ? "s" : ""})
-            </span>
-          </div>
-        )}
-
-        {/* Photos grid */}
-        {photos.isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="h-44 md:h-56 rounded-xl bg-muted animate-pulse" />
-            ))}
-          </div>
-        ) : list.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-            <p className="text-lg font-medium">Aucune photo disponible</p>
-            <p className="text-sm mt-1">
-              {selectedYear
-                ? `Aucune photo pour l'édition ${selectedYear} pour l'instant.`
-                : "La galerie est vide pour l'instant."}
-            </p>
-          </div>
+        {!selectedAlbum ? (
+          <section className="space-y-4">
+            <h2 className="text-xl font-semibold">Albums</h2>
+            {albums.isLoading ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-44 rounded-xl bg-muted animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : (albums.data ?? []).length === 0 ? (
+              <p className="text-muted-foreground">
+                Aucun album public disponible.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {(albums.data ?? []).map((album: any) => (
+                  <button
+                    key={album.id}
+                    onClick={() => {
+                      setSelectedAlbum(album.slug);
+                      setTag("all");
+                      setSort("recent");
+                      setPage(1);
+                    }}
+                    className="overflow-hidden rounded-xl bg-muted text-left border hover:border-primary transition-colors"
+                  >
+                    {album.cover_image ? (
+                      <img
+                        src={album.cover_image}
+                        alt={album.title}
+                        className="h-40 w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="h-40 w-full bg-muted-foreground/10" />
+                    )}
+                    <div className="p-3">
+                      <p className="font-medium line-clamp-1">{album.title}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {album.photo_count} photo
+                        {album.photo_count > 1 ? "s" : ""}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {list.map((photo: any, idx: number) => (
-              <button
-                key={photo.id}
-                onClick={() => setLightboxIndex(idx)}
-                className="overflow-hidden rounded-xl bg-muted"
+          <section className="space-y-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <h2 className="text-xl font-semibold">
+                  {selectedAlbumItem?.title ?? "Album"}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {total} photo{total > 1 ? "s" : ""}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedAlbum(null);
+                  setLightboxIndex(null);
+                  setPage(1);
+                }}
               >
-                <img
-                  src={photo.image_thumb_url || photo.image_medium_url || photo.image_original_url}
-                  alt={`${photo.title || "Photo"} ${photo.description || ""}`.trim()}
-                  loading="lazy"
-                  className="h-44 md:h-56 w-full object-cover transition-transform hover:scale-105"
-                />
-              </button>
-            ))}
-          </div>
+                Retour aux albums
+              </Button>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3">
+              <Select value={tag} onValueChange={setTag}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tag" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les tags</SelectItem>
+                  {allTags.map(t => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={sort} onValueChange={(v: any) => setSort(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recent">Récent</SelectItem>
+                  <SelectItem value="oldest">Ancien</SelectItem>
+                  <SelectItem value="featured">Mis en avant d'abord</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {photos.isLoading ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-44 md:h-56 rounded-xl bg-muted animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : list.length === 0 ? (
+              <p className="text-muted-foreground py-10">
+                Aucune photo publiée dans cet album.
+              </p>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {list.map((photo: any, idx: number) => (
+                    <button
+                      key={photo.id}
+                      onClick={() => setLightboxIndex(idx)}
+                      className="overflow-hidden rounded-xl bg-muted"
+                    >
+                      <img
+                        src={
+                          photo.image_thumb_url ||
+                          photo.image_medium_url ||
+                          photo.image_original_url
+                        }
+                        alt={`${photo.title || "Photo"} ${photo.description || ""}`.trim()}
+                        loading="lazy"
+                        className="h-44 md:h-56 w-full object-cover transition-transform hover:scale-105"
+                      />
+                    </button>
+                  ))}
+                </div>
+                {canLoadMore && (
+                  <div className="flex justify-center pt-2">
+                    <Button onClick={() => setPage(prev => prev + 1)}>
+                      Load more
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </section>
         )}
       </main>
       <Footer />
 
-      {/* Lightbox */}
       {current && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
@@ -242,17 +273,16 @@ export default function Galerie() {
             <ChevronRight className="h-6 w-6" />
           </button>
 
-          {/* Caption */}
-          {(current.title || current.description) && (
-            <div
-              className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white text-sm px-4 py-2 rounded-full max-w-xs text-center"
-              onClick={e => e.stopPropagation()}
-            >
-              {current.title}
-              {current.title && current.description ? " — " : ""}
-              {current.description}
-            </div>
-          )}
+          <button
+            className="absolute top-4 left-4 text-white bg-black/40 rounded-full px-3 py-2 hover:bg-black/60 inline-flex items-center gap-2"
+            onClick={e => {
+              e.stopPropagation();
+              downloadCurrentPhoto();
+            }}
+          >
+            <Download className="h-4 w-4" />
+            Download
+          </button>
         </div>
       )}
     </div>

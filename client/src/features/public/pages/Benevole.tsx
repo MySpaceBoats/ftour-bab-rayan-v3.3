@@ -22,6 +22,7 @@ import {
 import { trpc } from "@/lib/trpc";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import FeedbackCta from "@/components/FeedbackCta";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -333,8 +334,7 @@ export default function Benevole() {
     isOpen: boolean;
     registeredCount?: number | null;
     capacity: number;
-  }) =>
-    !day.isOpen || (day.registeredCount ?? 0) >= day.capacity;
+  }) => !day.isOpen || (day.registeredCount ?? 0) >= day.capacity;
 
   const isFutureDay = (date: string) =>
     toUtcDayNumber(date) > getRamadanTodayDayNumber();
@@ -814,6 +814,7 @@ export default function Benevole() {
             </Card>
           </div>
         </main>
+        <FeedbackCta type="volunteer" source="volunteer" />
         <Footer />
       </div>
     );

@@ -14,7 +14,25 @@ import { randomBytes } from "crypto";
 // CONSTANTES
 // ============================================
 
-const ADMIN_NOTIFICATION_EMAILS = ["contact@babrayan.org", "feedback@babrayan.org"];
+const ADMIN_NOTIFICATION_EMAILS = [
+  "contact@babrayan.org",
+  "feedback@babrayan.org",
+];
+const SITE_FEEDBACK_TYPES = [
+  "volunteer",
+  "event",
+  "restaurant",
+  "product",
+  "general",
+] as const;
+const SITE_FEEDBACK_SOURCES = [
+  "home",
+  "volunteer",
+  "event",
+  "restaurant",
+  "product",
+] as const;
+const SITE_FEEDBACK_STATUSES = ["new", "processed"] as const;
 
 function generateToken(): string {
   return randomBytes(32).toString("hex");
@@ -32,7 +50,10 @@ function resolveBaseUrl(): string {
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   const allowedRoles = ["admin", "super_admin", "admin_ops"];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Accès réservé aux administrateurs" });
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Accès réservé aux administrateurs",
+    });
   }
   return next({ ctx: { ...ctx, user: ctx.user } });
 });
@@ -42,6 +63,141 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 // ============================================
 
 export const feedbackRouter = router({
+  submitSiteFeedback: publicProcedure
+    .input(
+      z.object({
+        name: z.string().min(2),
+        email: z.string().email(),
+        phone: z.string().optional(),
+        feedbackType: z.enum(SITE_FEEDBACK_TYPES),
+        rating: z.number().min(1).max(5),
+        comment: z.string().min(3),
+        pageSource: z.enum(SITE_FEEDBACK_SOURCES),
+        consent: z.literal(true),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = getSupabaseAdminClient();
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "DB non configurée",
+        });
+
+      const { data, error } = await db
+        .from("feedbacks")
+        .insert({
+          name: input.name,
+          email: input.email,
+          phone: input.phone ?? null,
+          feedback_type: input.feedbackType,
+          rating: input.rating,
+          comment: input.comment,
+          page_source: input.pageSource,
+          status: "new",
+        })
+        .select("id")
+        .single();
+
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+
+      await sendSiteFeedbackNotification({
+        name: input.name,
+        email: input.email,
+        feedbackType: input.feedbackType,
+        rating: input.rating,
+        comment: input.comment,
+        pageSource: input.pageSource,
+      });
+
+      return { success: true, id: data?.id ?? null };
+    }),
+
+  listSiteFeedbacks: adminProcedure
+    .input(
+      z
+        .object({
+          feedbackType: z.enum(SITE_FEEDBACK_TYPES).optional(),
+          minRating: z.number().min(1).max(5).optional(),
+          status: z.enum(SITE_FEEDBACK_STATUSES).optional(),
+          fromDate: z.string().optional(),
+          toDate: z.string().optional(),
+        })
+        .optional()
+    )
+    .query(async ({ input }) => {
+      const db = getSupabaseAdminClient();
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "DB non configurée",
+        });
+
+      let query = db.from("feedbacks").select("*", { count: "exact" });
+
+      if (input?.feedbackType)
+        query = query.eq("feedback_type", input.feedbackType);
+      if (input?.status) query = query.eq("status", input.status);
+      if (input?.minRating) query = query.gte("rating", input.minRating);
+      if (input?.fromDate) query = query.gte("created_at", input.fromDate);
+      if (input?.toDate)
+        query = query.lte("created_at", `${input.toDate}T23:59:59Z`);
+
+      const { data, error, count } = await query.order("created_at", {
+        ascending: false,
+      });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      return { items: data ?? [], total: count ?? 0 };
+    }),
+
+  updateSiteFeedbackStatus: adminProcedure
+    .input(z.object({ id: z.number(), status: z.enum(SITE_FEEDBACK_STATUSES) }))
+    .mutation(async ({ input }) => {
+      const db = getSupabaseAdminClient();
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "DB non configurée",
+        });
+
+      const { error } = await db
+        .from("feedbacks")
+        .update({ status: input.status })
+        .eq("id", input.id);
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      return { success: true };
+    }),
+
+  deleteSiteFeedback: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = getSupabaseAdminClient();
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "DB non configurée",
+        });
+
+      const { error } = await db.from("feedbacks").delete().eq("id", input.id);
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      return { success: true };
+    }),
 
   // ============================================
   // FORMULAIRES (Admin)
@@ -49,14 +205,22 @@ export const feedbackRouter = router({
 
   listForms: adminProcedure.query(async () => {
     const db = getSupabaseAdminClient();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB non configurée" });
+    if (!db)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "DB non configurée",
+      });
 
     const { data, error } = await db
       .from("feedback_forms")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+    if (error)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      });
     return data ?? [];
   }),
 
@@ -64,7 +228,11 @@ export const feedbackRouter = router({
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       const db = getSupabaseAdminClient();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB non configurée" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "DB non configurée",
+        });
 
       const { data: form, error: formError } = await db
         .from("feedback_forms")
@@ -73,7 +241,11 @@ export const feedbackRouter = router({
         .eq("active", true)
         .single();
 
-      if (formError || !form) throw new TRPCError({ code: "NOT_FOUND", message: "Formulaire non trouvé" });
+      if (formError || !form)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Formulaire non trouvé",
+        });
 
       const { data: questions } = await db
         .from("feedback_questions")
@@ -86,7 +258,11 @@ export const feedbackRouter = router({
 
   getDefaultForm: publicProcedure.query(async () => {
     const db = getSupabaseAdminClient();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB non configurée" });
+    if (!db)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "DB non configurée",
+      });
 
     const { data: form, error } = await db
       .from("feedback_forms")
@@ -96,7 +272,11 @@ export const feedbackRouter = router({
       .limit(1)
       .single();
 
-    if (error || !form) throw new TRPCError({ code: "NOT_FOUND", message: "Aucun formulaire actif" });
+    if (error || !form)
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Aucun formulaire actif",
+      });
 
     const { data: questions } = await db
       .from("feedback_questions")
@@ -112,14 +292,23 @@ export const feedbackRouter = router({
       z.object({
         title: z.string().min(1),
         description: z.string().optional(),
-        targetType: z.enum(["global", "volunteers", "restaurant_clients", "foodstore_clients"]),
+        targetType: z.enum([
+          "global",
+          "volunteers",
+          "restaurant_clients",
+          "foodstore_clients",
+        ]),
         isAnonymousAllowed: z.boolean().default(true),
         active: z.boolean().default(true),
       })
     )
     .mutation(async ({ input }) => {
       const db = getSupabaseAdminClient();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB non configurée" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "DB non configurée",
+        });
 
       const { data, error } = await db
         .from("feedback_forms")
@@ -133,7 +322,11 @@ export const feedbackRouter = router({
         .select()
         .single();
 
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return data;
     }),
 
@@ -145,7 +338,11 @@ export const feedbackRouter = router({
     .input(z.object({ token: z.string() }))
     .query(async ({ input }) => {
       const db = getSupabaseAdminClient();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB non configurée" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "DB non configurée",
+        });
 
       const { data, error } = await db
         .from("feedback_campaign_recipients")
@@ -153,8 +350,13 @@ export const feedbackRouter = router({
         .eq("token", input.token)
         .single();
 
-      if (error || !data) throw new TRPCError({ code: "NOT_FOUND", message: "Token invalide" });
-      if (data.submitted_at) throw new TRPCError({ code: "BAD_REQUEST", message: "Feedback déjà soumis" });
+      if (error || !data)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Token invalide" });
+      if (data.submitted_at)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Feedback déjà soumis",
+        });
 
       // Mark as opened
       await db
@@ -181,7 +383,9 @@ export const feedbackRouter = router({
         isAnonymous: z.boolean().default(false),
         userName: z.string().optional(),
         userEmail: z.string().email().optional(),
-        source: z.enum(["public_page", "email_campaign"]).default("public_page"),
+        source: z
+          .enum(["public_page", "email_campaign"])
+          .default("public_page"),
         token: z.string().optional(), // token email campaign
         answers: z.array(
           z.object({
@@ -195,7 +399,11 @@ export const feedbackRouter = router({
     )
     .mutation(async ({ input }) => {
       const db = getSupabaseAdminClient();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB non configurée" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "DB non configurée",
+        });
 
       // If token provided, validate it
       let recipientId: number | null = null;
@@ -209,10 +417,16 @@ export const feedbackRouter = router({
           .single();
 
         if (tokenError || !recipient) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Token invalide" });
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Token invalide",
+          });
         }
         if (recipient.submitted_at) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Feedback déjà soumis avec ce lien" });
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Feedback déjà soumis avec ce lien",
+          });
         }
 
         recipientId = recipient.id;
@@ -237,12 +451,15 @@ export const feedbackRouter = router({
         .single();
 
       if (responseError || !response) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: responseError?.message ?? "Erreur lors de la sauvegarde" });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: responseError?.message ?? "Erreur lors de la sauvegarde",
+        });
       }
 
       // Insert answers
       if (input.answers.length > 0) {
-        const answersToInsert = input.answers.map((a) => ({
+        const answersToInsert = input.answers.map(a => ({
           response_id: response.id,
           question_id: a.questionId,
           answer_text: a.answerText ?? null,
@@ -250,9 +467,14 @@ export const feedbackRouter = router({
           answer_choice: a.answerChoice ?? null,
         }));
 
-        const { error: answersError } = await db.from("feedback_answers").insert(answersToInsert);
+        const { error: answersError } = await db
+          .from("feedback_answers")
+          .insert(answersToInsert);
         if (answersError) {
-          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: answersError.message });
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: answersError.message,
+          });
         }
       }
 
@@ -265,8 +487,10 @@ export const feedbackRouter = router({
       }
 
       // Send admin notification
-      const ratingAnswer = input.answers.find((a) => a.answerRating !== undefined);
-      const textAnswer = input.answers.find((a) => a.answerText);
+      const ratingAnswer = input.answers.find(
+        a => a.answerRating !== undefined
+      );
+      const textAnswer = input.answers.find(a => a.answerText);
       await sendAdminNotification({
         source: input.source,
         isAnonymous: input.isAnonymous,
@@ -284,15 +508,21 @@ export const feedbackRouter = router({
 
   getStats: adminProcedure
     .input(
-      z.object({
-        fromDate: z.string().optional(),
-        toDate: z.string().optional(),
-        targetType: z.string().optional(),
-      }).optional()
+      z
+        .object({
+          fromDate: z.string().optional(),
+          toDate: z.string().optional(),
+          targetType: z.string().optional(),
+        })
+        .optional()
     )
     .query(async ({ input }) => {
       const db = getSupabaseAdminClient();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB non configurée" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "DB non configurée",
+        });
 
       let query = db.from("feedback_responses").select(`
         id, form_id, is_anonymous, source, moderation, created_at,
@@ -301,11 +531,18 @@ export const feedbackRouter = router({
       `);
 
       if (input?.fromDate) query = query.gte("created_at", input.fromDate);
-      if (input?.toDate) query = query.lte("created_at", input.toDate + "T23:59:59Z");
+      if (input?.toDate)
+        query = query.lte("created_at", input.toDate + "T23:59:59Z");
 
-      const { data, error } = await query.order("created_at", { ascending: false });
+      const { data, error } = await query.order("created_at", {
+        ascending: false,
+      });
 
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
 
       const responses = data ?? [];
       const total = responses.length;
@@ -329,10 +566,12 @@ export const feedbackRouter = router({
         }
       }
 
-      const avgRating = ratingCount > 0 ? Math.round((ratingSum / ratingCount) * 10) / 10 : 0;
-      const recommendRate = recommendYes + recommendNo > 0
-        ? Math.round((recommendYes / (recommendYes + recommendNo)) * 100)
-        : 0;
+      const avgRating =
+        ratingCount > 0 ? Math.round((ratingSum / ratingCount) * 10) / 10 : 0;
+      const recommendRate =
+        recommendYes + recommendNo > 0
+          ? Math.round((recommendYes / (recommendYes + recommendNo)) * 100)
+          : 0;
 
       return {
         total,
@@ -346,39 +585,57 @@ export const feedbackRouter = router({
 
   listResponses: adminProcedure
     .input(
-      z.object({
-        fromDate: z.string().optional(),
-        toDate: z.string().optional(),
-        source: z.enum(["public_page", "email_campaign"]).optional(),
-        minRating: z.number().optional(),
-        maxRating: z.number().optional(),
-        moderation: z.enum(["pending", "processed", "to_analyze", "important"]).optional(),
-        limit: z.number().default(50),
-        offset: z.number().default(0),
-      }).optional()
+      z
+        .object({
+          fromDate: z.string().optional(),
+          toDate: z.string().optional(),
+          source: z.enum(["public_page", "email_campaign"]).optional(),
+          minRating: z.number().optional(),
+          maxRating: z.number().optional(),
+          moderation: z
+            .enum(["pending", "processed", "to_analyze", "important"])
+            .optional(),
+          limit: z.number().default(50),
+          offset: z.number().default(0),
+        })
+        .optional()
     )
     .query(async ({ input }) => {
       const db = getSupabaseAdminClient();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB non configurée" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "DB non configurée",
+        });
 
-      let query = db.from("feedback_responses").select(`
+      let query = db.from("feedback_responses").select(
+        `
         id, form_id, is_anonymous, user_email, user_name, source, moderation, created_at,
         feedback_answers(id, answer_rating, answer_text, answer_choice, question_id,
           feedback_questions(question, type)),
         feedback_forms(title, target_type)
-      `, { count: "exact" });
+      `,
+        { count: "exact" }
+      );
 
       if (input?.fromDate) query = query.gte("created_at", input.fromDate);
-      if (input?.toDate) query = query.lte("created_at", input.toDate + "T23:59:59Z");
+      if (input?.toDate)
+        query = query.lte("created_at", input.toDate + "T23:59:59Z");
       if (input?.source) query = query.eq("source", input.source);
       if (input?.moderation) query = query.eq("moderation", input.moderation);
 
       const limit = input?.limit ?? 50;
       const offset = input?.offset ?? 0;
-      query = query.order("created_at", { ascending: false }).range(offset, offset + limit - 1);
+      query = query
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1);
 
       const { data, error, count } = await query;
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
 
       return { responses: data ?? [], total: count ?? 0 };
     }),
@@ -392,14 +649,22 @@ export const feedbackRouter = router({
     )
     .mutation(async ({ input }) => {
       const db = getSupabaseAdminClient();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB non configurée" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "DB non configurée",
+        });
 
       const { error } = await db
         .from("feedback_responses")
         .update({ moderation: input.moderation })
         .eq("id", input.responseId);
 
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return { success: true };
     }),
 
@@ -409,14 +674,22 @@ export const feedbackRouter = router({
 
   listCampaigns: adminProcedure.query(async () => {
     const db = getSupabaseAdminClient();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB non configurée" });
+    if (!db)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "DB non configurée",
+      });
 
     const { data, error } = await db
       .from("feedback_campaigns")
       .select("*, feedback_forms(title)")
       .order("created_at", { ascending: false });
 
-    if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+    if (error)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      });
     return data ?? [];
   }),
 
@@ -424,7 +697,12 @@ export const feedbackRouter = router({
     .input(
       z.object({
         title: z.string().min(1),
-        targetGroup: z.enum(["volunteers", "restaurant_clients", "foodstore_clients", "all"]),
+        targetGroup: z.enum([
+          "volunteers",
+          "restaurant_clients",
+          "foodstore_clients",
+          "all",
+        ]),
         formId: z.number(),
         emailSubject: z.string().min(1),
         emailContent: z.string().min(1),
@@ -432,7 +710,11 @@ export const feedbackRouter = router({
     )
     .mutation(async ({ input }) => {
       const db = getSupabaseAdminClient();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB non configurée" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "DB non configurée",
+        });
 
       const { data, error } = await db
         .from("feedback_campaigns")
@@ -447,7 +729,11 @@ export const feedbackRouter = router({
         .select()
         .single();
 
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return data;
     }),
 
@@ -455,7 +741,11 @@ export const feedbackRouter = router({
     .input(z.object({ campaignId: z.number() }))
     .mutation(async ({ input }) => {
       const db = getSupabaseAdminClient();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB non configurée" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "DB non configurée",
+        });
 
       // Get campaign
       const { data: campaign, error: campError } = await db
@@ -464,14 +754,25 @@ export const feedbackRouter = router({
         .eq("id", input.campaignId)
         .single();
 
-      if (campError || !campaign) throw new TRPCError({ code: "NOT_FOUND", message: "Campagne non trouvée" });
-      if (campaign.status === "sent") throw new TRPCError({ code: "BAD_REQUEST", message: "Campagne déjà envoyée" });
+      if (campError || !campaign)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Campagne non trouvée",
+        });
+      if (campaign.status === "sent")
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Campagne déjà envoyée",
+        });
 
       // Collect target emails
       const emails = await collectTargetEmails(db, campaign.target_group);
 
       if (emails.length === 0) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Aucun destinataire trouvé pour ce groupe" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Aucun destinataire trouvé pour ce groupe",
+        });
       }
 
       const baseUrl = resolveBaseUrl();
@@ -482,13 +783,18 @@ export const feedbackRouter = router({
         const token = generateToken();
 
         // Insert recipient
-        const { error: recipError } = await db.from("feedback_campaign_recipients").insert({
-          campaign_id: campaign.id,
-          email,
-          user_id: userId ?? null,
-          token,
-        });
-        if (recipError) { failed++; continue; }
+        const { error: recipError } = await db
+          .from("feedback_campaign_recipients")
+          .insert({
+            campaign_id: campaign.id,
+            email,
+            user_id: userId ?? null,
+            token,
+          });
+        if (recipError) {
+          failed++;
+          continue;
+        }
 
         // Send email
         const feedbackUrl = `${baseUrl}/feedback?token=${token}`;
@@ -503,7 +809,8 @@ export const feedbackRouter = router({
           html,
         });
 
-        if (result.success) sent++; else failed++;
+        if (result.success) sent++;
+        else failed++;
       }
 
       // Update campaign status
@@ -519,14 +826,22 @@ export const feedbackRouter = router({
     .input(z.object({ campaignId: z.number() }))
     .query(async ({ input }) => {
       const db = getSupabaseAdminClient();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB non configurée" });
+      if (!db)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "DB non configurée",
+        });
 
       const { data, error } = await db
         .from("feedback_campaign_recipients")
         .select("*")
         .eq("campaign_id", input.campaignId);
 
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
 
       const recipients = data ?? [];
       return {
@@ -548,8 +863,10 @@ async function collectTargetEmails(
 ): Promise<Array<{ email: string; userId?: number | null }>> {
   const emails: Array<{ email: string; userId?: number | null }> = [];
 
-  const includeVolunteers = targetGroup === "volunteers" || targetGroup === "all";
-  const includeRestaurant = targetGroup === "restaurant_clients" || targetGroup === "all";
+  const includeVolunteers =
+    targetGroup === "volunteers" || targetGroup === "all";
+  const includeRestaurant =
+    targetGroup === "restaurant_clients" || targetGroup === "all";
 
   if (includeVolunteers) {
     const { data } = await db
@@ -577,7 +894,7 @@ async function collectTargetEmails(
 
   // Deduplicate by email
   const seen = new Set<string>();
-  return emails.filter((e) => {
+  return emails.filter(e => {
     if (seen.has(e.email)) return false;
     seen.add(e.email);
     return true;
@@ -592,7 +909,8 @@ async function sendAdminNotification(opts: {
   comment?: string;
 }) {
   const baseUrl = resolveBaseUrl();
-  const sourceLabel = opts.source === "email_campaign" ? "Campagne email" : "Page publique";
+  const sourceLabel =
+    opts.source === "email_campaign" ? "Campagne email" : "Page publique";
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h2 style="color: #5E5B34;">🔔 Nouveau feedback reçu — Bab Rayan</h2>
@@ -616,7 +934,43 @@ async function sendAdminNotification(opts: {
   }
 }
 
-function generateCampaignEmailHtml(opts: { emailContent: string; feedbackUrl: string }): string {
+async function sendSiteFeedbackNotification(opts: {
+  name: string;
+  email: string;
+  feedbackType: (typeof SITE_FEEDBACK_TYPES)[number];
+  rating: number;
+  comment: string;
+  pageSource: (typeof SITE_FEEDBACK_SOURCES)[number];
+}) {
+  const baseUrl = resolveBaseUrl();
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #5E5B34;">🔔 Nouveau feedback reçu</h2>
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr><td style="padding: 8px; font-weight: bold; width: 150px;">Type :</td><td style="padding: 8px;">${opts.feedbackType}</td></tr>
+        <tr><td style="padding: 8px; font-weight: bold;">Note :</td><td style="padding: 8px;">${opts.rating}/5</td></tr>
+        <tr><td style="padding: 8px; font-weight: bold;">Commentaire :</td><td style="padding: 8px;">${opts.comment}</td></tr>
+        <tr><td style="padding: 8px; font-weight: bold;">Page :</td><td style="padding: 8px;">${opts.pageSource}</td></tr>
+        <tr><td style="padding: 8px; font-weight: bold;">Nom :</td><td style="padding: 8px;">${opts.name}</td></tr>
+        <tr><td style="padding: 8px; font-weight: bold;">Email :</td><td style="padding: 8px;">${opts.email}</td></tr>
+      </table>
+      <a href="${baseUrl}/admin/feedback" style="display: inline-block; background: #5E5B34; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none;">Voir dans l'admin</a>
+    </div>
+  `;
+
+  for (const email of ADMIN_NOTIFICATION_EMAILS) {
+    await sendEmail({
+      to: email,
+      subject: "Nouveau feedback reçu",
+      html,
+    }).catch(() => {});
+  }
+}
+
+function generateCampaignEmailHtml(opts: {
+  emailContent: string;
+  feedbackUrl: string;
+}): string {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9f7f0; padding: 0;">
       <div style="background: #5E5B34; padding: 30px; text-align: center;">

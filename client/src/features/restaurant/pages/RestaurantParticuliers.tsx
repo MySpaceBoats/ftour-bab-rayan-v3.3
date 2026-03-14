@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import FeedbackCta from "@/components/FeedbackCta";
 import { useI18n } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { MapPin } from "lucide-react";
@@ -46,6 +47,7 @@ export default function RestaurantParticuliers() {
           </CardContent>
         </Card>
       </main>
+      <FeedbackCta type="restaurant" source="restaurant" />
       <Footer />
     </div>
   );

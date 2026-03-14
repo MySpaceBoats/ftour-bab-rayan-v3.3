@@ -30,6 +30,7 @@ type CartContextType = {
   getCartCountByType: (type: ProductType) => number;
   getCartTotalByType: (type: ProductType) => number;
   clearCartByType: (type: ProductType) => void;
+  getCartIndexByType: (type: ProductType, productId: number, variantId?: number) => number;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -121,6 +122,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const getCartCountByType = (type: ProductType) => getCartByType(type).reduce((sum, item) => sum + item.quantity, 0);
   const getCartTotalByType = (type: ProductType) => getCartByType(type).reduce((sum, item) => sum + item.price * item.quantity, 0);
   const clearCartByType = (type: ProductType) => setCart(cart.filter(item => item.productType !== type));
+  const getCartIndexByType = (type: ProductType, productId: number, variantId?: number) =>
+    cart.findIndex(
+      item =>
+        item.productType === type &&
+        item.productId === productId &&
+        item.variantId === variantId
+    );
 
   return (
     <CartContext.Provider
@@ -139,6 +147,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         getCartCountByType,
         getCartTotalByType,
         clearCartByType,
+        getCartIndexByType,
       }}
     >
       {children}

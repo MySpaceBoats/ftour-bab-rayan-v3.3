@@ -487,7 +487,7 @@ export default function AdminBenevoles() {
         <Card className="mb-6">
           <CardContent className="p-4">
             <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
+              <div className="flex-1 md:min-w-[320px] lg:min-w-[420px]">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input

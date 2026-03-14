@@ -22,7 +22,7 @@ export default function AnnouncementBanner() {
         <p className="text-center text-sm sm:text-base font-medium leading-snug">
           🔴 Information importante — Le dernier Ftour Solidaire Bab Rayan
           marquant la fin de cette 12eme édition des Ftours Bab Rayan Ramadan
-          1447, aura lieu le lundi 16 mars 2026 à l'association Bab Rayan.
+          1447, aura lieu le lundi 16 mars 2026 à l'association Bab Rayan pour la protection de l'enfance, l'éducation et l'insertion professionnelle.
         </p>
         <button
           onClick={closeBanner}
