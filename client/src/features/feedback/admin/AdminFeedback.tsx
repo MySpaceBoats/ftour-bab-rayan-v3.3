@@ -98,6 +98,9 @@ function getMainRating(response: any): number | null {
     if (a.answer_rating !== null && a.answer_rating !== undefined)
       return a.answer_rating;
   }
+  // Site feedbacks store rating directly on the response row
+  if (response.rating !== null && response.rating !== undefined)
+    return response.rating;
   return null;
 }
 
@@ -105,6 +108,8 @@ function getFirstComment(response: any): string | null {
   for (const a of response.feedback_answers ?? []) {
     if (a.answer_text) return a.answer_text;
   }
+  // Site feedbacks store the comment in the message column
+  if (response.message) return response.message;
   return null;
 }
 

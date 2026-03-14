@@ -173,6 +173,29 @@ export default function FeedbackPage() {
     });
   };
 
+  // ---- No form available (no active form in DB) ----
+  if (!token && defaultFormQuery.isError) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center py-20 bg-[#5E5B34]">
+          <Card className="max-w-md w-full mx-4 bg-[#4A4829] border-[#F2E9D3]/20">
+            <CardContent className="p-8 text-center">
+              <div className="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <MessageSquare className="w-8 h-8 text-amber-400" />
+              </div>
+              <h2 className="text-xl font-bold text-[#F2E9D3] mb-2">Formulaire indisponible</h2>
+              <p className="text-[#C9B97A]">
+                Aucun formulaire de feedback n'est actuellement disponible. Réessayez plus tard.
+              </p>
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   // ---- Token error state ----
   if (token && tokenQuery.isError) {
     return (
