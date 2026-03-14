@@ -2969,21 +2969,11 @@ const publicRouter = router({
         message: "Supabase non configuré",
       });
 
-    const { data: albums, error: albumsError } = await client
-      .from("gallery_albums")
-      .select("id, name, slug, sort_order, cover_photo_id, status")
-      .eq("status", "published")
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: false });
+    // Use listGalleryAlbums to ensure edition albums (2015-2026) are
+    // auto-created if they don't exist yet, then filter to published only.
+    const albums = await galleryServices.listGalleryAlbums(true);
 
-    if (albumsError) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: albumsError.message,
-      });
-    }
-
-    const albumIds = (albums ?? []).map(album => album.id);
+    const albumIds = (albums ?? []).map((album: any) => album.id);
     if (albumIds.length === 0) return [];
 
     const { data: publishedPhotos, error: photosError } = await client
