@@ -15,8 +15,8 @@ import { randomBytes } from "crypto";
 // ============================================
 
 const ADMIN_NOTIFICATION_EMAILS = [
-  "contact@babrayan.org",
-  "feedback@babrayan.org",
+  "contact@ftourbabrayan.ma",
+  "feedback@ftourbabrayan.ma",
 ];
 const SITE_FEEDBACK_TYPES = [
   "volunteer",
@@ -602,6 +602,7 @@ export const feedbackRouter = router({
 
       let query = db.from("feedback_responses").select(`
         id, form_id, is_anonymous, source, moderation, created_at,
+        rating, message,
         feedback_answers(answer_rating, answer_text, answer_choice, question_id),
         feedback_forms(title, target_type)
       `);
@@ -632,6 +633,11 @@ export const feedbackRouter = router({
       let recommendNo = 0;
 
       for (const r of responses as any[]) {
+        // Rating stored directly on the response (site feedback)
+        if (r.rating !== null && r.rating !== undefined && (r.feedback_answers ?? []).length === 0) {
+          ratingSum += r.rating;
+          ratingCount++;
+        }
         for (const a of r.feedback_answers ?? []) {
           if (a.answer_rating !== null && a.answer_rating !== undefined) {
             ratingSum += a.answer_rating;
@@ -687,6 +693,7 @@ export const feedbackRouter = router({
       let query = db.from("feedback_responses").select(
         `
         id, form_id, is_anonymous, user_email, user_name, source, moderation, created_at,
+        rating, message,
         feedback_answers(id, answer_rating, answer_text, answer_choice, question_id,
           feedback_questions(question, type)),
         feedback_forms(title, target_type)
