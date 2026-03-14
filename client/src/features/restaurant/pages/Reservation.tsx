@@ -237,7 +237,7 @@ export default function Reservation() {
             {isReservationClosed && (
               <Card className="border border-[#36030d] bg-[#36030d]">
                 <CardContent className="py-6 text-center space-y-2">
-                  <p className="text-lg font-semibold text-white">Les réservations pour les Ftours à La Table Du Jardin by Bab Rayan, sont fermés.</p>
+                  <p className="text-lg font-semibold text-white">Les réservations pour les Ftours à La Table Du Jardin by Bab Rayan, sont fermées.</p>
                 </CardContent>
               </Card>
             )}
