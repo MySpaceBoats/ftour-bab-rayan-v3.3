@@ -95,6 +95,170 @@ const SITE_FEEDBACK_SOURCES = [
   "product",
 ] as const;
 
+const catalogProductTypeEnum = z.enum(["goodies", "terroir", "patisserie"]);
+const catalogProductSelect =
+  "id,name,description,price,stock,image,category,tags,status,product_type,is_best_seller,is_ramadan_edition,created_at,updated_at";
+
+const catalogProductsRouter = router({
+  listPublic: publicProcedure
+    .input(z.object({ productType: catalogProductTypeEnum }))
+    .query(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from("products")
+        .select(catalogProductSelect)
+        .eq("product_type", input.productType)
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      }
+
+      return data ?? [];
+    }),
+
+  adminList: adminProcedure
+    .input(z.object({ productType: catalogProductTypeEnum }))
+    .query(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from("products")
+        .select(catalogProductSelect)
+        .eq("product_type", input.productType)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      }
+
+      return data ?? [];
+    }),
+
+  adminStats: adminProcedure
+    .input(z.object({ productType: catalogProductTypeEnum }))
+    .query(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from("products")
+        .select("status,is_best_seller,is_ramadan_edition")
+        .eq("product_type", input.productType);
+
+      if (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      }
+
+      const rows = data ?? [];
+      return {
+        total: rows.length,
+        active: rows.filter((row: any) => row.status === "active").length,
+        bestSellers: rows.filter((row: any) => row.is_best_seller === true).length,
+        ramadanEdition: rows.filter((row: any) => row.is_ramadan_edition === true).length,
+      };
+    }),
+
+  create: adminProcedure
+    .input(
+      z.object({
+        productType: catalogProductTypeEnum,
+        name: z.string().min(1),
+        description: z.string().optional(),
+        price: z.number().nonnegative(),
+        stock: z.number().int().nonnegative(),
+        image: z.string().optional(),
+        category: z.string().optional(),
+        tags: z.array(z.string()).default([]),
+        status: z.enum(["active", "inactive"]).default("active"),
+        isBestSeller: z.boolean().default(false),
+        isRamadanEdition: z.boolean().default(false),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from("products")
+        .insert({
+          name: input.name,
+          description: input.description ?? null,
+          price: input.price,
+          stock: input.stock,
+          image: input.image ?? null,
+          category: input.category ?? null,
+          tags: input.tags,
+          status: input.status,
+          product_type: input.productType,
+          is_best_seller: input.isBestSeller,
+          is_ramadan_edition: input.isRamadanEdition,
+        })
+        .select(catalogProductSelect)
+        .single();
+
+      if (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      }
+
+      return data;
+    }),
+
+  update: adminProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().min(1).optional(),
+        description: z.string().optional(),
+        price: z.number().nonnegative().optional(),
+        stock: z.number().int().nonnegative().optional(),
+        image: z.string().optional(),
+        category: z.string().optional(),
+        tags: z.array(z.string()).optional(),
+        status: z.enum(["active", "inactive"]).optional(),
+        isBestSeller: z.boolean().optional(),
+        isRamadanEdition: z.boolean().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const payload: Record<string, unknown> = {};
+
+      if (input.name !== undefined) payload.name = input.name;
+      if (input.description !== undefined) payload.description = input.description;
+      if (input.price !== undefined) payload.price = input.price;
+      if (input.stock !== undefined) payload.stock = input.stock;
+      if (input.image !== undefined) payload.image = input.image;
+      if (input.category !== undefined) payload.category = input.category;
+      if (input.tags !== undefined) payload.tags = input.tags;
+      if (input.status !== undefined) payload.status = input.status;
+      if (input.isBestSeller !== undefined) payload.is_best_seller = input.isBestSeller;
+      if (input.isRamadanEdition !== undefined) payload.is_ramadan_edition = input.isRamadanEdition;
+
+      const { data, error } = await supabase
+        .from("products")
+        .update(payload)
+        .eq("id", input.id)
+        .select(catalogProductSelect)
+        .single();
+
+      if (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      }
+
+      return data;
+    }),
+
+  remove: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { error } = await supabase.from("products").delete().eq("id", input.id);
+
+      if (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      }
+
+      return { success: true };
+    }),
+});
+
 const feedbackRouter = router({
   submitSiteFeedback: publicProcedure
     .input(
@@ -9045,6 +9209,7 @@ export const appRouter = router({
   ramadan: ramadanRouter,
   terroirModule: terroirModuleRouter,
   inventory: inventoryRouter,
+  catalogProducts: catalogProductsRouter,
   feedback: feedbackRouter,
   election: electionRouter,
 });
