@@ -235,12 +235,9 @@ export default function Reservation() {
             </div>
 
             {isReservationClosed && (
-              <Card className="border border-[#e8e5d8] bg-[#f9f7ef]">
+              <Card className="border border-[#7b1e3a] bg-[#7b1e3a]">
                 <CardContent className="py-6 text-center space-y-2">
-                  <p className="text-lg font-semibold text-[#5d5a3c]">Les réservations sont fermées</p>
-                  <p className="text-sm text-[#8b8b7a]">
-                    Le formulaire de réservation restaurant est fermé depuis le 13 mars 2026.
-                  </p>
+                  <p className="text-lg font-semibold text-white">Les réservations sont fermées</p>
                 </CardContent>
               </Card>
             )}
