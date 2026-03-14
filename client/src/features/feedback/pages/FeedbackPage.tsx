@@ -1,19 +1,10 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { trpc } from "@/lib/trpc";
@@ -87,10 +78,8 @@ function StarRating({
 // ============================================
 
 export default function FeedbackPage() {
-  const [location] = useLocation();
   const token = new URLSearchParams(window.location.search).get("token") ?? undefined;
 
-  const [selectedSubject, setSelectedSubject] = useState("");
   const [formId, setFormId] = useState<number | null>(null);
   const [answers, setAnswers] = useState<Map<number, Answer>>(new Map());
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -269,27 +258,6 @@ export default function FeedbackPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
-
-              {/* Sélection du sujet */}
-              <Card className="bg-[#4A4829] border-[#F2E9D3]/20">
-                <CardHeader>
-                  <CardTitle className="text-[#F2E9D3] text-lg">Sujet du feedback</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                    <SelectTrigger className="bg-[#3D3B1E] border-[#F2E9D3]/30 text-[#F2E9D3]">
-                      <SelectValue placeholder="Choisissez un sujet..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#4A4829] border-[#F2E9D3]/20">
-                      <SelectItem value="benevoles" className="text-[#F2E9D3] focus:bg-[#5E5B34]">Bénévolat</SelectItem>
-                      <SelectItem value="restaurant" className="text-[#F2E9D3] focus:bg-[#5E5B34]">Restaurant</SelectItem>
-                      <SelectItem value="foodstore" className="text-[#F2E9D3] focus:bg-[#5E5B34]">Foodstore</SelectItem>
-                      <SelectItem value="general" className="text-[#F2E9D3] focus:bg-[#5E5B34]">Organisation générale</SelectItem>
-                      <SelectItem value="autre" className="text-[#F2E9D3] focus:bg-[#5E5B34]">Autre</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </CardContent>
-              </Card>
 
               {/* Questions du formulaire */}
               {questions.map((q, idx) => (
