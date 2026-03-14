@@ -376,21 +376,25 @@ const galleryRouter = router({
         });
       }
 
-      const canManageGallery = Boolean(
-        ctx.user &&
-          [
-            "admin",
-            "super_admin",
-            "admin_ops",
-            "admin_boutique",
-            "admin_dons",
-            "admin_restaurant",
-            "vue_restaurant",
-            "manager_restaurant",
-            "admin_patisserie",
-            "admin_terroir",
-          ].includes(ctx.user.role)
+      const adminRoles = [
+        "admin",
+        "super_admin",
+        "admin_ops",
+        "admin_boutique",
+        "admin_dons",
+        "admin_restaurant",
+        "vue_restaurant",
+        "manager_restaurant",
+        "admin_patisserie",
+        "admin_terroir",
+      ];
+      const isAdmin = Boolean(
+        ctx.user && adminRoles.includes(ctx.user.role)
       );
+      // Authenticated volunteers bypass email validation (already logged in = identity confirmed)
+      // Their photos still go to draft and require admin moderation before publishing
+      const isAuthenticatedVolunteer = Boolean(ctx.user && !isAdmin);
+      const canManageGallery = isAdmin;
       const client = getSupabaseAdminClient();
       if (!client)
         throw new TRPCError({
@@ -420,8 +424,8 @@ const galleryRouter = router({
         }
       }
 
-      // Generate a single validation token for the whole batch (used for non-admin volunteers)
-      const batchValidationToken = canManageGallery
+      // Generate a single validation token for the whole batch (only for anonymous/unauth users)
+      const batchValidationToken = (canManageGallery || isAuthenticatedVolunteer)
         ? null
         : randomBytes(32).toString("hex");
 
@@ -505,8 +509,9 @@ const galleryRouter = router({
         results.push(created);
       }
 
-      // Send validation email for non-admin volunteers
-      if (!canManageGallery && batchValidationToken && ctx.user?.email) {
+      // Authenticated volunteers bypass email validation (identity already confirmed by login)
+      // Non-authenticated or unrecognized users still require email validation
+      if (!canManageGallery && !isAuthenticatedVolunteer && batchValidationToken && ctx.user?.email) {
         const validationUrl = `${resolveAppBaseUrl().replace(/\/$/, "")}/galerie/validation/${batchValidationToken}`;
         const emailPayload = generateGalleryUploadValidationEmail({
           email: ctx.user.email,
@@ -5702,6 +5707,191 @@ const volunteerProfileRouter = router({
         input.limit,
         input.offset
       );
+    }),
+
+  myRegistrations: publicProcedure.query(async ({ ctx }) => {
+    const authHeader = ctx.req.headers.authorization;
+    const accessToken = authHeader?.startsWith("Bearer ")
+      ? authHeader.substring(7)
+      : null;
+    if (!accessToken)
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
+    const authUser = await getUserFromToken(accessToken);
+    if (!authUser)
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Token invalide" });
+    return volunteerProfileServices.getMyRegistrations(authUser.email);
+  }),
+
+  openDays: publicProcedure.query(async ({ ctx }) => {
+    const authHeader = ctx.req.headers.authorization;
+    const accessToken = authHeader?.startsWith("Bearer ")
+      ? authHeader.substring(7)
+      : null;
+    if (!accessToken)
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
+    const authUser = await getUserFromToken(accessToken);
+    if (!authUser)
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Token invalide" });
+    const allDays = await supabaseServices.getAllRamadanDaysSupabase();
+    return allDays.filter(d => d.isOpen);
+  }),
+
+  registerForDay: publicProcedure
+    .input(
+      z.object({
+        dayId: z.number(),
+        volunteerSlots: z
+          .array(z.enum(["preparation_ftour", "service_ftour"]))
+          .min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const authHeader = ctx.req.headers.authorization;
+      const accessToken = authHeader?.startsWith("Bearer ")
+        ? authHeader.substring(7)
+        : null;
+      if (!accessToken)
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
+      const authUser = await getUserFromToken(accessToken);
+      if (!authUser)
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token invalide" });
+
+      const profile = await volunteerProfileServices.getMyVolunteerProfile(accessToken);
+
+      const normalizedEmail = authUser.email.toLowerCase().trim();
+
+      const absenceCount =
+        await supabaseServices.countVolunteerAbsencesByEmail(normalizedEmail);
+      if (absenceCount >= 2) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            "Votre compte est bloqué suite à des absences répétées. Veuillez nous contacter.",
+        });
+      }
+
+      const emailExists =
+        await supabaseServices.checkVolunteerEmailExistsForDay(
+          normalizedEmail,
+          input.dayId
+        );
+      if (emailExists) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Vous êtes déjà inscrit(e) pour ce jour.",
+        });
+      }
+
+      const day = await supabaseServices.getRamadanDayByIdSupabase(input.dayId);
+      if (!day) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
+      }
+      if (!day.isOpen) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Ce jour est fermé aux inscriptions",
+        });
+      }
+      if ((day.registeredCount ?? 0) >= day.capacity) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Ce jour a atteint le nombre maximum d'inscriptions",
+        });
+      }
+
+      const volunteer = await supabaseServices.createVolunteerShiftSupabase({
+        firstName: profile.first_name,
+        lastName: profile.last_name,
+        email: normalizedEmail,
+        phone: profile.phone ?? "",
+        city: undefined,
+        dayId: input.dayId,
+        volunteerSlots: input.volunteerSlots,
+        acceptedTerms: true,
+      });
+
+      return { success: true, qrToken: volunteer.qrToken };
+    }),
+
+  updateCredentials: publicProcedure
+    .input(
+      z.object({
+        email: z.string().email().optional(),
+        password: z.string().min(6).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const authHeader = ctx.req.headers.authorization;
+      const accessToken = authHeader?.startsWith("Bearer ")
+        ? authHeader.substring(7)
+        : null;
+      if (!accessToken)
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
+      const authUser = await getUserFromToken(accessToken);
+      if (!authUser)
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token invalide" });
+
+      if (!input.email && !input.password) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Aucune modification fournie",
+        });
+      }
+
+      await volunteerProfileServices.updateMyCredentials(authUser.id, {
+        email: input.email,
+        password: input.password,
+      });
+
+      return { success: true };
+    }),
+
+  submitFeedback: publicProcedure
+    .input(
+      z.object({
+        rating: z.number().min(1).max(5),
+        comment: z.string().min(3).max(1000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const authHeader = ctx.req.headers.authorization;
+      const accessToken = authHeader?.startsWith("Bearer ")
+        ? authHeader.substring(7)
+        : null;
+      if (!accessToken)
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token manquant" });
+      const authUser = await getUserFromToken(accessToken);
+      if (!authUser)
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token invalide" });
+
+      const admin = getSupabaseAdminClient();
+      if (!admin)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "DB non configurée",
+        });
+
+      const { error } = await admin.from("feedback_responses").insert({
+        form_id: null,
+        campaign_id: null,
+        recipient_id: null,
+        user_email: authUser.email,
+        user_name: authUser.name ?? null,
+        is_anonymous: false,
+        feedback_type: "volunteer",
+        rating: input.rating,
+        message: input.comment,
+        source: "volunteer",
+        moderation: "pending",
+      });
+
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+
+      return { success: true };
     }),
 });
 

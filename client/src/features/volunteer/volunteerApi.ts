@@ -25,6 +25,21 @@ export type VolunteerAttendance = {
   created_at: string;
 };
 
+export type VolunteerRegistration = {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  dayId: number;
+  dayNumber: number | null;
+  dayDate: string | null;
+  location: string | null;
+  volunteerSlots: string[];
+  qrToken: string | null;
+  status: string;
+  createdAt: string;
+};
+
 export function getMyVolunteerProfile() {
   return trpc.volunteerProfile.me.useQuery();
 }
@@ -43,4 +58,29 @@ export function updateMyVolunteerProfile() {
 
 export function getMyAttendance(limit = 20, offset = 0) {
   return trpc.volunteerProfile.attendance.useQuery({ limit, offset });
+}
+
+export function getMyRegistrations() {
+  return trpc.volunteerProfile.myRegistrations.useQuery();
+}
+
+export function getOpenDays() {
+  return trpc.volunteerProfile.openDays.useQuery();
+}
+
+export function registerForDay() {
+  const utils = trpc.useUtils();
+  return trpc.volunteerProfile.registerForDay.useMutation({
+    onSuccess: async () => {
+      await utils.volunteerProfile.myRegistrations.invalidate();
+    },
+  });
+}
+
+export function updateMyCredentials() {
+  return trpc.volunteerProfile.updateCredentials.useMutation();
+}
+
+export function submitVolunteerFeedback() {
+  return trpc.volunteerProfile.submitFeedback.useMutation();
 }
