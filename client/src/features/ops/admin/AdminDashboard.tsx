@@ -456,6 +456,15 @@ const sections: SectionDefinition[] = [
         iconBg: "bg-orange-100",
         allowedRoles: ["super_admin"],
       },
+      {
+        label: "Logs / Journal",
+        description: "Consulter les actions critiques (auth, CRUD, admin) et exporter en CSV",
+        route: "/admin/logs",
+        icon: FileText,
+        iconColor: "text-slate-700",
+        iconBg: "bg-slate-100",
+        allowedRoles: ["admin", "super_admin"],
+      },
     ],
   },
 ];
