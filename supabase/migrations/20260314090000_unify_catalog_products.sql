@@ -49,7 +49,7 @@ CREATE POLICY "Service role full access products"
 
 -- Migration de données existantes
 INSERT INTO public.products (name, description, price, stock, image, category, tags, status, product_type, is_best_seller, is_ramadan_edition, created_at, updated_at)
-SELECT g.name, g.description, g.price, COALESCE(g.stock,0), g.image_url, g.category, '{}', CASE WHEN g.is_active THEN 'active' ELSE 'inactive' END, 'goodies', COALESCE(g.is_best_seller,false), COALESCE(g.is_ramadan_edition,false), COALESCE(g.created_at, now()), COALESCE(g.updated_at, now())
+SELECT g.name, g.description, g.price, COALESCE(g.stock,0), g.image_url, g.category, '{}', CASE WHEN g.is_active THEN 'active' ELSE 'inactive' END, 'goodies', false, false, COALESCE(g.created_at, now()), COALESCE(g.updated_at, now())
 FROM public.goodies g
 WHERE NOT EXISTS (
   SELECT 1 FROM public.products p WHERE p.product_type='goodies' AND p.name=g.name
