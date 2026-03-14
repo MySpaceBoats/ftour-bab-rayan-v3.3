@@ -65,13 +65,13 @@ export async function getAdminDashboardPayload(input: { page?: number; pageSize?
     supabase.from('reservations').select('id', { count: 'exact', head: true }),
     supabase
       .from('volunteers')
-      .select('id,first_name,last_name,email,status,day_id,created_at,user_id')
+      .select('id,first_name,last_name,email,status,day_id,created_at')
       .order('created_at', { ascending: false })
       .range(from, to),
     supabase.from('volunteers').select('id', { count: 'exact', head: true }),
     supabase
       .from('payments')
-      .select('id,user_id,amount,status,payment_method,created_at')
+      .select('id,user_name,email,amount,status,payment_method,created_at')
       .order('created_at', { ascending: false })
       .range(from, to),
     supabase.from('payments').select('id', { count: 'exact', head: true }),
@@ -107,12 +107,12 @@ export async function getAdminDashboardPayload(input: { page?: number; pageSize?
       email: row.email,
       status: row.status,
       dayId: row.day_id,
-      userId: row.user_id,
+      userId: null,
       createdAt: toIsoOrNull(row.created_at),
     })),
     payments: (paymentsResult.data ?? []).map((row: any) => ({
       id: row.id,
-      userId: row.user_id,
+      userId: row.user_name ?? row.email ?? null,
       amount: Number(row.amount ?? 0),
       status: row.status,
       paymentMethod: row.payment_method,
