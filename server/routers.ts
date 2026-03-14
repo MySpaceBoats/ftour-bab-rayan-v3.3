@@ -5854,6 +5854,7 @@ export const appRouter = router({
   volunteerProfile: volunteerProfileRouter,
   inventory: inventoryRouter,
   ftour: ftourRouter,
+  feedback: feedbackRouter,
   audit: auditRouter,
 });
 
