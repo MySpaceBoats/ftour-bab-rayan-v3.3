@@ -80,6 +80,63 @@ const scannerProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
+const SITE_FEEDBACK_TYPES = [
+  "volunteer",
+  "event",
+  "restaurant",
+  "product",
+  "general",
+] as const;
+const SITE_FEEDBACK_SOURCES = [
+  "home",
+  "volunteer",
+  "event",
+  "restaurant",
+  "product",
+] as const;
+
+const feedbackRouter = router({
+  submitSiteFeedback: publicProcedure
+    .input(
+      z.object({
+        name: z.string().min(2),
+        email: z.string().email(),
+        phone: z.string().optional(),
+        feedbackType: z.enum(SITE_FEEDBACK_TYPES),
+        rating: z.number().min(1).max(5),
+        comment: z.string().min(3),
+        pageSource: z.enum(SITE_FEEDBACK_SOURCES),
+        consent: z.literal(true),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = createSupabaseAdmin(ctx.env);
+      const { data, error } = await db
+        .from("feedbacks")
+        .insert({
+          name: input.name,
+          email: input.email,
+          phone: input.phone ?? null,
+          feedback_type: input.feedbackType,
+          rating: input.rating,
+          comment: input.comment,
+          page_source: input.pageSource,
+          status: "new",
+        })
+        .select("id")
+        .single();
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      }
+
+      return { success: true, id: data?.id ?? null };
+    }),
+});
+
 // ============================================
 // GROUP VOLUNTEER FILE PROCESSING HELPERS
 // ============================================
@@ -8988,6 +9045,7 @@ export const appRouter = router({
   ramadan: ramadanRouter,
   terroirModule: terroirModuleRouter,
   inventory: inventoryRouter,
+  feedback: feedbackRouter,
   election: electionRouter,
 });
 
