@@ -197,7 +197,6 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
       <tr>
         <td style="padding: 20px;">
           <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 18px;">📅 Votre jour de participation</h3>
-          <p style="margin: 5px 0; color: #374151;"><strong>Jour :</strong> ${safeDayNumber} du Ramadan</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${safeDayDate}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Lieu :</strong> ${data.location}</p>
           ${slotsHtml ? `<p style="margin: 10px 0 5px 0; color: #374151;"><strong>Créneaux choisis :</strong></p><ul style="margin: 0; padding-left: 20px; color: #374151;">${slotsHtml}</ul>` : ''}
@@ -249,7 +248,7 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
   `;
 
   return {
-    subject: `✅ Confirmation inscription - Ftour Bab Rayan Jour ${safeDayNumber}`,
+    subject: '✅ Confirmation inscription - Ftour Bab Rayan (12eme édition)',
     html: baseTemplate(content, 'linear-gradient(135deg, #5E5B34 0%, #4A4829 100%)'),
   };
 }
