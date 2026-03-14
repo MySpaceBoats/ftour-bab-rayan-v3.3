@@ -11,6 +11,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Download, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const CURRENT_YEAR = new Date().getFullYear();
 
 export default function Galerie() {
   const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
@@ -21,6 +24,28 @@ export default function Galerie() {
   const [photosList, setPhotosList] = useState<any[]>([]);
 
   const albums = trpc.public.galleryAlbums.useQuery();
+
+  // Only year-based albums (edition-YYYY), sorted newest first
+  const yearAlbums = useMemo(() => {
+    return (albums.data ?? [])
+      .filter((a: any) => /^edition-\d{4}$/.test(a.slug))
+      .sort((a: any, b: any) => {
+        const yearA = parseInt(a.slug.replace("edition-", ""));
+        const yearB = parseInt(b.slug.replace("edition-", ""));
+        return yearB - yearA;
+      });
+  }, [albums.data]);
+
+  // Auto-select the most recent accessible (non-future) year
+  useEffect(() => {
+    if (yearAlbums.length > 0 && !selectedAlbum) {
+      const firstAccessible = yearAlbums.find((a: any) => {
+        const year = parseInt(a.slug.replace("edition-", ""));
+        return year <= CURRENT_YEAR;
+      });
+      if (firstAccessible) setSelectedAlbum(firstAccessible.slug);
+    }
+  }, [yearAlbums, selectedAlbum]);
 
   const photos = trpc.public.galleryPhotos.useQuery(
     {
@@ -44,6 +69,11 @@ export default function Galerie() {
     );
   }, [photos.data?.items, page, selectedAlbum]);
 
+  useEffect(() => {
+    setPage(1);
+    setPhotosList([]);
+  }, [tag, sort, selectedAlbum]);
+
   const list = photosList;
   const total = photos.data?.total ?? 0;
   const canLoadMore = list.length < total;
@@ -57,12 +87,15 @@ export default function Galerie() {
     return Array.from(tags).sort();
   }, [list]);
 
-  useEffect(() => {
+  const handleTabSelect = (slug: string, year: number) => {
+    if (year > CURRENT_YEAR) return;
+    setSelectedAlbum(slug);
+    setTag("all");
+    setSort("recent");
     setPage(1);
-  }, [tag, sort, selectedAlbum]);
-  const selectedAlbumItem = (albums.data ?? []).find(
-    (a: any) => a.slug === selectedAlbum
-  );
+    setPhotosList([]);
+    setLightboxIndex(null);
+  };
 
   const downloadCurrentPhoto = () => {
     if (!current?.image_original_url) return;
@@ -77,83 +110,57 @@ export default function Galerie() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-1 container py-10 space-y-8">
+      <main className="flex-1 container py-10 space-y-6">
         <h1 className="text-3xl font-bold">Galerie</h1>
 
-        {!selectedAlbum ? (
-          <section className="space-y-4">
-            <h2 className="text-xl font-semibold">Albums</h2>
+        {/* Year Tabs */}
+        <div className="border-b overflow-x-auto">
+          <div className="flex min-w-max">
             {albums.isLoading ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-44 rounded-xl bg-muted animate-pulse"
-                  />
+              <div className="flex gap-2 pb-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="h-10 w-16 rounded bg-muted animate-pulse" />
                 ))}
               </div>
-            ) : (albums.data ?? []).length === 0 ? (
-              <p className="text-muted-foreground">
-                Aucun album public disponible.
-              </p>
+            ) : yearAlbums.length === 0 ? (
+              <p className="text-muted-foreground pb-3">Aucun album disponible.</p>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {(albums.data ?? []).map((album: any) => (
+              yearAlbums.map((album: any) => {
+                const year = parseInt(album.slug.replace("edition-", ""));
+                const isFuture = year > CURRENT_YEAR;
+                const isSelected = album.slug === selectedAlbum;
+
+                return (
                   <button
                     key={album.id}
-                    onClick={() => {
-                      setSelectedAlbum(album.slug);
-                      setTag("all");
-                      setSort("recent");
-                      setPage(1);
-                    }}
-                    className="overflow-hidden rounded-xl bg-muted text-left border hover:border-primary transition-colors"
-                  >
-                    {album.cover_image ? (
-                      <img
-                        src={album.cover_image}
-                        alt={album.title}
-                        className="h-40 w-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="h-40 w-full bg-muted-foreground/10" />
+                    onClick={() => handleTabSelect(album.slug, year)}
+                    disabled={isFuture}
+                    title={isFuture ? `Édition ${year} — à venir` : undefined}
+                    className={cn(
+                      "px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
+                      isSelected
+                        ? "border-primary text-primary"
+                        : isFuture
+                        ? "border-transparent text-muted-foreground/35 cursor-not-allowed"
+                        : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50"
                     )}
-                    <div className="p-3">
-                      <p className="font-medium line-clamp-1">{album.title}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {album.photo_count} photo
-                        {album.photo_count > 1 ? "s" : ""}
-                      </p>
-                    </div>
+                  >
+                    {year}
+                    {!isFuture && album.photo_count > 0 && (
+                      <span className="ml-1.5 text-xs text-muted-foreground">
+                        ({album.photo_count})
+                      </span>
+                    )}
                   </button>
-                ))}
-              </div>
+                );
+              })
             )}
-          </section>
-        ) : (
-          <section className="space-y-4">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div>
-                <h2 className="text-xl font-semibold">
-                  {selectedAlbumItem?.title ?? "Album"}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  {total} photo{total > 1 ? "s" : ""}
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSelectedAlbum(null);
-                  setLightboxIndex(null);
-                  setPage(1);
-                }}
-              >
-                Retour aux albums
-              </Button>
-            </div>
+          </div>
+        </div>
 
+        {/* Photos for selected year */}
+        {selectedAlbum && (
+          <section className="space-y-4">
             <div className="grid sm:grid-cols-2 gap-3">
               <Select value={tag} onValueChange={setTag}>
                 <SelectTrigger>
@@ -192,7 +199,7 @@ export default function Galerie() {
               </div>
             ) : list.length === 0 ? (
               <p className="text-muted-foreground py-10">
-                Aucune photo publiée dans cet album.
+                Aucune photo publiée pour cette édition.
               </p>
             ) : (
               <>
@@ -219,7 +226,7 @@ export default function Galerie() {
                 {canLoadMore && (
                   <div className="flex justify-center pt-2">
                     <Button onClick={() => setPage(prev => prev + 1)}>
-                      Load more
+                      Charger plus
                     </Button>
                   </div>
                 )}
@@ -281,7 +288,7 @@ export default function Galerie() {
             }}
           >
             <Download className="h-4 w-4" />
-            Download
+            Télécharger
           </button>
         </div>
       )}

@@ -8,7 +8,7 @@ export const GALLERY_ALLOWED_MIME_TYPES = [
 export const GALLERY_MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024;
 export const GALLERY_MAX_BATCH = 20;
 export const GALLERY_EDITION_YEAR_START = 2015;
-export const GALLERY_EDITION_YEAR_END = 2026;
+export const GALLERY_EDITION_YEAR_END = 2030;
 
 export type GalleryStatus = "draft" | "published" | "rejected";
 
