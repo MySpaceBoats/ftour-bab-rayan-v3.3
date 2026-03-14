@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,12 +41,22 @@ export default function AdminGalerieNouveau() {
     const all = albums ?? [];
     const editions = all
       .filter((a: any) => YEAR_RE.test(String(a.name ?? "") + " " + String(a.slug ?? "")))
-      .sort((a: any, b: any) => (b.sortOrder ?? 0) - (a.sortOrder ?? 0));
+      .sort((a: any, b: any) => (b.sort_order ?? 0) - (a.sort_order ?? 0));
     const general = all.filter(
       (a: any) => !YEAR_RE.test(String(a.name ?? "") + " " + String(a.slug ?? ""))
     );
     return { editionAlbums: editions, generalAlbums: general };
   }, [albums]);
+
+  // Auto-select the current year's edition album when albums are loaded
+  useEffect(() => {
+    if (albumId !== "none") return;
+    const currentYear = new Date().getFullYear();
+    const currentYearAlbum = (albums ?? []).find(
+      (a: any) => a.slug === `edition-${currentYear}`
+    );
+    if (currentYearAlbum?.id) setAlbumId(currentYearAlbum.id);
+  }, [albums, albumId]);
   const upload = trpc.gallery.uploadPhotos.useMutation({
     onSuccess: () => toast.success("Upload terminé"),
     onError: e => toast.error(e.message),

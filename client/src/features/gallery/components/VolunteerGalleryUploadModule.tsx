@@ -84,7 +84,7 @@ export default function VolunteerGalleryUploadModule() {
       if (data.needsValidation) {
         toast.success("Photos reçues ! Vérifiez votre email pour les publier.");
       } else {
-        toast.success("Vos photos sont enregistrées et publiées.");
+        toast.success("Vos photos sont reçues et en attente de validation par l'équipe.");
       }
     },
     onError: e => toast.error(e.message),
@@ -227,9 +227,9 @@ export default function VolunteerGalleryUploadModule() {
           <div className="flex items-center gap-3">
             <CheckCircle className="h-8 w-8 text-green-600 shrink-0" />
             <div>
-              <h3 className="font-semibold text-green-900">Photos publiées avec succès !</h3>
+              <h3 className="font-semibold text-green-900">Photos reçues, merci !</h3>
               <p className="text-sm text-green-700 mt-1">
-                Vos photos sont maintenant visibles dans la galerie.
+                Vos photos sont en attente de validation par l'équipe. Elles apparaîtront dans la galerie une fois approuvées.
               </p>
             </div>
           </div>

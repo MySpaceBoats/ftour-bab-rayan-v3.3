@@ -36,14 +36,20 @@ export default function Galerie() {
       });
   }, [albums.data]);
 
-  // Auto-select the most recent accessible (non-future) year
+  // Auto-select the most recent accessible (non-future) year that has photos,
+  // falling back to the most recent accessible year if none have photos yet.
   useEffect(() => {
     if (yearAlbums.length > 0 && !selectedAlbum) {
-      const firstAccessible = yearAlbums.find((a: any) => {
+      const withPhotos = yearAlbums.find((a: any) => {
+        const year = parseInt(a.slug.replace("edition-", ""));
+        return year <= CURRENT_YEAR && a.photo_count > 0;
+      });
+      const fallback = yearAlbums.find((a: any) => {
         const year = parseInt(a.slug.replace("edition-", ""));
         return year <= CURRENT_YEAR;
       });
-      if (firstAccessible) setSelectedAlbum(firstAccessible.slug);
+      const target = withPhotos ?? fallback;
+      if (target) setSelectedAlbum(target.slug);
     }
   }, [yearAlbums, selectedAlbum]);
 
