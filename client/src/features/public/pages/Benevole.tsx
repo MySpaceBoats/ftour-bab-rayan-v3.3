@@ -49,6 +49,8 @@ import {
   Download,
   Info,
   TriangleAlert,
+  Moon,
+  Star,
 } from "lucide-react";
 import { useI18n } from "@/i18n";
 
@@ -122,7 +124,7 @@ export default function Benevole() {
 
   const [registrationSuccess, setRegistrationSuccess] = useState<{
     qrToken: string;
-    dayInfo: { dayNumber: number; date: string };
+    dayInfo: { dayNumber: number; date: string; rawDate: string };
   } | null>(null);
   const [groupSuccess, setGroupSuccess] = useState(false);
 
@@ -135,6 +137,7 @@ export default function Benevole() {
         qrToken: data.qrToken,
         dayInfo: {
           dayNumber: selectedDay?.dayNumber || 0,
+          rawDate: selectedDay?.date || "",
           date: selectedDay?.date
             ? new Date(selectedDay.date).toLocaleDateString(dateLocale, {
                 weekday: "long",
@@ -771,8 +774,25 @@ export default function Benevole() {
             ? "An email has been sent to the administration with the attached file."
             : "Un email de décision vous sera envoyé après traitement de votre demande.",
     };
+    const selectedGroupDay = days?.find(
+      d => d.id.toString() === formData.dayId
+    );
+    const isGroupLaylatAlQadr = selectedGroupDay?.date?.startsWith("2026-03-16");
     return (
-      <div className="min-h-screen flex flex-col">
+      <div
+        className="min-h-screen flex flex-col"
+        style={
+          isGroupLaylatAlQadr
+            ? {
+                backgroundImage: `url('/benevole-bg.jpg')`,
+                backgroundSize: "cover",
+                backgroundPosition: "center top",
+                backgroundColor: "#2A1A08",
+                backgroundAttachment: "fixed",
+              }
+            : undefined
+        }
+      >
         <Navbar />
         <main className="flex-1 py-16">
           <div className="container max-w-2xl">
@@ -798,6 +818,65 @@ export default function Benevole() {
                     {groupSuccessTexts.emailSent}
                   </p>
                 </div>
+
+                {/* Laylat al Qadr notice for group registrations on March 16 */}
+                {isGroupLaylatAlQadr && (
+                  <div className="relative overflow-hidden rounded-xl border border-amber-500/60 text-left shadow-lg">
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        backgroundImage: `url('/benevole-bg.jpg')`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        opacity: 0.18,
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-br from-amber-950/90 via-amber-900/85 to-yellow-900/90" />
+                    <div className="relative z-10 p-5 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Moon className="h-5 w-5 text-amber-300 fill-amber-300/30" />
+                        <Star className="h-3 w-3 text-amber-200 fill-amber-200/50" />
+                        <h3 className="font-bold text-amber-100 text-base">
+                          {lang === "ar"
+                            ? "يوم مبارك — ليلة القدر"
+                            : lang === "en"
+                              ? "A Blessed Day — Laylat al Qadr"
+                              : "Jour béni — Laylat al Qadr"}
+                        </h3>
+                        <Star className="h-2 w-2 text-amber-200 fill-amber-200/50 ml-auto" />
+                      </div>
+                      <p className="text-amber-200 text-sm leading-relaxed">
+                        {lang === "ar"
+                          ? "يوم الاثنين 16 مارس 2026 هو يوم استثنائي — إنه ليلة القدر. خدمتكم في هذا اليوم المبارك تحمل أجرًا مضاعفًا."
+                          : lang === "en"
+                            ? "Monday March 16, 2026 is an exceptional day — Laylat al Qadr (The Night of Power). Volunteering on this blessed night carries an immeasurable reward."
+                            : "Le lundi 16 mars 2026 est un jour exceptionnel — Laylat al Qadr (la Nuit du Destin). Votre bénévolat en cette nuit bénie porte une récompense inestimable."}
+                      </p>
+                      <div className="border-t border-amber-600/40 pt-3 flex items-start gap-3">
+                        <span className="text-2xl leading-none mt-0.5">
+                          👘
+                        </span>
+                        <div>
+                          <p className="font-semibold text-amber-100 text-sm">
+                            {lang === "ar"
+                              ? "كود اللباس الخاص لهذا اليوم"
+                              : lang === "en"
+                                ? "Special Dress Code for this Day"
+                                : "Dress code spécial pour cette journée"}
+                          </p>
+                          <p className="text-amber-200 text-sm mt-0.5">
+                            {lang === "ar"
+                              ? "اللباس التقليدي المغربي — إلزامي لجميع المتطوعين"
+                              : lang === "en"
+                                ? "Traditional Moroccan attire — mandatory for all volunteers"
+                                : "Tenue traditionnelle marocaine — obligatoire pour tous les bénévoles"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="pt-4">
                   <Button
                     onClick={() => {
@@ -821,8 +900,24 @@ export default function Benevole() {
   }
 
   if (registrationSuccess) {
+    const isLaylatAlQadr = registrationSuccess.dayInfo.rawDate.startsWith(
+      "2026-03-16"
+    );
     return (
-      <div className="min-h-screen flex flex-col">
+      <div
+        className="min-h-screen flex flex-col"
+        style={
+          isLaylatAlQadr
+            ? {
+                backgroundImage: `url('/benevole-bg.jpg')`,
+                backgroundSize: "cover",
+                backgroundPosition: "center top",
+                backgroundColor: "#2A1A08",
+                backgroundAttachment: "fixed",
+              }
+            : undefined
+        }
+      >
         <Dialog open={showWhatsAppPopup} onOpenChange={setShowWhatsAppPopup}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader className="text-center sm:text-center">
@@ -908,6 +1003,64 @@ export default function Benevole() {
                   </p>
                 </div>
 
+                {/* Laylat al Qadr special notice — shown only for March 16 */}
+                {isLaylatAlQadr && (
+                  <div className="relative overflow-hidden rounded-xl border border-amber-500/60 text-left shadow-lg">
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        backgroundImage: `url('/benevole-bg.jpg')`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        opacity: 0.18,
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-br from-amber-950/90 via-amber-900/85 to-yellow-900/90" />
+                    <div className="relative z-10 p-5 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Moon className="h-5 w-5 text-amber-300 fill-amber-300/30" />
+                        <Star className="h-3 w-3 text-amber-200 fill-amber-200/50" />
+                        <h3 className="font-bold text-amber-100 text-base">
+                          {lang === "ar"
+                            ? "يوم مبارك — ليلة القدر"
+                            : lang === "en"
+                              ? "A Blessed Day — Laylat al Qadr"
+                              : "Jour béni — Laylat al Qadr"}
+                        </h3>
+                        <Star className="h-2 w-2 text-amber-200 fill-amber-200/50 ml-auto" />
+                      </div>
+                      <p className="text-amber-200 text-sm leading-relaxed">
+                        {lang === "ar"
+                          ? "يوم الاثنين 16 مارس 2026 هو يوم استثنائي — إنه ليلة القدر. خدمتك في هذا اليوم المبارك تحمل أجرًا مضاعفًا."
+                          : lang === "en"
+                            ? "Monday March 16, 2026 is an exceptional day — Laylat al Qadr (The Night of Power). Volunteering on this blessed night carries an immeasurable reward."
+                            : "Le lundi 16 mars 2026 est un jour exceptionnel — Laylat al Qadr (la Nuit du Destin). Votre bénévolat en cette nuit bénie porte une récompense inestimable."}
+                      </p>
+                      <div className="border-t border-amber-600/40 pt-3 flex items-start gap-3">
+                        <span className="text-2xl leading-none mt-0.5">
+                          👘
+                        </span>
+                        <div>
+                          <p className="font-semibold text-amber-100 text-sm">
+                            {lang === "ar"
+                              ? "كود اللباس الخاص لهذا اليوم"
+                              : lang === "en"
+                                ? "Special Dress Code for this Day"
+                                : "Dress code spécial pour cette journée"}
+                          </p>
+                          <p className="text-amber-200 text-sm mt-0.5">
+                            {lang === "ar"
+                              ? "اللباس التقليدي المغربي — إلزامي لجميع المتطوعين"
+                              : lang === "en"
+                                ? "Traditional Moroccan attire — mandatory for all volunteers"
+                                : "Tenue traditionnelle marocaine — obligatoire pour tous les bénévoles"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {renderConsignesBox("text-left")}
 
                 <div className="pt-4">
@@ -949,17 +1102,37 @@ export default function Benevole() {
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="py-16 bg-gradient-to-b from-primary/5 to-background">
-          <div className="container">
+        <section
+          className="py-20 relative overflow-hidden"
+          style={{
+            backgroundImage: `url('/benevole-bg.jpg')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center top",
+            backgroundColor: "#2A1A08",
+          }}
+        >
+          {/* Dark overlay for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/80" />
+          {/* Subtle top crescent decoration */}
+          <div className="absolute top-4 right-6 opacity-30 pointer-events-none">
+            <Moon className="h-10 w-10 text-amber-300" />
+          </div>
+          <div className="absolute top-6 right-16 opacity-20 pointer-events-none">
+            <Star className="h-4 w-4 text-amber-200" />
+          </div>
+          <div className="absolute top-8 right-10 opacity-15 pointer-events-none">
+            <Star className="h-2 w-2 text-amber-100" />
+          </div>
+          <div className="container relative z-10">
             <div className="max-w-3xl mx-auto text-center space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-300/40 text-amber-200 text-sm font-medium">
                 <Users className="h-4 w-4" />
                 {formTexts.joinUs}
               </div>
-              <h1 className="text-4xl md:text-5xl font-bold text-foreground">
+              <h1 className="text-4xl md:text-5xl font-bold text-white drop-shadow-lg">
                 {formTexts.becomeVolunteer}
               </h1>
-              <p className="text-lg text-muted-foreground">
+              <p className="text-lg text-amber-100/90 drop-shadow">
                 {formTexts.subtitle}
               </p>
             </div>
@@ -989,6 +1162,31 @@ export default function Benevole() {
                     : "Le nombre de participants est limité durant l'évènement pour des raisons de sécurité mais également pour que ton expérience en tant que bénévole et le service assuré pour les bénéficiaires soit excellent."}
               </p>
             </div>
+            {/* Laylat al Qadr notice — visible when March 16 is selected or as a permanent reminder */}
+            {selectedDay?.date?.startsWith("2026-03-16") && (
+              <div className="relative overflow-hidden rounded-lg border border-amber-500/60 shadow">
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-950 via-amber-900 to-yellow-900 opacity-95" />
+                <div className="relative z-10 flex items-start gap-3 p-4">
+                  <Moon className="h-5 w-5 text-amber-300 fill-amber-300/30 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-bold text-amber-100">
+                      {lang === "ar"
+                        ? "ليلة القدر — لباس تقليدي مغربي إلزامي"
+                        : lang === "en"
+                          ? "Laylat al Qadr — Traditional Moroccan attire mandatory"
+                          : "Laylat al Qadr — Tenue traditionnelle marocaine obligatoire"}
+                    </p>
+                    <p className="text-xs text-amber-200 mt-0.5">
+                      {lang === "ar"
+                        ? "يوم الاثنين 16 مارس 2026 هو يوم ليلة القدر. الزي التقليدي المغربي إلزامي لجميع المتطوعين في هذا اليوم."
+                        : lang === "en"
+                          ? "Monday March 16, 2026 is Laylat al Qadr. Traditional Moroccan dress is mandatory for all volunteers on this day."
+                          : "Le lundi 16 mars 2026 est Laylat al Qadr. La tenue traditionnelle marocaine est obligatoire pour tous les bénévoles ce jour-là."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             {renderConsignesBox()}
           </div>
         </section>
