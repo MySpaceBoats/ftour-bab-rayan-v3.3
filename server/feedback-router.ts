@@ -34,6 +34,54 @@ const SITE_FEEDBACK_SOURCES = [
 ] as const;
 const SITE_FEEDBACK_STATUSES = ["new", "processed"] as const;
 
+
+type RateLimitBucket = { count: number; resetAt: number };
+const feedbackRateLimit = new Map<string, RateLimitBucket>();
+const FEEDBACK_RATE_LIMIT_MAX = 10;
+const FEEDBACK_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+
+const logger = {
+  error(payload: Record<string, unknown>) {
+    console.error(payload);
+  },
+};
+
+function getClientIp(ctx: any): string {
+  const forwarded = ctx?.req?.headers?.["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.length > 0) {
+    return forwarded.split(",")[0]!.trim();
+  }
+  return ctx?.req?.ip || "unknown";
+}
+
+function enforceFeedbackRateLimit(ip: string) {
+  const now = Date.now();
+  const bucket = feedbackRateLimit.get(ip);
+  if (!bucket || bucket.resetAt <= now) {
+    feedbackRateLimit.set(ip, {
+      count: 1,
+      resetAt: now + FEEDBACK_RATE_LIMIT_WINDOW_MS,
+    });
+    return;
+  }
+
+  if (bucket.count >= FEEDBACK_RATE_LIMIT_MAX) {
+    throw new TRPCError({
+      code: "TOO_MANY_REQUESTS",
+      message: "Trop de requêtes. Réessayez dans une heure.",
+    });
+  }
+
+  bucket.count += 1;
+  feedbackRateLimit.set(ip, bucket);
+}
+
+
+function isTokenExpired(expiresAt?: string | null): boolean {
+  if (!expiresAt) return false;
+  return new Date(expiresAt).getTime() < Date.now();
+}
+
 function generateToken(): string {
   return randomBytes(32).toString("hex");
 }
@@ -62,8 +110,14 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 // ROUTER
 // ============================================
 
+const publicFeedbackProcedure = publicProcedure.use(({ ctx, next }) => {
+  const ip = getClientIp(ctx);
+  enforceFeedbackRateLimit(ip);
+  return next();
+});
+
 export const feedbackRouter = router({
-  submitSiteFeedback: publicProcedure
+  submitSiteFeedback: publicFeedbackProcedure
     .input(
       z.object({
         name: z.string().min(2),
@@ -74,9 +128,15 @@ export const feedbackRouter = router({
         comment: z.string().min(3),
         pageSource: z.enum(SITE_FEEDBACK_SOURCES),
         consent: z.literal(true),
+        website: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
+      if (input.website) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Requête invalide" });
+      }
+
+
       const db = getSupabaseAdminClient();
       if (!db)
         throw new TRPCError({
@@ -85,16 +145,20 @@ export const feedbackRouter = router({
         });
 
       const { data, error } = await db
-        .from("feedbacks")
+        .from("feedback_responses")
         .insert({
-          name: input.name,
+          form_id: null,
+          campaign_id: null,
+          recipient_id: null,
           email: input.email,
-          phone: input.phone ?? null,
+          user_email: input.email,
+          user_name: input.name,
+          is_anonymous: false,
           feedback_type: input.feedbackType,
           rating: input.rating,
-          comment: input.comment,
-          page_source: input.pageSource,
-          status: "new",
+          message: input.comment,
+          source: "site",
+          moderation: "pending",
         })
         .select("id")
         .single();
@@ -137,11 +201,16 @@ export const feedbackRouter = router({
           message: "DB non configurée",
         });
 
-      let query = db.from("feedbacks").select("*", { count: "exact" });
+      let query = db
+        .from("feedback_responses")
+        .select("*", { count: "exact" })
+        .eq("source", "site");
 
       if (input?.feedbackType)
         query = query.eq("feedback_type", input.feedbackType);
-      if (input?.status) query = query.eq("status", input.status);
+      if (input?.status) {
+        query = query.eq("moderation", input.status === "processed" ? "processed" : "pending");
+      }
       if (input?.minRating) query = query.gte("rating", input.minRating);
       if (input?.fromDate) query = query.gte("created_at", input.fromDate);
       if (input?.toDate)
@@ -155,12 +224,20 @@ export const feedbackRouter = router({
           code: "INTERNAL_SERVER_ERROR",
           message: error.message,
         });
-      return { items: data ?? [], total: count ?? 0 };
+
+      const items = (data ?? []).map((row: any) => ({
+        ...row,
+        comment: row.message,
+        status: row.moderation === "processed" ? "processed" : "new",
+      }));
+
+      return { items, total: count ?? 0 };
     }),
 
   updateSiteFeedbackStatus: adminProcedure
     .input(z.object({ id: z.number(), status: z.enum(SITE_FEEDBACK_STATUSES) }))
     .mutation(async ({ input }) => {
+
       const db = getSupabaseAdminClient();
       if (!db)
         throw new TRPCError({
@@ -169,8 +246,8 @@ export const feedbackRouter = router({
         });
 
       const { error } = await db
-        .from("feedbacks")
-        .update({ status: input.status })
+        .from("feedback_responses")
+        .update({ moderation: input.status === "processed" ? "processed" : "pending" })
         .eq("id", input.id);
       if (error)
         throw new TRPCError({
@@ -183,6 +260,7 @@ export const feedbackRouter = router({
   deleteSiteFeedback: adminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
+
       const db = getSupabaseAdminClient();
       if (!db)
         throw new TRPCError({
@@ -190,7 +268,7 @@ export const feedbackRouter = router({
           message: "DB non configurée",
         });
 
-      const { error } = await db.from("feedbacks").delete().eq("id", input.id);
+      const { error } = await db.from("feedback_responses").delete().eq("id", input.id);
       if (error)
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -303,6 +381,7 @@ export const feedbackRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+
       const db = getSupabaseAdminClient();
       if (!db)
         throw new TRPCError({
@@ -313,6 +392,7 @@ export const feedbackRouter = router({
       const { data, error } = await db
         .from("feedback_forms")
         .insert({
+          name: input.title,
           title: input.title,
           description: input.description ?? null,
           target_type: input.targetType,
@@ -350,8 +430,14 @@ export const feedbackRouter = router({
         .eq("token", input.token)
         .single();
 
-      if (error || !data)
+      if (error || !data) {
+        logger.error({ module: "feedback", action: "validateToken.invalid", error: error?.message ?? "Token invalide" });
         throw new TRPCError({ code: "NOT_FOUND", message: "Token invalide" });
+      }
+      if (isTokenExpired(data.expires_at)) {
+        logger.error({ module: "feedback", action: "validateToken.expired", error: "Token expiré" });
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Lien expiré" });
+      }
       if (data.submitted_at)
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -376,7 +462,7 @@ export const feedbackRouter = router({
   // SOUMISSION FEEDBACK (Public)
   // ============================================
 
-  submitFeedback: publicProcedure
+  submitFeedback: publicFeedbackProcedure
     .input(
       z.object({
         formId: z.number(),
@@ -387,6 +473,7 @@ export const feedbackRouter = router({
           .enum(["public_page", "email_campaign"])
           .default("public_page"),
         token: z.string().optional(), // token email campaign
+        website: z.string().optional(),
         answers: z.array(
           z.object({
             questionId: z.number(),
@@ -398,6 +485,10 @@ export const feedbackRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+      if (input.website) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Requête invalide" });
+      }
+
       const db = getSupabaseAdminClient();
       if (!db)
         throw new TRPCError({
@@ -407,6 +498,7 @@ export const feedbackRouter = router({
 
       // If token provided, validate it
       let recipientId: number | null = null;
+      let recipientCampaignId: number | null = null;
       let resolvedEmail = input.userEmail ?? null;
 
       if (input.token) {
@@ -422,6 +514,13 @@ export const feedbackRouter = router({
             message: "Token invalide",
           });
         }
+        if (isTokenExpired(recipient.expires_at)) {
+          logger.error({ module: "feedback", action: "submitFeedback.token_expired", error: "Token expiré" });
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Lien expiré",
+          });
+        }
         if (recipient.submitted_at) {
           throw new TRPCError({
             code: "BAD_REQUEST",
@@ -430,67 +529,41 @@ export const feedbackRouter = router({
         }
 
         recipientId = recipient.id;
+        recipientCampaignId = recipient.campaign_id ?? null;
         if (!input.isAnonymous) {
           resolvedEmail = resolvedEmail ?? recipient.email;
         }
       }
 
-      // Insert response
-      const { data: response, error: responseError } = await db
-        .from("feedback_responses")
-        .insert({
-          form_id: input.formId,
-          user_id: null,
-          user_email: input.isAnonymous ? null : resolvedEmail,
-          user_name: input.isAnonymous ? null : (input.userName ?? null),
-          is_anonymous: input.isAnonymous,
-          source: input.source,
-          moderation: "pending",
-        })
-        .select()
-        .single();
+      const ratingAnswer = input.answers.find(a => a.answerRating !== undefined);
+      const textAnswer = input.answers.find(a => a.answerText);
 
-      if (responseError || !response) {
+      const { data: responseId, error: submitError } = await db.rpc(
+        "submit_feedback_atomic",
+        {
+          p_form_id: input.formId,
+          p_campaign_id: recipientCampaignId,
+          p_recipient_id: recipientId,
+          p_email: input.isAnonymous ? null : resolvedEmail,
+          p_feedback_type: null,
+          p_rating: ratingAnswer?.answerRating ?? null,
+          p_message: textAnswer?.answerText ?? null,
+          p_source: input.source,
+          p_user_name: input.userName ?? null,
+          p_is_anonymous: input.isAnonymous,
+          p_answers: input.answers as any,
+          p_token: input.token ?? null,
+        }
+      );
+
+      if (submitError || !responseId) {
+        logger.error({ module: "feedback", action: "submitFeedback.rpc", error: submitError?.message ?? "submit_feedback_atomic failed" });
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: responseError?.message ?? "Erreur lors de la sauvegarde",
+          message: submitError?.message ?? "Erreur lors de la sauvegarde",
         });
       }
 
-      // Insert answers
-      if (input.answers.length > 0) {
-        const answersToInsert = input.answers.map(a => ({
-          response_id: response.id,
-          question_id: a.questionId,
-          answer_text: a.answerText ?? null,
-          answer_rating: a.answerRating ?? null,
-          answer_choice: a.answerChoice ?? null,
-        }));
-
-        const { error: answersError } = await db
-          .from("feedback_answers")
-          .insert(answersToInsert);
-        if (answersError) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: answersError.message,
-          });
-        }
-      }
-
-      // Mark recipient as submitted
-      if (recipientId) {
-        await db
-          .from("feedback_campaign_recipients")
-          .update({ submitted_at: new Date().toISOString() })
-          .eq("id", recipientId);
-      }
-
-      // Send admin notification
-      const ratingAnswer = input.answers.find(
-        a => a.answerRating !== undefined
-      );
-      const textAnswer = input.answers.find(a => a.answerText);
       await sendAdminNotification({
         source: input.source,
         isAnonymous: input.isAnonymous,
@@ -499,7 +572,7 @@ export const feedbackRouter = router({
         comment: textAnswer?.answerText,
       });
 
-      return { success: true, responseId: response.id };
+      return { success: true, responseId };
     }),
 
   // ============================================
@@ -623,6 +696,8 @@ export const feedbackRouter = router({
         query = query.lte("created_at", input.toDate + "T23:59:59Z");
       if (input?.source) query = query.eq("source", input.source);
       if (input?.moderation) query = query.eq("moderation", input.moderation);
+      if (input?.minRating) query = query.gte("rating", input.minRating);
+      if (input?.maxRating) query = query.lte("rating", input.maxRating);
 
       const limit = input?.limit ?? 50;
       const offset = input?.offset ?? 0;
@@ -648,6 +723,7 @@ export const feedbackRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+
       const db = getSupabaseAdminClient();
       if (!db)
         throw new TRPCError({
@@ -709,6 +785,7 @@ export const feedbackRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+
       const db = getSupabaseAdminClient();
       if (!db)
         throw new TRPCError({
@@ -719,6 +796,7 @@ export const feedbackRouter = router({
       const { data, error } = await db
         .from("feedback_campaigns")
         .insert({
+          name: input.title,
           title: input.title,
           target_group: input.targetGroup,
           form_id: input.formId,
@@ -740,6 +818,7 @@ export const feedbackRouter = router({
   sendCampaign: adminProcedure
     .input(z.object({ campaignId: z.number() }))
     .mutation(async ({ input }) => {
+
       const db = getSupabaseAdminClient();
       if (!db)
         throw new TRPCError({
@@ -790,8 +869,10 @@ export const feedbackRouter = router({
             email,
             user_id: userId ?? null,
             token,
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           });
         if (recipError) {
+          logger.error({ module: "feedback", action: "sendCampaign.insertRecipient", error: recipError.message });
           failed++;
           continue;
         }
@@ -810,7 +891,10 @@ export const feedbackRouter = router({
         });
 
         if (result.success) sent++;
-        else failed++;
+        else {
+          logger.error({ module: "feedback", action: "sendCampaign.sendEmail", error: result.error ?? "email failed" });
+          failed++;
+        }
       }
 
       // Update campaign status
@@ -833,22 +917,24 @@ export const feedbackRouter = router({
         });
 
       const { data, error } = await db
-        .from("feedback_campaign_recipients")
+        .from("feedback_campaign_stats")
         .select("*")
-        .eq("campaign_id", input.campaignId);
+        .eq("campaign_id", input.campaignId)
+        .maybeSingle();
 
-      if (error)
+      if (error) {
+        logger.error({ module: "feedback", action: "getCampaignStats", error: error.message });
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: error.message,
         });
+      }
 
-      const recipients = data ?? [];
       return {
-        total: recipients.length,
-        opened: recipients.filter((r: any) => r.opened_at).length,
-        submitted: recipients.filter((r: any) => r.submitted_at).length,
-        recipients,
+        total: Number((data as any)?.emails_sent ?? 0),
+        opened: Number((data as any)?.emails_opened ?? 0),
+        submitted: Number((data as any)?.feedback_received ?? 0),
+        averageRating: Number((data as any)?.average_rating ?? 0),
       };
     }),
 });
@@ -867,6 +953,8 @@ async function collectTargetEmails(
     targetGroup === "volunteers" || targetGroup === "all";
   const includeRestaurant =
     targetGroup === "restaurant_clients" || targetGroup === "all";
+  const includeFoodstore =
+    targetGroup === "foodstore_clients" || targetGroup === "all";
 
   if (includeVolunteers) {
     const { data } = await db
@@ -889,6 +977,20 @@ async function collectTargetEmails(
 
     for (const r of data ?? []) {
       if (r.email) emails.push({ email: r.email, userId: null });
+    }
+  }
+
+  if (includeFoodstore) {
+    const { data } = await db
+      .from("orders")
+      .select("customer_email")
+      .not("customer_email", "is", null)
+      .in("status", ["confirmed", "paid", "delivered"]);
+
+    for (const order of data ?? []) {
+      if (order.customer_email) {
+        emails.push({ email: order.customer_email, userId: null });
+      }
     }
   }
 
@@ -994,3 +1096,11 @@ function generateCampaignEmailHtml(opts: {
     </div>
   `;
 }
+
+
+export const __feedbackTestUtils = {
+  getClientIp,
+  enforceFeedbackRateLimit,
+  _feedbackRateLimitMap: feedbackRateLimit,
+  isTokenExpired,
+};
