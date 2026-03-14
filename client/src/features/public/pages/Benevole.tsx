@@ -1447,21 +1447,6 @@ export default function Benevole() {
                             </div>
                           </div>
 
-                          <div className="space-y-2">
-                            <Label htmlFor="comment">Commentaire</Label>
-                            <Textarea
-                              id="comment"
-                              value={formData.comment}
-                              onChange={e =>
-                                setFormData(prev => ({
-                                  ...prev,
-                                  comment: e.target.value,
-                                }))
-                              }
-                              placeholder="Ajoutez un commentaire (optionnel)"
-                              rows={3}
-                            />
-                          </div>
                         </>
                       ) : (
                         <>

@@ -53,8 +53,19 @@ export default function AdminGroupesBenevoles() {
   const utils = trpc.useUtils();
 
   const reviewMutation = trpc.volunteers.reviewGroupRequest.useMutation({
-    onSuccess: () => {
-      toast.success("Demande mise à jour");
+    onSuccess: (data, variables) => {
+      if (variables.action === "validate") {
+        const summary = data.groupProcessingSummary;
+        if (summary) {
+          toast.success(
+            `Validé — ${summary.successCount} participant(s) inscrit(s) sur ${summary.totalRows} (${summary.failCount} ignoré(s))`
+          );
+        } else {
+          toast.success("Demande validée");
+        }
+      } else {
+        toast.success("Demande refusée");
+      }
       utils.volunteers.listGroupRequests.invalidate();
     },
     onError: error => toast.error(error.message),
@@ -202,6 +213,7 @@ export default function AdminGroupesBenevoles() {
                   <TableHead>Jour / Date</TableHead>
                   <TableHead>Effectif</TableHead>
                   <TableHead>Statut</TableHead>
+                  <TableHead>Soumis le</TableHead>
                   <TableHead>Pièce jointe</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -237,17 +249,33 @@ export default function AdminGroupesBenevoles() {
                     </TableCell>
                     <TableCell>{row.estimatedSize || "-"}</TableCell>
                     <TableCell>
-                      <Badge
-                        variant={
-                          row.status === "validated"
-                            ? "default"
-                            : row.status === "refused"
-                              ? "destructive"
-                              : "secondary"
-                        }
-                      >
-                        {row.status}
-                      </Badge>
+                      <div className="space-y-1">
+                        <Badge
+                          variant={
+                            row.status === "validated"
+                              ? "default"
+                              : row.status === "refused"
+                                ? "destructive"
+                                : "secondary"
+                          }
+                        >
+                          {row.status}
+                        </Badge>
+                        {row.status === "refused" && row.rejectionReason && (
+                          <div className="text-xs text-muted-foreground max-w-[160px] truncate" title={row.rejectionReason}>
+                            {row.rejectionReason}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {row.createdAt
+                        ? new Date(row.createdAt).toLocaleDateString("fr-FR", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : "-"}
                     </TableCell>
                     <TableCell>
                       <Button
