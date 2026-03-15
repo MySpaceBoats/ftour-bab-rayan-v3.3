@@ -56,6 +56,9 @@ import { useI18n } from "@/i18n";
 
 const RAMADAN_TIMEZONE = "Africa/Casablanca";
 
+// Set to true to hide the registration form and show the "inscriptions complètes" message
+const REGISTRATIONS_CLOSED = true;
+
 const getDateStringInRamadanTimezone = (date: Date): string => {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: RAMADAN_TIMEZONE,
@@ -1306,6 +1309,24 @@ export default function Benevole() {
 
               {/* Registration Form */}
               <div className="lg:col-span-2">
+                {REGISTRATIONS_CLOSED ? (
+                  <Card className="border-none shadow-lg">
+                    <CardContent className="p-10 flex flex-col items-center justify-center text-center space-y-4">
+                      <div className="text-5xl">🙏</div>
+                      <h2 className="text-2xl font-bold text-amber-800">
+                        Merci pour votre incroyable mobilisation
+                      </h2>
+                      <p className="text-lg font-semibold text-gray-700">
+                        Les inscriptions pour demain sont complètes.
+                      </p>
+                      <div className="text-4xl">💛</div>
+                      <p className="text-lg font-semibold text-gray-700">
+                        À l'année prochaine !
+                      </p>
+
+                    </CardContent>
+                  </Card>
+                ) : (
                 <Card className="border-none shadow-lg">
                   <CardHeader>
                     <CardTitle>{formTexts.formTitle}</CardTitle>
@@ -1781,6 +1802,7 @@ export default function Benevole() {
                     </form>
                   </CardContent>
                 </Card>
+                )}
               </div>
             </div>
           </div>
