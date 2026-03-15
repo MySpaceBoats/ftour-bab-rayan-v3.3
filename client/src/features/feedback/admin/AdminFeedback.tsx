@@ -468,6 +468,10 @@ export default function AdminFeedback() {
         <div className="flex justify-center py-10">
           <Loader2 className="w-8 h-8 animate-spin text-[#C9B97A]" />
         </div>
+      ) : statsQuery.isError ? (
+        <div className="mb-8 p-4 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm">
+          Impossible de charger les statistiques : {(statsQuery.error as any)?.message ?? "Erreur inconnue"}. Vérifiez que les migrations de base de données ont bien été appliquées.
+        </div>
       ) : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
@@ -771,6 +775,10 @@ export default function AdminFeedback() {
             <div className="flex justify-center py-10">
               <Loader2 className="w-6 h-6 animate-spin text-[#C9B97A]" />
             </div>
+          ) : listQuery.isError ? (
+            <p className="text-center text-rose-400/70 py-10">
+              Erreur lors du chargement des feedbacks : {(listQuery.error as any)?.message ?? "Erreur inconnue"}
+            </p>
           ) : responses.length === 0 ? (
             <p className="text-center text-[#C9B97A]/50 py-10">
               Aucun feedback pour ces filtres
@@ -992,6 +1000,10 @@ export default function AdminFeedback() {
             <div className="flex justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-[#C9B97A]" />
             </div>
+          ) : siteListQuery.isError ? (
+            <p className="text-center text-rose-400/70 py-8">
+              Erreur lors du chargement : {(siteListQuery.error as any)?.message ?? "Erreur inconnue"}
+            </p>
           ) : (siteListQuery.data?.items ?? []).length === 0 ? (
             <p className="text-center text-[#C9B97A]/50 py-8">
               Aucun feedback site
