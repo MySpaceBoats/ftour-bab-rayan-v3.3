@@ -54,8 +54,8 @@ export default function Terroir() {
     isError,
     error,
     refetch,
-  } = trpc.terroirModule.listProducts.useQuery();
-  const createOrderMutation = trpc.terroirModule.createOrder.useMutation();
+  } = trpc.catalogProducts.listPublic.useQuery({ productType: "terroir" });
+  const createOrderMutation = trpc.terroirModule.createCatalogOrder.useMutation();
 
   const terroirCart = getCartByType("terroir");
   const terroirCartCount = getCartCountByType("terroir");
@@ -157,8 +157,8 @@ export default function Terroir() {
         customerEmail: formData.customerEmail || undefined,
         notes: formData.notes || undefined,
         items: terroirCart.map(item => ({
-          productId: item.productId,
-          variantId: item.variantId,
+          catalogProductId: item.productId,
+          name: item.name,
           quantity: item.quantity,
           unitPrice: item.price,
         })),
@@ -230,20 +230,16 @@ export default function Terroir() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {products.map(product => {
-                    const configuredVariants =
-                      product.terroir_product_variants?.filter(
-                        (v: any) => v.is_active !== false
-                      ) || [];
-                    const variants =
-                      configuredVariants.length > 0
-                        ? configuredVariants
-                        : [getFallbackVariant(product)].filter(Boolean);
+                  {products.map((product: any) => {
+                    const variant = getFallbackVariant({
+                      ...product,
+                      image_url: product.image,
+                    });
                     return (
                       <TerroirProductCard
                         key={product.id}
-                        product={product}
-                        variants={variants as any[]}
+                        product={{ ...product, image_url: product.image }}
+                        variants={variant ? [variant] : []}
                         onAddToCart={handleAddToCart}
                       />
                     );
