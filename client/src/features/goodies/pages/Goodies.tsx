@@ -31,10 +31,10 @@ import {
   X,
   CheckCircle,
   Loader2,
-  Package,
   RefreshCw,
   AlertTriangle,
 } from "lucide-react";
+import ProductImageCarousel from "@/components/ProductImageCarousel";
 import { useI18n } from "@/i18n";
 import { useCart } from "@/contexts/CartContext";
 import GoodiesConfirmation from "@/components/GoodiesConfirmation";
@@ -261,19 +261,14 @@ export default function Goodies() {
                       key={goodie.id}
                       className="overflow-hidden group bg-[#4A4829] border-[#F2E9D3]/10 hover:border-[#F2E9D3]/30 transition-all"
                     >
-                      {/* Image */}
+                      {/* Image / Carousel */}
                       <div className="aspect-square bg-[#5E5B34] relative overflow-hidden">
-                        {(goodie as any).image ? (
-                          <img
-                            src={(goodie as any).image}
-                            alt={goodie.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Package className="h-16 w-16 text-[#F2E9D3]/30" />
-                          </div>
-                        )}
+                        <ProductImageCarousel
+                          image={(goodie as any).image}
+                          images={(goodie as any).images}
+                          alt={goodie.name}
+                          showFitToggle={true}
+                        />
                       </div>
 
                       {/* Content */}
