@@ -1323,9 +1323,7 @@ export default function Benevole() {
                       <p className="text-lg font-semibold text-gray-700">
                         À l'année prochaine !
                       </p>
-                      <p className="text-base text-amber-600 italic font-medium mt-2">
-                        Ambiance Ramadanesque
-                      </p>
+
                     </CardContent>
                   </Card>
                 ) : (
