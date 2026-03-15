@@ -138,7 +138,19 @@ export default function AdminGalerie() {
           </CardContent>
         </Card>
 
+        {query.isError && (
+          <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+            Erreur lors du chargement des photos : {query.error?.message}
+          </div>
+        )}
+
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {query.isLoading && (
+            <p className="col-span-full text-sm text-muted-foreground">Chargement…</p>
+          )}
+          {!query.isLoading && !query.isError && query.data?.items?.length === 0 && (
+            <p className="col-span-full text-sm text-muted-foreground">Aucune photo trouvée.</p>
+          )}
           {query.data?.items?.map((item: any) => (
             <Card key={item.id}>
               <CardContent className="p-3 space-y-3">
