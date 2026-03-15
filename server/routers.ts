@@ -4862,6 +4862,7 @@ const terroirModuleRouter = router({
         customerPhone: z.string().min(8),
         customerEmail: z.string().email().optional(),
         notes: z.string().optional(),
+        paymentMethod: z.string().optional(),
         items: z
           .array(
             z.object({
@@ -4895,7 +4896,8 @@ const terroirModuleRouter = router({
             code: "NOT_FOUND",
             message: `Produit ${item.catalogProductId} introuvable`,
           });
-        if (product.stock < item.quantity)
+        // Only check stock if it is explicitly tracked (non-null)
+        if (product.stock !== null && product.stock !== undefined && product.stock < item.quantity)
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: `Stock insuffisant pour "${product.name}"`,
@@ -4926,6 +4928,7 @@ const terroirModuleRouter = router({
         total_amount: totalAmount,
         status: "created",
         payment_status: "pending",
+        payment_provider: input.paymentMethod ?? null,
         qr_token: qrToken,
         qr_status: "inactive",
         notes: input.notes,
@@ -4956,18 +4959,97 @@ const terroirModuleRouter = router({
         order = orderWithout;
       }
 
-      // Decrement stock for each product
+      // Decrement stock for each product (only if stock is tracked)
       for (const item of input.items) {
         const { data: product } = await supabase
           .from("products")
           .select("stock")
           .eq("id", item.catalogProductId)
           .single();
-        if (product) {
+        if (product && product.stock !== null && product.stock !== undefined) {
           await supabase
             .from("products")
             .update({ stock: Math.max(0, product.stock - item.quantity) })
             .eq("id", item.catalogProductId);
+        }
+      }
+
+      // Send confirmation email with QR code
+      if (input.customerEmail) {
+        try {
+          const baseUrl =
+            process.env.VITE_APP_URL || "https://ftourbabrayan.ma";
+          const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${baseUrl}/qr/terroir/${reference}`)}`;
+
+          const itemsHtml = input.items
+            .map(
+              item =>
+                `<tr>
+              <td style="padding:8px;border-bottom:1px solid #e5e7eb;">${item.name}</td>
+              <td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td>
+              <td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:right;">${item.unitPrice * item.quantity} MAD</td>
+            </tr>`
+            )
+            .join("");
+
+          const emailHtml = `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f5f5f5;">
+  <table role="presentation" style="width:100%;border-collapse:collapse;">
+    <tr><td align="center" style="padding:40px 0;">
+      <table role="presentation" style="width:600px;max-width:100%;border-collapse:collapse;background-color:#ffffff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+        <tr><td style="background:linear-gradient(135deg,#166534 0%,#15803d 100%);padding:30px;text-align:center;border-radius:8px 8px 0 0;">
+          <h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:bold;">Ftour <span style="color:#fbbf24;">Bab Rayan</span></h1>
+          <p style="color:rgba(255,255,255,0.9);margin:10px 0 0 0;font-size:14px;">Terroir Solidaire</p>
+        </td></tr>
+        <tr><td style="padding:40px 30px;">
+          <h2 style="color:#166534;margin:0 0 20px 0;font-size:24px;">Commande confirmée !</h2>
+          <p style="color:#374151;font-size:16px;line-height:1.6;">Bonjour <strong>${input.customerName}</strong>,</p>
+          <p style="color:#374151;font-size:16px;line-height:1.6;">Votre commande de produits terroir a bien été enregistrée.</p>
+          <div style="background-color:#f0fdf4;padding:15px;border-radius:8px;text-align:center;margin:20px 0;">
+            <p style="margin:0;color:#6b7280;font-size:14px;">Référence de commande</p>
+            <p style="margin:5px 0 0 0;color:#166534;font-size:24px;font-weight:bold;font-family:monospace;">${reference}</p>
+          </div>
+          <table role="presentation" style="width:100%;border-collapse:collapse;margin:20px 0;">
+            <thead><tr style="background-color:#f3f4f6;">
+              <th style="padding:10px;text-align:left;color:#374151;">Article</th>
+              <th style="padding:10px;text-align:center;color:#374151;">Qté</th>
+              <th style="padding:10px;text-align:right;color:#374151;">Prix</th>
+            </tr></thead>
+            <tbody>
+              ${itemsHtml}
+              <tr style="background-color:#f0fdf4;">
+                <td colspan="2" style="padding:15px;font-weight:bold;color:#166534;">Total</td>
+                <td style="padding:15px;text-align:right;font-weight:bold;color:#166534;font-size:18px;">${totalAmount} MAD</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="text-align:center;margin:30px 0;padding:20px;background-color:#ffffff;border:2px dashed #166534;border-radius:8px;">
+            <h3 style="color:#166534;margin:0 0 15px 0;font-size:18px;">Votre QR Code</h3>
+            <img src="${qrCodeUrl}" alt="QR Code" style="width:200px;height:200px;margin:10px 0;" />
+            <p style="color:#6b7280;font-size:14px;margin:10px 0 0 0;">Présentez ce QR code lors du retrait de votre commande</p>
+          </div>
+          <p style="color:#374151;font-size:16px;line-height:1.6;margin:20px 0 0 0;">Merci pour votre soutien !<br><strong>L'équipe Ftour Bab Rayan</strong></p>
+        </td></tr>
+        <tr><td style="background-color:#f8f9fa;padding:20px 30px;text-align:center;border-radius:0 0 8px 8px;border-top:1px solid #e5e7eb;">
+          <p style="margin:0 0 10px 0;font-size:14px;color:#6b7280;">Association Bab Rayan</p>
+          <p style="margin:0;font-size:12px;color:#9ca3af;">4 rue Bayt Lahm, quartier Palmier, Casablanca<br>Tél: +212 (0) 666-690534 | contact@ftourbabrayan.ma</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+          await sendEmail({
+            to: input.customerEmail,
+            subject: `✅ Confirmation commande terroir #${reference}`,
+            html: emailHtml,
+          });
+        } catch (emailError) {
+          console.error("[Terroir CatalogOrder] Email send failed:", emailError);
         }
       }
 
