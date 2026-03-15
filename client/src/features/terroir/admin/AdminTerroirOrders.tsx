@@ -138,6 +138,7 @@ export default function AdminTerroirOrders() {
                       <TableRow>
                         <TableHead>Référence</TableHead>
                         <TableHead>Client</TableHead>
+                        <TableHead>Articles</TableHead>
                         <TableHead>Montant</TableHead>
                         <TableHead>Statut</TableHead>
                         <TableHead>Date</TableHead>
@@ -151,6 +152,23 @@ export default function AdminTerroirOrders() {
                           <TableCell>
                             <div className="font-medium">{order.customer_name}</div>
                             <div className="text-xs text-muted-foreground">{order.customer_phone}</div>
+                          </TableCell>
+                          <TableCell>
+                            {order.catalog_items ? (
+                              <ul className="text-xs space-y-0.5">
+                                {(order.catalog_items as any[]).map((it: any, i: number) => (
+                                  <li key={i}>{it.name} × {it.quantity}</li>
+                                ))}
+                              </ul>
+                            ) : order.terroir_order_items?.length > 0 ? (
+                              <ul className="text-xs space-y-0.5">
+                                {order.terroir_order_items.map((it: any) => (
+                                  <li key={it.id}>{it.terroir_products?.name ?? `#${it.product_id}`} × {it.quantity}</li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="font-medium">{parseFloat(order.total_amount).toFixed(2)} DH</TableCell>
                           <TableCell>
