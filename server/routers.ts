@@ -29,7 +29,7 @@ import {
 } from "./supabase-auth";
 import * as supabaseServices from "./supabase-services";
 import * as reservationServices from "./reservation-services";
-import { getSupabaseAdminClient } from "./supabase";
+import { getSupabaseAdminClient, getCatalogItemsColumnExists } from "./supabase";
 import {
   DEFAULT_RAMADAN_TIMEZONE,
   getDateStringInTimeZone,
@@ -4917,21 +4917,27 @@ const terroirModuleRouter = router({
         totalPrice: it.quantity * it.unitPrice,
       }));
 
+      const hasCatalogItemsCol = await getCatalogItemsColumnExists();
+
+      const orderPayload: Record<string, unknown> = {
+        order_reference: reference,
+        customer_name: input.customerName,
+        customer_phone: input.customerPhone,
+        customer_email: input.customerEmail,
+        total_amount: totalAmount,
+        status: "created",
+        payment_status: "pending",
+        qr_token: qrToken,
+        qr_status: "inactive",
+        notes: input.notes,
+      };
+      if (hasCatalogItemsCol) {
+        orderPayload.catalog_items = catalogItems;
+      }
+
       const { data: order, error } = await supabase
         .from("terroir_orders")
-        .insert({
-          order_reference: reference,
-          customer_name: input.customerName,
-          customer_phone: input.customerPhone,
-          customer_email: input.customerEmail,
-          total_amount: totalAmount,
-          status: "created",
-          payment_status: "pending",
-          qr_token: qrToken,
-          qr_status: "inactive",
-          notes: input.notes,
-          catalog_items: catalogItems,
-        })
+        .insert(orderPayload)
         .select()
         .single();
       if (error)

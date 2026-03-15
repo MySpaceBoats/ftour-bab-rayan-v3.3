@@ -197,6 +197,48 @@ export async function ensurePastriesTable(): Promise<void> {
 }
 
 // ============================================
+// AUTO-MIGRATION: detect missing catalog_items column on terroir_orders
+// ============================================
+let _catalogItemsColumnExists: boolean | null = null;
+
+/** Returns true if terroir_orders.catalog_items column exists (cached). */
+export async function getCatalogItemsColumnExists(): Promise<boolean> {
+  if (_catalogItemsColumnExists !== null) return _catalogItemsColumnExists;
+
+  const client = getSupabaseAdminClient();
+  if (!client) {
+    _catalogItemsColumnExists = false;
+    return false;
+  }
+
+  try {
+    const { error } = await client
+      .from('terroir_orders')
+      .select('catalog_items')
+      .limit(1);
+
+    const isMissing = error && (
+      error.code === 'PGRST204' ||
+      /catalog_items/.test(error.message || '')
+    );
+
+    if (isMissing) {
+      console.warn(
+        '[Migration] terroir_orders.catalog_items column is missing. ' +
+        'Apply supabase/migrations/20260315110000_terroir_catalog_order_support.sql in Supabase SQL Editor.'
+      );
+      _catalogItemsColumnExists = false;
+    } else {
+      _catalogItemsColumnExists = true;
+    }
+  } catch {
+    _catalogItemsColumnExists = false;
+  }
+
+  return _catalogItemsColumnExists;
+}
+
+// ============================================
 // DATABASE TYPES (generated from schema)
 // ============================================
 export interface Database {
