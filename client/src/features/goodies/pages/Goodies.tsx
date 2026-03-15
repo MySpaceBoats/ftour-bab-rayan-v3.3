@@ -52,7 +52,7 @@ export default function Goodies() {
     isError,
     error,
     refetch,
-  } = trpc.goodies.list.useQuery();
+  } = trpc.catalogProducts.listPublic.useQuery({ productType: "goodies" });
   const {
     cart,
     cartCount,
@@ -102,25 +102,14 @@ export default function Goodies() {
   });
 
   const addToCart = (goodie: NonNullable<typeof goodies>[number]) => {
-    const variant = goodie.variants?.find(
-      (v: { id: number }) => v.id.toString() === selectedVariant
-    );
-    const price =
-      goodie.price +
-      (variant?.priceModifier ? Number(variant.priceModifier) : 0);
-
     addToCartContext({
       productType: "goodies",
       productId: goodie.id,
       goodieId: goodie.id,
-      variantId: variant?.id,
       name: goodie.name,
-      variant: variant
-        ? `${variant.size || ""} ${variant.color || ""}`.trim()
-        : undefined,
-      price,
+      price: Number(goodie.price),
       quantity: 1,
-      imageUrl: goodie.imageUrl || undefined,
+      imageUrl: (goodie as any).image || undefined,
     });
 
     setSelectedGoodie(null);
@@ -264,13 +253,7 @@ export default function Goodies() {
             ) : goodies && goodies.length > 0 ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {goodies.map(goodie => {
-                  const totalVariantStock = (goodie.variants || [])
-                    .filter((v: any) => v.isAvailable)
-                    .reduce((sum: number, v: any) => sum + (v.stock || 0), 0);
-                  const hasVariants = (goodie.variants?.length || 0) > 0;
-                  const availableStock = hasVariants
-                    ? totalVariantStock
-                    : (goodie.stock ?? 0);
+                  const availableStock = (goodie as any).stock ?? 0;
                   const isOutOfStock = availableStock <= 0;
 
                   return (
@@ -280,9 +263,9 @@ export default function Goodies() {
                     >
                       {/* Image */}
                       <div className="aspect-square bg-[#5E5B34] relative overflow-hidden">
-                        {goodie.imageUrl ? (
+                        {(goodie as any).image ? (
                           <img
-                            src={goodie.imageUrl}
+                            src={(goodie as any).image}
                             alt={goodie.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
@@ -308,7 +291,7 @@ export default function Goodies() {
 
                         <div className="flex items-center justify-between">
                           <span className="text-xl font-bold text-[#CDBB8A]">
-                            {goodie.price.toFixed(0)} DH
+                            {Number(goodie.price).toFixed(0)} DH
                           </span>
                           <span
                             className={`text-xs font-medium ${isOutOfStock ? "text-red-400" : "text-green-400"}`}
@@ -322,14 +305,7 @@ export default function Goodies() {
                             className="bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]"
                             disabled={isOutOfStock}
                             onClick={() => {
-                              if (
-                                goodie.variants &&
-                                goodie.variants.length > 0
-                              ) {
-                                setSelectedGoodie(goodie.id);
-                              } else {
-                                addToCart(goodie);
-                              }
+                              addToCart(goodie);
                             }}
                           >
                             <Plus className="h-4 w-4 mr-1" />
@@ -393,7 +369,7 @@ export default function Goodies() {
                   <SelectValue placeholder={t.goodies.selectOption} />
                 </SelectTrigger>
                 <SelectContent className="bg-[#4A4829] border-[#F2E9D3]/20">
-                  {currentGoodie.variants?.map(
+                  {(currentGoodie as any).variants?.map(
                     (variant: {
                       id: number;
                       size?: string;
