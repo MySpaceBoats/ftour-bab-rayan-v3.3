@@ -123,7 +123,9 @@ export default function Dons() {
                       <p>{t.donations.transferDetails}</p>
                       <div className="bg-white rounded p-3 space-y-1 font-mono text-xs">
                         <p><strong>{t.donations.bank}:</strong> Attijariwafa Bank</p>
-                        <p><strong>RIB:</strong> 007 780 0003 401 000 100 238 97</p>
+                        <p><strong>RIB:</strong> 007 780 0003164000301419 31</p>
+                        <p><strong>IBAN:</strong> MA64 007 780 0003164000301419 31</p>
+                        <p><strong>BIC/SWIFT:</strong> BCMAMAMC</p>
                         <p><strong>{t.donations.label}:</strong> DON-{donationSuccess.reference}</p>
                       </div>
                       <p className="text-xs">{t.donations.emailSent}</p>

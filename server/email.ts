@@ -523,8 +523,10 @@ export function generateDonationConfirmationEmail(data: DonationEmailData): { su
           <h3 style="color: #1e40af; margin: 0 0 15px 0; font-size: 18px;">🏦 Coordonnées bancaires</h3>
           <p style="margin: 5px 0; color: #374151;"><strong>Banque :</strong> Attijariwafa Bank</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Titulaire :</strong> Association Bab Rayan</p>
-          <p style="margin: 5px 0; color: #374151;"><strong>RIB :</strong> 007 780 0003 401 000 100 238 97</p>
-          <p style="margin: 5px 0; color: #374151;"><strong>IBAN :</strong> MA64 007 780 0003 401 000 100 238 97</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Domiciliation :</strong> CASA LONGCHAMP ANGLE BD GHANDI ET RUE- EL MENARA</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>RIB :</strong> 007 780 0003164000301419 31</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>IBAN :</strong> MA64 007 780 0003164000301419 31</p>
+          <p style="margin: 5px 0; color: #374151;"><strong>BIC/SWIFT :</strong> BCMAMAMC</p>
           <p style="margin: 15px 0 0 0; color: #6b7280; font-size: 14px;">
             <strong>Important :</strong> Mentionnez votre référence <strong>${data.donationId}</strong> dans le motif du virement.
           </p>
@@ -1505,7 +1507,7 @@ export function generateReservationConfirmationEmail(data: ReservationConfirmati
 
     <!-- RIB -->
     <div style="text-align: center; margin: 20px 0;">
-      <p style="margin: 0; color: #374151; font-size: 14px;"><strong>RIB :</strong> 007 780 0003 401 000 100 238 97<br/><strong>IBAN :</strong> MA64 007 780 0003 401 000 100 238 97</p>
+      <p style="margin: 0; color: #374151; font-size: 14px;"><strong>RIB :</strong> 007 780 0003164000301419 31<br/><strong>IBAN :</strong> MA64 007 780 0003164000301419 31<br/><strong>BIC/SWIFT :</strong> BCMAMAMC</p>
     </div>
 
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
@@ -1597,7 +1599,7 @@ export function generateParticulierReservationRequestEmail(data: ParticulierRese
 
     <!-- RIB -->
     <div style="text-align: center; margin: 20px 0;">
-      <p style="margin: 0; color: #374151; font-size: 14px;"><strong>RIB :</strong> 007 780 0003 401 000 100 238 97<br/><strong>IBAN :</strong> MA64 007 780 0003 401 000 100 238 97</p>
+      <p style="margin: 0; color: #374151; font-size: 14px;"><strong>RIB :</strong> 007 780 0003164000301419 31<br/><strong>IBAN :</strong> MA64 007 780 0003164000301419 31<br/><strong>BIC/SWIFT :</strong> BCMAMAMC</p>
     </div>
 
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
@@ -1696,7 +1698,7 @@ export function generateParticulierReservationConfirmedEmail(data: ParticulierRe
 
     <!-- RIB -->
     <div style="text-align: center; margin: 20px 0;">
-      <p style="margin: 0; color: #374151; font-size: 14px;"><strong>RIB :</strong> 007 780 0003 401 000 100 238 97<br/><strong>IBAN :</strong> MA64 007 780 0003 401 000 100 238 97</p>
+      <p style="margin: 0; color: #374151; font-size: 14px;"><strong>RIB :</strong> 007 780 0003164000301419 31<br/><strong>IBAN :</strong> MA64 007 780 0003164000301419 31<br/><strong>BIC/SWIFT :</strong> BCMAMAMC</p>
     </div>
 
     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
