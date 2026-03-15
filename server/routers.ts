@@ -6724,7 +6724,7 @@ const qrRouter = router({
 
     const baseUrl = process.env.VITE_APP_URL || "https://ftourbabrayan.ma";
 
-    const [goodiesRes, pastriesRes, terroirRes] = await Promise.all([
+    const [goodiesRes, pastriesRes, terroirRes, unifiedProductsRes] = await Promise.all([
       supabase
         .from("goodies")
         .select("id, name, image_url, price, category, is_active")
@@ -6739,6 +6739,10 @@ const qrRouter = router({
           "id, name, image_url, category, is_active, terroir_product_variants(price_unit)"
         )
         .order("sort_order", { ascending: true }),
+      supabase
+        .from("products")
+        .select("id, name, image, price, product_type")
+        .order("created_at", { ascending: true }),
     ]);
 
     const makeQrDataUrl = (url: string) =>
@@ -6793,6 +6797,26 @@ const qrRouter = router({
         imageUrl: t.image_url,
         price: firstVariant?.price_unit ?? null,
         category: "terroir",
+        qrUrl: url,
+        qrDataUrl: await makeQrDataUrl(url),
+      });
+    }
+
+    // Include products from the unified catalog (products table)
+    const productTypeToUrlSegment: Record<string, string> = {
+      goodies: "goodie",
+      patisserie: "pastry",
+      terroir: "terroir",
+    };
+    for (const up of unifiedProductsRes.data || []) {
+      const urlSegment = productTypeToUrlSegment[up.product_type] || up.product_type;
+      const url = `${baseUrl}/fr/buy/${urlSegment}/${up.id}`;
+      items.push({
+        id: up.id,
+        name: up.name,
+        imageUrl: up.image ?? null,
+        price: up.price != null ? Number(up.price) : null,
+        category: up.product_type === "patisserie" ? "patisserie" : up.product_type,
         qrUrl: url,
         qrDataUrl: await makeQrDataUrl(url),
       });
