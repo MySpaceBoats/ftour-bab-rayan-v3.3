@@ -125,10 +125,10 @@ export default function AdminUnifiedCatalog() {
   const createTerroirProduct =
     trpc.terroirModule.adminCreateProduct.useMutation({
       onSuccess: async created => {
-        if (form.variantLabel) {
+        if (form.variantLabel || form.stock > 0 || form.price > 0) {
           await createTerroirVariant.mutateAsync({
             productId: created.id,
-            label: form.variantLabel,
+            label: form.variantLabel || "Standard",
             sku: form.variantSku,
             priceUnit: form.price,
             stockTotal: form.stock,
@@ -210,11 +210,11 @@ export default function AdminUnifiedCatalog() {
       name: item.name,
       description: item.description || "",
       category: item.category || "-",
-      imageUrl: item.imageUrl || "",
-      sortOrder: item.sortOrder || 0,
+      imageUrl: item.image_url || "",
+      sortOrder: item.sort_order || 0,
       price: item.price,
       stock: item.stock ?? 0,
-      isActive: item.isActive,
+      isActive: item.is_active,
       manageRoute: "/admin/goodies",
       rawId: item.id,
     }));
@@ -234,7 +234,7 @@ export default function AdminUnifiedCatalog() {
       rawId: item.id,
     }));
 
-    const terroir = (terroirQuery.data || []).map((item: any) => ({
+    const terroir = (terroirQuery.data || []).filter((item: any) => item.is_active !== false).map((item: any) => ({
       id: `terroir-${item.id}`,
       type: "terroir" as const,
       name: item.name,
@@ -417,6 +417,7 @@ export default function AdminUnifiedCatalog() {
       imageUrl: form.imageUrl,
       sortOrder: form.sortOrder,
       isActive: form.isActive,
+      stockTotal: form.stock,
     });
   };
 
