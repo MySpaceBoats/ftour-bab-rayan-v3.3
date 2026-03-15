@@ -1317,7 +1317,13 @@ export default function Benevole() {
                         Merci pour votre incroyable mobilisation
                       </h2>
                       <p className="text-lg font-semibold text-gray-700">
-                        Les inscriptions pour demain sont complètes.
+                        Les inscriptions sont dorénavant fermées.
+                      </p>
+                      <p className="text-base text-gray-600">
+                        L'aventure Ftour Bab Rayan de cette année touche à sa fin.
+                      </p>
+                      <p className="text-base text-gray-600">
+                        Nous vous redonnons rendez-vous inshallah l'année prochaine pour de nouvelles aventures incroyables.
                       </p>
 
 
