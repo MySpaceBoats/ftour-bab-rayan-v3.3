@@ -24,7 +24,7 @@ const adminBoutiqueProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 const productSelect =
-  "id,name,description,price,stock,image,category,tags,status,product_type,is_best_seller,is_ramadan_edition,created_at,updated_at";
+  "id,name,description,price,stock,image,images,category,tags,status,product_type,is_best_seller,is_ramadan_edition,created_at,updated_at";
 
 export const catalogProductsRouter = router({
   listPublic: publicProcedure
@@ -97,6 +97,7 @@ export const catalogProductsRouter = router({
         price: z.number().nonnegative(),
         stock: z.number().int().nonnegative(),
         image: z.string().optional(),
+        images: z.array(z.string()).optional(),
         category: z.string().optional(),
         tags: z.array(z.string()).default([]),
         status: z.enum(["active", "inactive"]).default("active"),
@@ -110,6 +111,9 @@ export const catalogProductsRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Supabase not configured" });
       }
 
+      const imagesArray = input.images ?? (input.image ? [input.image] : []);
+      const primaryImage = imagesArray[0] ?? input.image ?? null;
+
       const { data, error } = await supabase
         .from("products")
         .insert({
@@ -117,7 +121,8 @@ export const catalogProductsRouter = router({
           description: input.description ?? null,
           price: input.price,
           stock: input.stock,
-          image: input.image ?? null,
+          image: primaryImage,
+          images: imagesArray,
           category: input.category ?? null,
           tags: input.tags,
           status: input.status,
@@ -141,6 +146,7 @@ export const catalogProductsRouter = router({
         price: z.number().nonnegative().optional(),
         stock: z.number().int().nonnegative().optional(),
         image: z.string().optional(),
+        images: z.array(z.string()).optional(),
         category: z.string().optional(),
         tags: z.array(z.string()).optional(),
         status: z.enum(["active", "inactive"]).optional(),
@@ -159,7 +165,12 @@ export const catalogProductsRouter = router({
       if (input.description !== undefined) payload.description = input.description;
       if (input.price !== undefined) payload.price = input.price;
       if (input.stock !== undefined) payload.stock = input.stock;
-      if (input.image !== undefined) payload.image = input.image;
+      if (input.images !== undefined) {
+        payload.images = input.images;
+        payload.image = input.images[0] ?? null;
+      } else if (input.image !== undefined) {
+        payload.image = input.image;
+      }
       if (input.category !== undefined) payload.category = input.category;
       if (input.tags !== undefined) payload.tags = input.tags;
       if (input.status !== undefined) payload.status = input.status;
