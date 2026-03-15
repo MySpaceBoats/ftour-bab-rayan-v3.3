@@ -789,12 +789,11 @@ export async function createVolunteerGroupRequestSupabase(input: VolunteerGroupR
       status: 'pending',
       ...(input.validationToken ? { validation_token: input.validationToken } : {}),
     })
-    .select('*')
+    .select('*, ramadan_days(*)')
     .single();
 
   if (error) throw error;
-  const [hydrated] = await hydrateVolunteerGroupRequestDays([data]);
-  return hydrated;
+  return data;
 }
 
 export async function listVolunteerGroupRequestsSupabase() {
@@ -803,11 +802,11 @@ export async function listVolunteerGroupRequestsSupabase() {
 
   const { data, error } = await client
     .from('volunteer_group_requests')
-    .select('*')
+    .select('*, ramadan_days(*)')
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return hydrateVolunteerGroupRequestDays(data ?? []);
+  return data ?? [];
 }
 
 export async function getVolunteerGroupRequestByIdSupabase(id: number) {
@@ -816,14 +815,12 @@ export async function getVolunteerGroupRequestByIdSupabase(id: number) {
 
   const { data, error } = await client
     .from('volunteer_group_requests')
-    .select('*')
+    .select('*, ramadan_days(*)')
     .eq('id', id)
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) return null;
-  const [hydrated] = await hydrateVolunteerGroupRequestDays([data]);
-  return hydrated;
+  return data ?? null;
 }
 
 export async function getVolunteerGroupRequestByValidationToken(token: string) {
@@ -832,14 +829,12 @@ export async function getVolunteerGroupRequestByValidationToken(token: string) {
 
   const { data, error } = await client
     .from('volunteer_group_requests')
-    .select('*')
+    .select('*, ramadan_days(*)')
     .eq('validation_token', token)
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) return null;
-  const [hydrated] = await hydrateVolunteerGroupRequestDays([data]);
-  return hydrated;
+  return data ?? null;
 }
 
 export async function updateVolunteerGroupRequestSupabase(id: number, updates: {
@@ -874,12 +869,11 @@ export async function updateVolunteerGroupRequestSupabase(id: number, updates: {
     .from('volunteer_group_requests')
     .update(payload)
     .eq('id', id)
-    .select('*')
+    .select('*, ramadan_days(*)')
     .single();
 
   if (error) throw error;
-  const [hydrated] = await hydrateVolunteerGroupRequestDays([data]);
-  return hydrated;
+  return data;
 }
 
 export async function deleteVolunteerGroupRequestSupabase(id: number) {
@@ -1323,6 +1317,9 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
   const client = getSupabaseAdminClient();
   if (!client) return { volunteers: [], days: [] };
 
+  // Single query: fetch all volunteers across all days (no dayId filter).
+  // This lets us compute cross-day attendance frequency in one pass and avoids
+  // the previous double full-table-scan pattern (fetching all rows twice).
   const fetchAllVolunteers = async () => {
     const pageSize = 1000;
     let from = 0;
@@ -1330,18 +1327,13 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
 
     while (true) {
       const to = from + pageSize - 1;
-      let query = client
+      const { data, error } = await client
         .from('volunteers')
         .select('*, ramadan_days(*)')
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
         .range(from, to);
 
-      if (dayId) {
-        query = query.eq('day_id', dayId);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
 
       const rows = data ?? [];
@@ -1354,72 +1346,42 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
     return allRows;
   };
 
-  const fetchAllVolunteerAttendances = async () => {
-    const pageSize = 1000;
-    let from = 0;
-    const allRows: Array<{
-      email: string | null;
-      day_id: number | null;
-      status: string | null;
-      qr_status: string | null;
-      scanned_at: string | null;
-    }> = [];
+  const [allVolunteers, daysResult] = await Promise.all([
+    fetchAllVolunteers(),
+    client.from('ramadan_days').select('*').order('day_number', { ascending: true }),
+  ]);
 
-    while (true) {
-      const to = from + pageSize - 1;
-      const { data, error } = await client
-        .from('volunteers')
-        .select('email, day_id, status, qr_status, scanned_at')
-        .order('id', { ascending: true })
-        .range(from, to);
-
-      if (error) throw error;
-
-      const rows = data ?? [];
-      allRows.push(...rows);
-
-      if (rows.length < pageSize) break;
-      from += pageSize;
-    }
-
-    return allRows;
-  };
-
-  const volunteers = await fetchAllVolunteers();
-  const allVolunteerAttendances = await fetchAllVolunteerAttendances();
-
+  // Compute cross-day attendance frequency from the single result set
   const attendanceFrequencyByEmail = new Map<string, number>();
-  // Track (email, day_id) pairs to avoid double-counting duplicate rows on the same day
   const seenPairs = new Set<string>();
-  for (const attendanceRow of allVolunteerAttendances ?? []) {
-    const email = String(attendanceRow.email ?? '').toLowerCase().trim();
+  for (const v of allVolunteers) {
+    const email = String(v.email ?? '').toLowerCase().trim();
     if (!email) continue;
 
     const isPresent =
-      attendanceRow.status !== 'cancelled' &&
-      (attendanceRow.status === 'present' ||
-        attendanceRow.qr_status === 'validated' ||
-        !!attendanceRow.scanned_at);
+      v.status !== 'cancelled' &&
+      (v.status === 'present' ||
+        v.qr_status === 'validated' ||
+        !!(v.scanned_at ?? v.scannedAt));
 
     if (!isPresent) continue;
 
-    const pairKey = `${email}:${attendanceRow.day_id}`;
+    const pairKey = `${email}:${v.day_id ?? v.dayId}`;
     if (seenPairs.has(pairKey)) continue;
     seenPairs.add(pairKey);
 
-    attendanceFrequencyByEmail.set(
-      email,
-      (attendanceFrequencyByEmail.get(email) ?? 0) + 1
-    );
+    attendanceFrequencyByEmail.set(email, (attendanceFrequencyByEmail.get(email) ?? 0) + 1);
   }
 
-  const { data: days } = await client
-    .from('ramadan_days')
-    .select('*')
-    .order('day_number', { ascending: true });
+  // Filter by dayId in memory (avoids a second DB round-trip)
+  const volunteers = dayId
+    ? allVolunteers.filter(v => (v.day_id ?? v.dayId) === dayId)
+    : allVolunteers;
+
+  const days = daysResult.data ?? [];
 
   return {
-    volunteers: volunteers?.map(v => {
+    volunteers: volunteers.map(v => {
       const rd = v.ramadan_days;
       return {
         id: v.id,
@@ -1444,12 +1406,12 @@ export async function getVolunteersByDaySupabase(dayId?: number) {
           date: rd.date,
         } : null,
       };
-    }) || [],
-    days: days?.map(d => ({
+    }),
+    days: days.map(d => ({
       id: d.id,
       dayNumber: d.day_number ?? d.dayNumber,
       date: d.date,
-    })) || [],
+    })),
   };
 }
 
