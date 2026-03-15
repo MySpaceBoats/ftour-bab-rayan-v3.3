@@ -130,7 +130,7 @@ export default function AdminBenevoles() {
     { dayId: selectedDay === "all" ? undefined : parseInt(selectedDay) },
     {
       enabled: true,
-      refetchInterval: 5000, // Rafraîchir automatiquement toutes les 5 secondes
+      refetchInterval: 30000, // Rafraîchir automatiquement toutes les 30 secondes
       refetchIntervalInBackground: false, // Ne pas rafraîchir en arrière-plan
     }
   );
