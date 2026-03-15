@@ -156,6 +156,7 @@ export default function Terroir() {
         customerPhone: formData.customerPhone,
         customerEmail: formData.customerEmail || undefined,
         notes: formData.notes || undefined,
+        paymentMethod: formData.paymentMethod || undefined,
         items: terroirCart.map(item => ({
           catalogProductId: item.productId,
           name: item.name,
