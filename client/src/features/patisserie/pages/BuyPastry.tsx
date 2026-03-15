@@ -24,10 +24,10 @@ export default function BuyPastry() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: pastries, isLoading } = trpc.pastries.list.useQuery();
+  const { data: pastries, isLoading } = trpc.catalogProducts.listPublic.useQuery({ productType: "patisserie" });
   const pastry = pastries?.find((p: any) => p.id === pastryId) ?? null;
 
-  const createOrderMutation = trpc.pastryOrders.create.useMutation();
+  const createOrderMutation = trpc.pastryOrders.createCatalogOrder.useMutation();
 
   const handleSubmitOrder = async () => {
     if (!formData.fullName || !formData.phone || !pastry) {
@@ -42,9 +42,10 @@ export default function BuyPastry() {
         email: formData.email || undefined,
         items: [
           {
-            pastryId: pastry.id,
+            catalogProductId: pastry.id,
+            name: pastry.name,
             quantity,
-            price: pastry.price,
+            unitPrice: pastry.price,
           },
         ],
         totalAmount: pastry.price * quantity,
@@ -91,9 +92,9 @@ export default function BuyPastry() {
             {/* Product Details */}
             <div className="lg:col-span-1">
               <Card className="overflow-hidden sticky top-4">
-                {pastry.image_url && (
+                {pastry.image && (
                   <img
-                    src={pastry.image_url}
+                    src={pastry.image}
                     alt={pastry.name}
                     className="w-full h-64 object-cover"
                   />
