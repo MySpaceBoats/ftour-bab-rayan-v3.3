@@ -7790,6 +7790,122 @@ const terroirModuleRouter = router({
       return data;
     }),
 
+  // --- Public: create order from unified catalog (products table) ---
+  createCatalogOrder: publicProcedure
+    .input(
+      z.object({
+        customerName: z.string().min(2),
+        customerPhone: z.string().min(8),
+        customerEmail: z.string().email().optional(),
+        notes: z.string().optional(),
+        items: z
+          .array(
+            z.object({
+              catalogProductId: z.number(),
+              name: z.string(),
+              quantity: z.number().min(1),
+              unitPrice: z.number().min(0),
+            })
+          )
+          .min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      // Validate stock for each item
+      for (const item of input.items) {
+        const { data: product } = await supabase
+          .from("products")
+          .select("stock, name")
+          .eq("id", item.catalogProductId)
+          .eq("product_type", "terroir")
+          .single();
+        if (!product)
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: `Produit ${item.catalogProductId} introuvable`,
+          });
+        if (product.stock < item.quantity)
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Stock insuffisant pour "${product.name}"`,
+          });
+      }
+
+      const totalAmount = input.items.reduce(
+        (sum, it) => sum + it.quantity * it.unitPrice,
+        0
+      );
+      const reference = `TER-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      const qrToken = `ter-${Date.now()}-${Math.random().toString(36).substring(2, 14)}`;
+
+      const catalogItems = input.items.map(it => ({
+        catalogProductId: it.catalogProductId,
+        name: it.name,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        totalPrice: it.quantity * it.unitPrice,
+      }));
+
+      // Try inserting with catalog_items; fall back without it if the column is missing
+      let order: any = null;
+      const payloadWithItems = {
+        order_reference: reference,
+        customer_name: input.customerName,
+        customer_phone: input.customerPhone,
+        customer_email: input.customerEmail,
+        total_amount: totalAmount,
+        status: "created",
+        payment_status: "pending",
+        qr_token: qrToken,
+        qr_status: "inactive",
+        notes: input.notes,
+        catalog_items: catalogItems,
+      };
+
+      const { data: orderWithItems, error: errWithItems } = await supabase
+        .from("terroir_orders")
+        .insert(payloadWithItems)
+        .select()
+        .single();
+
+      if (!errWithItems) {
+        order = orderWithItems;
+      } else {
+        // Column may not exist yet — retry without catalog_items
+        const { catalog_items: _ci, ...payloadWithoutItems } = payloadWithItems;
+        const { data: orderWithout, error: errWithout } = await supabase
+          .from("terroir_orders")
+          .insert(payloadWithoutItems)
+          .select()
+          .single();
+        if (errWithout)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: errWithout.message,
+          });
+        order = orderWithout;
+      }
+
+      // Decrement stock for each product
+      for (const item of input.items) {
+        const { data: product } = await supabase
+          .from("products")
+          .select("stock")
+          .eq("id", item.catalogProductId)
+          .single();
+        if (product) {
+          await supabase
+            .from("products")
+            .update({ stock: Math.max(0, product.stock - item.quantity) })
+            .eq("id", item.catalogProductId);
+        }
+      }
+
+      return order;
+    }),
+
   adminDeleteProduct: adminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {

@@ -29,7 +29,7 @@ import {
 } from "./supabase-auth";
 import * as supabaseServices from "./supabase-services";
 import * as reservationServices from "./reservation-services";
-import { getSupabaseAdminClient, getCatalogItemsColumnExists } from "./supabase";
+import { getSupabaseAdminClient } from "./supabase";
 import {
   DEFAULT_RAMADAN_TIMEZONE,
   getDateStringInTimeZone,
@@ -4917,9 +4917,8 @@ const terroirModuleRouter = router({
         totalPrice: it.quantity * it.unitPrice,
       }));
 
-      const hasCatalogItemsCol = await getCatalogItemsColumnExists();
-
-      const orderPayload: Record<string, unknown> = {
+      // Try inserting with catalog_items; fall back without it if the column is missing
+      const payloadWithItems = {
         order_reference: reference,
         customer_name: input.customerName,
         customer_phone: input.customerPhone,
@@ -4930,21 +4929,32 @@ const terroirModuleRouter = router({
         qr_token: qrToken,
         qr_status: "inactive",
         notes: input.notes,
+        catalog_items: catalogItems,
       };
-      if (hasCatalogItemsCol) {
-        orderPayload.catalog_items = catalogItems;
-      }
 
-      const { data: order, error } = await supabase
+      let order: any = null;
+      const { data: orderWithItems, error: errWithItems } = await supabase
         .from("terroir_orders")
-        .insert(orderPayload)
+        .insert(payloadWithItems)
         .select()
         .single();
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
+
+      if (!errWithItems) {
+        order = orderWithItems;
+      } else {
+        const { catalog_items: _ci, ...payloadWithoutItems } = payloadWithItems;
+        const { data: orderWithout, error: errWithout } = await supabase
+          .from("terroir_orders")
+          .insert(payloadWithoutItems)
+          .select()
+          .single();
+        if (errWithout)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: errWithout.message,
+          });
+        order = orderWithout;
+      }
 
       // Decrement stock for each product
       for (const item of input.items) {
