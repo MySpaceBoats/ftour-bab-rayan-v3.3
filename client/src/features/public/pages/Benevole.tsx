@@ -1319,10 +1319,7 @@ export default function Benevole() {
                       <p className="text-lg font-semibold text-gray-700">
                         Les inscriptions pour demain sont complètes.
                       </p>
-                      <div className="text-4xl">💛</div>
-                      <p className="text-lg font-semibold text-gray-700">
-                        À l'année prochaine !
-                      </p>
+
 
                     </CardContent>
                   </Card>
