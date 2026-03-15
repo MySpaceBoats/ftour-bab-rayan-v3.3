@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -8,12 +8,17 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { ArrowLeft, Download, Filter, Loader2, Search, TrendingUp } from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  ArrowLeft, CheckCircle, CreditCard, Download, ExternalLink,
+  Filter, Loader2, Package, Search, TrendingUp, XCircle,
+} from 'lucide-react';
 
 type UnifiedModule = 'entrees' | 'goodies' | 'pastry' | 'terroir' | 'donation';
 
 type UnifiedRow = {
   id: string;
+  rawId: number | string;
   reference: string;
   module: UnifiedModule;
   customer: string;
@@ -34,6 +39,14 @@ type CashOrder = {
   created_at: string;
 };
 
+const MODULE_LINKS: Record<UnifiedModule, string> = {
+  goodies: '/admin/commandes',
+  pastry: '/admin/patisserie',
+  terroir: '/admin/terroir/orders',
+  donation: '/admin/dons',
+  entrees: '/admin/ops/payments',
+};
+
 export default function AdminUnifiedDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [moduleFilter, setModuleFilter] = useState('all');
@@ -48,6 +61,8 @@ export default function AdminUnifiedDashboard() {
   const canReadDonations = ['admin', 'super_admin', 'admin_dons'].includes(user?.role || '');
   const canReadEntrees = ['admin', 'super_admin', 'admin_ops', 'scanner', 'admin_boutique', 'admin_dons', 'admin_terroir'].includes(user?.role || '');
 
+  const utils = trpc.useUtils();
+
   const goodies = trpc.orders.listAll.useQuery(undefined, { enabled: canReadGoodies });
   const pastries = trpc.pastryOrders.list.useQuery({}, { enabled: canReadPastry });
   const terroir = trpc.terroirModule.adminListOrders.useQuery(undefined, { enabled: canReadTerroir });
@@ -56,7 +71,7 @@ export default function AdminUnifiedDashboard() {
   const [cashOrders, setCashOrders] = useState<CashOrder[]>([]);
   const [cashLoading, setCashLoading] = useState(false);
 
-  useEffect(() => {
+  const fetchEntrees = useCallback(() => {
     if (!canReadEntrees) return;
     setCashLoading(true);
     fetch('/api/orders')
@@ -69,9 +84,33 @@ export default function AdminUnifiedDashboard() {
       .finally(() => setCashLoading(false));
   }, [canReadEntrees]);
 
+  useEffect(() => { fetchEntrees(); }, [fetchEntrees]);
+
+  // Mutations
+  const goodiesMutation = trpc.orders.updateStatus.useMutation({
+    onSuccess: () => { toast.success('Statut mis à jour'); utils.orders.listAll.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const pastryMutation = trpc.pastryOrders.updateStatus.useMutation({
+    onSuccess: () => { toast.success('Statut mis à jour'); utils.pastryOrders.list.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const terroirMutation = trpc.terroirModule.adminUpdateOrderStatus.useMutation({
+    onSuccess: () => { toast.success('Statut mis à jour'); utils.terroirModule.adminListOrders.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const donationMutation = trpc.donations.updateStatus.useMutation({
+    onSuccess: () => { toast.success('Statut mis à jour'); utils.donations.listAll.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+
   const rows = useMemo<UnifiedRow[]>(() => {
     const mappedGoodies = (goodies.data || []).map((o: any) => ({
       id: `goodies-${o.id}`,
+      rawId: o.id,
       reference: o.orderReference,
       module: 'goodies' as const,
       customer: o.customerName || '—',
@@ -84,6 +123,7 @@ export default function AdminUnifiedDashboard() {
 
     const mappedPastries = (pastries.data || []).map((o: any) => ({
       id: `pastry-${o.id}`,
+      rawId: o.id,
       reference: o.reference,
       module: 'pastry' as const,
       customer: o.customer_name || '—',
@@ -96,6 +136,7 @@ export default function AdminUnifiedDashboard() {
 
     const mappedTerroir = (terroir.data || []).map((o: any) => ({
       id: `terroir-${o.id}`,
+      rawId: o.id,
       reference: o.order_reference,
       module: 'terroir' as const,
       customer: o.customer_name || '—',
@@ -108,6 +149,7 @@ export default function AdminUnifiedDashboard() {
 
     const mappedDonations = (donations.data || []).map((d: any) => ({
       id: `don-${d.id}`,
+      rawId: d.id,
       reference: d.donationReference,
       module: 'donation' as const,
       customer: d.isAnonymous ? 'Anonyme' : d.donorName,
@@ -120,6 +162,7 @@ export default function AdminUnifiedDashboard() {
 
     const mappedEntrees = cashOrders.map((o) => ({
       id: `entrees-${o.id}`,
+      rawId: o.id,
       reference: o.reference,
       module: 'entrees' as const,
       customer: `${o.customer_first_name || ''} ${o.customer_last_name || ''}`.trim() || '—',
@@ -178,6 +221,125 @@ export default function AdminUnifiedDashboard() {
     a.href = URL.createObjectURL(blob);
     a.download = `dashboard-unifie-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
+  };
+
+  const renderActions = (row: UnifiedRow) => {
+    const id = row.rawId as number;
+    const s = row.businessStatus;
+
+    return (
+      <div className="flex gap-1">
+        <Link href={MODULE_LINKS[row.module]}>
+          <Button size="sm" variant="ghost" title="Voir dans le module">
+            <ExternalLink className="h-4 w-4" />
+          </Button>
+        </Link>
+
+        {row.module === 'goodies' && (
+          <>
+            {s === 'reserved' && (
+              <Button size="sm" variant="outline" className="text-green-600" title="Marquer payé"
+                onClick={() => goodiesMutation.mutate({ orderId: id, status: 'paid' })}
+                disabled={goodiesMutation.isPending}>
+                <CreditCard className="h-4 w-4" />
+              </Button>
+            )}
+            {s === 'paid' && (
+              <Button size="sm" variant="outline" className="text-emerald-600" title="Marquer remis"
+                onClick={() => goodiesMutation.mutate({ orderId: id, status: 'delivered' })}
+                disabled={goodiesMutation.isPending}>
+                <CheckCircle className="h-4 w-4" />
+              </Button>
+            )}
+            {s !== 'cancelled' && s !== 'delivered' && (
+              <Button size="sm" variant="outline" className="text-red-600" title="Annuler"
+                onClick={() => goodiesMutation.mutate({ orderId: id, status: 'cancelled' })}
+                disabled={goodiesMutation.isPending}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            )}
+          </>
+        )}
+
+        {row.module === 'pastry' && (
+          <>
+            {s === 'reserved' && (
+              <Button size="sm" variant="outline" className="text-green-600" title="Marquer payé"
+                onClick={() => pastryMutation.mutate({ orderId: id, orderStatus: 'paid' as any, paymentStatus: 'confirmed' as any })}
+                disabled={pastryMutation.isPending}>
+                <CheckCircle className="h-4 w-4" />
+              </Button>
+            )}
+            {s === 'paid' && (
+              <Button size="sm" variant="outline" className="text-blue-600" title="Marquer remis"
+                onClick={() => pastryMutation.mutate({ orderId: id, orderStatus: 'handed' as any })}
+                disabled={pastryMutation.isPending}>
+                <Package className="h-4 w-4" />
+              </Button>
+            )}
+            {(s === 'reserved' || s === 'paid') && (
+              <Button size="sm" variant="outline" className="text-red-600" title="Annuler"
+                onClick={() => pastryMutation.mutate({ orderId: id, orderStatus: 'cancelled' as any, paymentStatus: 'cancelled' as any })}
+                disabled={pastryMutation.isPending}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            )}
+          </>
+        )}
+
+        {row.module === 'terroir' && (
+          <>
+            {s === 'created' && (
+              <Button size="sm" variant="outline" className="text-green-600" title="Marquer payé"
+                onClick={() => terroirMutation.mutate({ id, status: 'paid' })}
+                disabled={terroirMutation.isPending}>
+                <CreditCard className="h-4 w-4" />
+              </Button>
+            )}
+            {s === 'paid' && (
+              <Button size="sm" variant="outline" className="text-blue-600" title="Prête"
+                onClick={() => terroirMutation.mutate({ id, status: 'ready' })}
+                disabled={terroirMutation.isPending}>
+                <Package className="h-4 w-4" />
+              </Button>
+            )}
+            {s === 'ready' && (
+              <Button size="sm" variant="outline" className="text-emerald-600" title="Retirée"
+                onClick={() => terroirMutation.mutate({ id, status: 'picked_up' })}
+                disabled={terroirMutation.isPending}>
+                <CheckCircle className="h-4 w-4" />
+              </Button>
+            )}
+            {s !== 'cancelled' && s !== 'picked_up' && (
+              <Button size="sm" variant="outline" className="text-red-600" title="Annuler"
+                onClick={() => terroirMutation.mutate({ id, status: 'cancelled' })}
+                disabled={terroirMutation.isPending}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            )}
+          </>
+        )}
+
+        {row.module === 'donation' && (
+          <>
+            {s !== 'received' && s !== 'cancelled' && (
+              <Button size="sm" variant="outline" className="text-green-600" title="Marquer reçu"
+                onClick={() => donationMutation.mutate({ donationId: id, status: 'received' })}
+                disabled={donationMutation.isPending}>
+                <CheckCircle className="h-4 w-4" />
+              </Button>
+            )}
+            {s !== 'cancelled' && s !== 'received' && (
+              <Button size="sm" variant="outline" className="text-red-600" title="Annuler"
+                onClick={() => donationMutation.mutate({ donationId: id, status: 'cancelled' })}
+                disabled={donationMutation.isPending}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -278,6 +440,7 @@ export default function AdminUnifiedDashboard() {
                     <th className="px-4 py-3 text-left">Paiement</th>
                     <th className="px-4 py-3 text-left">Statut</th>
                     <th className="px-4 py-3 text-left">Date</th>
+                    <th className="px-4 py-3 text-left">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -290,6 +453,7 @@ export default function AdminUnifiedDashboard() {
                       <td className="px-4 py-3">{row.paymentStatus}</td>
                       <td className="px-4 py-3">{row.businessStatus}</td>
                       <td className="px-4 py-3 text-muted-foreground">{new Date(row.createdAt).toLocaleDateString('fr-FR')}</td>
+                      <td className="px-4 py-3">{renderActions(row)}</td>
                     </tr>
                   ))}
                 </tbody>
