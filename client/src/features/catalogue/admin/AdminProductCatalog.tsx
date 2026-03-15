@@ -43,6 +43,8 @@ export default function AdminProductCatalog({ productType }: { productType: Prod
     isRamadanEdition: false,
   });
 
+  const utils = trpc.useUtils();
+
   const productsQuery = trpc.catalogProducts.adminList.useQuery({ productType });
   const statsQuery = trpc.catalogProducts.adminStats.useQuery({ productType });
 
@@ -60,6 +62,7 @@ export default function AdminProductCatalog({ productType }: { productType: Prod
       resetForm();
       productsQuery.refetch();
       statsQuery.refetch();
+      utils.qr.catalogQRCodes.invalidate();
     },
     onError: (err: any) => toast.error(err.message),
   });

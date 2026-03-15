@@ -93,6 +93,8 @@ export default function AdminUnifiedCatalog() {
 
   const [form, setForm] = useState(BASE_FORM);
 
+  const utils = trpc.useUtils();
+
   const goodiesQuery = trpc.goodies.listAll.useQuery();
   const pastriesQuery = trpc.pastries.list.useQuery();
   const terroirQuery = trpc.terroirModule.adminListProducts.useQuery();
@@ -109,6 +111,7 @@ export default function AdminUnifiedCatalog() {
       toast.success("Produit goodies créé");
       postCreate();
       goodiesQuery.refetch();
+      utils.qr.catalogQRCodes.invalidate();
     },
     onError: (err: any) => toast.error(err.message),
   });
@@ -118,6 +121,7 @@ export default function AdminUnifiedCatalog() {
       toast.success("Produit pâtisserie créé");
       postCreate();
       pastriesQuery.refetch();
+      utils.qr.catalogQRCodes.invalidate();
     },
     onError: (err: any) => toast.error(err.message),
   });
@@ -138,6 +142,7 @@ export default function AdminUnifiedCatalog() {
         toast.success("Produit terroir créé");
         postCreate();
         terroirQuery.refetch();
+        utils.qr.catalogQRCodes.invalidate();
       },
       onError: (err: any) => toast.error(err.message),
     });
