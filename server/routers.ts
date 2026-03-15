@@ -6983,6 +6983,89 @@ const qrRouter = router({
 
     return items;
   }),
+
+  // --- Admin: Save a custom QR code ---
+  saveCustom: adminProcedure
+    .input(
+      z.object({
+        label: z.string().max(255),
+        url: z.string().url(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+
+      const { data, error } = await supabase
+        .from("custom_qr_codes")
+        .insert({
+          label: input.label,
+          url: input.url,
+          created_by: ctx.user?.id ?? null,
+        })
+        .select()
+        .single();
+
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+
+      return data;
+    }),
+
+  // --- Admin: List all saved custom QR codes ---
+  listCustom: adminProcedure.query(async () => {
+    const supabase = getSupabaseAdminClient();
+    if (!supabase)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Supabase non configuré",
+      });
+
+    const { data, error } = await supabase
+      .from("custom_qr_codes")
+      .select("id, label, url, created_at")
+      .order("created_at", { ascending: false });
+
+    if (error)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      });
+
+    return data ?? [];
+  }),
+
+  // --- Admin: Delete a saved custom QR code ---
+  deleteCustom: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const supabase = getSupabaseAdminClient();
+      if (!supabase)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Supabase non configuré",
+        });
+
+      const { error } = await supabase
+        .from("custom_qr_codes")
+        .delete()
+        .eq("id", input.id);
+
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+
+      return { success: true };
+    }),
 });
 
 // Ajouter les nouveaux routers à l'appRouter existant

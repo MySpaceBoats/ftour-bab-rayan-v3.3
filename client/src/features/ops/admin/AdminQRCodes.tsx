@@ -9,6 +9,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { trpc } from "@/lib/trpc";
 import {
   ArrowLeft,
@@ -21,6 +31,9 @@ import {
   Heart,
   Search,
   X,
+  Save,
+  Trash2,
+  Link as LinkIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import QRCode from "qrcode";
@@ -39,6 +52,14 @@ interface CatalogProduct {
   category: ProductCategory;
   qrUrl: string;
   qrDataUrl: string;
+}
+
+interface SavedCustomQR {
+  id: number;
+  label: string;
+  url: string;
+  created_at: string;
+  qrDataUrl?: string;
 }
 
 const CATEGORY_CONFIG: Record<
@@ -86,9 +107,16 @@ export default function AdminQRCodes() {
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [customUrl, setCustomUrl] = useState("");
+  const [customLabel, setCustomLabel] = useState("");
   const [customQrDataUrl, setCustomQrDataUrl] = useState("");
   const [customQrError, setCustomQrError] = useState("");
   const [isGeneratingCustomQr, setIsGeneratingCustomQr] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [selectedSavedQR, setSelectedSavedQR] = useState<SavedCustomQR | null>(
+    null
+  );
+
+  const utils = trpc.useUtils();
 
   // Fetch all QR codes from server (generated server-side)
   const { data: products, isLoading } = trpc.qr.catalogQRCodes.useQuery(
@@ -97,6 +125,24 @@ export default function AdminQRCodes() {
       staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     }
   );
+
+  // Fetch saved custom QR codes
+  const { data: savedQRs, isLoading: isLoadingSaved } =
+    trpc.qr.listCustom.useQuery();
+
+  const saveCustomMutation = trpc.qr.saveCustom.useMutation({
+    onSuccess: () => {
+      void utils.qr.listCustom.invalidate();
+      setCustomLabel("");
+    },
+  });
+
+  const deleteCustomMutation = trpc.qr.deleteCustom.useMutation({
+    onSuccess: () => {
+      void utils.qr.listCustom.invalidate();
+      setDeleteConfirmId(null);
+    },
+  });
 
   const items: CatalogProduct[] = (products || []).map((p: any) => ({
     ...p,
@@ -151,8 +197,30 @@ export default function AdminQRCodes() {
     }
   };
 
+  const clearCustomQr = () => {
+    setCustomQrDataUrl("");
+    setCustomUrl("");
+    setCustomLabel("");
+    setCustomQrError("");
+  };
+
+  const handleSaveCustomQr = () => {
+    const trimmedUrl = customUrl.trim();
+    const trimmedLabel = customLabel.trim();
+    if (!trimmedUrl || !customQrDataUrl) return;
+    saveCustomMutation.mutate({
+      label: trimmedLabel || trimmedUrl,
+      url: trimmedUrl,
+    });
+  };
+
   // Download QR code (fetch external image and save as blob)
-  const downloadQR = async (product: CatalogProduct) => {
+  const downloadQR = async (product: {
+    name: string;
+    category: string;
+    qrDataUrl: string;
+    qrUrl: string;
+  }) => {
     if (!product.qrDataUrl) return;
     try {
       const res = await fetch(product.qrDataUrl);
@@ -166,6 +234,42 @@ export default function AdminQRCodes() {
     } catch {
       // Fallback: open in new tab
       window.open(product.qrDataUrl, "_blank");
+    }
+  };
+
+  const downloadSavedQR = async (saved: SavedCustomQR) => {
+    let dataUrl = saved.qrDataUrl;
+    if (!dataUrl) {
+      dataUrl = await QRCode.toDataURL(saved.url, {
+        errorCorrectionLevel: "H",
+        margin: 2,
+        width: 400,
+      });
+    }
+    try {
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = `qr-custom-${saved.label.replace(/\s+/g, "-").toLowerCase()}.png`;
+      link.href = blobUrl;
+      link.click();
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      window.open(dataUrl, "_blank");
+    }
+  };
+
+  const openSavedQR = async (saved: SavedCustomQR) => {
+    if (!saved.qrDataUrl) {
+      const dataUrl = await QRCode.toDataURL(saved.url, {
+        errorCorrectionLevel: "H",
+        margin: 2,
+        width: 400,
+      });
+      setSelectedSavedQR({ ...saved, qrDataUrl: dataUrl });
+    } else {
+      setSelectedSavedQR(saved);
     }
   };
 
@@ -249,27 +353,126 @@ export default function AdminQRCodes() {
                   {customUrl.trim()}
                 </div>
 
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    downloadQR({
-                      id: -1,
-                      name: "custom-url",
-                      imageUrl: null,
-                      price: null,
-                      category: "dons",
-                      qrUrl: customUrl.trim(),
-                      qrDataUrl: customQrDataUrl,
-                    })
-                  }
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Télécharger le QR personnalisé
-                </Button>
+                {/* Label input for saving */}
+                <Input
+                  placeholder="Libellé (optionnel, ex: Page d'accueil)"
+                  value={customLabel}
+                  onChange={e => setCustomLabel(e.target.value)}
+                />
+
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      downloadQR({
+                        name: "custom-url",
+                        category: "custom",
+                        qrUrl: customUrl.trim(),
+                        qrDataUrl: customQrDataUrl,
+                      })
+                    }
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Télécharger
+                  </Button>
+                  <Button
+                    onClick={handleSaveCustomQr}
+                    disabled={saveCustomMutation.isPending}
+                  >
+                    {saveCustomMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4 mr-2" />
+                    )}
+                    Sauvegarder
+                  </Button>
+                  <Button variant="ghost" onClick={clearCustomQr}>
+                    <X className="h-4 w-4 mr-2" />
+                    Effacer
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Saved custom QR codes */}
+        {((savedQRs && savedQRs.length > 0) || isLoadingSaved) && (
+          <Card className="mb-6">
+            <CardContent className="p-4 md:p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base md:text-lg font-semibold">
+                    QR codes personnalisés sauvegardés
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {savedQRs?.length ?? 0} QR code(s) sauvegardé(s)
+                  </p>
+                </div>
+              </div>
+
+              {isLoadingSaved ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {savedQRs?.map(saved => (
+                    <div
+                      key={saved.id}
+                      className="flex items-center gap-3 py-3"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                        <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">
+                          {saved.label || saved.url}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {saved.url}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(saved.created_at).toLocaleDateString(
+                            "fr-FR",
+                            { day: "2-digit", month: "short", year: "numeric" }
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => void openSavedQR(saved)}
+                          title="Afficher le QR"
+                        >
+                          <QrCode className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => void downloadSavedQR(saved)}
+                          title="Télécharger"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => setDeleteConfirmId(saved.id)}
+                          title="Supprimer"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
@@ -427,7 +630,7 @@ export default function AdminQRCodes() {
         )}
       </main>
 
-      {/* Modal: Full-size QR Code */}
+      {/* Modal: Full-size QR Code (catalog) */}
       <Dialog
         open={!!selectedProduct}
         onOpenChange={open => {
@@ -481,6 +684,102 @@ export default function AdminQRCodes() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal: Full-size saved custom QR code */}
+      <Dialog
+        open={!!selectedSavedQR}
+        onOpenChange={open => {
+          if (!open) setSelectedSavedQR(null);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="h-5 w-5" />
+              {selectedSavedQR?.label || "QR personnalisé"}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedSavedQR && (
+            <div className="space-y-4">
+              {selectedSavedQR.qrDataUrl ? (
+                <div className="bg-white rounded-xl p-6 flex items-center justify-center border">
+                  <img
+                    src={selectedSavedQR.qrDataUrl}
+                    alt={`QR Code - ${selectedSavedQR.label}`}
+                    className="w-72 h-72"
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              )}
+
+              <div className="text-xs text-muted-foreground text-center break-all bg-muted/50 p-2 rounded">
+                {selectedSavedQR.url}
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  className="flex-1"
+                  onClick={() => void downloadSavedQR(selectedSavedQR)}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Télécharger
+                </Button>
+                <Button
+                  variant="outline"
+                  className="text-red-500 hover:text-red-600"
+                  onClick={() => {
+                    setSelectedSavedQR(null);
+                    setDeleteConfirmId(selectedSavedQR.id);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Supprimer
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm delete dialog */}
+      <AlertDialog
+        open={deleteConfirmId !== null}
+        onOpenChange={open => {
+          if (!open) setDeleteConfirmId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce QR code ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Le QR code sera définitivement
+              supprimé.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                if (deleteConfirmId !== null) {
+                  deleteCustomMutation.mutate({ id: deleteConfirmId });
+                }
+              }}
+              disabled={deleteCustomMutation.isPending}
+            >
+              {deleteCustomMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
