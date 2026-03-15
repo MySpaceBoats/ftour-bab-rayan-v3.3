@@ -58,8 +58,8 @@ export default function Pastries() {
     paymentMethod: "bank_transfer",
   });
 
-  const { data: pastries, isLoading } = trpc.pastries.list.useQuery();
-  const createOrderMutation = trpc.pastryOrders.create.useMutation();
+  const { data: pastries, isLoading } = trpc.catalogProducts.listPublic.useQuery({ productType: "patisserie" });
+  const createOrderMutation = trpc.pastryOrders.createCatalogOrder.useMutation();
 
   const findPastryCartIndex = (pastryId: number) =>
     unifiedCart.findIndex(
@@ -73,7 +73,7 @@ export default function Pastries() {
       name: pastry.name,
       price: pastry.price,
       quantity: 1,
-      imageUrl: pastry.image_url || undefined,
+      imageUrl: pastry.image || undefined,
     });
     toast.success(t.pastries.addToCart);
   };
@@ -131,9 +131,10 @@ export default function Pastries() {
         phone: formData.phone,
         email: formData.email || undefined,
         items: cart.map(item => ({
-          pastryId: item.productId,
+          catalogProductId: item.productId,
+          name: item.name,
           quantity: item.quantity,
-          price: item.price,
+          unitPrice: item.price,
         })),
         totalAmount: estimatedTotal,
         paymentMethod: formData.paymentMethod as any,
@@ -195,9 +196,9 @@ export default function Pastries() {
                       key={pastry.id}
                       className="overflow-hidden hover:shadow-lg transition-shadow"
                     >
-                      {pastry.image_url && (
+                      {pastry.image && (
                         <img
-                          src={pastry.image_url}
+                          src={pastry.image}
                           alt={pastry.name}
                           className="w-full h-48 object-cover"
                         />
@@ -227,11 +228,11 @@ export default function Pastries() {
                           <Button
                             onClick={() => addToCart(pastry)}
                             disabled={
-                              !pastry.active || (pastry.stock ?? 0) <= 0
+                              pastry.status !== "active" || (pastry.stock ?? 0) <= 0
                             }
                             size="sm"
                           >
-                            {pastry.active && (pastry.stock ?? 0) > 0
+                            {pastry.status === "active" && (pastry.stock ?? 0) > 0
                               ? t.pastries.addToCart
                               : t.pastries.outOfStock}
                           </Button>
