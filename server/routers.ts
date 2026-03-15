@@ -4917,28 +4917,44 @@ const terroirModuleRouter = router({
         totalPrice: it.quantity * it.unitPrice,
       }));
 
-      const { data: order, error } = await supabase
+      // Try inserting with catalog_items; fall back without it if the column is missing
+      const payloadWithItems = {
+        order_reference: reference,
+        customer_name: input.customerName,
+        customer_phone: input.customerPhone,
+        customer_email: input.customerEmail,
+        total_amount: totalAmount,
+        status: "created",
+        payment_status: "pending",
+        qr_token: qrToken,
+        qr_status: "inactive",
+        notes: input.notes,
+        catalog_items: catalogItems,
+      };
+
+      let order: any = null;
+      const { data: orderWithItems, error: errWithItems } = await supabase
         .from("terroir_orders")
-        .insert({
-          order_reference: reference,
-          customer_name: input.customerName,
-          customer_phone: input.customerPhone,
-          customer_email: input.customerEmail,
-          total_amount: totalAmount,
-          status: "created",
-          payment_status: "pending",
-          qr_token: qrToken,
-          qr_status: "inactive",
-          notes: input.notes,
-          catalog_items: catalogItems,
-        })
+        .insert(payloadWithItems)
         .select()
         .single();
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
+
+      if (!errWithItems) {
+        order = orderWithItems;
+      } else {
+        const { catalog_items: _ci, ...payloadWithoutItems } = payloadWithItems;
+        const { data: orderWithout, error: errWithout } = await supabase
+          .from("terroir_orders")
+          .insert(payloadWithoutItems)
+          .select()
+          .single();
+        if (errWithout)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: errWithout.message,
+          });
+        order = orderWithout;
+      }
 
       // Decrement stock for each product
       for (const item of input.items) {
