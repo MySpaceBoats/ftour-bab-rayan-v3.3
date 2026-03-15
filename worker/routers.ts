@@ -4810,6 +4810,23 @@ const ordersRouter = router({
         })),
       };
     }),
+
+  delete: adminProcedure
+    .input(z.object({ orderId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+
+      const { error } = await supabase
+        .from("orders")
+        .delete()
+        .eq("id", input.orderId);
+
+      if (error) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      }
+
+      return { success: true };
+    }),
 });
 
 // ============================================
