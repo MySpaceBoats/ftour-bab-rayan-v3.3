@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -79,12 +80,15 @@ function StarRating({
 
 export default function FeedbackPage() {
   const token = new URLSearchParams(window.location.search).get("token") ?? undefined;
+  const [, navigate] = useLocation();
 
   const [formId, setFormId] = useState<number | null>(null);
   const [answers, setAnswers] = useState<Map<number, Answer>>(new Map());
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [userPhone, setUserPhone] = useState("");
+  const [consent, setConsent] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   // Validate token if present
@@ -162,6 +166,11 @@ export default function FeedbackPage() {
       return;
     }
 
+    if (!consent) {
+      toast.error("Veuillez accepter le consentement avant d'envoyer votre feedback.");
+      return;
+    }
+
     submitMutation.mutate({
       formId,
       isAnonymous,
@@ -173,27 +182,10 @@ export default function FeedbackPage() {
     });
   };
 
-  // ---- No form available (no active form in DB) ----
+  // ---- No form available (no active form in DB) → redirect to the public site feedback form ----
   if (!token && defaultFormQuery.isError) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center py-20 bg-[#5E5B34]">
-          <Card className="max-w-md w-full mx-4 bg-[#4A4829] border-[#F2E9D3]/20">
-            <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <MessageSquare className="w-8 h-8 text-amber-400" />
-              </div>
-              <h2 className="text-xl font-bold text-[#F2E9D3] mb-2">Formulaire indisponible</h2>
-              <p className="text-[#C9B97A]">
-                Aucun formulaire de feedback n'est actuellement disponible. Réessayez plus tard.
-              </p>
-            </CardContent>
-          </Card>
-        </main>
-        <Footer />
-      </div>
-    );
+    navigate("/feedback/new");
+    return null;
   }
 
   // ---- Token error state ----
@@ -255,7 +247,7 @@ export default function FeedbackPage() {
     );
   }
 
-  const isLoading = formQuery.isLoading || (!!token && tokenQuery.isLoading);
+  const isLoading = formQuery.isLoading || (!!token && tokenQuery.isLoading) || (!token && defaultFormQuery.isLoading);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -386,15 +378,39 @@ export default function FeedbackPage() {
                           className="bg-[#3D3B1E] border-[#F2E9D3]/30 text-[#F2E9D3] placeholder:text-[#F2E9D3]/40"
                         />
                       </div>
+                      <div>
+                        <Label className="text-[#C9B97A] text-sm mb-1 block">Téléphone (optionnel)</Label>
+                        <Input
+                          type="tel"
+                          placeholder="+212 6XX XX XX XX"
+                          value={userPhone}
+                          onChange={(e) => setUserPhone(e.target.value)}
+                          className="bg-[#3D3B1E] border-[#F2E9D3]/30 text-[#F2E9D3] placeholder:text-[#F2E9D3]/40"
+                        />
+                      </div>
                     </div>
                   )}
                 </CardContent>
               </Card>
 
+              {/* Consentement */}
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="consent"
+                  checked={consent}
+                  onCheckedChange={(v) => setConsent(!!v)}
+                  className="border-[#C9B97A] data-[state=checked]:bg-[#C9B97A] mt-0.5"
+                />
+                <Label htmlFor="consent" className="text-[#F2E9D3]/80 text-sm cursor-pointer leading-snug">
+                  J'accepte que mon feedback soit utilisé par l'association Bab Rayan pour améliorer
+                  l'expérience du Ftour solidaire
+                </Label>
+              </div>
+
               {/* Submit */}
               <Button
                 type="submit"
-                disabled={submitMutation.isPending || !formId}
+                disabled={submitMutation.isPending || !formId || !consent}
                 className="w-full bg-[#C9B97A] hover:bg-[#B5A56A] text-[#3D3B1E] font-bold py-4 text-lg"
               >
                 {submitMutation.isPending ? (
