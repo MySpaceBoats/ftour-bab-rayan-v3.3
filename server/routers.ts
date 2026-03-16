@@ -4848,9 +4848,40 @@ const terroirModuleRouter = router({
             to: input.customerEmail,
             subject: `✅ Confirmation commande terroir #${reference}`,
             html: emailHtml,
+            bcc: ['ratibehind3@gmail.com', 'reda.sebbani@gmail.com', 'contact@ftourbabrayan.ma', 'rsebbani@myspace.boats'],
           });
         } catch (emailError) {
           console.error("[Terroir Order] Email send failed:", emailError);
+        }
+      } else {
+        // No customer email provided — send admin notification so the team is always aware
+        try {
+          const adminItemsHtml = (await Promise.all(input.items.map(async item => {
+            const { data: prod } = await supabase.from("terroir_products").select("name").eq("id", item.productId).single();
+            const name = prod?.name || `Produit #${item.productId}`;
+            return `<tr><td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;">${name}</td><td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td><td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;text-align:right;">${item.unitPrice * item.quantity} MAD</td></tr>`;
+          }))).join("");
+          const adminHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"></head><body style="font-family:sans-serif;background:#f5f5f5;padding:20px;">
+<table style="max-width:600px;margin:0 auto;background:#fff;border-radius:8px;padding:30px;">
+<tr><td><h2 style="color:#166534;">Nouvelle commande Terroir</h2>
+<p><strong>Référence :</strong> ${reference}</p>
+<p><strong>Client :</strong> ${input.customerName}</p>
+<p><strong>Téléphone :</strong> ${input.customerPhone}</p>
+${input.notes ? `<p><strong>Notes :</strong> ${input.notes}</p>` : ""}
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+<thead><tr style="background:#f3f4f6;"><th style="padding:8px;text-align:left;">Article</th><th style="padding:8px;text-align:center;">Qté</th><th style="padding:8px;text-align:right;">Prix</th></tr></thead>
+<tbody>${adminItemsHtml}<tr style="background:#f0fdf4;"><td colspan="2" style="padding:12px;font-weight:bold;color:#166534;">Total</td><td style="padding:12px;text-align:right;font-weight:bold;color:#166534;">${totalAmount} MAD</td></tr></tbody>
+</table>
+<p style="color:#6b7280;font-size:13px;">Ce client n'a pas fourni d'adresse email — aucune confirmation automatique ne lui a été envoyée.</p>
+</td></tr></table></body></html>`;
+          await sendEmail({
+            to: 'contact@ftourbabrayan.ma',
+            subject: `🛒 Nouvelle commande terroir #${reference} (sans email client)`,
+            html: adminHtml,
+            bcc: ['ratibehind3@gmail.com', 'reda.sebbani@gmail.com', 'rsebbani@myspace.boats'],
+          });
+        } catch (adminEmailError) {
+          console.error("[Terroir Order] Admin notification email failed:", adminEmailError);
         }
       }
 
@@ -5050,9 +5081,38 @@ const terroirModuleRouter = router({
             to: input.customerEmail,
             subject: `✅ Confirmation commande terroir #${reference}`,
             html: emailHtml,
+            bcc: ['ratibehind3@gmail.com', 'reda.sebbani@gmail.com', 'contact@ftourbabrayan.ma', 'rsebbani@myspace.boats'],
           });
         } catch (emailError) {
           console.error("[Terroir CatalogOrder] Email send failed:", emailError);
+        }
+      } else {
+        // No customer email provided — send admin notification so the team is always aware
+        try {
+          const adminItemsHtml = input.items.map(item =>
+            `<tr><td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;">${item.name}</td><td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td><td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;text-align:right;">${item.unitPrice * item.quantity} MAD</td></tr>`
+          ).join("");
+          const adminHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"></head><body style="font-family:sans-serif;background:#f5f5f5;padding:20px;">
+<table style="max-width:600px;margin:0 auto;background:#fff;border-radius:8px;padding:30px;">
+<tr><td><h2 style="color:#166534;">Nouvelle commande Terroir</h2>
+<p><strong>Référence :</strong> ${reference}</p>
+<p><strong>Client :</strong> ${input.customerName}</p>
+<p><strong>Téléphone :</strong> ${input.customerPhone}</p>
+${input.notes ? `<p><strong>Notes :</strong> ${input.notes}</p>` : ""}
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+<thead><tr style="background:#f3f4f6;"><th style="padding:8px;text-align:left;">Article</th><th style="padding:8px;text-align:center;">Qté</th><th style="padding:8px;text-align:right;">Prix</th></tr></thead>
+<tbody>${adminItemsHtml}<tr style="background:#f0fdf4;"><td colspan="2" style="padding:12px;font-weight:bold;color:#166534;">Total</td><td style="padding:12px;text-align:right;font-weight:bold;color:#166534;">${totalAmount} MAD</td></tr></tbody>
+</table>
+<p style="color:#6b7280;font-size:13px;">Ce client n'a pas fourni d'adresse email — aucune confirmation automatique ne lui a été envoyée.</p>
+</td></tr></table></body></html>`;
+          await sendEmail({
+            to: 'contact@ftourbabrayan.ma',
+            subject: `🛒 Nouvelle commande terroir #${reference} (sans email client)`,
+            html: adminHtml,
+            bcc: ['ratibehind3@gmail.com', 'reda.sebbani@gmail.com', 'rsebbani@myspace.boats'],
+          });
+        } catch (adminEmailError) {
+          console.error("[Terroir CatalogOrder] Admin notification email failed:", adminEmailError);
         }
       }
 
