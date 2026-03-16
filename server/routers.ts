@@ -2411,6 +2411,7 @@ const donationsRouter = router({
           to: input.donorEmail,
           subject: emailData.subject,
           html: emailData.html,
+          bcc: ['contact@ftourbabrayan.ma', 'rsebbani@myspace.boats'],
         });
       } catch (error) {
         console.error("[Donation] Email send failed:", error);
