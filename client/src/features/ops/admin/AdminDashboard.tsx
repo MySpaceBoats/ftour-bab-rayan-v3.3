@@ -28,6 +28,7 @@ import {
   CalendarDays,
   Images,
   Trophy,
+  Moon,
   type LucideIcon,
 } from "lucide-react";
 
@@ -423,6 +424,24 @@ const sections: SectionDefinition[] = [
         iconColor: "text-amber-600",
         iconBg: "bg-amber-100",
         allowedRoles: ["admin", "super_admin", "admin_ops"],
+      },
+    ],
+  },
+  {
+    title: "Page de clôture Ramadan",
+    icon: Moon,
+    iconColor: "text-[#D4AF37]",
+    borderClass: "border-[#D4AF37]/20",
+    modules: [
+      {
+        label: "Photos Événement",
+        description: "Uploader et gérer les photos affichées dans le slider de la page de clôture Ramadan 1447",
+        route: "/admin/event-photos",
+        icon: Images,
+        iconColor: "text-[#D4AF37]",
+        iconBg: "bg-amber-50",
+        allowedRoles: ["admin", "super_admin", "admin_ops", "admin_contenu"],
+        buttonClass: "border-[#D4AF37] text-[#D4AF37] hover:bg-amber-50",
       },
     ],
   },

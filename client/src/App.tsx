@@ -9,6 +9,12 @@ import { CartProvider } from "./contexts/CartContext";
 import { useI18n, SUPPORTED_LOCALES, type Locale } from "./i18n";
 
 // ============================================
+// RAMADAN CLOSING PAGE
+// ============================================
+import RamadanClosingPage from "@/features/closing/components/RamadanClosingPage";
+import AdminEventPhotos from "@/features/closing/admin/AdminEventPhotos";
+
+// ============================================
 // PUBLIC PAGES — features/public
 // ============================================
 import Home from "@/features/public/pages/Home";
@@ -347,6 +353,9 @@ function LocalizedRoutes() {
       {/* Admin Team Trombinoscope */}
       <Route path="/admin/equipe" component={AdminTeam} />
 
+      {/* Admin Event Photos (Ramadan Closing Page) */}
+      <Route path="/admin/event-photos" component={AdminEventPhotos} />
+
       {/* Admin Election Managers */}
       <Route path="/admin/elections" component={AdminElections} />
 
@@ -402,9 +411,9 @@ function LocalizedRoutes() {
       />
 
       {/* ================================================
-          REDIRECT ROOT → default locale
+          RAMADAN CLOSING PAGE — replaces homepage
           ================================================ */}
-      <Route path="/">{() => <Redirect to={`/${lang}`} />}</Route>
+      <Route path="/" component={RamadanClosingPage} />
 
       {/* Page feedback publique */}
       <Route path="/feedback/new" component={SiteFeedbackPage} />
@@ -419,7 +428,7 @@ function LocalizedRoutes() {
       {/* ================================================
           PUBLIC ROUTES — sous /:lang (section 4.1)
           ================================================ */}
-      <Route path="/:lang" component={Home} />
+      <Route path="/:lang" component={RamadanClosingPage} />
       <Route path="/:lang/programme" component={Programme} />
       <Route path="/:lang/benevole" component={Benevole} />
       <Route path="/:lang/benevole/photos" component={BenevoleGalerieUpload} />

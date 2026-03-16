@@ -3562,3 +3562,112 @@ export async function getVolunteersRegisteredSinceSupabase(sinceDate: Date) {
     };
   });
 }
+
+// ============================================
+// EVENT PHOTOS (Ramadan Closing Page Slider)
+// ============================================
+
+function mapEventPhoto(p: any) {
+  return {
+    id: p.id as number,
+    imageUrl: p.image_url as string,
+    storagePath: (p.storage_path as string) || null,
+    title: (p.title as string) || null,
+    isActive: p.is_active as boolean,
+    displayOrder: p.display_order as number,
+    createdAt: p.created_at as string,
+    updatedAt: p.updated_at as string,
+  };
+}
+
+export async function listEventPhotosPublicSupabase() {
+  const client = getSupabaseAdminClient();
+  if (!client) return [];
+  const { data, error } = await client
+    .from('event_photos')
+    .select('*')
+    .eq('is_active', true)
+    .order('display_order', { ascending: true });
+  if (error) {
+    console.error('[EventPhotos] Error fetching public photos:', error.message);
+    return [];
+  }
+  return (data ?? []).map(mapEventPhoto);
+}
+
+export async function listEventPhotosAdminSupabase() {
+  const client = getSupabaseAdminClient();
+  if (!client) return [];
+  const { data, error } = await client
+    .from('event_photos')
+    .select('*')
+    .order('display_order', { ascending: true });
+  if (error) throw new Error(`Erreur récupération photos: ${error.message}`);
+  return (data ?? []).map(mapEventPhoto);
+}
+
+export async function createEventPhotoSupabase(input: {
+  imageUrl: string;
+  storagePath?: string;
+  title?: string;
+  displayOrder?: number;
+}) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  const { data, error } = await client
+    .from('event_photos')
+    .insert({
+      image_url: input.imageUrl,
+      storage_path: input.storagePath || null,
+      title: input.title || null,
+      display_order: input.displayOrder ?? 0,
+      is_active: true,
+    })
+    .select()
+    .single();
+  if (error) throw new Error(`Erreur création photo: ${error.message}`);
+  return mapEventPhoto(data);
+}
+
+export async function updateEventPhotoSupabase(id: number, input: {
+  title?: string;
+  isActive?: boolean;
+  displayOrder?: number;
+}) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  const updateData: any = { updated_at: new Date().toISOString() };
+  if (input.title !== undefined) updateData.title = input.title;
+  if (input.isActive !== undefined) updateData.is_active = input.isActive;
+  if (input.displayOrder !== undefined) updateData.display_order = input.displayOrder;
+  const { data, error } = await client
+    .from('event_photos')
+    .update(updateData)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw new Error(`Erreur mise à jour photo: ${error.message}`);
+  return mapEventPhoto(data);
+}
+
+export async function deleteEventPhotoSupabase(id: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  const { error } = await client.from('event_photos').delete().eq('id', id);
+  if (error) throw new Error(`Erreur suppression photo: ${error.message}`);
+  return { success: true };
+}
+
+export async function reorderEventPhotosSupabase(orderedIds: number[]) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  await Promise.all(
+    orderedIds.map((id, index) =>
+      client
+        .from('event_photos')
+        .update({ display_order: index, updated_at: new Date().toISOString() })
+        .eq('id', id)
+    )
+  );
+  return { success: true };
+}
