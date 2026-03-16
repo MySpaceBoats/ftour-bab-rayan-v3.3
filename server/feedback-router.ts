@@ -158,6 +158,7 @@ export const feedbackRouter = router({
           rating: input.rating,
           message: input.comment,
           source: "site",
+          page_source: input.pageSource,
           moderation: "pending",
         })
         .select("id")
@@ -227,10 +228,10 @@ export const feedbackRouter = router({
 
       const items = (data ?? []).map((row: any) => ({
         ...row,
-        name: row.name ?? row.user_name ?? null,
-        email: row.email ?? row.user_email ?? null,
-        comment: row.comment ?? row.message ?? null,
-        page_source: row.page_source ?? row.source ?? null,
+        name: row.user_name ?? null,
+        email: row.user_email ?? row.email ?? null,
+        comment: row.message ?? null,
+        page_source: row.page_source ?? null,
         status: row.moderation === "processed" ? "processed" : "new",
       }));
 
@@ -629,13 +630,13 @@ export const feedbackRouter = router({
       const anonymous = anonResult.count ?? 0;
       const identified = total - anonymous;
 
-      // 2. Limited responses for chart data (last 500 — includes nested ratings)
+      // 2. Limited responses for chart data (no joins — robust against schema cache issues)
+      // rating is stored directly on feedback_responses for all feedback types
+      // (submit_feedback_atomic extracts and stores the first rating answer directly)
       const { data, error: chartError } = await applyDateFilters(
-        db.from("feedback_responses").select(`
-          id, is_anonymous, source, moderation, created_at,
-          rating, message,
-          feedback_answers(answer_rating, answer_text, answer_choice, question_id)
-        `)
+        db.from("feedback_responses").select(
+          "id, is_anonymous, source, moderation, created_at, rating, message"
+        )
       )
         .order("created_at", { ascending: false })
         .limit(500);
@@ -648,34 +649,24 @@ export const feedbackRouter = router({
 
       const responses = data ?? [];
 
-      // 3. Compute avg rating and recommend rate from chart data
+      // 3. Compute avg rating and recommend rate directly from rating column
       let ratingSum = 0;
       let ratingCount = 0;
       let recommendYes = 0;
-      let recommendNo = 0;
 
       for (const r of responses as any[]) {
-        // Rating stored directly on the response (site feedback — no feedback_answers)
-        if (r.rating !== null && r.rating !== undefined && (r.feedback_answers ?? []).length === 0) {
+        if (r.rating !== null && r.rating !== undefined) {
           ratingSum += r.rating;
           ratingCount++;
-        }
-        for (const a of r.feedback_answers ?? []) {
-          if (a.answer_rating !== null && a.answer_rating !== undefined) {
-            ratingSum += a.answer_rating;
-            ratingCount++;
-          }
-          if (a.answer_choice === "Oui") recommendYes++;
-          if (a.answer_choice === "Non") recommendNo++;
+          // Use rating >= 4 as proxy for "would recommend"
+          if (r.rating >= 4) recommendYes++;
         }
       }
 
       const avgRating =
         ratingCount > 0 ? Math.round((ratingSum / ratingCount) * 10) / 10 : 0;
       const recommendRate =
-        recommendYes + recommendNo > 0
-          ? Math.round((recommendYes / (recommendYes + recommendNo)) * 100)
-          : 0;
+        ratingCount > 0 ? Math.round((recommendYes / ratingCount) * 100) : 0;
 
       return {
         total,
@@ -716,8 +707,7 @@ export const feedbackRouter = router({
         `
         id, form_id, is_anonymous, user_email, user_name, source, moderation, created_at,
         rating, message,
-        feedback_answers(id, answer_rating, answer_text, answer_choice, question_id,
-          feedback_questions(question, type)),
+        feedback_answers(id, answer_rating, answer_text, answer_choice, question_id),
         feedback_forms(title, target_type)
       `,
         { count: "exact" }
