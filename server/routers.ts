@@ -44,7 +44,7 @@ import { feedbackRouter } from "./feedback-router";
 import { auditRouter } from "./audit-router";
 import { catalogProductsRouter } from "./catalog-products-router";
 import { teamRouter } from "./team-router";
-import { eventPhotosRouter } from "./event-photos-router";
+import { storagePut } from "./storage";
 import * as galleryServices from "./gallery-services";
 import * as volunteerProfileServices from "./volunteer-profile-services";
 import { randomBytes } from "crypto";
@@ -6148,6 +6148,86 @@ const volunteerProfileRouter = router({
         });
 
       return { success: true };
+    }),
+});
+
+// ============================================
+// EVENT PHOTOS ROUTER (Ramadan Closing Page)
+// ============================================
+
+const eventPhotosAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const allowed = ['admin', 'super_admin', 'admin_contenu', 'admin_ops'];
+  if (!ctx.user || !allowed.includes(ctx.user.role)) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès administrateur requis' });
+  }
+  return next({ ctx });
+});
+
+const eventPhotosRouter = router({
+  listPublic: publicProcedure.query(async () => {
+    return supabaseServices.listEventPhotosPublicSupabase();
+  }),
+
+  list: eventPhotosAdminProcedure.query(async () => {
+    return supabaseServices.listEventPhotosAdminSupabase();
+  }),
+
+  create: eventPhotosAdminProcedure
+    .input(z.object({
+      imageBase64: z.string().optional(),
+      imageUrl: z.string().optional(),
+      title: z.string().max(255).optional(),
+      displayOrder: z.number().int().min(0).default(0),
+    }))
+    .mutation(async ({ input }) => {
+      let imageUrl = input.imageUrl;
+      if (input.imageBase64) {
+        const base64Data = input.imageBase64.replace(/^data:image\/\w+;base64,/, '');
+        const contentType = input.imageBase64.startsWith('data:image/png')
+          ? 'image/png'
+          : input.imageBase64.startsWith('data:image/webp')
+          ? 'image/webp'
+          : 'image/jpeg';
+        const ext = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
+        const key = `event-photos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const buffer = Buffer.from(base64Data, 'base64');
+        const { url } = await storagePut(key, buffer, contentType);
+        imageUrl = url;
+      }
+      if (!imageUrl) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'URL ou image base64 requise' });
+      }
+      return supabaseServices.createEventPhotoSupabase({ imageUrl, title: input.title, displayOrder: input.displayOrder });
+    }),
+
+  update: eventPhotosAdminProcedure
+    .input(z.object({
+      id: z.number().int(),
+      title: z.string().max(255).optional(),
+      isActive: z.boolean().optional(),
+      displayOrder: z.number().int().min(0).optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { id, ...rest } = input;
+      return supabaseServices.updateEventPhotoSupabase(id, rest);
+    }),
+
+  toggleActive: eventPhotosAdminProcedure
+    .input(z.object({ id: z.number().int(), isActive: z.boolean() }))
+    .mutation(async ({ input }) => {
+      return supabaseServices.updateEventPhotoSupabase(input.id, { isActive: input.isActive });
+    }),
+
+  delete: eventPhotosAdminProcedure
+    .input(z.object({ id: z.number().int() }))
+    .mutation(async ({ input }) => {
+      return supabaseServices.deleteEventPhotoSupabase(input.id);
+    }),
+
+  reorder: eventPhotosAdminProcedure
+    .input(z.object({ orderedIds: z.array(z.number().int()) }))
+    .mutation(async ({ input }) => {
+      return supabaseServices.reorderEventPhotosSupabase(input.orderedIds);
     }),
 });
 
