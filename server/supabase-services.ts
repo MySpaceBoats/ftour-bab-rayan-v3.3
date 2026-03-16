@@ -3423,6 +3423,109 @@ export async function deleteFaqSupabase(id: number) {
   return { success: true };
 }
 
+// ============================================
+// FTOUR TEAM MEMBERS SERVICES (Trombinoscope)
+// ============================================
+
+function mapTeamMember(m: any) {
+  return {
+    id: m.id,
+    firstName: m.first_name,
+    lastName: m.last_name,
+    role: m.role || null,
+    citation: m.citation || null,
+    photoUrl: m.photo_url || null,
+    displayOrder: m.display_order,
+    edition: m.edition,
+    isActive: m.is_active,
+    createdAt: m.created_at,
+    updatedAt: m.updated_at,
+  };
+}
+
+export async function getTeamMembersPublicSupabase(edition: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) return [];
+  const { data, error } = await client
+    .from('ftour_team_members')
+    .select('*')
+    .eq('edition', edition)
+    .eq('is_active', true)
+    .order('display_order', { ascending: true });
+  if (error) {
+    console.error('[TeamMembers] Error fetching public team members:', error.message);
+    return [];
+  }
+  return (data ?? []).map(mapTeamMember);
+}
+
+export async function getAllTeamMembersAdminSupabase(edition?: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) return [];
+  let query = client.from('ftour_team_members').select('*').order('edition', { ascending: false }).order('display_order', { ascending: true });
+  if (edition !== undefined) query = query.eq('edition', edition);
+  const { data, error } = await query;
+  if (error) throw new Error(`Erreur récupération membres: ${error.message}`);
+  return (data ?? []).map(mapTeamMember);
+}
+
+export async function createTeamMemberSupabase(input: {
+  firstName: string; lastName: string; role?: string; citation?: string;
+  photoUrl?: string; displayOrder?: number; edition?: number;
+}) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  const { data, error } = await client.from('ftour_team_members').insert({
+    first_name: input.firstName, last_name: input.lastName,
+    role: input.role || null, citation: input.citation || null,
+    photo_url: input.photoUrl || null,
+    display_order: input.displayOrder ?? 0,
+    edition: input.edition ?? 12,
+    is_active: true,
+  }).select().single();
+  if (error) throw new Error(`Erreur création membre: ${error.message}`);
+  return mapTeamMember(data);
+}
+
+export async function updateTeamMemberSupabase(id: number, input: {
+  firstName?: string; lastName?: string; role?: string; citation?: string;
+  photoUrl?: string; displayOrder?: number; edition?: number; isActive?: boolean;
+}) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  const updateData: any = { updated_at: new Date().toISOString() };
+  if (input.firstName !== undefined) updateData.first_name = input.firstName;
+  if (input.lastName !== undefined) updateData.last_name = input.lastName;
+  if (input.role !== undefined) updateData.role = input.role;
+  if (input.citation !== undefined) updateData.citation = input.citation;
+  if (input.photoUrl !== undefined) updateData.photo_url = input.photoUrl;
+  if (input.displayOrder !== undefined) updateData.display_order = input.displayOrder;
+  if (input.edition !== undefined) updateData.edition = input.edition;
+  if (input.isActive !== undefined) updateData.is_active = input.isActive;
+  const { data, error } = await client.from('ftour_team_members').update(updateData).eq('id', id).select().single();
+  if (error) throw new Error(`Erreur mise à jour membre: ${error.message}`);
+  return mapTeamMember(data);
+}
+
+export async function deleteTeamMemberSupabase(id: number) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  const { error } = await client.from('ftour_team_members').delete().eq('id', id);
+  if (error) throw new Error(`Erreur suppression membre: ${error.message}`);
+  return { success: true };
+}
+
+export async function reorderTeamMembersSupabase(orderedIds: number[]) {
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error('Supabase not configured');
+  await Promise.all(
+    orderedIds.map((id, index) =>
+      client.from('ftour_team_members').update({ display_order: index, updated_at: new Date().toISOString() }).eq('id', id)
+    )
+  );
+  return { success: true };
+}
+
 export async function getVolunteersRegisteredSinceSupabase(sinceDate: Date) {
   const client = getSupabaseAdminClient();
   if (!client) return [];

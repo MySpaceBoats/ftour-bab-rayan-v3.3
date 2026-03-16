@@ -43,6 +43,7 @@ import { electionRouter } from "./election-router";
 import { feedbackRouter } from "./feedback-router";
 import { auditRouter } from "./audit-router";
 import { catalogProductsRouter } from "./catalog-products-router";
+import { teamRouter } from "./team-router";
 import * as galleryServices from "./gallery-services";
 import * as volunteerProfileServices from "./volunteer-profile-services";
 import { randomBytes } from "crypto";
@@ -6241,6 +6242,7 @@ export const appRouter = router({
   ftour: ftourRouter,
   feedback: feedbackRouter,
   audit: auditRouter,
+  team: teamRouter,
 });
 
 // ============================================

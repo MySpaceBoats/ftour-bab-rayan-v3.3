@@ -44,6 +44,7 @@ export const MODULES = {
   MESSAGES: 'messages',
   UTILISATEURS: 'utilisateurs',
   SYSTEM: 'system',
+  TEAM: 'team',
 } as const;
 
 export type Module = (typeof MODULES)[keyof typeof MODULES];
@@ -72,7 +73,7 @@ export const ROLE_MODULES: Record<Role, readonly Module[]> = {
   [ROLES.ADMIN_BOUTIQUE]: [MODULES.GOODIES, MODULES.PATISSERIE, MODULES.TERROIR],
   [ROLES.ADMIN_DONS]: [MODULES.DONS],
   [ROLES.SCANNER]: [MODULES.SCANNER],
-  [ROLES.ADMIN_CONTENU]: [MODULES.CONTENU],
+  [ROLES.ADMIN_CONTENU]: [MODULES.CONTENU, MODULES.TEAM],
   [ROLES.ADMIN_MESSAGES]: [MODULES.MESSAGES],
   [ROLES.USER]: [],
 };
@@ -131,6 +132,9 @@ export const ROUTE_ROLES: Record<string, readonly Role[]> = {
 
   // Contenu
   '/admin/contenu': [...ADMIN_BASE, ROLES.ADMIN_CONTENU],
+
+  // Team Trombinoscope
+  '/admin/equipe': [...ADMIN_BASE, ROLES.ADMIN_CONTENU, ROLES.ADMIN_OPS],
 
   // Messages
   '/admin/messages': [...ADMIN_BASE, ROLES.ADMIN_MESSAGES],

@@ -158,6 +158,12 @@ import AdminFtour from "@/features/ftour/admin/AdminFtour";
 import FtourConfirmation from "@/features/ftour/pages/FtourConfirmation";
 
 // ============================================
+// TEAM TROMBINOSCOPE — features/team
+// ============================================
+import EquipeFtour from "@/features/team/pages/EquipeFtour";
+import AdminTeam from "@/features/team/admin/AdminTeam";
+
+// ============================================
 // FEEDBACK — features/feedback
 // ============================================
 import FeedbackPage from "@/features/feedback/pages/FeedbackPage";
@@ -338,6 +344,9 @@ function LocalizedRoutes() {
       {/* Admin Ftour Bénévoles */}
       <Route path="/admin/ftour" component={AdminFtour} />
 
+      {/* Admin Team Trombinoscope */}
+      <Route path="/admin/equipe" component={AdminTeam} />
+
       {/* Admin Election Managers */}
       <Route path="/admin/elections" component={AdminElections} />
 
@@ -429,6 +438,9 @@ function LocalizedRoutes() {
         component={ForgotPassword}
       />
       <Route path="/:lang/profil-benevole" component={VolunteerProfilePage} />
+
+      {/* Équipe Ftour – Trombinoscope */}
+      <Route path="/:lang/equipe-ftour" component={EquipeFtour} />
 
       {/* Election Managers */}
       <Route path="/:lang/election-managers" component={ElectionManagers} />
@@ -530,6 +542,9 @@ function LocalizedRoutes() {
       </Route>
       <Route path="/profil-benevole">
         {() => <Redirect to={`/${lang}/profil-benevole`} />}
+      </Route>
+      <Route path="/equipe-ftour">
+        {() => <Redirect to={`/${lang}/equipe-ftour`} />}
       </Route>
       <Route path="/election-managers">
         {() => <Redirect to={`/${lang}/election-managers`} />}

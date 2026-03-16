@@ -1047,3 +1047,24 @@ export const feedbackCampaignRecipients = mysqlTable("feedback_campaign_recipien
 
 export type FeedbackCampaignRecipient = typeof feedbackCampaignRecipients.$inferSelect;
 export type InsertFeedbackCampaignRecipient = typeof feedbackCampaignRecipients.$inferInsert;
+
+// ============================================
+// FTOUR TEAM MEMBERS (Trombinoscope)
+// ============================================
+
+export const ftourTeamMembers = mysqlTable("ftour_team_members", {
+  id: int("id").autoincrement().primaryKey(),
+  firstName: varchar("firstName", { length: 100 }).notNull(),
+  lastName: varchar("lastName", { length: 100 }).notNull(),
+  role: varchar("role", { length: 150 }),
+  citation: text("citation"),
+  photoUrl: text("photoUrl"),
+  displayOrder: int("displayOrder").notNull().default(0),
+  edition: int("edition").notNull().default(12),
+  isActive: boolean("isActive").notNull().default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type FtourTeamMember = typeof ftourTeamMembers.$inferSelect;
+export type InsertFtourTeamMember = typeof ftourTeamMembers.$inferInsert;
