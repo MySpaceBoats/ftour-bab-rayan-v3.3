@@ -65,9 +65,22 @@ export default function PastriesConfirmation({ order }: PastriesConfirmationProp
               {deliveryMode === 'pickup' ? (
                 <div className="space-y-3">
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="font-semibold text-blue-900 mb-2">{t.pastries.pickupInstructions}</p>
-                    <p className="text-sm text-blue-800">{t.pastries.presentReferenceAtPickup}</p>
-                    <p className="text-sm text-blue-800 mt-2">{t.pastries.paymentAtPickupLocation}</p>
+                    <p className="font-semibold text-blue-900 mb-3">{t.pastries.pickupInstructions}</p>
+                    <h4 className="font-semibold text-blue-900 mb-2">{t.pastries.nextSteps}</h4>
+                    <ul className="space-y-2">
+                      <li className="flex gap-2 text-sm text-blue-800">
+                        <span className="text-blue-900">✓</span>
+                        <span>{t.pastries.confirmationEmailSent}</span>
+                      </li>
+                      <li className="flex gap-2 text-sm text-blue-800">
+                        <span className="text-blue-900">✓</span>
+                        <span>{t.pastries.presentReferenceAtPickup}</span>
+                      </li>
+                      <li className="flex gap-2 text-sm text-blue-800">
+                        <span className="text-blue-900">✓</span>
+                        <span>{t.pastries.paymentAtPickupLocation}</span>
+                      </li>
+                    </ul>
                   </div>
                 </div>
               ) : (
