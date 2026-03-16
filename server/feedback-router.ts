@@ -600,40 +600,62 @@ export const feedbackRouter = router({
           message: "DB non configurée",
         });
 
-      let query = db.from("feedback_responses").select(`
-        id, form_id, is_anonymous, source, moderation, created_at,
-        rating, message,
-        feedback_answers(answer_rating, answer_text, answer_choice, question_id),
-        feedback_forms(title, target_type)
-      `);
+      // Helper to apply date filters
+      const applyDateFilters = (q: any) => {
+        if (input?.fromDate) q = q.gte("created_at", input.fromDate);
+        if (input?.toDate) q = q.lte("created_at", input.toDate + "T23:59:59Z");
+        return q;
+      };
 
-      if (input?.fromDate) query = query.gte("created_at", input.fromDate);
-      if (input?.toDate)
-        query = query.lte("created_at", input.toDate + "T23:59:59Z");
+      // 1. Accurate total and anonymous counts (no JOINs — fast)
+      const [totalResult, anonResult] = await Promise.all([
+        applyDateFilters(
+          db.from("feedback_responses").select("*", { count: "exact", head: true })
+        ),
+        applyDateFilters(
+          db.from("feedback_responses")
+            .select("*", { count: "exact", head: true })
+            .eq("is_anonymous", true)
+        ),
+      ]);
 
-      const { data, error } = await query.order("created_at", {
-        ascending: false,
-      });
-
-      if (error)
+      if (totalResult.error)
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
+          message: totalResult.error.message,
+        });
+
+      const total = totalResult.count ?? 0;
+      const anonymous = anonResult.count ?? 0;
+      const identified = total - anonymous;
+
+      // 2. Limited responses for chart data (last 500 — includes nested ratings)
+      const { data, error: chartError } = await applyDateFilters(
+        db.from("feedback_responses").select(`
+          id, is_anonymous, source, moderation, created_at,
+          rating, message,
+          feedback_answers(answer_rating, answer_text, answer_choice, question_id)
+        `)
+      )
+        .order("created_at", { ascending: false })
+        .limit(500);
+
+      if (chartError)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: chartError.message,
         });
 
       const responses = data ?? [];
-      const total = responses.length;
-      const anonymous = responses.filter((r: any) => r.is_anonymous).length;
-      const identified = total - anonymous;
 
-      // Compute average rating
+      // 3. Compute avg rating and recommend rate from chart data
       let ratingSum = 0;
       let ratingCount = 0;
       let recommendYes = 0;
       let recommendNo = 0;
 
       for (const r of responses as any[]) {
-        // Rating stored directly on the response (site feedback)
+        // Rating stored directly on the response (site feedback — no feedback_answers)
         if (r.rating !== null && r.rating !== undefined && (r.feedback_answers ?? []).length === 0) {
           ratingSum += r.rating;
           ratingCount++;
