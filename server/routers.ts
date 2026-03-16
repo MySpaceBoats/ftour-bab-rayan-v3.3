@@ -44,6 +44,7 @@ import { feedbackRouter } from "./feedback-router";
 import { auditRouter } from "./audit-router";
 import { catalogProductsRouter } from "./catalog-products-router";
 import { teamRouter } from "./team-router";
+import { eventPhotosRouter } from "./event-photos-router";
 import * as galleryServices from "./gallery-services";
 import * as volunteerProfileServices from "./volunteer-profile-services";
 import { randomBytes } from "crypto";
@@ -6304,6 +6305,7 @@ export const appRouter = router({
   feedback: feedbackRouter,
   audit: auditRouter,
   team: teamRouter,
+  eventPhotos: eventPhotosRouter,
 });
 
 // ============================================

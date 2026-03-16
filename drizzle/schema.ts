@@ -1068,3 +1068,21 @@ export const ftourTeamMembers = mysqlTable("ftour_team_members", {
 
 export type FtourTeamMember = typeof ftourTeamMembers.$inferSelect;
 export type InsertFtourTeamMember = typeof ftourTeamMembers.$inferInsert;
+
+// ============================================
+// EVENT PHOTOS (Ramadan Closing Page Slider)
+// ============================================
+
+export const eventPhotos = mysqlTable("event_photos", {
+  id: int("id").autoincrement().primaryKey(),
+  imageUrl: text("imageUrl").notNull(),
+  storagePath: text("storagePath"),
+  title: varchar("title", { length: 255 }),
+  isActive: boolean("isActive").notNull().default(true),
+  displayOrder: int("displayOrder").notNull().default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type EventPhoto = typeof eventPhotos.$inferSelect;
+export type InsertEventPhoto = typeof eventPhotos.$inferInsert;
