@@ -381,12 +381,10 @@ export default function AdminFeedback() {
 
   // Build chart data
   const ratingDistribution = [1, 2, 3, 4, 5].map(r => {
-    let count = 0;
-    for (const resp of stats?.responses ?? []) {
-      for (const a of (resp as any).feedback_answers ?? []) {
-        if (a.answer_rating === r) count++;
-      }
-    }
+    // Use getMainRating to handle both site feedbacks (direct rating) and form responses (feedback_answers)
+    const count = (stats?.responses ?? []).filter(
+      (resp: any) => getMainRating(resp) === r
+    ).length;
     return { rating: `${r}⭐`, count };
   });
 
@@ -403,6 +401,12 @@ export default function AdminFeedback() {
   })();
 
   const sourceData = [
+    {
+      name: "Formulaire site",
+      value: (stats?.responses ?? []).filter(
+        (r: any) => r.source === "site"
+      ).length,
+    },
     {
       name: "Page web",
       value: (stats?.responses ?? []).filter(
