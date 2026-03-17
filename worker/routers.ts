@@ -9415,6 +9415,149 @@ const electionRouter = router({
 });
 
 // ============================================
+// EVENT PHOTOS ROUTER (Ramadan Closing Page)
+// ============================================
+
+const eventPhotosAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const allowed = ['admin', 'super_admin', 'admin_contenu', 'admin_ops'];
+  if (!ctx.user || !allowed.includes(ctx.user.role)) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès administrateur requis' });
+  }
+  return next({ ctx });
+});
+
+function mapEventPhoto(p: any) {
+  return {
+    id: p.id as number,
+    imageUrl: p.image_url as string,
+    title: p.title as string | null,
+    isActive: p.is_active as boolean,
+    displayOrder: p.display_order as number,
+    createdAt: p.created_at as string,
+  };
+}
+
+const eventPhotosRouter = router({
+  listPublic: publicProcedure.query(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+    const { data, error } = await supabase
+      .from('event_photos')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+    if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+    return (data ?? []).map(mapEventPhoto);
+  }),
+
+  list: eventPhotosAdminProcedure.query(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+    const { data, error } = await supabase
+      .from('event_photos')
+      .select('*')
+      .order('display_order', { ascending: true });
+    if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+    return (data ?? []).map(mapEventPhoto);
+  }),
+
+  create: eventPhotosAdminProcedure
+    .input(z.object({
+      imageBase64: z.string().optional(),
+      imageUrl: z.string().optional(),
+      title: z.string().max(255).optional(),
+      displayOrder: z.number().int().min(0).default(0),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      let imageUrl = input.imageUrl;
+
+      if (input.imageBase64) {
+        const base64Data = input.imageBase64.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '');
+        const contentType = input.imageBase64.startsWith('data:image/png')
+          ? 'image/png'
+          : input.imageBase64.startsWith('data:image/webp')
+          ? 'image/webp'
+          : 'image/jpeg';
+        const ext = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
+        const key = `event-photos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+        const { error: uploadErr } = await supabase.storage
+          .from('images')
+          .upload(key, buffer, { contentType, upsert: false });
+        if (uploadErr) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: uploadErr.message });
+        imageUrl = supabase.storage.from('images').getPublicUrl(key).data.publicUrl;
+      }
+
+      if (!imageUrl) throw new TRPCError({ code: 'BAD_REQUEST', message: 'URL ou image base64 requise' });
+
+      const { data, error } = await supabase
+        .from('event_photos')
+        .insert({ image_url: imageUrl, title: input.title ?? null, display_order: input.displayOrder, is_active: true })
+        .select()
+        .single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return mapEventPhoto(data);
+    }),
+
+  update: eventPhotosAdminProcedure
+    .input(z.object({
+      id: z.number().int(),
+      title: z.string().max(255).optional(),
+      isActive: z.boolean().optional(),
+      displayOrder: z.number().int().min(0).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const updateData: any = { updated_at: new Date().toISOString() };
+      if (input.title !== undefined) updateData.title = input.title;
+      if (input.isActive !== undefined) updateData.is_active = input.isActive;
+      if (input.displayOrder !== undefined) updateData.display_order = input.displayOrder;
+      const { data, error } = await supabase
+        .from('event_photos')
+        .update(updateData)
+        .eq('id', input.id)
+        .select()
+        .single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return mapEventPhoto(data);
+    }),
+
+  toggleActive: eventPhotosAdminProcedure
+    .input(z.object({ id: z.number().int(), isActive: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('event_photos')
+        .update({ is_active: input.isActive, updated_at: new Date().toISOString() })
+        .eq('id', input.id)
+        .select()
+        .single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return mapEventPhoto(data);
+    }),
+
+  delete: eventPhotosAdminProcedure
+    .input(z.object({ id: z.number().int() }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { error } = await supabase.from('event_photos').delete().eq('id', input.id);
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return { success: true };
+    }),
+
+  reorder: eventPhotosAdminProcedure
+    .input(z.object({ orderedIds: z.array(z.number().int()) }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      await Promise.all(
+        input.orderedIds.map((id, index) =>
+          supabase.from('event_photos').update({ display_order: index, updated_at: new Date().toISOString() }).eq('id', id)
+        )
+      );
+      return { success: true };
+    }),
+});
+
+// ============================================
 // MAIN APP ROUTER
 // ============================================
 
@@ -9446,6 +9589,7 @@ export const appRouter = router({
   catalogProducts: catalogProductsRouter,
   feedback: feedbackRouter,
   election: electionRouter,
+  eventPhotos: eventPhotosRouter,
 });
 
 export type AppRouter = typeof appRouter;
