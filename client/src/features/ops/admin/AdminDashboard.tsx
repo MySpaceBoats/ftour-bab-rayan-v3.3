@@ -356,6 +356,15 @@ const sections: SectionDefinition[] = [
         allowedRoles: ["admin", "super_admin", "admin_ops"],
       },
       {
+        label: "Équipe Ftour",
+        description: "Gérer le trombinoscope des managers et membres de l'équipe par édition",
+        route: "/admin/equipe",
+        icon: UsersRound,
+        iconColor: "text-emerald-700",
+        iconBg: "bg-emerald-100",
+        allowedRoles: ["admin", "super_admin", "admin_ops", "admin_contenu"],
+      },
+      {
         label: "Cartes membres",
         description:
           "Suivre les statuts, paiements et livraisons des cartes membres",

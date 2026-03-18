@@ -116,6 +116,12 @@ function FeaturedQuote({ members }: { members: any[] }) {
 // PAGE
 // ============================================
 export default function EquipeFtour() {
+  useEffect(() => {
+    const prev = document.title;
+    document.title = "L'équipe du Ftour Bab Rayan – 12ᵉ édition";
+    return () => { document.title = prev; };
+  }, []);
+
   const { data: members = [], isLoading, error } = trpc.team.listPublic.useQuery(
     { edition: CURRENT_EDITION },
     { staleTime: 5 * 60 * 1000 }
