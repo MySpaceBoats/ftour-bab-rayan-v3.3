@@ -16,6 +16,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import FeedbackCta from "@/components/FeedbackCta";
 import { ShoppingCart } from "lucide-react";
+import ProductImageCarousel from "@/components/ProductImageCarousel";
 
 export default function Pastries() {
   const { t } = useI18n();
@@ -196,13 +197,14 @@ export default function Pastries() {
                       key={pastry.id}
                       className="overflow-hidden hover:shadow-lg transition-shadow"
                     >
-                      {pastry.image && (
-                        <img
-                          src={pastry.image}
+                      <div className="aspect-video bg-muted relative overflow-hidden">
+                        <ProductImageCarousel
+                          image={(pastry as any).image}
+                          images={(pastry as any).images}
                           alt={pastry.name}
-                          className="w-full h-48 object-cover"
+                          showFitToggle={true}
                         />
-                      )}
+                      </div>
                       <div className="p-4">
                         <h3 className="font-semibold text-lg mb-2">
                           {pastry.name}
