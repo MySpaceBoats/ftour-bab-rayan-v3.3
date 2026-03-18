@@ -1312,21 +1312,21 @@ export default function Benevole() {
                 {REGISTRATIONS_CLOSED ? (
                   <Card className="border-none shadow-lg">
                     <CardContent className="p-10 flex flex-col items-center justify-center text-center space-y-4">
-                      <p className="text-lg font-semibold text-gray-700">
+                      <p className="text-lg font-semibold text-red-600">
                         🌙 Aïd Moubarak !<br />
                         Toute l'équipe du Ftour Bab Rayan vous souhaite une fête bénie, remplie de paix, de générosité et de lumière. Merci pour votre engagement, votre énergie et votre présence tout au long de ce Ramadan.
                       </p>
                       <div className="text-4xl">💛</div>
-                      <p className="text-lg font-semibold text-gray-700">
+                      <p className="text-lg font-semibold text-red-600">
                         À très bientôt, pour de nouvelles actions solidaires.
                       </p>
                       <hr className="w-full border-amber-200" />
-                      <p className="text-lg font-semibold text-gray-700" dir="rtl">
+                      <p className="text-lg font-semibold text-red-600" dir="rtl">
                         🌙 عيد مبارك سعيد<br />
                         تتمنى لكم أسرة فطور باب الريان عيدًا مباركًا مليئًا بالخير والبركة والطمأنينة. شكرًا لكم على عطائكم ومساهمتكم القيمة طوال شهر رمضان.
                       </p>
                       <div className="text-4xl">💛</div>
-                      <p className="text-lg font-semibold text-gray-700" dir="rtl">
+                      <p className="text-lg font-semibold text-red-600" dir="rtl">
                         إلى لقاء قريب في مبادرات إنسانية قادمة.
                       </p>
 
