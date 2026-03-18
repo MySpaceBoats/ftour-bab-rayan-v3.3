@@ -200,7 +200,7 @@ export default function Pastries() {
                         <img
                           src={pastry.image}
                           alt={pastry.name}
-                          className="w-full h-48 object-cover"
+                          className="w-full h-64 object-cover"
                         />
                       )}
                       <div className="p-4">
