@@ -89,16 +89,6 @@ export default function Home() {
                     Réserver ftour
                   </Button>
                 </Link>
-                <Link href={`/${lang}/benevole`}>
-                  <Button
-                    size="lg"
-                    className="w-full sm:w-auto text-lg px-8 py-6 bg-red-600 text-white hover:bg-red-700 border-2 border-red-600"
-                  >
-                    <Users className="h-5 w-5 mr-2" />
-                    {t.cta.volunteer}
-                    <ArrowRight className="h-5 w-5 ml-2" />
-                  </Button>
-                </Link>
                 <Link href={`/${lang}/dons`}>
                   <Button
                     size="lg"
@@ -567,17 +557,6 @@ export default function Home() {
               Inscrivez-vous dès maintenant et faites partie de cette belle
               initiative solidaire pour les enfants en difficulté
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href={`/${lang}/benevole`}>
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto text-lg px-8 bg-red-600 text-white hover:bg-red-700 border-2 border-red-600"
-                >
-                  <Users className="h-5 w-5 mr-2" />
-                  Devenir bénévole
-                </Button>
-              </Link>
-            </div>
           </div>
         </section>
       </main>

@@ -238,16 +238,6 @@ export default function Navbar() {
                 {t.auth.logout}
               </Button>
             )}
-            {/* CTA Principal : Devenir bénévole */}
-            <Link href={localizedHref("/benevole")}>
-              <Button
-                size="sm"
-                className="bg-red-600 text-white hover:bg-red-700 border-2 border-red-600 font-semibold"
-              >
-                <Users className="h-4 w-4 mr-2" />
-                {t.cta.volunteer}
-              </Button>
-            </Link>
             {/* CTA Secondaire : Faire un don */}
             <Link href={localizedHref("/dons")}>
               <Button
