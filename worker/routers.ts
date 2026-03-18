@@ -9415,6 +9415,180 @@ const electionRouter = router({
 });
 
 // ============================================
+// TEAM ROUTER (Trombinoscope Équipe Ftour)
+// ============================================
+
+function mapTeamMember(m: any) {
+  return {
+    id: m.id,
+    firstName: m.first_name,
+    lastName: m.last_name,
+    role: m.role ?? null,
+    citation: m.citation ?? null,
+    photoUrl: m.photo_url ?? null,
+    displayOrder: m.display_order,
+    edition: m.edition,
+    isActive: m.is_active,
+    createdAt: m.created_at,
+    updatedAt: m.updated_at,
+  };
+}
+
+const teamAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const allowed = ["admin", "super_admin", "admin_ops", "admin_contenu"];
+  if (!ctx.user || !allowed.includes(ctx.user.role)) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Accès administrateur requis" });
+  }
+  return next({ ctx });
+});
+
+const teamRouter = router({
+  listPublic: publicProcedure
+    .input(z.object({ edition: z.number().int().min(1).default(12) }))
+    .query(async ({ input, ctx }) => {
+      const db = createSupabaseAdmin(ctx.env);
+      const { data, error } = await db
+        .from("ftour_team_members")
+        .select("*")
+        .eq("edition", input.edition)
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      return (data ?? []).map(mapTeamMember);
+    }),
+
+  list: teamAdminProcedure
+    .input(z.object({ edition: z.number().int().min(1).optional() }))
+    .query(async ({ input, ctx }) => {
+      const db = createSupabaseAdmin(ctx.env);
+      let query = db
+        .from("ftour_team_members")
+        .select("*")
+        .order("edition", { ascending: false })
+        .order("display_order", { ascending: true });
+      if (input.edition !== undefined) query = query.eq("edition", input.edition);
+      const { data, error } = await query;
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      return (data ?? []).map(mapTeamMember);
+    }),
+
+  create: teamAdminProcedure
+    .input(z.object({
+      firstName: z.string().min(1),
+      lastName: z.string().min(1),
+      role: z.string().optional(),
+      citation: z.string().optional(),
+      photoBase64: z.string().optional(),
+      photoUrl: z.string().optional(),
+      displayOrder: z.number().int().min(0).default(0),
+      edition: z.number().int().min(1).default(12),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = createSupabaseAdmin(ctx.env);
+      let resolvedPhotoUrl = input.photoUrl ?? null;
+
+      if (input.photoBase64) {
+        const base64Data = input.photoBase64.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, "");
+        const contentType = input.photoBase64.startsWith("data:image/png") ? "image/png" : "image/jpeg";
+        const ext = contentType === "image/png" ? "png" : "jpg";
+        const path = `team/edition-${input.edition}/${Date.now()}-${input.firstName.toLowerCase()}-${input.lastName.toLowerCase()}.${ext}`;
+        const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+        const { error: uploadError } = await db.storage.from("images").upload(path, buffer, { contentType, upsert: false });
+        if (uploadError) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: uploadError.message });
+        resolvedPhotoUrl = db.storage.from("images").getPublicUrl(path).data.publicUrl;
+      }
+
+      const { data, error } = await db
+        .from("ftour_team_members")
+        .insert({
+          first_name: input.firstName,
+          last_name: input.lastName,
+          role: input.role ?? null,
+          citation: input.citation ?? null,
+          photo_url: resolvedPhotoUrl,
+          display_order: input.displayOrder,
+          edition: input.edition,
+          is_active: true,
+        })
+        .select()
+        .single();
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      return mapTeamMember(data);
+    }),
+
+  update: teamAdminProcedure
+    .input(z.object({
+      id: z.number().int(),
+      firstName: z.string().min(1).optional(),
+      lastName: z.string().min(1).optional(),
+      role: z.string().optional(),
+      citation: z.string().optional(),
+      photoBase64: z.string().optional(),
+      photoUrl: z.string().optional(),
+      displayOrder: z.number().int().min(0).optional(),
+      edition: z.number().int().min(1).optional(),
+      isActive: z.boolean().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = createSupabaseAdmin(ctx.env);
+      const { id, photoBase64, ...rest } = input;
+      let resolvedPhotoUrl = rest.photoUrl;
+
+      if (photoBase64) {
+        const base64Data = photoBase64.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, "");
+        const contentType = photoBase64.startsWith("data:image/png") ? "image/png" : "image/jpeg";
+        const ext = contentType === "image/png" ? "png" : "jpg";
+        const edition = rest.edition ?? 12;
+        const path = `team/edition-${edition}/${Date.now()}-${id}.${ext}`;
+        const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+        const { error: uploadError } = await db.storage.from("images").upload(path, buffer, { contentType, upsert: false });
+        if (uploadError) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: uploadError.message });
+        resolvedPhotoUrl = db.storage.from("images").getPublicUrl(path).data.publicUrl;
+      }
+
+      const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if (rest.firstName !== undefined) updates.first_name = rest.firstName;
+      if (rest.lastName !== undefined) updates.last_name = rest.lastName;
+      if (rest.role !== undefined) updates.role = rest.role;
+      if (rest.citation !== undefined) updates.citation = rest.citation;
+      if (resolvedPhotoUrl !== undefined) updates.photo_url = resolvedPhotoUrl;
+      if (rest.displayOrder !== undefined) updates.display_order = rest.displayOrder;
+      if (rest.edition !== undefined) updates.edition = rest.edition;
+      if (rest.isActive !== undefined) updates.is_active = rest.isActive;
+
+      const { data, error } = await db
+        .from("ftour_team_members")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      return mapTeamMember(data);
+    }),
+
+  delete: teamAdminProcedure
+    .input(z.object({ id: z.number().int() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = createSupabaseAdmin(ctx.env);
+      const { error } = await db.from("ftour_team_members").delete().eq("id", input.id);
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      return { success: true };
+    }),
+
+  reorder: teamAdminProcedure
+    .input(z.object({ orderedIds: z.array(z.number().int()) }))
+    .mutation(async ({ input, ctx }) => {
+      const db = createSupabaseAdmin(ctx.env);
+      await Promise.all(
+        input.orderedIds.map((id, index) =>
+          db.from("ftour_team_members").update({ display_order: index, updated_at: new Date().toISOString() }).eq("id", id)
+        )
+      );
+      return { success: true };
+    }),
+});
+
+// ============================================
 // MAIN APP ROUTER
 // ============================================
 
@@ -9446,6 +9620,7 @@ export const appRouter = router({
   catalogProducts: catalogProductsRouter,
   feedback: feedbackRouter,
   election: electionRouter,
+  team: teamRouter,
 });
 
 export type AppRouter = typeof appRouter;
