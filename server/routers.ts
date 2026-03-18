@@ -7288,6 +7288,7 @@ export const appRouterUpdated = router({
   election: electionRouter,
   feedback: feedbackRouter,
   audit: auditRouter,
+  team: teamRouter,
 });
 
 export type AppRouter = typeof appRouterUpdated;
