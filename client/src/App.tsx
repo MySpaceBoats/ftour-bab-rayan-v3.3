@@ -411,9 +411,9 @@ function LocalizedRoutes() {
       />
 
       {/* ================================================
-          RAMADAN CLOSING PAGE — replaces homepage
+          PUBLIC ROUTES — homepage
           ================================================ */}
-      <Route path="/" component={RamadanClosingPage} />
+      <Route path="/" component={Home} />
 
       {/* Page feedback publique */}
       <Route path="/feedback/new" component={SiteFeedbackPage} />
@@ -428,7 +428,7 @@ function LocalizedRoutes() {
       {/* ================================================
           PUBLIC ROUTES — sous /:lang (section 4.1)
           ================================================ */}
-      <Route path="/:lang" component={RamadanClosingPage} />
+      <Route path="/:lang" component={Home} />
       <Route path="/:lang/programme" component={Programme} />
       <Route path="/:lang/benevole" component={Benevole} />
       <Route path="/:lang/benevole/photos" component={BenevoleGalerieUpload} />
