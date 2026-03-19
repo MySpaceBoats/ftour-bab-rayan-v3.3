@@ -21,8 +21,9 @@ export const amz: Translations = {
     administration: 'Administration',
     search: 'Search...',
     searchPlaceholder: 'Search the site...',
-    boutique: 'Shop',
+    boutique: 'Solidarity Shop',
     gallery: 'Gallery',
+    blog: 'Blog',
   },
 
   // CTA Buttons

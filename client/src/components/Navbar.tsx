@@ -28,6 +28,8 @@ import {
   UtensilsCrossed,
   UserCircle2,
   Star,
+  BookOpen,
+  Images,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -76,16 +78,13 @@ export default function Navbar() {
     { href: localizedHref("/evenement"), label: t.nav.event, icon: Info },
     { href: localizedHref("/benevole"), label: t.nav.volunteer, icon: Users },
     {
-      href: localizedHref("/reservation"),
-      label: t.nav.restaurant,
-      icon: UtensilsCrossed,
-    },
-    {
       href: localizedHref("/boutique"),
       label: t.nav.boutique,
       icon: ShoppingBag,
     },
     { href: localizedHref("/dons"), label: "Donation", icon: Heart },
+    { href: localizedHref("/blog"), label: t.nav.blog, icon: BookOpen },
+    { href: localizedHref("/galerie"), label: t.nav.gallery, icon: Images },
     { href: localizedHref("/equipe-ftour"), label: t.nav.team, icon: Star },
   ];
 

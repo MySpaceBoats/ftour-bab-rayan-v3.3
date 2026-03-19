@@ -21,8 +21,9 @@ export const ar: Translations = {
     administration: 'لوحة التحكم',
     search: 'بحث...',
     searchPlaceholder: 'البحث في الموقع...',
-    boutique: 'المتجر',
+    boutique: 'المتجر التضامني',
     gallery: 'المعرض',
+    blog: 'المدونة',
     team: 'فريق الفطور',
   },
 

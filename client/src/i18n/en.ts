@@ -21,8 +21,9 @@ export const en: Translations = {
     administration: 'Administration',
     search: 'Search...',
     searchPlaceholder: 'Search the site...',
-    boutique: 'Shop',
+    boutique: 'Solidarity Shop',
     gallery: 'Gallery',
+    blog: 'Blog',
     team: 'The Ftour Team',
   },
 
