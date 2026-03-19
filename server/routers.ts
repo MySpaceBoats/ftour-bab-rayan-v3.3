@@ -41,6 +41,7 @@ import { scannerRouter } from "./scanner-router";
 import { ftourRouter } from "./ftour-router";
 import { electionRouter } from "./election-router";
 import { feedbackRouter } from "./feedback-router";
+import { eventFeedbackRouter } from "./event-feedback-router";
 import { auditRouter } from "./audit-router";
 import { catalogProductsRouter } from "./catalog-products-router";
 import { teamRouter } from "./team-router";
@@ -6303,6 +6304,7 @@ export const appRouter = router({
   catalogProducts: catalogProductsRouter,
   ftour: ftourRouter,
   feedback: feedbackRouter,
+  eventFeedback: eventFeedbackRouter,
   audit: auditRouter,
   team: teamRouter,
   eventPhotos: eventPhotosRouter,
@@ -7287,6 +7289,7 @@ export const appRouterUpdated = router({
   ftour: ftourRouter,
   election: electionRouter,
   feedback: feedbackRouter,
+  eventFeedback: eventFeedbackRouter,
   audit: auditRouter,
   team: teamRouter,
   eventPhotos: eventPhotosRouter,

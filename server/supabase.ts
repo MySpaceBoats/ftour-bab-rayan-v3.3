@@ -234,6 +234,47 @@ export async function ensureTeamTable(): Promise<void> {
 }
 
 // ============================================
+// AUTO-MIGRATION: event_feedback tables
+// ============================================
+let _eventFeedbackMigrationDone = false;
+
+/**
+ * Vérifie que les tables du module Event Feedback existent.
+ * Affiche un message d'erreur explicatif si elles sont absentes.
+ */
+export async function ensureEventFeedbackTables(): Promise<void> {
+  if (_eventFeedbackMigrationDone) return;
+  _eventFeedbackMigrationDone = true;
+
+  const client = getSupabaseAdminClient();
+  if (!client) {
+    console.warn('[Migration] Supabase not configured, skipping event_feedback tables check');
+    return;
+  }
+
+  try {
+    const { error } = await client.from('event_feedback').select('id').limit(1);
+
+    if (error && (
+      error.code === 'PGRST204' ||
+      error.code === '42P01' ||
+      error.message?.includes('does not exist') ||
+      error.message?.includes('schema cache')
+    )) {
+      console.error('='.repeat(70));
+      console.error('[MIGRATION REQUIRED] Event Feedback tables are MISSING');
+      console.error('[MIGRATION REQUIRED] Run this migration in the Supabase SQL Editor:');
+      console.error('  supabase/migrations/20260319000000_add_event_feedback_module.sql');
+      console.error('='.repeat(70));
+    } else {
+      console.log('[Migration] event_feedback tables OK');
+    }
+  } catch (err) {
+    console.error('[Migration] Error checking event_feedback tables:', err);
+  }
+}
+
+// ============================================
 // AUTO-MIGRATION: detect missing catalog_items column on terroir_orders
 // ============================================
 let _catalogItemsColumnExists: boolean | null = null;

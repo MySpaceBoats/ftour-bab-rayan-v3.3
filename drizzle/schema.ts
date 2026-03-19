@@ -1049,6 +1049,100 @@ export type FeedbackCampaignRecipient = typeof feedbackCampaignRecipients.$infer
 export type InsertFeedbackCampaignRecipient = typeof feedbackCampaignRecipients.$inferInsert;
 
 // ============================================
+// EVENT FEEDBACK MODULE (Feedback multi-dimensionnel Ramadan)
+// ============================================
+
+/** Rôle du participant au sein de l'événement Ramadan */
+export const eventFeedbackRoleEnum = mysqlEnum("eventFeedbackRole", [
+  "VOLUNTEER",    // Bénévole
+  "MANAGER",      // Responsable / Manager
+  "GROUP",        // Représentant d'un groupe
+  "BENEFICIARY",  // Bénéficiaire (bénéficiaire de la distribution)
+  "VISITOR",      // Visiteur / Invité
+  "PARTNER",      // Partenaire
+]);
+
+/** Type de participation à l'événement */
+export const eventFeedbackParticipationTypeEnum = mysqlEnum("eventFeedbackParticipationType", [
+  "FTOR",             // Ftour classique
+  "NIGHT_26",         // Nuit du 26
+  "VOLUNTEER_EVENT",  // Ftour bénévoles
+  "THANK_YOU_EVENT",  // Événement remerciements
+]);
+
+/**
+ * Feedback principal — une réponse complète par participant
+ * Indexé sur role, participationType et eventDay pour des analyses rapides
+ */
+export const eventFeedback = mysqlTable("event_feedback", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId"),                                  // Optionnel (si connecté)
+  email: varchar("email", { length: 320 }),               // Optionnel (anonyme autorisé)
+  name: varchar("name", { length: 255 }),
+  role: eventFeedbackRoleEnum.notNull(),
+  participationType: eventFeedbackParticipationTypeEnum.notNull(),
+  eventDay: int("eventDay"),                              // Numéro du jour Ramadan (1-30)
+  eventDate: timestamp("eventDate"),                      // Date réelle (optionnel)
+  isAnonymous: boolean("isAnonymous").notNull().default(false),
+  // Score global NPS (0-10) stocké séparément pour requêtes rapides
+  npsScore: int("npsScore"),
+  // Score global experience (1-10) stocké séparément pour requêtes rapides
+  globalScore: int("globalScore"),
+  // Statut de modération (hérite du système feedback existant)
+  moderation: feedbackModerationEnum.notNull().default("pending"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type EventFeedback = typeof eventFeedback.$inferSelect;
+export type InsertEventFeedback = typeof eventFeedback.$inferInsert;
+
+/**
+ * Réponses par section — note et métadonnées (sous-questions) par domaine
+ * Ex: { sectionKey: "cuisine", rating: 4, metadata: { qualite: 5, quantite: 3 } }
+ */
+export const eventFeedbackSectionResponses = mysqlTable("event_feedback_section_responses", {
+  id: int("id").autoincrement().primaryKey(),
+  feedbackId: int("feedbackId").notNull(),
+  sectionKey: varchar("sectionKey", { length: 100 }).notNull(), // "service", "cuisine", "securite"…
+  rating: int("rating"),                                         // Note principale (1-5 ou 1-10)
+  metadata: json("metadata"),                                    // Sous-questions JSON { key: value }
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type EventFeedbackSectionResponse = typeof eventFeedbackSectionResponses.$inferSelect;
+export type InsertEventFeedbackSectionResponse = typeof eventFeedbackSectionResponses.$inferInsert;
+
+/**
+ * Réponses textuelles — champs libres (suggestions, témoignages, impact personnel…)
+ */
+export const eventFeedbackTextResponses = mysqlTable("event_feedback_text_responses", {
+  id: int("id").autoincrement().primaryKey(),
+  feedbackId: int("feedbackId").notNull(),
+  fieldKey: varchar("fieldKey", { length: 100 }).notNull(), // "suggestion_1", "testimonial", "personal_impact"
+  value: text("value").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type EventFeedbackTextResponse = typeof eventFeedbackTextResponses.$inferSelect;
+export type InsertEventFeedbackTextResponse = typeof eventFeedbackTextResponses.$inferInsert;
+
+/**
+ * Tags auto-générés — pour détection rapide des problèmes
+ * Ex: "low_service_score", "security_issue", "positive_testimony"
+ */
+export const eventFeedbackTags = mysqlTable("event_feedback_tags", {
+  id: int("id").autoincrement().primaryKey(),
+  feedbackId: int("feedbackId").notNull(),
+  tag: varchar("tag", { length: 100 }).notNull(),         // "low_service_score", "security_issue"…
+  sectionKey: varchar("sectionKey", { length: 100 }),     // Section associée (optionnel)
+  severity: varchar("severity", { length: 20 }).default("info"), // "info", "warning", "critical"
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type EventFeedbackTag = typeof eventFeedbackTags.$inferSelect;
+export type InsertEventFeedbackTag = typeof eventFeedbackTags.$inferInsert;
+
+// ============================================
 // FTOUR TEAM MEMBERS (Trombinoscope)
 // ============================================
 
