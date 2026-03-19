@@ -229,7 +229,7 @@ function MemberRow({
   isLast: boolean;
 }) {
   const fullName = `${member.firstName} ${member.lastName}`;
-  const initials = `${member.firstName[0] ?? ""}${member.lastName[0] ?? ""}`.toUpperCase();
+  const initials = `${member.firstName?.[0] ?? ""}${member.lastName?.[0] ?? ""}`.toUpperCase();
 
   return (
     <div className={`flex items-center gap-3 p-3 rounded-lg border ${member.isActive ? "bg-background" : "bg-muted/40 opacity-70"}`}>
@@ -542,7 +542,7 @@ export default function AdminTeam() {
                   .filter((m: TeamMember) => m.isActive && (editionFilter === undefined || m.edition === editionFilter))
                   .sort((a: TeamMember, b: TeamMember) => a.displayOrder - b.displayOrder)
                   .map((member: TeamMember) => {
-                    const initials = `${member.firstName[0] ?? ""}${member.lastName[0] ?? ""}`.toUpperCase();
+                    const initials = `${member.firstName?.[0] ?? ""}${member.lastName?.[0] ?? ""}`.toUpperCase();
                     return (
                       <div key={member.id} className="flex flex-col items-center gap-1.5 text-center">
                         {member.photoUrl ? (
