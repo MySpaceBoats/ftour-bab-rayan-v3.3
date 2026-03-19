@@ -45,6 +45,7 @@ import { auditRouter } from "./audit-router";
 import { catalogProductsRouter } from "./catalog-products-router";
 import { teamRouter } from "./team-router";
 import { eventPhotosRouter } from "./event-photos-router";
+import { blogRouter } from "./blog-router";
 import * as galleryServices from "./gallery-services";
 import * as volunteerProfileServices from "./volunteer-profile-services";
 import { randomBytes } from "crypto";
@@ -7290,6 +7291,7 @@ export const appRouterUpdated = router({
   audit: auditRouter,
   team: teamRouter,
   eventPhotos: eventPhotosRouter,
+  blog: blogRouter,
 });
 
 export type AppRouter = typeof appRouterUpdated;

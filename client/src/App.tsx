@@ -170,6 +170,14 @@ import EquipeFtour from "@/features/team/pages/EquipeFtour";
 import AdminTeam from "@/features/team/admin/AdminTeam";
 
 // ============================================
+// BLOG COMMUNAUTAIRE — features/blog
+// ============================================
+import BlogList from "@/features/blog/pages/BlogList";
+import BlogPost from "@/features/blog/pages/BlogPost";
+import BlogNew from "@/features/blog/pages/BlogNew";
+import AdminBlog from "@/features/blog/admin/AdminBlog";
+
+// ============================================
 // FEEDBACK — features/feedback
 // ============================================
 import FeedbackPage from "@/features/feedback/pages/FeedbackPage";
@@ -359,6 +367,9 @@ function LocalizedRoutes() {
       {/* Admin Election Managers */}
       <Route path="/admin/elections" component={AdminElections} />
 
+      {/* Admin Blog Communautaire */}
+      <Route path="/admin/blog" component={AdminBlog} />
+
       {/* Admin Feedback */}
       <Route
         path="/admin/feedback/campagnes"
@@ -415,6 +426,11 @@ function LocalizedRoutes() {
           ================================================ */}
       <Route path="/" component={Home} />
 
+      {/* Blog Communautaire */}
+      <Route path="/blog/nouveau" component={BlogNew} />
+      <Route path="/blog/:slug" component={BlogPost} />
+      <Route path="/blog" component={BlogList} />
+
       {/* Page feedback publique */}
       <Route path="/feedback/new" component={SiteFeedbackPage} />
       <Route path="/feedback" component={FeedbackPage} />
@@ -447,6 +463,11 @@ function LocalizedRoutes() {
         component={ForgotPassword}
       />
       <Route path="/:lang/profil-benevole" component={VolunteerProfilePage} />
+
+      {/* Blog Communautaire */}
+      <Route path="/:lang/blog/nouveau" component={BlogNew} />
+      <Route path="/:lang/blog/:slug" component={BlogPost} />
+      <Route path="/:lang/blog" component={BlogList} />
 
       {/* Équipe Ftour – Trombinoscope */}
       <Route path="/:lang/equipe-ftour" component={EquipeFtour} />
@@ -551,6 +572,9 @@ function LocalizedRoutes() {
       </Route>
       <Route path="/profil-benevole">
         {() => <Redirect to={`/${lang}/profil-benevole`} />}
+      </Route>
+      <Route path="/blog">
+        {() => <Redirect to={`/${lang}/blog`} />}
       </Route>
       <Route path="/equipe-ftour">
         {() => <Redirect to={`/${lang}/equipe-ftour`} />}
