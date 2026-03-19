@@ -99,17 +99,33 @@ alter table public.event_feedback_text_responses    enable row level security;
 alter table public.event_feedback_tags              enable row level security;
 
 -- Politique : accès total pour le service role (backend Supabase admin)
-create policy if not exists "service_role_all_ef"
-  on public.event_feedback for all to service_role using (true) with check (true);
+do $$ begin
+  if not exists (select 1 from pg_policies where policyname = 'service_role_all_ef' and tablename = 'event_feedback') then
+    create policy "service_role_all_ef"
+      on public.event_feedback for all to service_role using (true) with check (true);
+  end if;
+end $$;
 
-create policy if not exists "service_role_all_efsr"
-  on public.event_feedback_section_responses for all to service_role using (true) with check (true);
+do $$ begin
+  if not exists (select 1 from pg_policies where policyname = 'service_role_all_efsr' and tablename = 'event_feedback_section_responses') then
+    create policy "service_role_all_efsr"
+      on public.event_feedback_section_responses for all to service_role using (true) with check (true);
+  end if;
+end $$;
 
-create policy if not exists "service_role_all_eftr"
-  on public.event_feedback_text_responses for all to service_role using (true) with check (true);
+do $$ begin
+  if not exists (select 1 from pg_policies where policyname = 'service_role_all_eftr' and tablename = 'event_feedback_text_responses') then
+    create policy "service_role_all_eftr"
+      on public.event_feedback_text_responses for all to service_role using (true) with check (true);
+  end if;
+end $$;
 
-create policy if not exists "service_role_all_eft"
-  on public.event_feedback_tags for all to service_role using (true) with check (true);
+do $$ begin
+  if not exists (select 1 from pg_policies where policyname = 'service_role_all_eft' and tablename = 'event_feedback_tags') then
+    create policy "service_role_all_eft"
+      on public.event_feedback_tags for all to service_role using (true) with check (true);
+  end if;
+end $$;
 
 -- Rafraîchir le cache PostgREST
 notify pgrst, 'reload schema';
