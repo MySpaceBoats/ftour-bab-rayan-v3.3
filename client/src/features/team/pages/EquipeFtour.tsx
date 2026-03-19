@@ -99,7 +99,7 @@ function FeaturedQuote({ members }: { members: any[] }) {
         ) : (
           <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
             <span className="text-primary font-bold text-sm">
-              {featured.firstName[0]}{featured.lastName[0]}
+              {featured.firstName?.[0] ?? ""}{featured.lastName?.[0] ?? ""}
             </span>
           </div>
         )}
