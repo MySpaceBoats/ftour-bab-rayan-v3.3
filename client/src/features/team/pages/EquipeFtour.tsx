@@ -26,7 +26,7 @@ function MemberCard({ member, index }: { member: any; index: number }) {
   }, []);
 
   const fullName = `${member.firstName} ${member.lastName}`;
-  const initials = `${member.firstName[0] ?? ""}${member.lastName[0] ?? ""}`.toUpperCase();
+  const initials = `${member.firstName?.[0] ?? ""}${member.lastName?.[0] ?? ""}`.toUpperCase();
   const delay = (index % 8) * 80; // stagger per row
 
   return (
