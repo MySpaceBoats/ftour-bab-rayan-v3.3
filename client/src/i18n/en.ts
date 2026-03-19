@@ -23,6 +23,7 @@ export const en: Translations = {
     searchPlaceholder: 'Search the site...',
     boutique: 'Shop',
     gallery: 'Gallery',
+    team: 'The Ftour Team',
   },
 
   // CTA Buttons
