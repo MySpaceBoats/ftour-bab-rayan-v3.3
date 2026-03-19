@@ -86,7 +86,7 @@ export default function Navbar() {
       icon: ShoppingBag,
     },
     { href: localizedHref("/dons"), label: "Donation", icon: Heart },
-    { href: localizedHref("/equipe"), label: t.nav.team, icon: Star },
+    { href: localizedHref("/equipe-ftour"), label: t.nav.team, icon: Star },
   ];
 
   const handleLogout = async () => {
