@@ -197,6 +197,43 @@ export async function ensurePastriesTable(): Promise<void> {
 }
 
 // ============================================
+// AUTO-MIGRATION: ensure ftour_team_members table exists
+// ============================================
+let _teamMigrationDone = false;
+
+export async function ensureTeamTable(): Promise<void> {
+  if (_teamMigrationDone) return;
+  _teamMigrationDone = true;
+
+  const client = getSupabaseAdminClient();
+  if (!client) {
+    console.warn('[Migration] Supabase not configured, skipping ftour_team_members table check');
+    return;
+  }
+
+  try {
+    const { error: testError } = await client
+      .from('ftour_team_members')
+      .select('id')
+      .limit(1);
+
+    if (testError && (testError.code === 'PGRST204' || testError.code === '42P01' || testError.message?.includes('schema cache') || testError.message?.includes('does not exist'))) {
+      console.error('='.repeat(70));
+      console.error('[MIGRATION REQUIRED] The "ftour_team_members" table is MISSING from the database');
+      console.error('[MIGRATION REQUIRED] Team trombinoscope features will NOT work until you run the migration.');
+      console.error('');
+      console.error('[MIGRATION REQUIRED] Run this file in the Supabase SQL Editor:');
+      console.error('  supabase/migrations/20260316_add_team_members_and_event_photos.sql');
+      console.error('='.repeat(70));
+    } else {
+      console.log('[Migration] ftour_team_members table OK');
+    }
+  } catch (err) {
+    console.error('[Migration] Error checking ftour_team_members table:', err);
+  }
+}
+
+// ============================================
 // AUTO-MIGRATION: detect missing catalog_items column on terroir_orders
 // ============================================
 let _catalogItemsColumnExists: boolean | null = null;

@@ -7,7 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouterUpdated } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { ensureVolunteerSlotsColumn, ensurePastriesTable } from "../supabase";
+import { ensureVolunteerSlotsColumn, ensurePastriesTable, ensureTeamTable } from "../supabase";
 import { refreshUserSession } from "../supabase-auth";
 import { getSupabaseAdminClient } from "../supabase";
 import {
@@ -48,6 +48,7 @@ async function startServer() {
   // Ensure database schema is up to date
   await ensureVolunteerSlotsColumn();
   await ensurePastriesTable();
+  await ensureTeamTable();
 
   // Initialize all product stocks to 60
   await initializeAllStocks(60);
