@@ -9925,6 +9925,213 @@ const blogRouter = router({
 });
 
 // ============================================
+// EVENT FEEDBACK ROUTER
+// ============================================
+
+const FEEDBACK_ROLES = ["VOLUNTEER", "MANAGER", "GROUP", "BENEFICIARY", "VISITOR", "PARTNER"] as const;
+const PARTICIPATION_TYPES = ["FTOR", "NIGHT_26", "VOLUNTEER_EVENT", "THANK_YOU_EVENT"] as const;
+
+const LOW_SCORE_THRESHOLD = 3;
+
+function generateEventFeedbackAutoTags(
+  sections: Array<{ sectionKey: string; rating?: number | null }>,
+  globalScore?: number | null,
+  npsScore?: number | null
+): Array<{ tag: string; sectionKey?: string; severity: string }> {
+  const tags: Array<{ tag: string; sectionKey?: string; severity: string }> = [];
+  for (const section of sections) {
+    if (section.rating === null || section.rating === undefined) continue;
+    const normalizedRating = section.rating > 5 ? Math.round(section.rating / 2) : section.rating;
+    if (normalizedRating < LOW_SCORE_THRESHOLD) {
+      const severity = normalizedRating <= 1 ? "critical" : "warning";
+      tags.push({ tag: `low_${section.sectionKey.replace(/[^a-z0-9_]/gi, "_")}`, sectionKey: section.sectionKey, severity });
+    }
+  }
+  if (npsScore !== null && npsScore !== undefined && npsScore <= 6) {
+    tags.push({ tag: "nps_detractor", severity: npsScore <= 3 ? "critical" : "warning" });
+  }
+  if (globalScore !== null && globalScore !== undefined && globalScore <= 4) {
+    tags.push({ tag: "low_global_score", severity: globalScore <= 2 ? "critical" : "warning" });
+  }
+  return tags;
+}
+
+type EventFeedbackRateLimitBucket = { count: number; resetAt: number };
+const eventFeedbackRateLimit = new Map<string, EventFeedbackRateLimitBucket>();
+
+function enforceEventFeedbackRateLimit(ip: string) {
+  const now = Date.now();
+  const windowMs = 60 * 60 * 1000;
+  const max = 5;
+  const bucket = eventFeedbackRateLimit.get(ip);
+  if (!bucket || bucket.resetAt <= now) {
+    eventFeedbackRateLimit.set(ip, { count: 1, resetAt: now + windowMs });
+    return;
+  }
+  if (bucket.count >= max) {
+    throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Trop de soumissions. Réessayez dans une heure." });
+  }
+  bucket.count++;
+  eventFeedbackRateLimit.set(ip, bucket);
+}
+
+function getWorkerClientIp(req: Request): string {
+  const cfIp = req.headers.get("cf-connecting-ip");
+  if (cfIp) return cfIp;
+  const fwd = req.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0]!.trim();
+  return "unknown";
+}
+
+const eventFeedbackAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const allowedRoles = ["admin", "super_admin", "admin_ops"];
+  if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Accès réservé aux administrateurs" });
+  }
+  return next({ ctx });
+});
+
+const sectionResponseSchema = z.object({
+  sectionKey: z.string().min(1).max(100),
+  rating: z.number().min(1).max(10).optional(),
+  metadata: z.record(z.union([z.string(), z.number(), z.boolean()])).optional(),
+});
+
+const textResponseSchema = z.object({
+  fieldKey: z.string().min(1).max(100),
+  value: z.string().min(1),
+});
+
+const submitEventFeedbackInput = z.object({
+  role: z.enum(FEEDBACK_ROLES),
+  participationType: z.enum(PARTICIPATION_TYPES),
+  eventDay: z.number().min(1).max(30).optional(),
+  name: z.string().min(2).max(255).optional(),
+  email: z.string().email().optional(),
+  isAnonymous: z.boolean().default(false),
+  sections: z.array(sectionResponseSchema),
+  textResponses: z.array(textResponseSchema),
+  website: z.string().optional(),
+});
+
+const eventFeedbackRouter = router({
+  submitEventFeedback: publicProcedure
+    .input(submitEventFeedbackInput)
+    .mutation(async ({ input, ctx }) => {
+      if (input.website) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Requête invalide" });
+      }
+      enforceEventFeedbackRateLimit(getWorkerClientIp(ctx.req));
+
+      const db = createSupabaseAdmin(ctx.env);
+
+      const globalSection = input.sections.find(s => s.sectionKey === "global_experience");
+      const globalScore = (globalSection?.metadata?.["global_score"] as number | undefined) ?? globalSection?.rating ?? null;
+      const npsScore = (globalSection?.metadata?.["nps"] as number | undefined) ?? null;
+
+      const { data: feedbackRow, error: feedbackError } = await db
+        .from("event_feedback")
+        .insert({
+          user_id: null,
+          email: input.isAnonymous ? null : (input.email ?? null),
+          name: input.isAnonymous ? null : (input.name ?? null),
+          role: input.role,
+          participation_type: input.participationType,
+          event_day: input.eventDay ?? null,
+          is_anonymous: input.isAnonymous,
+          nps_score: npsScore,
+          global_score: globalScore,
+          moderation: "pending",
+        })
+        .select("id")
+        .single();
+
+      if (feedbackError || !feedbackRow) {
+        console.error("[EventFeedback] Insert main:", feedbackError);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: feedbackError?.message ?? "Erreur lors de la sauvegarde" });
+      }
+
+      const feedbackId = feedbackRow.id;
+
+      if (input.sections.length > 0) {
+        const sectionRows = input.sections.map(s => ({
+          feedback_id: feedbackId,
+          section_key: s.sectionKey,
+          rating: s.rating ?? null,
+          metadata: s.metadata ?? null,
+        }));
+        const { error: sectionsError } = await db.from("event_feedback_section_responses").insert(sectionRows);
+        if (sectionsError) console.error("[EventFeedback] Insert sections:", sectionsError);
+      }
+
+      const validTextResponses = input.textResponses.filter(t => t.value.trim().length > 0);
+      if (validTextResponses.length > 0) {
+        const textRows = validTextResponses.map(t => ({ feedback_id: feedbackId, field_key: t.fieldKey, value: t.value.trim() }));
+        const { error: textError } = await db.from("event_feedback_text_responses").insert(textRows);
+        if (textError) console.error("[EventFeedback] Insert text responses:", textError);
+      }
+
+      const autoTags = generateEventFeedbackAutoTags(input.sections, globalScore, npsScore);
+      if (autoTags.length > 0) {
+        const tagRows = autoTags.map(t => ({ feedback_id: feedbackId, tag: t.tag, section_key: t.sectionKey ?? null, severity: t.severity }));
+        const { error: tagsError } = await db.from("event_feedback_tags").insert(tagRows);
+        if (tagsError) console.error("[EventFeedback] Insert tags:", tagsError);
+      }
+
+      return { success: true, feedbackId };
+    }),
+
+  getEventFeedbackAnalytics: eventFeedbackAdminProcedure
+    .input(z.object({
+      fromDate: z.string().optional(),
+      toDate: z.string().optional(),
+      role: z.enum(FEEDBACK_ROLES).optional(),
+      participationType: z.enum(PARTICIPATION_TYPES).optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const db = createSupabaseAdmin(ctx.env);
+      let query = db.from("event_feedback").select("*");
+      if (input.fromDate) query = query.gte("created_at", input.fromDate);
+      if (input.toDate) query = query.lte("created_at", input.toDate);
+      if (input.role) query = query.eq("role", input.role);
+      if (input.participationType) query = query.eq("participation_type", input.participationType);
+      const { data, error } = await query;
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      return data ?? [];
+    }),
+
+  getEventFeedbackList: eventFeedbackAdminProcedure
+    .input(z.object({
+      page: z.number().min(1).default(1),
+      pageSize: z.number().min(1).max(100).default(20),
+      role: z.enum(FEEDBACK_ROLES).optional(),
+      participationType: z.enum(PARTICIPATION_TYPES).optional(),
+      moderation: z.enum(["pending", "approved", "rejected"]).optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const db = createSupabaseAdmin(ctx.env);
+      const from = (input.page - 1) * input.pageSize;
+      const to = from + input.pageSize - 1;
+      let query = db.from("event_feedback").select("*", { count: "exact" }).range(from, to).order("created_at", { ascending: false });
+      if (input.role) query = query.eq("role", input.role);
+      if (input.participationType) query = query.eq("participation_type", input.participationType);
+      if (input.moderation) query = query.eq("moderation", input.moderation);
+      const { data, error, count } = await query;
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      return { items: data ?? [], total: count ?? 0 };
+    }),
+
+  updateEventFeedbackModeration: eventFeedbackAdminProcedure
+    .input(z.object({ id: z.number(), moderation: z.enum(["pending", "approved", "rejected"]) }))
+    .mutation(async ({ ctx, input }) => {
+      const db = createSupabaseAdmin(ctx.env);
+      const { error } = await db.from("event_feedback").update({ moderation: input.moderation }).eq("id", input.id);
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      return { success: true };
+    }),
+});
+
+// ============================================
 // MAIN APP ROUTER
 // ============================================
 
@@ -9955,6 +10162,7 @@ export const appRouter = router({
   inventory: inventoryRouter,
   catalogProducts: catalogProductsRouter,
   feedback: feedbackRouter,
+  eventFeedback: eventFeedbackRouter,
   election: electionRouter,
   team: teamRouter,
   blog: blogRouter,
