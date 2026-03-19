@@ -9415,6 +9415,165 @@ const electionRouter = router({
 });
 
 // ============================================
+// TEAM ROUTER
+// ============================================
+
+const teamAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const allowedRoles = ['admin', 'super_admin', 'admin_contenu', 'admin_ops', 'admin_operations'];
+  if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès administrateur requis' });
+  }
+  return next({ ctx });
+});
+
+const teamRouter = router({
+  listPublic: publicProcedure
+    .input(z.object({ edition: z.number().int().min(1).default(12) }))
+    .query(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('ftour_team_members')
+        .select('*')
+        .eq('edition', input.edition)
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data ?? [];
+    }),
+
+  list: teamAdminProcedure
+    .input(z.object({ edition: z.number().int().min(1).optional() }))
+    .query(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      let query = supabase.from('ftour_team_members').select('*').order('display_order', { ascending: true });
+      if (input.edition) query = query.eq('edition', input.edition);
+      const { data, error } = await query;
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data ?? [];
+    }),
+
+  create: teamAdminProcedure
+    .input(z.object({
+      firstName: z.string().min(1),
+      lastName: z.string().min(1),
+      role: z.string().optional(),
+      citation: z.string().optional(),
+      photoBase64: z.string().optional(),
+      photoUrl: z.string().optional(),
+      displayOrder: z.number().int().min(0).default(0),
+      edition: z.number().int().min(1).default(12),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      let photoUrl = input.photoUrl ?? null;
+
+      if (input.photoBase64) {
+        const base64Data = input.photoBase64.replace(/^data:image\/\w+;base64,/, '');
+        const contentType = input.photoBase64.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+        const ext = contentType === 'image/png' ? 'png' : 'jpg';
+        const key = `team/edition-${input.edition}/${Date.now()}-${input.firstName.toLowerCase()}-${input.lastName.toLowerCase()}.${ext}`;
+        const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('images')
+          .upload(key, buffer, { contentType, upsert: false });
+        if (uploadError) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: uploadError.message });
+        const { data: urlData } = supabase.storage.from('images').getPublicUrl(uploadData.path);
+        photoUrl = urlData.publicUrl;
+      }
+
+      const { data, error } = await supabase
+        .from('ftour_team_members')
+        .insert({
+          first_name: input.firstName,
+          last_name: input.lastName,
+          role: input.role ?? null,
+          citation: input.citation ?? null,
+          photo_url: photoUrl,
+          display_order: input.displayOrder,
+          edition: input.edition,
+          is_active: true,
+        })
+        .select()
+        .single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data;
+    }),
+
+  update: teamAdminProcedure
+    .input(z.object({
+      id: z.number().int(),
+      firstName: z.string().min(1).optional(),
+      lastName: z.string().min(1).optional(),
+      role: z.string().optional(),
+      citation: z.string().optional(),
+      photoBase64: z.string().optional(),
+      photoUrl: z.string().optional(),
+      displayOrder: z.number().int().min(0).optional(),
+      edition: z.number().int().min(1).optional(),
+      isActive: z.boolean().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { id, photoBase64, ...rest } = input;
+      let photoUrl = rest.photoUrl ?? undefined;
+
+      if (photoBase64) {
+        const base64Data = photoBase64.replace(/^data:image\/\w+;base64,/, '');
+        const contentType = photoBase64.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+        const ext = contentType === 'image/png' ? 'png' : 'jpg';
+        const edition = rest.edition ?? 12;
+        const key = `team/edition-${edition}/${Date.now()}-${id}.${ext}`;
+        const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('images')
+          .upload(key, buffer, { contentType, upsert: false });
+        if (uploadError) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: uploadError.message });
+        const { data: urlData } = supabase.storage.from('images').getPublicUrl(uploadData.path);
+        photoUrl = urlData.publicUrl;
+      }
+
+      const updates: Record<string, unknown> = {};
+      if (rest.firstName !== undefined) updates.first_name = rest.firstName;
+      if (rest.lastName !== undefined) updates.last_name = rest.lastName;
+      if (rest.role !== undefined) updates.role = rest.role;
+      if (rest.citation !== undefined) updates.citation = rest.citation;
+      if (photoUrl !== undefined) updates.photo_url = photoUrl;
+      if (rest.displayOrder !== undefined) updates.display_order = rest.displayOrder;
+      if (rest.edition !== undefined) updates.edition = rest.edition;
+      if (rest.isActive !== undefined) updates.is_active = rest.isActive;
+
+      const { data, error } = await supabase
+        .from('ftour_team_members')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data;
+    }),
+
+  delete: teamAdminProcedure
+    .input(z.object({ id: z.number().int() }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { error } = await supabase.from('ftour_team_members').delete().eq('id', input.id);
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return { success: true };
+    }),
+
+  reorder: teamAdminProcedure
+    .input(z.object({ orderedIds: z.array(z.number().int()) }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const updates = input.orderedIds.map((id, index) =>
+        supabase.from('ftour_team_members').update({ display_order: index }).eq('id', id)
+      );
+      await Promise.all(updates);
+      return { success: true };
+    }),
+});
+
+// ============================================
 // MAIN APP ROUTER
 // ============================================
 
@@ -9446,6 +9605,7 @@ export const appRouter = router({
   catalogProducts: catalogProductsRouter,
   feedback: feedbackRouter,
   election: electionRouter,
+  team: teamRouter,
 });
 
 export type AppRouter = typeof appRouter;
