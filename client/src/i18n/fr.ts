@@ -19,8 +19,9 @@ export const fr = {
     administration: 'Administration',
     search: 'Rechercher...',
     searchPlaceholder: 'Rechercher sur le site...',
-    boutique: 'Boutique',
+    boutique: 'Boutique Solidaire',
     gallery: 'Galerie',
+    blog: 'Blog',
     team: "L'équipe Ftour",
   },
 
