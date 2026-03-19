@@ -182,8 +182,10 @@ import AdminBlog from "@/features/blog/admin/AdminBlog";
 // ============================================
 import FeedbackPage from "@/features/feedback/pages/FeedbackPage";
 import SiteFeedbackPage from "@/features/feedback/pages/SiteFeedbackPage";
+import EventFeedbackForm from "@/features/feedback/pages/EventFeedbackForm";
 import AdminFeedback from "@/features/feedback/admin/AdminFeedback";
 import AdminFeedbackCampagnes from "@/features/feedback/admin/AdminFeedbackCampagnes";
+import AdminEventFeedback from "@/features/feedback/admin/AdminEventFeedback";
 
 // ============================================
 // ELECTION MANAGERS — features/election
@@ -375,6 +377,7 @@ function LocalizedRoutes() {
         path="/admin/feedback/campagnes"
         component={AdminFeedbackCampagnes}
       />
+      <Route path="/admin/feedback/evenement" component={AdminEventFeedback} />
       <Route path="/admin/feedback" component={AdminFeedback} />
 
       {/* ================================================
@@ -432,6 +435,7 @@ function LocalizedRoutes() {
       <Route path="/blog" component={BlogList} />
 
       {/* Page feedback publique */}
+      <Route path="/feedback/evenement" component={EventFeedbackForm} />
       <Route path="/feedback/new" component={SiteFeedbackPage} />
       <Route path="/feedback" component={FeedbackPage} />
 
