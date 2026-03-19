@@ -21,6 +21,7 @@ export const fr = {
     searchPlaceholder: 'Rechercher sur le site...',
     boutique: 'Boutique',
     gallery: 'Galerie',
+    team: "L'équipe Ftour",
   },
 
   // CTA Buttons
