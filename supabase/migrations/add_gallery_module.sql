@@ -70,3 +70,17 @@ values
   ('Ftour Bab Rayan', 'ftour-bab-rayan', 0, 'published'),
   ('Bénévoles', 'benevoles', 1, 'published')
 on conflict (slug) do nothing;
+
+-- Public storage bucket for gallery images
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'images',
+  'images',
+  true,
+  10485760,
+  array['image/jpeg', 'image/png', 'image/webp']
+)
+on conflict (id) do update set
+  public = true,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
