@@ -47,6 +47,7 @@ import { catalogProductsRouter } from "./catalog-products-router";
 import { teamRouter } from "./team-router";
 import { eventPhotosRouter } from "./event-photos-router";
 import { blogRouter } from "./blog-router";
+import { aiRouter } from "./ai-router";
 import * as galleryServices from "./gallery-services";
 import * as volunteerProfileServices from "./volunteer-profile-services";
 import { randomBytes } from "crypto";
@@ -7295,6 +7296,7 @@ export const appRouterUpdated = router({
   team: teamRouter,
   eventPhotos: eventPhotosRouter,
   blog: blogRouter,
+  ai: aiRouter,
 });
 
 export type AppRouter = typeof appRouterUpdated;

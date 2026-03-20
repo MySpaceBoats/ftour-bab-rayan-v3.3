@@ -158,6 +158,12 @@ import VolunteerProfilePage from "@/features/volunteer/pages/VolunteerProfile";
 import WhatsAppFloatingButton from "./components/WhatsAppFloatingButton";
 
 // ============================================
+// AI LAYER — features/ai
+// ============================================
+import AiChatWidget from "@/features/ai/components/AiChatWidget";
+import AiAdminCopilot from "@/features/ai/components/AiAdminCopilot";
+
+// ============================================
 // FTOUR BÉNÉVOLES — features/ftour
 // ============================================
 import AdminFtour from "@/features/ftour/admin/AdminFtour";
@@ -600,6 +606,11 @@ function LocalizedRoutes() {
       </Route>
 
       {/* ================================================
+          AI COPILOT — Admin only
+          ================================================ */}
+      <Route path="/admin/ai-copilot" component={AiAdminCopilot} />
+
+      {/* ================================================
           404
           ================================================ */}
       <Route path="/404" component={NotFound} />
@@ -617,6 +628,7 @@ function App() {
             <Toaster />
             <LocalizedRoutes />
             <WhatsAppFloatingButton />
+            <AiChatWidget />
           </TooltipProvider>
         </CartProvider>
       </ThemeProvider>

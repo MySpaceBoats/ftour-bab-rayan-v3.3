@@ -18,6 +18,9 @@ import {
 import { DONATION_SUGGESTED_AMOUNTS_MAD } from "../../shared/const";
 import { validateGroupRequestByToken } from "../volunteer-group-service";
 import { getAdminDashboardPayload } from "../admin-dashboard-bff";
+import { sdk } from "./sdk";
+import { buildRagContext, getOrCreateConversation, getConversationHistory, saveMessage, BASE_SYSTEM_PROMPT } from "../ai-services";
+import { ENV } from "./env";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -266,6 +269,135 @@ async function startServer() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Une erreur est survenue.";
       res.status(400).send(validationResultPage(false, message));
+    }
+  });
+
+  // ─── AI STREAMING CHAT (SSE) ─────────────────────────────────────────────────
+  // POST /api/ai/chat/stream
+  // Body: { message: string, conversationId?: string }
+  // Returns: Server-Sent Events stream with delta text chunks
+  app.post("/api/ai/chat/stream", async (req, res) => {
+    // 1. Authenticate
+    let user: Awaited<ReturnType<typeof sdk.authenticateRequest>> | null = null;
+    try {
+      user = await sdk.authenticateRequest(req);
+    } catch {
+      res.status(401).json({ error: "Non authentifié" });
+      return;
+    }
+
+    const message: string = typeof req.body?.message === "string" ? req.body.message.slice(0, 4000) : "";
+    if (!message) {
+      res.status(400).json({ error: "message est requis" });
+      return;
+    }
+
+    const conversationId: string | undefined =
+      typeof req.body?.conversationId === "string" ? req.body.conversationId : undefined;
+
+    // 2. SSE headers
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+
+    const sendEvent = (event: string, data: string) => {
+      res.write(`event: ${event}\ndata: ${data}\n\n`);
+    };
+
+    try {
+      const isAdmin = ["admin", "super_admin", "admin_ops"].includes(user.role);
+
+      // 3. Ensure conversation + RAG
+      const convId = await getOrCreateConversation(user.openId, conversationId);
+      await saveMessage(convId, "user", message);
+
+      const [ragContext, history] = await Promise.all([
+        buildRagContext(message, isAdmin),
+        getConversationHistory(convId, 20),
+      ]);
+
+      const systemPrompt =
+        BASE_SYSTEM_PROMPT +
+        (isAdmin
+          ? "\nTu parles à un administrateur. Analyse détaillée autorisée."
+          : "\nTu parles à un utilisateur standard.") +
+        (ragContext ? `\n\n${ragContext}` : "");
+
+      const messages = [
+        { role: "system", content: systemPrompt },
+        ...history.slice(0, -1),
+        { role: "user", content: message },
+      ];
+
+      // 4. Emit conversationId to client
+      sendEvent("conversation", JSON.stringify({ conversationId: convId }));
+
+      // 5. Call Forge API with stream: true
+      const forgeApiUrl = ENV.forgeApiUrl
+        ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
+        : "https://forge.manus.im/v1/chat/completions";
+
+      const forgeRes = await fetch(forgeApiUrl, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${ENV.forgeApiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gemini-2.5-flash",
+          messages,
+          max_tokens: 2048,
+          stream: true,
+        }),
+      });
+
+      if (!forgeRes.ok || !forgeRes.body) {
+        const errText = await forgeRes.text();
+        sendEvent("error", JSON.stringify({ message: `LLM error: ${errText.slice(0, 200)}` }));
+        res.end();
+        return;
+      }
+
+      // 6. Stream SSE chunks from Forge → client
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullReply = "";
+
+      for await (const chunk of forgeRes.body as unknown as AsyncIterable<Uint8Array>) {
+        buffer += decoder.decode(chunk, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const payload = line.slice(6).trim();
+          if (payload === "[DONE]") continue;
+
+          try {
+            const parsed = JSON.parse(payload);
+            const delta: string = parsed?.choices?.[0]?.delta?.content ?? "";
+            if (delta) {
+              fullReply += delta;
+              sendEvent("delta", JSON.stringify({ delta }));
+            }
+          } catch {
+            // malformed chunk – skip
+          }
+        }
+      }
+
+      // 7. Persist assistant reply
+      await saveMessage(convId, "assistant", fullReply || "(no content)", ragContext);
+
+      sendEvent("done", JSON.stringify({ conversationId: convId }));
+      res.end();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erreur interne";
+      console.error("[AI Stream] Error:", err);
+      sendEvent("error", JSON.stringify({ message: msg }));
+      res.end();
     }
   });
 
