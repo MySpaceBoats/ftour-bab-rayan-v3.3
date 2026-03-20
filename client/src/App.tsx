@@ -178,6 +178,15 @@ import BlogNew from "@/features/blog/pages/BlogNew";
 import AdminBlog from "@/features/blog/admin/AdminBlog";
 
 // ============================================
+// JOURNAL — features/journal
+// ============================================
+import AdminJournal from "@/features/journal/admin/AdminJournal";
+import AdminJournalNew from "@/features/journal/admin/AdminJournalNew";
+import AdminJournalEntry from "@/features/journal/admin/AdminJournalEntry";
+import AdminJournalLessons from "@/features/journal/admin/AdminJournalLessons";
+import AdminJournalAnalytics from "@/features/journal/admin/AdminJournalAnalytics";
+
+// ============================================
 // FEEDBACK — features/feedback
 // ============================================
 import FeedbackPage from "@/features/feedback/pages/FeedbackPage";
@@ -368,6 +377,13 @@ function LocalizedRoutes() {
 
       {/* Admin Election Managers */}
       <Route path="/admin/elections" component={AdminElections} />
+
+      {/* Admin Journal d'Événement */}
+      <Route path="/admin/journal/new" component={AdminJournalNew} />
+      <Route path="/admin/journal/lessons" component={AdminJournalLessons} />
+      <Route path="/admin/journal/analytics" component={AdminJournalAnalytics} />
+      <Route path="/admin/journal/:id" component={AdminJournalEntry} />
+      <Route path="/admin/journal" component={AdminJournal} />
 
       {/* Admin Blog Communautaire */}
       <Route path="/admin/blog" component={AdminBlog} />
