@@ -26,10 +26,10 @@ export default function BoutiqueProductTypePage({ productType }: { productType: 
         {isLoading ? (
           <p className="text-[#E6DCC3]">Chargement...</p>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {(data || []).map((item: any) => (
               <Card key={item.id} className="overflow-hidden bg-[#4A4829] border-[#F2E9D3]/10">
-                <div className="aspect-square bg-[#5E5B34]">{item.image && <img src={item.image} className="h-full w-full object-cover" />}</div>
+                <div className="aspect-[4/3] bg-[#5E5B34]">{item.image && <img src={item.image} className="h-full w-full object-cover" />}</div>
                 <CardContent className="p-4 text-[#F2E9D3]">
                   <p className="font-semibold">{item.name}</p>
                   <p className="text-sm text-[#E6DCC3] line-clamp-2">{item.description || "Pas de description"}</p>
