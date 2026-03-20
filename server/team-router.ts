@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { router, protectedProcedure, publicProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
 import * as supabaseServices from './supabase-services';
-import { storagePut } from './storage';
+import { getSupabaseAdminClient } from './supabase';
 
 // ============================================
 // ADMIN GUARD
@@ -59,10 +59,13 @@ export const teamRouter = router({
         const base64Data = input.photoBase64.replace(/^data:image\/\w+;base64,/, '');
         const contentType = input.photoBase64.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
         const ext = contentType === 'image/png' ? 'png' : 'jpg';
-        const key = `team/edition-${input.edition}/${Date.now()}-${input.firstName.toLowerCase()}-${input.lastName.toLowerCase()}.${ext}`;
+        const path = `team/edition-${input.edition}/${Date.now()}-${input.firstName.toLowerCase()}-${input.lastName.toLowerCase()}.${ext}`;
         const buffer = Buffer.from(base64Data, 'base64');
-        const { url } = await storagePut(key, buffer, contentType);
-        photoUrl = url;
+        const client = getSupabaseAdminClient();
+        if (!client) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+        const { error: uploadError } = await client.storage.from('images').upload(path, buffer, { contentType, upsert: true });
+        if (uploadError) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: uploadError.message });
+        photoUrl = client.storage.from('images').getPublicUrl(path).data.publicUrl;
       }
 
       return supabaseServices.createTeamMemberSupabase({
@@ -98,10 +101,13 @@ export const teamRouter = router({
         const contentType = photoBase64.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
         const ext = contentType === 'image/png' ? 'png' : 'jpg';
         const edition = rest.edition ?? 12;
-        const key = `team/edition-${edition}/${Date.now()}-${id}.${ext}`;
+        const path = `team/edition-${edition}/${Date.now()}-${id}.${ext}`;
         const buffer = Buffer.from(base64Data, 'base64');
-        const { url } = await storagePut(key, buffer, contentType);
-        photoUrl = url;
+        const client = getSupabaseAdminClient();
+        if (!client) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Supabase non configuré' });
+        const { error: uploadError } = await client.storage.from('images').upload(path, buffer, { contentType, upsert: true });
+        if (uploadError) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: uploadError.message });
+        photoUrl = client.storage.from('images').getPublicUrl(path).data.publicUrl;
       }
 
       return supabaseServices.updateTeamMemberSupabase(id, { ...rest, photoUrl });
