@@ -94,6 +94,7 @@ const SITE_FEEDBACK_SOURCES = [
   "restaurant",
   "product",
 ] as const;
+const SITE_FEEDBACK_STATUSES = ["new", "processed"] as const;
 
 const catalogProductTypeEnum = z.enum(["goodies", "terroir", "patisserie"]);
 const catalogProductSelect =
@@ -298,6 +299,202 @@ const feedbackRouter = router({
       }
 
       return { success: true, id: data?.id ?? null };
+    }),
+
+  listSiteFeedbacks: adminProcedure
+    .input(
+      z
+        .object({
+          feedbackType: z.enum(SITE_FEEDBACK_TYPES).optional(),
+          minRating: z.number().min(1).max(5).optional(),
+          status: z.enum(SITE_FEEDBACK_STATUSES).optional(),
+          fromDate: z.string().optional(),
+          toDate: z.string().optional(),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const db = createSupabaseAdmin(ctx.env);
+      let query = db
+        .from("feedback_responses")
+        .select("id, user_name, user_email, feedback_type, rating, message, source, page_source, moderation, created_at")
+        .eq("source", "site")
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      if (input?.feedbackType) query = query.eq("feedback_type", input.feedbackType);
+      if (input?.minRating) query = query.gte("rating", input.minRating);
+      if (input?.status) query = query.eq("moderation", input.status);
+      if (input?.fromDate) query = query.gte("created_at", input.fromDate);
+      if (input?.toDate) query = query.lte("created_at", input.toDate + "T23:59:59Z");
+
+      const { data, error } = await query;
+      if (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      }
+      return { feedbacks: data ?? [] };
+    }),
+
+  updateSiteFeedbackStatus: adminProcedure
+    .input(z.object({ id: z.number(), status: z.enum(SITE_FEEDBACK_STATUSES) }))
+    .mutation(async ({ ctx, input }) => {
+      const db = createSupabaseAdmin(ctx.env);
+      const { error } = await db
+        .from("feedback_responses")
+        .update({ moderation: input.status })
+        .eq("id", input.id);
+      if (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      }
+      return { success: true };
+    }),
+
+  deleteSiteFeedback: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = createSupabaseAdmin(ctx.env);
+      const { error } = await db
+        .from("feedback_responses")
+        .delete()
+        .eq("id", input.id);
+      if (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      }
+      return { success: true };
+    }),
+
+  getStats: adminProcedure
+    .input(
+      z
+        .object({
+          fromDate: z.string().optional(),
+          toDate: z.string().optional(),
+          targetType: z.string().optional(),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const db = createSupabaseAdmin(ctx.env);
+
+      const applyDateFilters = (q: any) => {
+        if (input?.fromDate) q = q.gte("created_at", input.fromDate);
+        if (input?.toDate) q = q.lte("created_at", input.toDate + "T23:59:59Z");
+        return q;
+      };
+
+      const [totalResult, anonResult] = await Promise.all([
+        applyDateFilters(
+          db.from("feedback_responses").select("*", { count: "exact", head: true })
+        ),
+        applyDateFilters(
+          db.from("feedback_responses")
+            .select("*", { count: "exact", head: true })
+            .eq("is_anonymous", true)
+        ),
+      ]);
+
+      if (totalResult.error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: totalResult.error.message });
+      }
+
+      const total = totalResult.count ?? 0;
+      const anonymous = anonResult.count ?? 0;
+      const identified = total - anonymous;
+
+      const { data, error: chartError } = await applyDateFilters(
+        db.from("feedback_responses").select(
+          "id, is_anonymous, source, moderation, created_at, rating, message"
+        )
+      )
+        .order("created_at", { ascending: false })
+        .limit(500);
+
+      if (chartError) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: chartError.message });
+      }
+
+      const responses = data ?? [];
+      let ratingSum = 0;
+      let ratingCount = 0;
+      let recommendYes = 0;
+
+      for (const r of responses as any[]) {
+        if (r.rating !== null && r.rating !== undefined) {
+          ratingSum += r.rating;
+          ratingCount++;
+          if (r.rating >= 4) recommendYes++;
+        }
+      }
+
+      const avgRating = ratingCount > 0 ? Math.round((ratingSum / ratingCount) * 10) / 10 : 0;
+      const recommendRate = ratingCount > 0 ? Math.round((recommendYes / ratingCount) * 100) : 0;
+
+      return { total, anonymous, identified, avgRating, recommendRate, responses };
+    }),
+
+  listResponses: adminProcedure
+    .input(
+      z
+        .object({
+          fromDate: z.string().optional(),
+          toDate: z.string().optional(),
+          source: z.enum(["public_page", "email_campaign"]).optional(),
+          minRating: z.number().optional(),
+          maxRating: z.number().optional(),
+          moderation: z
+            .enum(["pending", "processed", "to_analyze", "important"])
+            .optional(),
+          limit: z.number().default(50),
+          offset: z.number().default(0),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const db = createSupabaseAdmin(ctx.env);
+
+      let query = db.from("feedback_responses").select(
+        `id, form_id, is_anonymous, user_email, user_name, source, moderation, created_at, rating, message`,
+        { count: "exact" }
+      );
+
+      if (input?.fromDate) query = query.gte("created_at", input.fromDate);
+      if (input?.toDate) query = query.lte("created_at", input.toDate + "T23:59:59Z");
+      if (input?.source) query = query.eq("source", input.source);
+      if (input?.moderation) query = query.eq("moderation", input.moderation);
+      if (input?.minRating) query = query.gte("rating", input.minRating);
+      if (input?.maxRating) query = query.lte("rating", input.maxRating);
+
+      const limit = input?.limit ?? 50;
+      const offset = input?.offset ?? 0;
+      query = query
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      const { data, error, count } = await query;
+      if (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      }
+
+      return { responses: data ?? [], total: count ?? 0 };
+    }),
+
+  updateModeration: adminProcedure
+    .input(
+      z.object({
+        responseId: z.number(),
+        moderation: z.enum(["pending", "processed", "to_analyze", "important"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = createSupabaseAdmin(ctx.env);
+      const { error } = await db
+        .from("feedback_responses")
+        .update({ moderation: input.moderation })
+        .eq("id", input.responseId);
+      if (error) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      }
+      return { success: true };
     }),
 });
 
