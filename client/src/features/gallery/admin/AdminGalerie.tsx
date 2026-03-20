@@ -155,10 +155,13 @@ export default function AdminGalerie() {
             <Card key={item.id}>
               <CardContent className="p-3 space-y-3">
                 <img
-                  src={item.image_thumb_url}
+                  src={item.image_thumb_url ?? item.image_original_url ?? undefined}
                   alt={item.title || "photo"}
-                  className="h-44 w-full rounded object-cover"
+                  className="h-44 w-full rounded object-cover bg-muted"
                   loading="lazy"
+                  onError={e => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
                 />
                 <div className="space-y-1">
                   <p className="font-medium line-clamp-1">
