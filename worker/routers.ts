@@ -9015,6 +9015,7 @@ const inventoryRouter = router({
   products: inventoryProductsRouter,
   locations: inventoryLocationsRouter,
   stock: inventoryStockRouter,
+  movements: inventoryMovementsRouter,
 
   syncAllCatalogs: adminProcedure.mutation(async ({ ctx }) => {
     const supabase = createSupabaseAdmin(ctx.env);
