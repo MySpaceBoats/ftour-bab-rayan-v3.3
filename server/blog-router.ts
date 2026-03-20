@@ -7,6 +7,7 @@ import { router, publicProcedure, protectedProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getSupabaseAdminClient } from "./supabase";
+import { storagePut } from "./storage";
 
 // ============================================
 // CONSTANTES
@@ -106,6 +107,7 @@ const createPostSchema = z.object({
   categories: z.array(z.enum(BLOG_CATEGORIES)).min(1).max(4),
   hook: z.string().max(255).optional(),
   coverImage: z.string().url().optional().or(z.literal("")),
+  coverImageBase64: z.string().optional(),
   consented: z.literal(true, {
     errorMap: () => ({ message: "Vous devez accepter les conditions de publication." }),
   }),
@@ -282,6 +284,22 @@ export const blogRouter = router({
     const db = requireDb(getSupabaseAdminClient());
     const user = ctx.user;
 
+    // Handle base64 image upload
+    let coverImageUrl = input.coverImage || null;
+    if (input.coverImageBase64) {
+      const base64Data = input.coverImageBase64.replace(/^data:image\/\w+;base64,/, "");
+      const contentType = input.coverImageBase64.startsWith("data:image/png")
+        ? "image/png"
+        : input.coverImageBase64.startsWith("data:image/webp")
+        ? "image/webp"
+        : "image/jpeg";
+      const ext = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
+      const key = `blog-covers/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const buffer = Buffer.from(base64Data, "base64");
+      const { url } = await storagePut(key, buffer, contentType);
+      coverImageUrl = url;
+    }
+
     const baseSlug = slugify(input.title);
     const slug = await ensureUniqueSlug(db, baseSlug);
 
@@ -302,7 +320,7 @@ export const blogRouter = router({
         author_name: user.name || "Anonyme",
         type: input.type,
         categories: input.categories,
-        cover_image: input.coverImage || null,
+        cover_image: coverImageUrl,
         consented: true,
         status: "pending",
       })
