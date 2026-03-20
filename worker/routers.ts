@@ -9010,12 +9010,205 @@ const inventoryMovementsRouter = router({
     }),
 });
 
+// ---- Stock Entry QR helpers ----
+function makeWorkerStockEntrySlug(productId: number): string {
+  const rand = crypto.randomUUID().replace(/-/g, '').slice(0, 20);
+  return `stk_${productId}_${rand}`;
+}
+async function workerEnsureStockEntryQrSlug(supabase: any, productId: number): Promise<string> {
+  const { data: existing } = await supabase
+    .from('inventory_products').select('id, stock_entry_qr_slug').eq('id', productId).single();
+  if (existing?.stock_entry_qr_slug) return existing.stock_entry_qr_slug;
+  for (let i = 0; i < 5; i++) {
+    const slug = makeWorkerStockEntrySlug(productId);
+    const { data, error } = await supabase
+      .from('inventory_products')
+      .update({ stock_entry_qr_slug: slug })
+      .eq('id', productId)
+      .is('stock_entry_qr_slug', null)
+      .select('stock_entry_qr_slug')
+      .single();
+    if (!error && data?.stock_entry_qr_slug) return data.stock_entry_qr_slug;
+    const { data: refreshed } = await supabase
+      .from('inventory_products').select('stock_entry_qr_slug').eq('id', productId).single();
+    if (refreshed?.stock_entry_qr_slug) return refreshed.stock_entry_qr_slug;
+  }
+  throw new Error("Impossible de générer un QR d'entrée de stock");
+}
+
+const inventoryStockEntryRouter = router({
+  listProducts: adminProcedure
+    .input(z.object({ search: z.string().optional(), isActive: z.boolean().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      let q = supabase.from('inventory_products').select('*').order('name');
+      if (input?.isActive !== undefined) q = q.eq('is_active', input.isActive);
+      if (input?.search) {
+        const p = `%${input.search}%`;
+        q = q.or(`name.ilike.${p},sku.ilike.${p},category.ilike.${p},barcode.ilike.${p}`);
+      }
+      const { data: products, error } = await q;
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      const rows = products ?? [];
+      await Promise.all(
+        rows.filter((p: any) => !p.stock_entry_qr_slug).map((p: any) => workerEnsureStockEntryQrSlug(supabase, p.id)),
+      );
+      const productIds = rows.map((p: any) => p.id);
+      let globalLocId: number | null = null;
+      try {
+        const { data: loc } = await supabase
+          .from('inventory_locations').select('id').eq('type', 'GLOBAL').eq('is_active', true).limit(1).single();
+        globalLocId = loc?.id ?? null;
+      } catch { /* no global location yet */ }
+      let balances: Array<{ product_id: number; quantity_on_hand: number }> = [];
+      if (globalLocId && productIds.length) {
+        const { data } = await supabase
+          .from('inventory_stock_balances').select('product_id, quantity_on_hand')
+          .eq('location_id', globalLocId).in('product_id', productIds);
+        balances = data ?? [];
+      }
+      const byBalance = new Map<number, number>(balances.map((b: any) => [b.product_id, b.quantity_on_hand]));
+      const normalized = await Promise.all(rows.map(async (p: any) => {
+        const slug = p.stock_entry_qr_slug ?? await workerEnsureStockEntryQrSlug(supabase, p.id);
+        return { ...p, stock_entry_qr_slug: slug, global_stock: byBalance.get(p.id) ?? 0 };
+      }));
+      return { globalLocationId: globalLocId, products: normalized };
+    }),
+
+  getProductDetail: adminProcedure
+    .input(z.object({ productId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data: product, error } = await supabase
+        .from('inventory_products').select('*').eq('id', input.productId).single();
+      if (error) throw new TRPCError({ code: 'NOT_FOUND', message: parseInvError(error) });
+      const slug = product.stock_entry_qr_slug ?? await workerEnsureStockEntryQrSlug(supabase, input.productId);
+      const { data: globalLoc } = await supabase
+        .from('inventory_locations').select('*').eq('type', 'GLOBAL').eq('is_active', true).limit(1).single();
+      let globalStock = 0;
+      if (globalLoc) {
+        const { data: bal } = await supabase
+          .from('inventory_stock_balances').select('quantity_on_hand')
+          .eq('product_id', input.productId).eq('location_id', globalLoc.id).maybeSingle();
+        globalStock = bal?.quantity_on_hand ?? 0;
+      }
+      const { data: history } = await supabase
+        .from('inventory_movements').select('*, users(id, username, email)')
+        .eq('product_id', input.productId).eq('reference_type', 'QR_STOCK_ENTRY')
+        .order('created_at', { ascending: false }).limit(20);
+      return {
+        product: { ...product, stock_entry_qr_slug: slug },
+        globalLocation: globalLoc ?? null,
+        globalStock,
+        history: history ?? [],
+        lastEntry: (history ?? [])[0] ?? null,
+      };
+    }),
+
+  getBySlug: publicProcedure
+    .input(z.object({ slug: z.string().min(6).max(140) }))
+    .query(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('inventory_products').select('*').eq('stock_entry_qr_slug', input.slug).maybeSingle();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      if (!data) throw new TRPCError({ code: 'NOT_FOUND', message: 'Produit introuvable' });
+      if (!data.stock_entry_qr_enabled) throw new TRPCError({ code: 'FORBIDDEN', message: 'QR inactif' });
+      return data;
+    }),
+
+  ensureQr: adminProcedure
+    .input(z.object({ productId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const slug = await workerEnsureStockEntryQrSlug(supabase, input.productId);
+      return { slug };
+    }),
+
+  regenerateQr: adminProcedure
+    .input(z.object({ productId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      for (let i = 0; i < 5; i++) {
+        const slug = makeWorkerStockEntrySlug(input.productId);
+        const { data, error } = await supabase
+          .from('inventory_products')
+          .update({ stock_entry_qr_slug: slug, stock_entry_qr_enabled: true })
+          .eq('id', input.productId).select('stock_entry_qr_slug').single();
+        if (!error && data?.stock_entry_qr_slug) return { slug: data.stock_entry_qr_slug };
+      }
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Impossible de régénérer le QR' });
+    }),
+
+  setQrEnabled: adminProcedure
+    .input(z.object({ productId: z.number().int().positive(), enabled: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data, error } = await supabase
+        .from('inventory_products').update({ stock_entry_qr_enabled: input.enabled })
+        .eq('id', input.productId).select('id, stock_entry_qr_enabled').single();
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      return data;
+    }),
+
+  submit: adminProcedure
+    .input(z.object({
+      productId: z.number().int().positive(),
+      qty: z.number().int().positive(),
+      entryType: z.enum(['INITIAL_LOAD', 'PURCHASE_IN', 'DONATION_IN', 'PRODUCTION_IN']).optional(),
+      note: z.string().max(500).optional(),
+      reason: z.string().max(500).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const { data: product, error: pErr } = await supabase
+        .from('inventory_products').select('*').eq('id', input.productId).single();
+      if (pErr || !product) throw new TRPCError({ code: 'NOT_FOUND', message: 'Produit introuvable' });
+      if (!product.stock_entry_qr_enabled) throw new TRPCError({ code: 'FORBIDDEN', message: 'QR inactif' });
+      const { data: globalLoc, error: locErr } = await supabase
+        .from('inventory_locations').select('*').eq('type', 'GLOBAL').eq('is_active', true).limit(1).single();
+      if (locErr || !globalLoc) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Emplacement global non trouvé' });
+      const slug = product.stock_entry_qr_slug ?? await workerEnsureStockEntryQrSlug(supabase, input.productId);
+      const { data: mvt, error: mvtErr } = await supabase.rpc('inventory_add_stock', {
+        p_product_id:     input.productId,
+        p_location_id:    globalLoc.id,
+        p_quantity:       input.qty,
+        p_movement_type:  input.entryType ?? 'PURCHASE_IN',
+        p_reason:         input.reason ?? 'Entrée stock via QR',
+        p_note:           input.note ?? null,
+        p_performed_by:   ctx.user?.id ?? null,
+        p_reference_type: 'QR_STOCK_ENTRY',
+        p_reference_id:   slug,
+      });
+      if (mvtErr) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(mvtErr) });
+      const { data: bal } = await supabase
+        .from('inventory_stock_balances').select('quantity_on_hand')
+        .eq('product_id', input.productId).eq('location_id', globalLoc.id).maybeSingle();
+      return { movementId: mvt as number, globalLocationId: globalLoc.id, newGlobalBalance: bal?.quantity_on_hand ?? 0 };
+    }),
+
+  history: adminProcedure
+    .input(z.object({ limit: z.number().int().min(1).max(300).optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const supabase = createSupabaseAdmin(ctx.env);
+      const limit = Math.min(input?.limit ?? 100, 300);
+      const { data, error } = await supabase
+        .from('inventory_movements')
+        .select('*, inventory_products(id, name, category, sku), users(id, username, email)')
+        .eq('reference_type', 'QR_STOCK_ENTRY')
+        .order('created_at', { ascending: false }).limit(limit);
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      return data ?? [];
+    }),
+});
+
 const inventoryRouter = router({
   events: inventoryEventsRouter,
   products: inventoryProductsRouter,
   locations: inventoryLocationsRouter,
   stock: inventoryStockRouter,
   movements: inventoryMovementsRouter,
+  stockEntry: inventoryStockEntryRouter,
 
   syncAllCatalogs: adminProcedure.mutation(async ({ ctx }) => {
     const supabase = createSupabaseAdmin(ctx.env);
