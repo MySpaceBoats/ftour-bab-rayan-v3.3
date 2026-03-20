@@ -78,10 +78,10 @@ export default function BoutiqueSolidaire() {
                     <div className="h-1" style={{ backgroundColor: cat.color }} />
                     <div className="p-8 space-y-4">
                       <div
-                        className="w-14 h-14 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"
-                        style={{ backgroundColor: `${cat.color}20` }}
+                        className="w-24 h-24 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"
+                        style={{ backgroundColor: `${cat.color}30` }}
                       >
-                        <Icon className="h-7 w-7" style={{ color: cat.color }} />
+                        <Icon className="h-12 w-12" style={{ color: cat.color }} />
                       </div>
                       <h2 className="text-xl font-bold text-[#F2E9D3]">{cat.title}</h2>
                       <p className="text-[#E6DCC3]">{cat.description}</p>
@@ -106,10 +106,10 @@ export default function BoutiqueSolidaire() {
                 <div className="h-1" style={{ backgroundColor: terroirCategory.color }} />
                 <div className="p-8 space-y-4">
                   <div
-                    className="w-14 h-14 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"
-                    style={{ backgroundColor: `${terroirCategory.color}20` }}
+                    className="w-24 h-24 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"
+                    style={{ backgroundColor: `${terroirCategory.color}30` }}
                   >
-                    <terroirCategory.icon className="h-7 w-7" style={{ color: terroirCategory.color }} />
+                    <terroirCategory.icon className="h-12 w-12" style={{ color: terroirCategory.color }} />
                   </div>
                   <h2 className="text-xl font-bold text-[#F2E9D3]">{terroirCategory.title}</h2>
                   <p className="text-[#E6DCC3]">{terroirCategory.description}</p>
