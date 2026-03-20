@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { PenSquare, Loader2, CheckCircle } from "lucide-react";
+import { PenSquare, Loader2, CheckCircle, ImagePlus, X } from "lucide-react";
 
 // ============================================
 // CONSTANTES
@@ -51,8 +51,10 @@ export default function BlogNew() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [hook, setHook] = useState("");
   const [content, setContent] = useState("");
-  const [coverImage, setCoverImage] = useState("");
+  const [coverImageBase64, setCoverImageBase64] = useState<string>("");
+  const [coverImagePreview, setCoverImagePreview] = useState<string>("");
   const [consented, setConsented] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const createPost = trpc.blog.create.useMutation({
     onSuccess: (data) => {
@@ -68,6 +70,31 @@ export default function BlogNew() {
       }
     },
   });
+
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      toast.error("L'image ne doit pas dépasser 5 Mo.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setCoverImageBase64(result);
+      setCoverImagePreview(result);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeImage() {
+    setCoverImageBase64("");
+    setCoverImagePreview("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   function toggleCategory(val: string) {
     setSelectedCategories((prev) =>
@@ -105,7 +132,7 @@ export default function BlogNew() {
       categories: selectedCategories as any,
       hook: hook.trim() || undefined,
       content: content.trim(),
-      coverImage: coverImage.trim() || undefined,
+      coverImageBase64: coverImageBase64 || undefined,
       consented: true,
     });
   }
@@ -242,26 +269,53 @@ Minimum 50 caractères."
             <p className="text-xs text-gray-400">{content.length} caractères</p>
           </div>
 
-          {/* Image cover (URL) */}
+          {/* Image de couverture (upload) */}
           <div className="space-y-2">
-            <Label htmlFor="coverImage" className="font-semibold">
+            <Label className="font-semibold">
               Image de couverture{" "}
-              <span className="text-gray-400 font-normal">(URL optionnelle)</span>
+              <span className="text-gray-400 font-normal">(optionnelle, max 5 Mo)</span>
             </Label>
-            <Input
-              id="coverImage"
-              type="url"
-              placeholder="https://…"
-              value={coverImage}
-              onChange={(e) => setCoverImage(e.target.value)}
+            <input
+              ref={fileInputRef}
+              id="coverImageFile"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleImageChange}
+              className="hidden"
             />
-            {coverImage && (
-              <img
-                src={coverImage}
-                alt="Aperçu"
-                className="w-full h-40 object-cover rounded-lg mt-2"
-                onError={(e) => (e.currentTarget.style.display = "none")}
-              />
+            {!coverImagePreview ? (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full h-36 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-amber-400 hover:text-amber-600 transition-colors cursor-pointer"
+              >
+                <ImagePlus className="w-8 h-8" />
+                <span className="text-sm">Cliquez pour choisir une photo</span>
+                <span className="text-xs">JPG, PNG ou WEBP</span>
+              </button>
+            ) : (
+              <div className="relative rounded-xl overflow-hidden">
+                <img
+                  src={coverImagePreview}
+                  alt="Aperçu"
+                  className="w-full h-48 object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 transition-colors"
+                  aria-label="Supprimer l'image"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute bottom-2 right-2 bg-white/90 hover:bg-white text-gray-700 text-xs px-3 py-1.5 rounded-full font-medium shadow transition-colors"
+                >
+                  Changer
+                </button>
+              </div>
             )}
           </div>
 
