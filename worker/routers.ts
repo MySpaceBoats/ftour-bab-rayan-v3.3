@@ -277,16 +277,20 @@ const feedbackRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = createSupabaseAdmin(ctx.env);
       const { data, error } = await db
-        .from("feedbacks")
+        .from("feedback_responses")
         .insert({
-          name: input.name,
+          form_id: null,
+          campaign_id: null,
+          recipient_id: null,
+          user_name: input.name,
+          user_email: input.email,
           email: input.email,
-          phone: input.phone ?? null,
           feedback_type: input.feedbackType,
           rating: input.rating,
-          comment: input.comment,
+          message: input.comment,
+          source: "site",
           page_source: input.pageSource,
-          status: "new",
+          moderation: "pending",
         })
         .select("id")
         .single();
