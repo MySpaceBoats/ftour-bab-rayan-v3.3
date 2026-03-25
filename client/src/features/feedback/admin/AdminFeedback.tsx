@@ -221,7 +221,11 @@ function ResponseDetailDialog({
             <div>
               <span className="text-[#C9B97A]">Source :</span>
               <span className="ml-2">
-                {response.source === "email_campaign" ? "Email" : "Page web"}
+                {response.source === "email_campaign"
+                  ? "Email"
+                  : response.source === "site"
+                    ? "Formulaire site"
+                    : "Page web"}
               </span>
             </div>
             <div>
@@ -275,6 +279,32 @@ function ResponseDetailDialog({
                 )}
               </div>
             ))}
+
+            {/* Fallback for site feedbacks stored directly on feedback_responses */}
+            {(response.feedback_answers?.length ?? 0) === 0 && (
+              <div className="space-y-3">
+                {response.rating !== null && response.rating !== undefined && (
+                  <div>
+                    <p className="text-[#C9B97A] text-sm mb-1">Note</p>
+                    <StarDisplay rating={response.rating} />
+                  </div>
+                )}
+                {response.message && (
+                  <div>
+                    <p className="text-[#C9B97A] text-sm mb-1">Commentaire</p>
+                    <p className="text-[#F2E9D3]/90 text-sm italic bg-[#3D3B1E] px-3 py-2 rounded">
+                      "{response.message}"
+                    </p>
+                  </div>
+                )}
+                {!response.message &&
+                  (response.rating === null || response.rating === undefined) && (
+                    <p className="text-[#F2E9D3]/50 text-sm">
+                      Aucun contenu textuel pour ce feedback.
+                    </p>
+                  )}
+              </div>
+            )}
           </div>
 
           {/* Modération */}
