@@ -264,17 +264,32 @@ const feedbackRouter = router({
   submitSiteFeedback: publicProcedure
     .input(
       z.object({
-        name: z.string().min(2),
-        email: z.string().email(),
+        name: z.string().min(2).optional(),
+        email: z.string().email().optional(),
         phone: z.string().optional(),
         feedbackType: z.enum(SITE_FEEDBACK_TYPES),
         rating: z.number().min(1).max(5),
         comment: z.string().min(3),
         pageSource: z.enum(SITE_FEEDBACK_SOURCES),
+        isAnonymous: z.boolean().default(false),
         consent: z.literal(true),
+        website: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
+      if (input.website) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Requête invalide" });
+      }
+
+      if (!input.isAnonymous) {
+        if (!input.name?.trim()) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nom requis" });
+        }
+        if (!input.email?.trim()) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Email requis" });
+        }
+      }
+
       const isPageSourceSchemaCacheError = (error: any): boolean =>
         error?.code === "PGRST204" &&
         typeof error?.message === "string" &&
@@ -286,9 +301,10 @@ const feedbackRouter = router({
         form_id: null,
         campaign_id: null,
         recipient_id: null,
-        user_name: input.name,
-        user_email: input.email,
-        email: input.email,
+        user_name: input.isAnonymous ? "Anonyme" : (input.name ?? null),
+        user_email: input.isAnonymous ? null : (input.email ?? null),
+        email: input.isAnonymous ? null : (input.email ?? null),
+        is_anonymous: input.isAnonymous,
         feedback_type: input.feedbackType,
         rating: input.rating,
         message: input.comment,
