@@ -9780,6 +9780,30 @@ const teamAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
+function parseBase64ImageData(photoBase64: string) {
+  const match = photoBase64.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+  if (!match) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Format image invalide' });
+  }
+
+  const mimeType = match[1].toLowerCase();
+  const base64Data = match[2];
+  const extensionByMime: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/jpg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+  };
+
+  const ext = extensionByMime[mimeType];
+  if (!ext) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Format image non supporté (jpeg, png, webp)' });
+  }
+
+  const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+  return { mimeType, ext, buffer };
+}
+
 const teamRouter = router({
   listPublic: publicProcedure
     .input(z.object({ edition: z.number().int().min(1).default(12) }))
@@ -9822,14 +9846,11 @@ const teamRouter = router({
       let photoUrl = input.photoUrl ?? null;
 
       if (input.photoBase64) {
-        const base64Data = input.photoBase64.replace(/^data:image\/\w+;base64,/, '');
-        const contentType = input.photoBase64.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
-        const ext = contentType === 'image/png' ? 'png' : 'jpg';
+        const { mimeType, ext, buffer } = parseBase64ImageData(input.photoBase64);
         const key = `team/edition-${input.edition}/${Date.now()}-${input.firstName.toLowerCase()}-${input.lastName.toLowerCase()}.${ext}`;
-        const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('images')
-          .upload(key, buffer, { contentType, upsert: false });
+          .upload(key, buffer, { contentType: mimeType, upsert: false });
         if (uploadError) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: uploadError.message });
         const { data: urlData } = supabase.storage.from('images').getPublicUrl(uploadData.path);
         photoUrl = urlData.publicUrl;
@@ -9872,15 +9893,12 @@ const teamRouter = router({
       let photoUrl = rest.photoUrl ?? undefined;
 
       if (photoBase64) {
-        const base64Data = photoBase64.replace(/^data:image\/\w+;base64,/, '');
-        const contentType = photoBase64.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
-        const ext = contentType === 'image/png' ? 'png' : 'jpg';
+        const { mimeType, ext, buffer } = parseBase64ImageData(photoBase64);
         const edition = rest.edition ?? 12;
         const key = `team/edition-${edition}/${Date.now()}-${id}.${ext}`;
-        const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('images')
-          .upload(key, buffer, { contentType, upsert: false });
+          .upload(key, buffer, { contentType: mimeType, upsert: false });
         if (uploadError) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: uploadError.message });
         const { data: urlData } = supabase.storage.from('images').getPublicUrl(uploadData.path);
         photoUrl = urlData.publicUrl;
