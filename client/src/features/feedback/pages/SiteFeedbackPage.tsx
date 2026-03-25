@@ -49,6 +49,7 @@ export default function SiteFeedbackPage() {
   const [phone, setPhone] = useState("");
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [consent, setConsent] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -79,15 +80,20 @@ export default function SiteFeedbackPage() {
     e.preventDefault();
     if (rating < 1) return toast.error("Veuillez sélectionner une note.");
     if (!consent) return toast.error("Veuillez accepter le consentement.");
+    if (!isAnonymous) {
+      if (!name.trim()) return toast.error("Veuillez renseigner votre nom.");
+      if (!email.trim()) return toast.error("Veuillez renseigner votre email.");
+    }
 
     submitMutation.mutate({
-      name,
-      email,
-      phone: phone || undefined,
+      name: isAnonymous ? undefined : name,
+      email: isAnonymous ? undefined : email,
+      phone: isAnonymous ? undefined : phone || undefined,
       feedbackType,
       rating,
       comment,
       pageSource,
+      isAnonymous,
       consent: true,
     });
   };
@@ -115,12 +121,31 @@ export default function SiteFeedbackPage() {
                 </div>
               ) : (
                 <form onSubmit={onSubmit} className="space-y-4">
+                  <div className="flex gap-2 items-start">
+                    <Checkbox
+                      checked={isAnonymous}
+                      onCheckedChange={v => {
+                        const checked = !!v;
+                        setIsAnonymous(checked);
+                        if (checked) {
+                          setName("");
+                          setEmail("");
+                          setPhone("");
+                        }
+                      }}
+                      id="anonymous"
+                    />
+                    <Label htmlFor="anonymous" className="text-[#F2E9D3]">
+                      Envoi anonyme (nom, email et téléphone non obligatoires)
+                    </Label>
+                  </div>
                   <div>
                     <Label className="text-[#C9B97A]">Nom</Label>
                     <Input
                       value={name}
                       onChange={e => setName(e.target.value)}
-                      required
+                      required={!isAnonymous}
+                      disabled={isAnonymous}
                     />
                   </div>
                   <div>
@@ -129,7 +154,8 @@ export default function SiteFeedbackPage() {
                       type="email"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      required
+                      required={!isAnonymous}
+                      disabled={isAnonymous}
                     />
                   </div>
                   <div>
@@ -139,6 +165,7 @@ export default function SiteFeedbackPage() {
                     <Input
                       value={phone}
                       onChange={e => setPhone(e.target.value)}
+                      disabled={isAnonymous}
                     />
                   </div>
                   <input type="hidden" value={feedbackType} />
