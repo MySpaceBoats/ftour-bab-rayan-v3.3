@@ -46,6 +46,15 @@ const logger = {
   },
 };
 
+function isPageSourceSchemaCacheError(error: any): boolean {
+  return (
+    error?.code === "PGRST204" &&
+    typeof error?.message === "string" &&
+    error.message.includes("page_source") &&
+    error.message.includes("feedback_responses")
+  );
+}
+
 function getClientIp(ctx: any): string {
   const forwarded = ctx?.req?.headers?.["x-forwarded-for"];
   if (typeof forwarded === "string" && forwarded.length > 0) {
@@ -144,25 +153,38 @@ export const feedbackRouter = router({
           message: "DB non configurée",
         });
 
-      const { data, error } = await db
+      const payload = {
+        form_id: null,
+        campaign_id: null,
+        recipient_id: null,
+        email: input.email,
+        user_email: input.email,
+        user_name: input.name,
+        is_anonymous: false,
+        feedback_type: input.feedbackType,
+        rating: input.rating,
+        message: input.comment,
+        source: "site",
+        page_source: input.pageSource,
+        moderation: "pending",
+      };
+
+      let { data, error } = await db
         .from("feedback_responses")
-        .insert({
-          form_id: null,
-          campaign_id: null,
-          recipient_id: null,
-          email: input.email,
-          user_email: input.email,
-          user_name: input.name,
-          is_anonymous: false,
-          feedback_type: input.feedbackType,
-          rating: input.rating,
-          message: input.comment,
-          source: "site",
-          page_source: input.pageSource,
-          moderation: "pending",
-        })
+        .insert(payload)
         .select("id")
         .single();
+
+      if (error && isPageSourceSchemaCacheError(error)) {
+        const { page_source: _ignored, ...fallbackPayload } = payload;
+        const retryResult = await db
+          .from("feedback_responses")
+          .insert(fallbackPayload)
+          .select("id")
+          .single();
+        data = retryResult.data;
+        error = retryResult.error;
+      }
 
       if (error)
         throw new TRPCError({

@@ -275,25 +275,44 @@ const feedbackRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const isPageSourceSchemaCacheError = (error: any): boolean =>
+        error?.code === "PGRST204" &&
+        typeof error?.message === "string" &&
+        error.message.includes("page_source") &&
+        error.message.includes("feedback_responses");
+
       const db = createSupabaseAdmin(ctx.env);
-      const { data, error } = await db
+      const payload = {
+        form_id: null,
+        campaign_id: null,
+        recipient_id: null,
+        user_name: input.name,
+        user_email: input.email,
+        email: input.email,
+        feedback_type: input.feedbackType,
+        rating: input.rating,
+        message: input.comment,
+        source: "site",
+        page_source: input.pageSource,
+        moderation: "pending",
+      };
+
+      let { data, error } = await db
         .from("feedback_responses")
-        .insert({
-          form_id: null,
-          campaign_id: null,
-          recipient_id: null,
-          user_name: input.name,
-          user_email: input.email,
-          email: input.email,
-          feedback_type: input.feedbackType,
-          rating: input.rating,
-          message: input.comment,
-          source: "site",
-          page_source: input.pageSource,
-          moderation: "pending",
-        })
+        .insert(payload)
         .select("id")
         .single();
+
+      if (error && isPageSourceSchemaCacheError(error)) {
+        const { page_source: _ignored, ...fallbackPayload } = payload;
+        const retryResult = await db
+          .from("feedback_responses")
+          .insert(fallbackPayload)
+          .select("id")
+          .single();
+        data = retryResult.data;
+        error = retryResult.error;
+      }
 
       if (error) {
         throw new TRPCError({
@@ -318,6 +337,12 @@ const feedbackRouter = router({
         .optional()
     )
     .query(async ({ ctx, input }) => {
+      const isPageSourceSchemaCacheError = (error: any): boolean =>
+        error?.code === "PGRST204" &&
+        typeof error?.message === "string" &&
+        error.message.includes("page_source") &&
+        error.message.includes("feedback_responses");
+
       const db = createSupabaseAdmin(ctx.env);
       let query = db
         .from("feedback_responses")
@@ -332,7 +357,26 @@ const feedbackRouter = router({
       if (input?.fromDate) query = query.gte("created_at", input.fromDate);
       if (input?.toDate) query = query.lte("created_at", input.toDate + "T23:59:59Z");
 
-      const { data, error } = await query;
+      let { data, error } = await query;
+      if (error && isPageSourceSchemaCacheError(error)) {
+        let fallbackQuery = db
+          .from("feedback_responses")
+          .select("id, user_name, user_email, feedback_type, rating, message, source, moderation, created_at")
+          .eq("source", "site")
+          .order("created_at", { ascending: false })
+          .limit(200);
+
+        if (input?.feedbackType) fallbackQuery = fallbackQuery.eq("feedback_type", input.feedbackType);
+        if (input?.minRating) fallbackQuery = fallbackQuery.gte("rating", input.minRating);
+        if (input?.status) fallbackQuery = fallbackQuery.eq("moderation", input.status);
+        if (input?.fromDate) fallbackQuery = fallbackQuery.gte("created_at", input.fromDate);
+        if (input?.toDate) fallbackQuery = fallbackQuery.lte("created_at", input.toDate + "T23:59:59Z");
+
+        const retryResult = await fallbackQuery;
+        data = retryResult.data?.map(row => ({ ...row, page_source: null })) ?? null;
+        error = retryResult.error;
+      }
+
       if (error) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
       }
