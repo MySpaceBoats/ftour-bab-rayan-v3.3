@@ -34,6 +34,15 @@ const SITE_FEEDBACK_SOURCES = [
 ] as const;
 const SITE_FEEDBACK_STATUSES = ["new", "processed"] as const;
 
+function isFeedbackPageSourceColumnMissing(error: any): boolean {
+  const msg = String(error?.message ?? "").toLowerCase();
+  return (
+    error?.code === "42703" ||
+    (msg.includes("feedback_responses.page_source") && msg.includes("does not exist")) ||
+    (msg.includes("column") && msg.includes("page_source") && msg.includes("does not exist"))
+  );
+}
+
 
 type RateLimitBucket = { count: number; resetAt: number };
 const feedbackRateLimit = new Map<string, RateLimitBucket>();
@@ -144,25 +153,37 @@ export const feedbackRouter = router({
           message: "DB non configurée",
         });
 
-      const { data, error } = await db
+      const basePayload = {
+        form_id: null,
+        campaign_id: null,
+        recipient_id: null,
+        email: input.email,
+        user_email: input.email,
+        user_name: input.name,
+        is_anonymous: false,
+        feedback_type: input.feedbackType,
+        rating: input.rating,
+        message: input.comment,
+        source: "site",
+        moderation: "pending",
+      };
+
+      let { data, error } = await db
         .from("feedback_responses")
         .insert({
-          form_id: null,
-          campaign_id: null,
-          recipient_id: null,
-          email: input.email,
-          user_email: input.email,
-          user_name: input.name,
-          is_anonymous: false,
-          feedback_type: input.feedbackType,
-          rating: input.rating,
-          message: input.comment,
-          source: "site",
+          ...basePayload,
           page_source: input.pageSource,
-          moderation: "pending",
         })
         .select("id")
         .single();
+
+      if (error && isFeedbackPageSourceColumnMissing(error)) {
+        ({ data, error } = await db
+          .from("feedback_responses")
+          .insert(basePayload)
+          .select("id")
+          .single());
+      }
 
       if (error)
         throw new TRPCError({

@@ -96,6 +96,15 @@ const SITE_FEEDBACK_SOURCES = [
 ] as const;
 const SITE_FEEDBACK_STATUSES = ["new", "processed"] as const;
 
+function isFeedbackPageSourceColumnMissing(error: any): boolean {
+  const msg = String(error?.message ?? "").toLowerCase();
+  return (
+    error?.code === "42703" ||
+    (msg.includes("feedback_responses.page_source") && msg.includes("does not exist")) ||
+    (msg.includes("column") && msg.includes("page_source") && msg.includes("does not exist"))
+  );
+}
+
 const catalogProductTypeEnum = z.enum(["goodies", "terroir", "patisserie"]);
 const catalogProductSelect =
   "id,name,description,price,stock,image,category,tags,status,product_type,is_best_seller,is_ramadan_edition,created_at,updated_at";
@@ -328,7 +337,19 @@ const feedbackRouter = router({
       if (input?.fromDate) query = query.gte("created_at", input.fromDate);
       if (input?.toDate) query = query.lte("created_at", input.toDate + "T23:59:59Z");
 
-      const { data, error } = await query;
+      let { data, error } = await query;
+      if (error && isFeedbackPageSourceColumnMissing(error)) {
+        ({ data, error } = await db
+          .from("feedback_responses")
+          .select("id, user_name, user_email, feedback_type, rating, message, source, moderation, created_at")
+          .eq("source", "site")
+          .order("created_at", { ascending: false })
+          .limit(200));
+        if (!error && data) {
+          data = data.map((row: any) => ({ ...row, page_source: null }));
+        }
+      }
+
       if (error) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
       }
