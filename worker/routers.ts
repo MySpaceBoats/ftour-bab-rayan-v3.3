@@ -1927,6 +1927,44 @@ const GALLERY_ALLOWED_MIME_TYPES = [
 const GALLERY_MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024;
 const GALLERY_MAX_BATCH = 10;
 
+async function withGalleryDisplayUrls(supabase: any, photo: any) {
+  if (!photo) return photo;
+
+  const originalPath = typeof photo.storage_path === "string" ? photo.storage_path : null;
+  const thumbPath = typeof photo.thumb_storage_path === "string" ? photo.thumb_storage_path : null;
+
+  let imageOriginalUrl = photo.image_original_url ?? null;
+  let imageThumbUrl = photo.image_thumb_url ?? null;
+
+  if (originalPath) {
+    const signed = await supabase.storage
+      .from("images")
+      .createSignedUrl(originalPath, 60 * 60 * 24);
+    if (!signed.error && signed.data?.signedUrl) {
+      imageOriginalUrl = signed.data.signedUrl;
+    }
+  }
+
+  if (thumbPath) {
+    const signed = await supabase.storage
+      .from("images")
+      .createSignedUrl(thumbPath, 60 * 60 * 24);
+    if (!signed.error && signed.data?.signedUrl) {
+      imageThumbUrl = signed.data.signedUrl;
+    }
+  }
+
+  return {
+    ...photo,
+    image_original_url: imageOriginalUrl,
+    image_thumb_url: imageThumbUrl ?? imageOriginalUrl,
+  };
+}
+
+async function withGalleryDisplayUrlsMany(supabase: any, photos: any[]) {
+  return Promise.all((photos ?? []).map(photo => withGalleryDisplayUrls(supabase, photo)));
+}
+
 const galleryRouter = router({
   listAlbums: adminProcedure.query(async ({ ctx }) => {
     const supabase = createSupabaseAdmin(ctx.env);
@@ -1991,7 +2029,8 @@ const galleryRouter = router({
         .range(start, end);
       if (error)
         throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-      return { items: data || [], total: count || 0, page, pageSize };
+      const items = await withGalleryDisplayUrlsMany(supabase, data || []);
+      return { items, total: count || 0, page, pageSize };
     }),
 
   getPhoto: adminProcedure
@@ -2005,7 +2044,7 @@ const galleryRouter = router({
         .single();
       if (error)
         throw new TRPCError({ code: "NOT_FOUND", message: error.message });
-      return data;
+      return withGalleryDisplayUrls(supabase, data);
     }),
 
   uploadPhotos: protectedProcedure
@@ -2772,7 +2811,8 @@ const publicRouter = router({
       const { data, error, count } = await query.range(start, end);
       if (error)
         throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-      return { items: data || [], total: count ?? 0, page, pageSize };
+      const items = await withGalleryDisplayUrlsMany(supabase, data || []);
+      return { items, total: count ?? 0, page, pageSize };
     }),
 });
 
