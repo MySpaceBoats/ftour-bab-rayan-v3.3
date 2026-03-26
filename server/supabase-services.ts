@@ -3443,6 +3443,38 @@ function mapTeamMember(m: any) {
   };
 }
 
+function extractSupabaseStorageRef(photoUrl: string): { bucket: string; path: string } | null {
+  try {
+    const parsed = new URL(photoUrl);
+    const marker = '/storage/v1/object/public/';
+    const markerIndex = parsed.pathname.indexOf(marker);
+    if (markerIndex === -1) return null;
+    const remainder = parsed.pathname.slice(markerIndex + marker.length);
+    const firstSlash = remainder.indexOf('/');
+    if (firstSlash <= 0) return null;
+    const bucket = decodeURIComponent(remainder.slice(0, firstSlash));
+    const path = decodeURIComponent(remainder.slice(firstSlash + 1));
+    if (!bucket || !path) return null;
+    return { bucket, path };
+  } catch {
+    return null;
+  }
+}
+
+async function resolveTeamMemberPhotoUrl(photoUrl: string | null): Promise<string | null> {
+  if (!photoUrl) return null;
+
+  const ref = extractSupabaseStorageRef(photoUrl);
+  if (!ref) return photoUrl;
+
+  const client = getSupabaseAdminClient();
+  if (!client) return photoUrl;
+
+  const { data, error } = await client.storage.from(ref.bucket).createSignedUrl(ref.path, 60 * 60 * 24 * 30);
+  if (error || !data?.signedUrl) return photoUrl;
+  return data.signedUrl;
+}
+
 export async function getTeamMembersPublicSupabase(edition: number) {
   const client = getSupabaseAdminClient();
   if (!client) return [];
@@ -3456,7 +3488,13 @@ export async function getTeamMembersPublicSupabase(edition: number) {
     console.error('[TeamMembers] Error fetching public team members:', error.message);
     return [];
   }
-  return (data ?? []).map(mapTeamMember);
+  const mapped = (data ?? []).map(mapTeamMember);
+  return Promise.all(
+    mapped.map(async (member) => ({
+      ...member,
+      photoUrl: await resolveTeamMemberPhotoUrl(member.photoUrl),
+    }))
+  );
 }
 
 export async function getAllTeamMembersAdminSupabase(edition?: number) {
@@ -3466,7 +3504,13 @@ export async function getAllTeamMembersAdminSupabase(edition?: number) {
   if (edition !== undefined) query = query.eq('edition', edition);
   const { data, error } = await query;
   if (error) throw new Error(`Erreur récupération membres: ${error.message}`);
-  return (data ?? []).map(mapTeamMember);
+  const mapped = (data ?? []).map(mapTeamMember);
+  return Promise.all(
+    mapped.map(async (member) => ({
+      ...member,
+      photoUrl: await resolveTeamMemberPhotoUrl(member.photoUrl),
+    }))
+  );
 }
 
 export async function createTeamMemberSupabase(input: {
@@ -3484,7 +3528,11 @@ export async function createTeamMemberSupabase(input: {
     is_active: true,
   }).select().single();
   if (error) throw new Error(`Erreur création membre: ${error.message}`);
-  return mapTeamMember(data);
+  const mapped = mapTeamMember(data);
+  return {
+    ...mapped,
+    photoUrl: await resolveTeamMemberPhotoUrl(mapped.photoUrl),
+  };
 }
 
 export async function updateTeamMemberSupabase(id: number, input: {
@@ -3504,7 +3552,11 @@ export async function updateTeamMemberSupabase(id: number, input: {
   if (input.isActive !== undefined) updateData.is_active = input.isActive;
   const { data, error } = await client.from('ftour_team_members').update(updateData).eq('id', id).select().single();
   if (error) throw new Error(`Erreur mise à jour membre: ${error.message}`);
-  return mapTeamMember(data);
+  const mapped = mapTeamMember(data);
+  return {
+    ...mapped,
+    photoUrl: await resolveTeamMemberPhotoUrl(mapped.photoUrl),
+  };
 }
 
 export async function deleteTeamMemberSupabase(id: number) {
