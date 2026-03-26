@@ -83,6 +83,7 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
     "admin",
     "super_admin",
     "admin_ops",
+    "admin_operations",
     "admin_boutique",
     "admin_dons",
     "admin_restaurant",
@@ -384,6 +385,7 @@ const galleryRouter = router({
         "admin",
         "super_admin",
         "admin_ops",
+        "admin_operations",
         "admin_boutique",
         "admin_dons",
         "admin_restaurant",
@@ -496,7 +498,9 @@ const galleryRouter = router({
           validationEmail: canManageGallery
             ? undefined
             : (ctx.user?.email ?? undefined),
-          validationToken: canManageGallery ? undefined : batchValidationToken,
+          validationToken: canManageGallery
+            ? undefined
+            : (batchValidationToken ?? undefined),
           validationSentAt: canManageGallery
             ? undefined
             : new Date().toISOString(),
