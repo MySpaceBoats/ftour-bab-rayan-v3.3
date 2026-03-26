@@ -57,7 +57,7 @@ import { useI18n } from "@/i18n";
 const RAMADAN_TIMEZONE = "Africa/Casablanca";
 
 // Set to true to hide the registration form and show the "inscriptions complètes" message
-const REGISTRATIONS_CLOSED = true;
+const REGISTRATIONS_CLOSED = false;
 
 const getDateStringInRamadanTimezone = (date: Date): string => {
   const formatter = new Intl.DateTimeFormat("en-CA", {
