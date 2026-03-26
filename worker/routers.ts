@@ -9804,6 +9804,22 @@ function parseBase64ImageData(photoBase64: string) {
   return { mimeType, ext, buffer };
 }
 
+function mapTeamMember(row: any) {
+  return {
+    id: row.id,
+    firstName: row.first_name ?? row.firstName ?? "",
+    lastName: row.last_name ?? row.lastName ?? "",
+    role: row.role ?? null,
+    citation: row.citation ?? null,
+    photoUrl: row.photo_url ?? row.photoUrl ?? null,
+    displayOrder: row.display_order ?? row.displayOrder ?? 0,
+    edition: row.edition ?? 12,
+    isActive: row.is_active ?? row.isActive ?? true,
+    createdAt: row.created_at ?? row.createdAt ?? null,
+    updatedAt: row.updated_at ?? row.updatedAt ?? null,
+  };
+}
+
 const teamRouter = router({
   listPublic: publicProcedure
     .input(z.object({ edition: z.number().int().min(1).default(12) }))
@@ -9816,7 +9832,7 @@ const teamRouter = router({
         .eq('is_active', true)
         .order('display_order', { ascending: true });
       if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
-      return data ?? [];
+      return (data ?? []).map(mapTeamMember);
     }),
 
   list: teamAdminProcedure
@@ -9827,7 +9843,7 @@ const teamRouter = router({
       if (input.edition) query = query.eq('edition', input.edition);
       const { data, error } = await query;
       if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
-      return data ?? [];
+      return (data ?? []).map(mapTeamMember);
     }),
 
   create: teamAdminProcedure
