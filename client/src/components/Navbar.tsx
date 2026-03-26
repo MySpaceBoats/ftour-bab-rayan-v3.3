@@ -11,7 +11,6 @@ import {
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useI18n } from "@/i18n";
 import { useCart } from "@/contexts/CartContext";
-import AnnouncementBanner from "@/components/AnnouncementBanner";
 import {
   Menu,
   Heart,
@@ -95,7 +94,6 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full">
-      <AnnouncementBanner />
       {/* Top Menu (niveau 0) - Menu utilitaire */}
       <div className="bg-[#3A3820] border-b border-[#F2E9D3]/10">
         <div className="container flex h-9 items-center justify-end gap-4 text-sm">
