@@ -14,6 +14,11 @@ import { ChevronLeft, ChevronRight, Download, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const CURRENT_YEAR = new Date().getFullYear();
+const FIRST_EDITION_YEAR = 2015;
+
+function getEditionNumber(year: number) {
+  return year - FIRST_EDITION_YEAR + 1;
+}
 
 export default function Galerie() {
   const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
@@ -119,7 +124,7 @@ export default function Galerie() {
       <main className="flex-1 container py-10 space-y-6">
         <h1 className="text-3xl font-bold">Galerie</h1>
 
-        {/* Year Tabs */}
+        {/* Edition Tabs */}
         <div className="border-b overflow-x-auto">
           <div className="flex min-w-max">
             {albums.isLoading ? (
@@ -141,7 +146,11 @@ export default function Galerie() {
                     key={album.id}
                     onClick={() => handleTabSelect(album.slug, year)}
                     disabled={isFuture}
-                    title={isFuture ? `Édition ${year} — à venir` : undefined}
+                    title={
+                      isFuture
+                        ? `Édition ${getEditionNumber(year)} — à venir`
+                        : undefined
+                    }
                     className={cn(
                       "px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
                       isSelected
@@ -151,7 +160,7 @@ export default function Galerie() {
                         : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50"
                     )}
                   >
-                    {year}
+                    {getEditionNumber(year)}
                     {!isFuture && album.photo_count > 0 && (
                       <span className="ml-1.5 text-xs text-muted-foreground">
                         ({album.photo_count})
