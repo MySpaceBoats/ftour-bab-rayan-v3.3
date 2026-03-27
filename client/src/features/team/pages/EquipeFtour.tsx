@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Quote, Users, Loader2 } from "lucide-react";
+import { Users, Loader2 } from "lucide-react";
 
 // ============================================
 // CURRENT EDITION
@@ -70,43 +70,6 @@ function MemberCard({ member, index }: { member: any; index: number }) {
             &ldquo;{member.citation}&rdquo;
           </p>
         )}
-      </div>
-    </div>
-  );
-}
-
-// ============================================
-// FEATURED QUOTE (random member)
-// ============================================
-function FeaturedQuote({ members }: { members: any[] }) {
-  const candidates = members.filter((m) => m.citation);
-  if (candidates.length === 0) return null;
-  const [featured] = useState(() => candidates[Math.floor(Math.random() * candidates.length)]);
-
-  return (
-    <div className="bg-primary/5 border border-primary/15 rounded-2xl p-8 text-center max-w-2xl mx-auto mb-12">
-      <Quote className="w-8 h-8 text-primary/40 mx-auto mb-4" />
-      <p className="text-lg md:text-xl text-foreground italic leading-relaxed mb-4">
-        &ldquo;{featured.citation}&rdquo;
-      </p>
-      <div className="flex items-center justify-center gap-3">
-        {featured.photoUrl ? (
-          <img
-            src={featured.photoUrl}
-            alt={`${featured.firstName} ${featured.lastName}`}
-            className="w-10 h-10 rounded-full object-cover"
-          />
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-            <span className="text-primary font-bold text-sm">
-              {featured.firstName?.[0] ?? ""}{featured.lastName?.[0] ?? ""}
-            </span>
-          </div>
-        )}
-        <div className="text-left">
-          <p className="font-semibold text-foreground text-sm">{featured.firstName} {featured.lastName}</p>
-          {featured.role && <p className="text-xs text-muted-foreground">{featured.role}</p>}
-        </div>
       </div>
     </div>
   );
@@ -181,9 +144,6 @@ export default function EquipeFtour() {
 
             {!isLoading && members.length > 0 && (
               <>
-                {/* Featured random quote */}
-                <FeaturedQuote members={members} />
-
                 {/* Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 items-start">
                   {members.map((member, i) => (
