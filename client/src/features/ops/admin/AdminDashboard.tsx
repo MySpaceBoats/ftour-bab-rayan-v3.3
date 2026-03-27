@@ -29,6 +29,7 @@ import {
   Images,
   Trophy,
   Moon,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -69,6 +70,8 @@ const ALL_ADMIN_ROLES = [
   "manager_restaurant",
   "admin_patisserie",
   "admin_terroir",
+  "admin_contenu",
+  "admin_messages",
 ];
 
 const sections: SectionDefinition[] = [
@@ -482,7 +485,16 @@ const sections: SectionDefinition[] = [
         icon: FileText,
         iconColor: "text-orange-600",
         iconBg: "bg-orange-100",
-        allowedRoles: ["super_admin"],
+        allowedRoles: ["super_admin", "admin_contenu"],
+      },
+      {
+        label: "Blog communautaire",
+        description: "Modérer, approuver ou refuser les publications du blog",
+        route: "/admin/blog",
+        icon: BookOpen,
+        iconColor: "text-indigo-600",
+        iconBg: "bg-indigo-100",
+        allowedRoles: ["admin", "super_admin", "admin_ops", "admin_contenu"],
       },
       {
         label: "Logs / Journal",
@@ -526,6 +538,8 @@ export default function Admin() {
       "manager_restaurant",
       "admin_patisserie",
       "admin_terroir",
+      "admin_contenu",
+      "admin_messages",
       "scanner",
     ].includes(user.role);
 
