@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { getSupabaseAdminClient } from "./supabase";
 import * as supabaseServices from "./supabase-services";
 import * as reservationServices from "./reservation-services";
+import * as inventoryServices from "./inventory-services";
 import { getTimeInMinutesInTimeZone, DEFAULT_RAMADAN_TIMEZONE } from "@shared/ramadan";
 
 // ============================================
@@ -1028,6 +1029,15 @@ export const scannerRouter = router({
           "unknown",
         ]),
         entityId: z.number(),
+        stockContext: z
+          .object({
+            mode: z.enum(["sale", "return"]),
+            eventId: z.number().int().positive(),
+            posLocationId: z.number().int().positive(),
+            bufferLocationId: z.number().int().positive().optional(),
+            quantity: z.number().int().positive().default(1),
+          })
+          .optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -1189,6 +1199,87 @@ export const scannerRouter = router({
       }
 
       // ---- PRODUCT (catalog QR) ----
+      const isCatalogProductType =
+        input.type === "product_goodie" ||
+        input.type === "product_pastry" ||
+        input.type === "product_terroir";
+
+      const stockContext = input.stockContext;
+      const ensureStockContext = () => {
+        if (!stockContext || !stockContext.eventId || !stockContext.posLocationId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Veuillez sélectionner le mode (vente/retour), l'événement et le point de vente avant validation du produit.",
+          });
+        }
+      };
+
+      const resolveInventoryProductId = async (
+        productType: "goodie" | "pastry" | "terroir",
+        sourceProductId: number
+      ): Promise<number> => {
+        if (!supabase) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Supabase non configuré",
+          });
+        }
+
+        const { data, error } = await supabase
+          .from("inventory_products")
+          .select("id")
+          .eq("product_type", productType)
+          .eq("source_product_id", sourceProductId)
+          .is("source_variant_id", null)
+          .maybeSingle();
+
+        if (error) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+        }
+        if (!data?.id) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Produit non synchronisé dans le module stock. Lancez la synchronisation du catalogue inventaire.",
+          });
+        }
+
+        return data.id;
+      };
+
+      const resolveEventBufferLocationId = async (eventId: number): Promise<number> => {
+        if (!supabase) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Supabase non configuré",
+          });
+        }
+        const { data, error } = await supabase
+          .from("inventory_locations")
+          .select("id")
+          .eq("type", "EVENT_BUFFER")
+          .eq("event_id", eventId)
+          .eq("is_active", true)
+          .limit(1)
+          .maybeSingle();
+        if (error) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+        }
+        if (!data?.id) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Aucun buffer actif trouvé pour cet événement. Configurez un buffer événement dans la gestion de stock.",
+          });
+        }
+        return data.id;
+      };
+
+      if (isCatalogProductType) {
+        ensureStockContext();
+      }
+
       if (input.type === "product_goodie") {
         if (!supabase)
           throw new TRPCError({
@@ -1213,6 +1304,39 @@ export const scannerRouter = router({
             code: "BAD_REQUEST",
             message: "Ce produit goodies est inactif",
           });
+        }
+
+        const inventoryProductId = await resolveInventoryProductId("goodie", product.id);
+
+        if (stockContext?.mode === "return") {
+          const toBufferLocationId =
+            stockContext.bufferLocationId ??
+            (await resolveEventBufferLocationId(stockContext.eventId));
+
+          await inventoryServices.recordReturn({
+            productId: inventoryProductId,
+            quantity: stockContext.quantity,
+            fromPosLocationId: stockContext.posLocationId,
+            toBufferLocationId,
+            eventId: stockContext.eventId,
+            reason: "Retour produit scanné",
+            note: "Scanner produit — retour en stock",
+            performedBy: validatedBy || undefined,
+          });
+
+          await logQRScanSafely({
+            token: input.token,
+            scope: input.type,
+            entityId: input.entityId,
+            validationAction: "catalog_return_scan",
+            validatedBy,
+            success: true,
+          });
+
+          return {
+            success: true,
+            message: "Retour produit goodies enregistré (POS → buffer événement).",
+          };
         }
 
         const unitPrice = parseFloat(product.price as any) || 0;
@@ -1309,6 +1433,18 @@ export const scannerRouter = router({
           });
         }
 
+        await inventoryServices.recordSale({
+          productId: inventoryProductId,
+          quantity: stockContext?.quantity ?? 1,
+          locationId: stockContext?.posLocationId as number,
+          eventId: stockContext?.eventId ?? null,
+          saleOrderId: String(createdOrder.id),
+          referenceType: "SCANNER_PRODUCT_QR",
+          referenceId: input.token,
+          note: "Scanner produit — vente",
+          performedBy: validatedBy || undefined,
+        });
+
         await logQRScanSafely({
           token: input.token,
           scope: input.type,
@@ -1352,6 +1488,39 @@ export const scannerRouter = router({
           });
         }
 
+        const inventoryProductId = await resolveInventoryProductId("pastry", product.id);
+
+        if (stockContext?.mode === "return") {
+          const toBufferLocationId =
+            stockContext.bufferLocationId ??
+            (await resolveEventBufferLocationId(stockContext.eventId));
+
+          await inventoryServices.recordReturn({
+            productId: inventoryProductId,
+            quantity: stockContext.quantity,
+            fromPosLocationId: stockContext.posLocationId,
+            toBufferLocationId,
+            eventId: stockContext.eventId,
+            reason: "Retour produit scanné",
+            note: "Scanner produit — retour en stock",
+            performedBy: validatedBy || undefined,
+          });
+
+          await logQRScanSafely({
+            token: input.token,
+            scope: input.type,
+            entityId: input.entityId,
+            validationAction: "catalog_return_scan",
+            validatedBy,
+            success: true,
+          });
+
+          return {
+            success: true,
+            message: "Retour produit pâtisserie enregistré (POS → buffer événement).",
+          };
+        }
+
         const unitPrice = parseFloat(product.price as any) || 0;
         const reference = buildCompactToken("PAS", 20);
         const qrToken = buildCompactToken("PSQ", 20);
@@ -1381,6 +1550,18 @@ export const scannerRouter = router({
               orderError?.message || "Création commande pâtisserie impossible",
           });
         }
+
+        await inventoryServices.recordSale({
+          productId: inventoryProductId,
+          quantity: stockContext?.quantity ?? 1,
+          locationId: stockContext?.posLocationId as number,
+          eventId: stockContext?.eventId ?? null,
+          saleOrderId: String(createdOrder.id),
+          referenceType: "SCANNER_PRODUCT_QR",
+          referenceId: input.token,
+          note: "Scanner produit — vente",
+          performedBy: validatedBy || undefined,
+        });
 
         await logQRScanSafely({
           token: input.token,
@@ -1425,6 +1606,39 @@ export const scannerRouter = router({
             code: "BAD_REQUEST",
             message: "Ce produit terroir est inactif",
           });
+        }
+
+        const inventoryProductId = await resolveInventoryProductId("terroir", product.id);
+
+        if (stockContext?.mode === "return") {
+          const toBufferLocationId =
+            stockContext.bufferLocationId ??
+            (await resolveEventBufferLocationId(stockContext.eventId));
+
+          await inventoryServices.recordReturn({
+            productId: inventoryProductId,
+            quantity: stockContext.quantity,
+            fromPosLocationId: stockContext.posLocationId,
+            toBufferLocationId,
+            eventId: stockContext.eventId,
+            reason: "Retour produit scanné",
+            note: "Scanner produit — retour en stock",
+            performedBy: validatedBy || undefined,
+          });
+
+          await logQRScanSafely({
+            token: input.token,
+            scope: input.type,
+            entityId: input.entityId,
+            validationAction: "catalog_return_scan",
+            validatedBy,
+            success: true,
+          });
+
+          return {
+            success: true,
+            message: "Retour produit terroir enregistré (POS → buffer événement).",
+          };
         }
 
         const variants = (
@@ -1489,6 +1703,18 @@ export const scannerRouter = router({
             message: itemError.message,
           });
         }
+
+        await inventoryServices.recordSale({
+          productId: inventoryProductId,
+          quantity: stockContext?.quantity ?? 1,
+          locationId: stockContext?.posLocationId as number,
+          eventId: stockContext?.eventId ?? null,
+          saleOrderId: String(createdOrder.id),
+          referenceType: "SCANNER_PRODUCT_QR",
+          referenceId: input.token,
+          note: "Scanner produit — vente",
+          performedBy: validatedBy || undefined,
+        });
 
         await logQRScanSafely({
           token: input.token,
