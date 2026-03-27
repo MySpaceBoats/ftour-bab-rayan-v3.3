@@ -113,7 +113,10 @@ const catalogProductsRouter = router({
         .order("created_at", { ascending: false });
 
       if (error) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
 
       return data ?? [];
@@ -130,7 +133,10 @@ const catalogProductsRouter = router({
         .order("created_at", { ascending: false });
 
       if (error) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
 
       return data ?? [];
@@ -146,15 +152,21 @@ const catalogProductsRouter = router({
         .eq("product_type", input.productType);
 
       if (error) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
 
       const rows = data ?? [];
       return {
         total: rows.length,
         active: rows.filter((row: any) => row.status === "active").length,
-        bestSellers: rows.filter((row: any) => row.is_best_seller === true).length,
-        ramadanEdition: rows.filter((row: any) => row.is_ramadan_edition === true).length,
+        bestSellers: rows.filter((row: any) => row.is_best_seller === true)
+          .length,
+        ramadanEdition: rows.filter(
+          (row: any) => row.is_ramadan_edition === true
+        ).length,
       };
     }),
 
@@ -195,7 +207,10 @@ const catalogProductsRouter = router({
         .single();
 
       if (error) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
 
       return data;
@@ -222,15 +237,18 @@ const catalogProductsRouter = router({
       const payload: Record<string, unknown> = {};
 
       if (input.name !== undefined) payload.name = input.name;
-      if (input.description !== undefined) payload.description = input.description;
+      if (input.description !== undefined)
+        payload.description = input.description;
       if (input.price !== undefined) payload.price = input.price;
       if (input.stock !== undefined) payload.stock = input.stock;
       if (input.image !== undefined) payload.image = input.image;
       if (input.category !== undefined) payload.category = input.category;
       if (input.tags !== undefined) payload.tags = input.tags;
       if (input.status !== undefined) payload.status = input.status;
-      if (input.isBestSeller !== undefined) payload.is_best_seller = input.isBestSeller;
-      if (input.isRamadanEdition !== undefined) payload.is_ramadan_edition = input.isRamadanEdition;
+      if (input.isBestSeller !== undefined)
+        payload.is_best_seller = input.isBestSeller;
+      if (input.isRamadanEdition !== undefined)
+        payload.is_ramadan_edition = input.isRamadanEdition;
 
       const { data, error } = await supabase
         .from("products")
@@ -240,7 +258,10 @@ const catalogProductsRouter = router({
         .single();
 
       if (error) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
 
       return data;
@@ -250,10 +271,16 @@ const catalogProductsRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
-      const { error } = await supabase.from("products").delete().eq("id", input.id);
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", input.id);
 
       if (error) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
 
       return { success: true };
@@ -278,7 +305,10 @@ const feedbackRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       if (input.website) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Requête invalide" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Requête invalide",
+        });
       }
 
       if (!input.isAnonymous) {
@@ -362,39 +392,57 @@ const feedbackRouter = router({
       const db = createSupabaseAdmin(ctx.env);
       let query = db
         .from("feedback_responses")
-        .select("id, user_name, user_email, feedback_type, rating, message, source, page_source, moderation, created_at")
+        .select(
+          "id, user_name, user_email, feedback_type, rating, message, source, page_source, moderation, created_at"
+        )
         .eq("source", "site")
         .order("created_at", { ascending: false })
         .limit(200);
 
-      if (input?.feedbackType) query = query.eq("feedback_type", input.feedbackType);
+      if (input?.feedbackType)
+        query = query.eq("feedback_type", input.feedbackType);
       if (input?.minRating) query = query.gte("rating", input.minRating);
       if (input?.status) query = query.eq("moderation", input.status);
       if (input?.fromDate) query = query.gte("created_at", input.fromDate);
-      if (input?.toDate) query = query.lte("created_at", input.toDate + "T23:59:59Z");
+      if (input?.toDate)
+        query = query.lte("created_at", input.toDate + "T23:59:59Z");
 
       let { data, error } = await query;
       if (error && isPageSourceSchemaCacheError(error)) {
         let fallbackQuery = db
           .from("feedback_responses")
-          .select("id, user_name, user_email, feedback_type, rating, message, source, moderation, created_at")
+          .select(
+            "id, user_name, user_email, feedback_type, rating, message, source, moderation, created_at"
+          )
           .eq("source", "site")
           .order("created_at", { ascending: false })
           .limit(200);
 
-        if (input?.feedbackType) fallbackQuery = fallbackQuery.eq("feedback_type", input.feedbackType);
-        if (input?.minRating) fallbackQuery = fallbackQuery.gte("rating", input.minRating);
-        if (input?.status) fallbackQuery = fallbackQuery.eq("moderation", input.status);
-        if (input?.fromDate) fallbackQuery = fallbackQuery.gte("created_at", input.fromDate);
-        if (input?.toDate) fallbackQuery = fallbackQuery.lte("created_at", input.toDate + "T23:59:59Z");
+        if (input?.feedbackType)
+          fallbackQuery = fallbackQuery.eq("feedback_type", input.feedbackType);
+        if (input?.minRating)
+          fallbackQuery = fallbackQuery.gte("rating", input.minRating);
+        if (input?.status)
+          fallbackQuery = fallbackQuery.eq("moderation", input.status);
+        if (input?.fromDate)
+          fallbackQuery = fallbackQuery.gte("created_at", input.fromDate);
+        if (input?.toDate)
+          fallbackQuery = fallbackQuery.lte(
+            "created_at",
+            input.toDate + "T23:59:59Z"
+          );
 
         const retryResult = await fallbackQuery;
-        data = retryResult.data?.map(row => ({ ...row, page_source: null })) ?? null;
+        data =
+          retryResult.data?.map(row => ({ ...row, page_source: null })) ?? null;
         error = retryResult.error;
       }
 
       if (error) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
       return { feedbacks: data ?? [] };
     }),
@@ -408,7 +456,10 @@ const feedbackRouter = router({
         .update({ moderation: input.status })
         .eq("id", input.id);
       if (error) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
       return { success: true };
     }),
@@ -422,7 +473,10 @@ const feedbackRouter = router({
         .delete()
         .eq("id", input.id);
       if (error) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
       return { success: true };
     }),
@@ -448,17 +502,23 @@ const feedbackRouter = router({
 
       const [totalResult, anonResult] = await Promise.all([
         applyDateFilters(
-          db.from("feedback_responses").select("*", { count: "exact", head: true })
+          db
+            .from("feedback_responses")
+            .select("*", { count: "exact", head: true })
         ),
         applyDateFilters(
-          db.from("feedback_responses")
+          db
+            .from("feedback_responses")
             .select("*", { count: "exact", head: true })
             .eq("is_anonymous", true)
         ),
       ]);
 
       if (totalResult.error) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: totalResult.error.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: totalResult.error.message,
+        });
       }
 
       const total = totalResult.count ?? 0;
@@ -466,15 +526,20 @@ const feedbackRouter = router({
       const identified = total - anonymous;
 
       const { data, error: chartError } = await applyDateFilters(
-        db.from("feedback_responses").select(
-          "id, is_anonymous, source, moderation, created_at, rating, message"
-        )
+        db
+          .from("feedback_responses")
+          .select(
+            "id, is_anonymous, source, moderation, created_at, rating, message"
+          )
       )
         .order("created_at", { ascending: false })
         .limit(500);
 
       if (chartError) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: chartError.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: chartError.message,
+        });
       }
 
       const responses = data ?? [];
@@ -490,10 +555,19 @@ const feedbackRouter = router({
         }
       }
 
-      const avgRating = ratingCount > 0 ? Math.round((ratingSum / ratingCount) * 10) / 10 : 0;
-      const recommendRate = ratingCount > 0 ? Math.round((recommendYes / ratingCount) * 100) : 0;
+      const avgRating =
+        ratingCount > 0 ? Math.round((ratingSum / ratingCount) * 10) / 10 : 0;
+      const recommendRate =
+        ratingCount > 0 ? Math.round((recommendYes / ratingCount) * 100) : 0;
 
-      return { total, anonymous, identified, avgRating, recommendRate, responses };
+      return {
+        total,
+        anonymous,
+        identified,
+        avgRating,
+        recommendRate,
+        responses,
+      };
     }),
 
   listResponses: adminProcedure
@@ -516,13 +590,16 @@ const feedbackRouter = router({
     .query(async ({ ctx, input }) => {
       const db = createSupabaseAdmin(ctx.env);
 
-      let query = db.from("feedback_responses").select(
-        `id, form_id, is_anonymous, user_email, user_name, source, moderation, created_at, rating, message`,
-        { count: "exact" }
-      );
+      let query = db
+        .from("feedback_responses")
+        .select(
+          `id, form_id, is_anonymous, user_email, user_name, source, moderation, created_at, rating, message`,
+          { count: "exact" }
+        );
 
       if (input?.fromDate) query = query.gte("created_at", input.fromDate);
-      if (input?.toDate) query = query.lte("created_at", input.toDate + "T23:59:59Z");
+      if (input?.toDate)
+        query = query.lte("created_at", input.toDate + "T23:59:59Z");
       if (input?.source) query = query.eq("source", input.source);
       if (input?.moderation) query = query.eq("moderation", input.moderation);
       if (input?.minRating) query = query.gte("rating", input.minRating);
@@ -536,7 +613,10 @@ const feedbackRouter = router({
 
       const { data, error, count } = await query;
       if (error) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
 
       return { responses: data ?? [], total: count ?? 0 };
@@ -556,7 +636,10 @@ const feedbackRouter = router({
         .update({ moderation: input.moderation })
         .eq("id", input.responseId);
       if (error) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
       return { success: true };
     }),
@@ -574,7 +657,9 @@ const GROUP_MAIL_DISPATCH_CC = [
 
 /** Strips a potential data:...;base64, prefix from a base64 payload */
 const _decodeBase64Payload = (payload: string): Uint8Array => {
-  const clean = payload.includes(",") ? (payload.split(",").pop() ?? "") : payload;
+  const clean = payload.includes(",")
+    ? (payload.split(",").pop() ?? "")
+    : payload;
   return Uint8Array.from(atob(clean), c => c.charCodeAt(0));
 };
 
@@ -600,7 +685,9 @@ type ParsedGroupRow = {
  * - Searches multiple sample rows for column detection (robust to merged cells)
  * - Deduplicates by email across all sheets
  */
-const _parseGroupVolunteersFromSpreadsheet = (fileBase64: string): ParsedGroupRow[] => {
+const _parseGroupVolunteersFromSpreadsheet = (
+  fileBase64: string
+): ParsedGroupRow[] => {
   const buffer = _decodeBase64Payload(fileBase64);
   const workbook = XLSX.read(buffer, { type: "array", raw: false, FS: ";" });
   const seenEmails = new Set<string>();
@@ -617,22 +704,53 @@ const _parseGroupVolunteersFromSpreadsheet = (fileBase64: string): ParsedGroupRo
     });
 
     const TEMPLATE_HEADER_ROW = 6;
-    let headerRowIndex = rawRows.length > TEMPLATE_HEADER_ROW ? TEMPLATE_HEADER_ROW : 0;
+    let headerRowIndex =
+      rawRows.length > TEMPLATE_HEADER_ROW ? TEMPLATE_HEADER_ROW : 0;
     let bestScore = -1;
 
     for (let i = 0; i < Math.min(rawRows.length, 30); i++) {
       const row = rawRows[i] ?? [];
-      let hasEmail = false, hasName = false, score = 0;
+      let hasEmail = false,
+        hasName = false,
+        score = 0;
       for (const cell of row) {
         const n = _normalizeStr(cell);
         if (!n) continue;
-        if (n.includes("email") || n.includes("mail") || n.includes("courriel")) { hasEmail = true; score += 3; }
-        if (n.includes("nom") || n.includes("name") || n.includes("prenom") || n.includes("first") || n.includes("last")) { hasName = true; score += 2; }
-        if (n.includes("tel") || n.includes("phone") || n.includes("ville") || n.includes("city")) score += 1;
+        if (
+          n.includes("email") ||
+          n.includes("mail") ||
+          n.includes("courriel")
+        ) {
+          hasEmail = true;
+          score += 3;
+        }
+        if (
+          n.includes("nom") ||
+          n.includes("name") ||
+          n.includes("prenom") ||
+          n.includes("first") ||
+          n.includes("last")
+        ) {
+          hasName = true;
+          score += 2;
+        }
+        if (
+          n.includes("tel") ||
+          n.includes("phone") ||
+          n.includes("ville") ||
+          n.includes("city")
+        )
+          score += 1;
       }
       if (hasEmail && hasName) {
-        if (i === TEMPLATE_HEADER_ROW) { headerRowIndex = i; break; }
-        if (score > bestScore) { bestScore = score; headerRowIndex = i; }
+        if (i === TEMPLATE_HEADER_ROW) {
+          headerRowIndex = i;
+          break;
+        }
+        if (score > bestScore) {
+          bestScore = score;
+          headerRowIndex = i;
+        }
       }
     }
 
@@ -658,13 +776,23 @@ const _parseGroupVolunteersFromSpreadsheet = (fileBase64: string): ParsedGroupRo
 
     const colEmail = findCol(["email", "mail", "courriel"]);
     const colFirst = findCol(["prenom", "first", "firstname"], [colEmail]);
-    const colLast  = findCol(["nom", "last", "lastname", "family"], [colEmail, colFirst].filter(Boolean));
-    const colFull  = (!colFirst || !colLast)
-      ? findCol(["nom", "name", "prenom"], [colEmail].filter(Boolean))
-      : "";
-    const used     = [colEmail, colFirst, colLast, colFull].filter(Boolean);
-    const colPhone = findCol(["telephone", "tel", "phone", "mobile", "gsm"], used);
-    const colCity  = findCol(["ville", "city"], [...used, colPhone].filter(Boolean));
+    const colLast = findCol(
+      ["nom", "last", "lastname", "family"],
+      [colEmail, colFirst].filter(Boolean)
+    );
+    const colFull =
+      !colFirst || !colLast
+        ? findCol(["nom", "name", "prenom"], [colEmail].filter(Boolean))
+        : "";
+    const used = [colEmail, colFirst, colLast, colFull].filter(Boolean);
+    const colPhone = findCol(
+      ["telephone", "tel", "phone", "mobile", "gsm"],
+      used
+    );
+    const colCity = findCol(
+      ["ville", "city"],
+      [...used, colPhone].filter(Boolean)
+    );
 
     if ((!colFirst || !colLast) && !colFull) continue;
     if (!colEmail) continue;
@@ -672,18 +800,36 @@ const _parseGroupVolunteersFromSpreadsheet = (fileBase64: string): ParsedGroupRo
     for (const row of rows) {
       let firstName: string, lastName: string;
       if (colFull) {
-        const parts = String(row[colFull] ?? "").trim().split(/\s+/).filter(Boolean);
-        if (parts.length >= 2) { lastName = parts[0]; firstName = parts.slice(1).join(" "); }
-        else { firstName = parts[0] ?? ""; lastName = parts[0] ?? ""; }
+        const parts = String(row[colFull] ?? "")
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean);
+        if (parts.length >= 2) {
+          lastName = parts[0];
+          firstName = parts.slice(1).join(" ");
+        } else {
+          firstName = parts[0] ?? "";
+          lastName = parts[0] ?? "";
+        }
       } else {
         firstName = String(row[colFirst] ?? "").trim();
-        lastName  = String(row[colLast]  ?? "").trim();
+        lastName = String(row[colLast] ?? "").trim();
       }
-      const email = String(row[colEmail] ?? "").toLowerCase().trim();
+      const email = String(row[colEmail] ?? "")
+        .toLowerCase()
+        .trim();
       const phone = colPhone ? String(row[colPhone] ?? "").trim() : "";
-      const city  = colCity  ? (String(row[colCity] ?? "").trim() || undefined) : undefined;
+      const city = colCity
+        ? String(row[colCity] ?? "").trim() || undefined
+        : undefined;
 
-      if (!firstName || !lastName || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) continue;
+      if (
+        !firstName ||
+        !lastName ||
+        !email ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+      )
+        continue;
       if (seenEmails.has(email)) continue;
       seenEmails.add(email);
       allRows.push({ firstName, lastName, email, phone, city });
@@ -1776,7 +1922,9 @@ const scannerRouter = router({
       if (input.type === "donation") {
         const { data: donation } = await supabase
           .from("donations")
-          .select("status, donor_name, donor_email, donation_reference, amount, payment_method")
+          .select(
+            "status, donor_name, donor_email, donation_reference, amount, payment_method"
+          )
           .eq("id", input.entityId)
           .single();
         if (!donation)
@@ -1796,12 +1944,17 @@ const scannerRouter = router({
 
         // Envoyer un email de confirmation de réception
         try {
-          const { sendEmail, generateDonationReceivedEmail } = await import("./email");
+          const { sendEmail, generateDonationReceivedEmail } = await import(
+            "./email"
+          );
           const emailData = generateDonationReceivedEmail({
             donorName: donation.donor_name,
             donorEmail: donation.donor_email,
             donationReference: donation.donation_reference,
-            amount: typeof donation.amount === "string" ? parseFloat(donation.amount) || 0 : (donation.amount ?? 0),
+            amount:
+              typeof donation.amount === "string"
+                ? parseFloat(donation.amount) || 0
+                : (donation.amount ?? 0),
             paymentMethod: donation.payment_method,
           });
           await sendEmail({
@@ -1811,7 +1964,10 @@ const scannerRouter = router({
             apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
           });
         } catch (emailError) {
-          console.error("[Worker] Error sending donation received email (scanner):", emailError);
+          console.error(
+            "[Worker] Error sending donation received email (scanner):",
+            emailError
+          );
         }
 
         return { success: true, message: "Don marqué comme reçu !" };
@@ -1930,8 +2086,12 @@ const GALLERY_MAX_BATCH = 10;
 async function withGalleryDisplayUrls(supabase: any, photo: any) {
   if (!photo) return photo;
 
-  const originalPath = typeof photo.storage_path === "string" ? photo.storage_path : null;
-  const thumbPath = typeof photo.thumb_storage_path === "string" ? photo.thumb_storage_path : null;
+  const originalPath =
+    typeof photo.storage_path === "string" ? photo.storage_path : null;
+  const thumbPath =
+    typeof photo.thumb_storage_path === "string"
+      ? photo.thumb_storage_path
+      : null;
 
   let imageOriginalUrl = photo.image_original_url ?? null;
   let imageThumbUrl = photo.image_thumb_url ?? null;
@@ -1962,7 +2122,9 @@ async function withGalleryDisplayUrls(supabase: any, photo: any) {
 }
 
 async function withGalleryDisplayUrlsMany(supabase: any, photos: any[]) {
-  return Promise.all((photos ?? []).map(photo => withGalleryDisplayUrls(supabase, photo)));
+  return Promise.all(
+    (photos ?? []).map(photo => withGalleryDisplayUrls(supabase, photo))
+  );
 }
 
 const galleryRouter = router({
@@ -2160,9 +2322,14 @@ const galleryRouter = router({
         const thumbUrl = supabase.storage.from("images").getPublicUrl(thumbPath)
           .data.publicUrl;
 
-        const defaultAlbumTag = photo.albumId ? albumNameById.get(photo.albumId) : undefined;
+        const defaultAlbumTag = photo.albumId
+          ? albumNameById.get(photo.albumId)
+          : undefined;
         const mergedTags = Array.from(
-          new Set([...(photo.tags ?? []), ...(defaultAlbumTag ? [defaultAlbumTag] : [])])
+          new Set([
+            ...(photo.tags ?? []),
+            ...(defaultAlbumTag ? [defaultAlbumTag] : []),
+          ])
         );
 
         const { data, error } = await supabase
@@ -2185,9 +2352,13 @@ const galleryRouter = router({
             size_bytes: buffer.length,
             mime_type: photo.fileType,
             uploaded_by: ctx.user?.email,
-            validation_email: canManageGallery ? null : (ctx.user?.email ?? null),
+            validation_email: canManageGallery
+              ? null
+              : (ctx.user?.email ?? null),
             validation_token: batchValidationToken,
-            validation_sent_at: batchValidationToken ? new Date().toISOString() : null,
+            validation_sent_at: batchValidationToken
+              ? new Date().toISOString()
+              : null,
             validated_at: canManageGallery ? new Date().toISOString() : null,
           })
           .select("*")
@@ -2200,7 +2371,9 @@ const galleryRouter = router({
 
       // Send validation email for non-admin volunteers
       if (!canManageGallery && batchValidationToken && ctx.user?.email) {
-        const baseUrl = (ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma").replace(/\/$/, "");
+        const baseUrl = (
+          ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma"
+        ).replace(/\/$/, "");
         const validationUrl = `${baseUrl}/galerie/validation/${batchValidationToken}`;
         const emailPayload = generateGalleryUploadValidationEmail({
           email: ctx.user.email,
@@ -2228,10 +2401,16 @@ const galleryRouter = router({
         .eq("validation_token", input.token);
 
       if (fetchError)
-        throw new TRPCError({ code: "BAD_REQUEST", message: fetchError.message });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: fetchError.message,
+        });
 
       if (!rows || rows.length === 0)
-        throw new TRPCError({ code: "NOT_FOUND", message: "Lien de validation invalide ou expiré" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Lien de validation invalide ou expiré",
+        });
 
       const alreadyValidated = rows.every((r: any) => r.status === "published");
       if (alreadyValidated)
@@ -2243,13 +2422,24 @@ const galleryRouter = router({
 
       const { error: updateError } = await supabase
         .from("gallery_photos")
-        .update({ status: "published", validated_at: new Date().toISOString(), validation_token: null })
+        .update({
+          status: "published",
+          validated_at: new Date().toISOString(),
+          validation_token: null,
+        })
         .in("id", idsToPublish);
 
       if (updateError)
-        throw new TRPCError({ code: "BAD_REQUEST", message: updateError.message });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: updateError.message,
+        });
 
-      return { success: true, alreadyValidated: false, updatedCount: idsToPublish.length };
+      return {
+        success: true,
+        alreadyValidated: false,
+        updatedCount: idsToPublish.length,
+      };
     }),
 
   resendValidationEmail: publicProcedure
@@ -2276,10 +2466,15 @@ const galleryRouter = router({
         });
 
       const token = rows[0].validation_token;
-      const baseUrl = (ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma").replace(/\/$/, "");
+      const baseUrl = (
+        ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma"
+      ).replace(/\/$/, "");
       const validationUrl = `${baseUrl}/galerie/validation/${token}`;
 
-      const emailPayload = generateGalleryUploadValidationEmail({ email, validationUrl });
+      const emailPayload = generateGalleryUploadValidationEmail({
+        email,
+        validationUrl,
+      });
       const emailResult = await sendEmail({
         to: email,
         subject: emailPayload.subject,
@@ -2297,20 +2492,28 @@ const galleryRouter = router({
     }),
 
   createAlbum: adminProcedure
-    .input(z.object({
-      name: z.string().min(1).max(120),
-      slug: z.string().min(1).max(120),
-      sortOrder: z.number().int().default(0),
-      status: z.enum(["draft", "published"]).default("published"),
-    }))
+    .input(
+      z.object({
+        name: z.string().min(1).max(120),
+        slug: z.string().min(1).max(120),
+        sortOrder: z.number().int().default(0),
+        status: z.enum(["draft", "published"]).default("published"),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       const { data, error } = await supabase
         .from("gallery_albums")
-        .insert({ name: input.name, slug: input.slug, sort_order: input.sortOrder, status: input.status })
+        .insert({
+          name: input.name,
+          slug: input.slug,
+          sort_order: input.sortOrder,
+          status: input.status,
+        })
         .select("*")
         .single();
-      if (error) throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      if (error)
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
       return data;
     }),
 
@@ -2322,7 +2525,8 @@ const galleryRouter = router({
         .from("gallery_photos")
         .update({ status: "published" })
         .eq("id", input.id);
-      if (error) throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      if (error)
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
       return { success: true };
     }),
 
@@ -2334,7 +2538,8 @@ const galleryRouter = router({
         .from("gallery_photos")
         .update({ status: "draft" })
         .eq("id", input.id);
-      if (error) throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      if (error)
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
       return { success: true };
     }),
 
@@ -2346,12 +2551,15 @@ const galleryRouter = router({
         .from("gallery_photos")
         .update({ status: "rejected" })
         .eq("id", input.id);
-      if (error) throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      if (error)
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
       return { success: true };
     }),
 
   updatePhoto: adminProcedure
-    .input(z.object({ id: z.string().uuid(), ...gallerySchema.partial().shape }))
+    .input(
+      z.object({ id: z.string().uuid(), ...gallerySchema.partial().shape })
+    )
     .mutation(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       const { id, eventDate, albumId, sortOrder, isFeatured, ...rest } = input;
@@ -2360,7 +2568,10 @@ const galleryRouter = router({
         .update({
           title: rest.title,
           description: rest.description,
-          event_date: eventDate !== undefined ? normalizeGalleryEventDate(eventDate) : undefined,
+          event_date:
+            eventDate !== undefined
+              ? normalizeGalleryEventDate(eventDate)
+              : undefined,
           tags: rest.tags,
           album_id: albumId,
           sort_order: sortOrder,
@@ -2370,12 +2581,19 @@ const galleryRouter = router({
         .eq("id", id)
         .select("*")
         .single();
-      if (error) throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      if (error)
+        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
       return data;
     }),
 
   reorderPhotos: adminProcedure
-    .input(z.object({ items: z.array(z.object({ id: z.string().uuid(), sortOrder: z.number().int() })) }))
+    .input(
+      z.object({
+        items: z.array(
+          z.object({ id: z.string().uuid(), sortOrder: z.number().int() })
+        ),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       for (const item of input.items) {
@@ -2383,7 +2601,8 @@ const galleryRouter = router({
           .from("gallery_photos")
           .update({ sort_order: item.sortOrder })
           .eq("id", item.id);
-        if (error) throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+        if (error)
+          throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
       }
       return { success: true };
     }),
@@ -2397,9 +2616,14 @@ const galleryRouter = router({
         .select("storage_path,thumb_storage_path,medium_storage_path")
         .eq("id", input.id)
         .single();
-      if (error) throw new TRPCError({ code: "NOT_FOUND", message: error.message });
+      if (error)
+        throw new TRPCError({ code: "NOT_FOUND", message: error.message });
 
-      const pathsToDelete = [data.storage_path, data.thumb_storage_path, data.medium_storage_path].filter(Boolean) as string[];
+      const pathsToDelete = [
+        data.storage_path,
+        data.thumb_storage_path,
+        data.medium_storage_path,
+      ].filter(Boolean) as string[];
       if (pathsToDelete.length > 0) {
         await supabase.storage.from("images").remove(pathsToDelete);
       }
@@ -2408,7 +2632,11 @@ const galleryRouter = router({
         .from("gallery_photos")
         .delete()
         .eq("id", input.id);
-      if (deleteError) throw new TRPCError({ code: "BAD_REQUEST", message: deleteError.message });
+      if (deleteError)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: deleteError.message,
+        });
       return { success: true };
     }),
 });
@@ -3395,7 +3623,9 @@ const volunteersRouter = router({
       const attendanceFrequencyByEmail = new Map<string, number>();
       const seenPairs = new Set<string>();
       for (const row of allAttendances) {
-        const email = String(row.email ?? "").toLowerCase().trim();
+        const email = String(row.email ?? "")
+          .toLowerCase()
+          .trim();
         if (!email) continue;
 
         const isPresent =
@@ -3427,9 +3657,12 @@ const volunteersRouter = router({
         firstName: v.first_name,
         lastName: v.last_name,
         email: v.email,
-        attendanceFrequency: attendanceFrequencyByEmail.get(
-          String(v.email ?? "").toLowerCase().trim()
-        ) ?? 0,
+        attendanceFrequency:
+          attendanceFrequencyByEmail.get(
+            String(v.email ?? "")
+              .toLowerCase()
+              .trim()
+          ) ?? 0,
         phone: v.phone,
         city: v.city,
         dayId: v.day_id,
@@ -3646,7 +3879,10 @@ const volunteersRouter = router({
       }
 
       const estimatedGroupSize = Math.max(1, input.estimatedSize ?? 1);
-      const availableSeats = Math.max(0, day.capacity - (day.registered_count ?? 0));
+      const availableSeats = Math.max(
+        0,
+        day.capacity - (day.registered_count ?? 0)
+      );
       if (estimatedGroupSize > availableSeats) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -3676,7 +3912,8 @@ const volunteersRouter = router({
       if (requestError || !createdRequest) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: requestError?.message || "Erreur lors de la création de la demande",
+          message:
+            requestError?.message || "Erreur lors de la création de la demande",
         });
       }
 
@@ -3685,9 +3922,7 @@ const volunteersRouter = router({
         sendEmail,
         generateGroupRegistrationEmail,
         generateGroupRegistrationAcknowledgementEmail,
-      } = await import(
-        "./email"
-      );
+      } = await import("./email");
       const emailData = generateGroupRegistrationEmail({
         groupName: input.groupName,
         responsibleName: input.responsibleName,
@@ -3726,7 +3961,7 @@ const volunteersRouter = router({
         } else {
           console.error(
             "[Group Registration] Admin email failed:",
-            adminEmailResult.error || "Unknown error",
+            adminEmailResult.error || "Unknown error"
           );
         }
       } catch (error) {
@@ -3734,21 +3969,22 @@ const volunteersRouter = router({
       }
 
       try {
-        const acknowledgementEmail = generateGroupRegistrationAcknowledgementEmail({
-          responsibleName: input.responsibleName,
-          groupName: input.groupName,
-          dayNumber: day?.day_number,
-          dayDate: day?.date
-            ? new Date(day.date).toLocaleDateString("fr-FR", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-              })
-            : undefined,
-          estimatedSize: input.estimatedSize,
-          volunteerSlots: input.volunteerSlots,
-          startTime: day?.iftar_time || "18h00",
-        });
+        const acknowledgementEmail =
+          generateGroupRegistrationAcknowledgementEmail({
+            responsibleName: input.responsibleName,
+            groupName: input.groupName,
+            dayNumber: day?.day_number,
+            dayDate: day?.date
+              ? new Date(day.date).toLocaleDateString("fr-FR", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                })
+              : undefined,
+            estimatedSize: input.estimatedSize,
+            volunteerSlots: input.volunteerSlots,
+            startTime: day?.iftar_time || "18h00",
+          });
 
         const acknowledgementResult = await sendEmail({
           to: normalizedGroupEmail,
@@ -3758,17 +3994,19 @@ const volunteersRouter = router({
         });
 
         if (acknowledgementResult.success) {
-          console.log("[Group Registration] Responsible acknowledgement email sent successfully");
+          console.log(
+            "[Group Registration] Responsible acknowledgement email sent successfully"
+          );
         } else {
           console.error(
             "[Group Registration] Responsible acknowledgement email failed:",
-            acknowledgementResult.error || "Unknown error",
+            acknowledgementResult.error || "Unknown error"
           );
         }
       } catch (error) {
         console.error(
           "[Group Registration] Responsible acknowledgement email failed:",
-          error,
+          error
         );
       }
 
@@ -3789,7 +4027,10 @@ const volunteersRouter = router({
       .order("created_at", { ascending: false });
 
     if (error) {
-      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      });
     }
 
     return (data || []).map(row => ({
@@ -3828,11 +4069,17 @@ const volunteersRouter = router({
         .maybeSingle();
 
       if (error) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
 
       if (!data) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Demande introuvable" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Demande introuvable",
+        });
       }
 
       return {
@@ -3860,15 +4107,21 @@ const volunteersRouter = router({
     .mutation(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
 
-      const updatePayload: Record<string, unknown> = { updated_at: new Date().toISOString() };
-      if (input.groupName !== undefined) updatePayload.group_name = input.groupName;
+      const updatePayload: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      };
+      if (input.groupName !== undefined)
+        updatePayload.group_name = input.groupName;
       if (input.responsibleName !== undefined)
         updatePayload.responsible_name = input.responsibleName;
       if (input.responsibleEmail !== undefined)
-        updatePayload.responsible_email = input.responsibleEmail.toLowerCase().trim();
+        updatePayload.responsible_email = input.responsibleEmail
+          .toLowerCase()
+          .trim();
       if (input.responsiblePhone !== undefined)
         updatePayload.responsible_phone = input.responsiblePhone;
-      if (input.estimatedSize !== undefined) updatePayload.estimated_size = input.estimatedSize;
+      if (input.estimatedSize !== undefined)
+        updatePayload.estimated_size = input.estimatedSize;
       if (input.dayId !== undefined) updatePayload.day_id = input.dayId;
       if (input.volunteerSlots !== undefined)
         updatePayload.volunteer_slots = input.volunteerSlots;
@@ -3908,11 +4161,17 @@ const volunteersRouter = router({
         .maybeSingle();
 
       if (requestError) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: requestError.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: requestError.message,
+        });
       }
 
       if (!request) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Demande introuvable" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Demande introuvable",
+        });
       }
 
       if (request.status !== "pending") {
@@ -3934,15 +4193,23 @@ const volunteersRouter = router({
           .single();
 
         if (dayError || !day) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Jour non trouvé" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Jour non trouvé",
+          });
         }
 
         validationDay = day;
 
         const estimatedSize = Number(request.estimated_size ?? 1);
         const normalizedEstimatedSize =
-          Number.isFinite(estimatedSize) && estimatedSize > 0 ? estimatedSize : 1;
-        const availableSeats = Math.max(0, day.capacity - (day.registered_count ?? 0));
+          Number.isFinite(estimatedSize) && estimatedSize > 0
+            ? estimatedSize
+            : 1;
+        const availableSeats = Math.max(
+          0,
+          day.capacity - (day.registered_count ?? 0)
+        );
 
         if (normalizedEstimatedSize > availableSeats) {
           throw new TRPCError({
@@ -3955,16 +4222,20 @@ const volunteersRouter = router({
           .toLowerCase()
           .trim();
 
-        const { data: duplicateVolunteer, error: duplicateError } = await supabase
-          .from("volunteers")
-          .select("id")
-          .eq("day_id", dayId)
-          .eq("email", normalizedResponsibleEmail)
-          .limit(1)
-          .maybeSingle();
+        const { data: duplicateVolunteer, error: duplicateError } =
+          await supabase
+            .from("volunteers")
+            .select("id")
+            .eq("day_id", dayId)
+            .eq("email", normalizedResponsibleEmail)
+            .limit(1)
+            .maybeSingle();
 
         if (duplicateError) {
-          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: duplicateError.message });
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: duplicateError.message,
+          });
         }
 
         if (duplicateVolunteer) {
@@ -3979,19 +4250,21 @@ const volunteersRouter = router({
         const responsibleName = String(request.responsible_name || "").trim();
         const nameParts = responsibleName.split(/\s+/).filter(Boolean);
 
-        const { error: createVolunteerError } = await supabase.from("volunteers").insert({
-          first_name: nameParts[0] || request.group_name,
-          last_name: nameParts.slice(1).join(" ") || request.group_name,
-          email: normalizedResponsibleEmail,
-          phone: request.responsible_phone,
-          day_id: dayId,
-          volunteer_slots: request.volunteer_slots || [],
-          qr_token: qrToken,
-          qr_status: "generated",
-          status: "registered",
-          accepted_terms: true,
-          email_sent: false,
-        });
+        const { error: createVolunteerError } = await supabase
+          .from("volunteers")
+          .insert({
+            first_name: nameParts[0] || request.group_name,
+            last_name: nameParts.slice(1).join(" ") || request.group_name,
+            email: normalizedResponsibleEmail,
+            phone: request.responsible_phone,
+            day_id: dayId,
+            volunteer_slots: request.volunteer_slots || [],
+            qr_token: qrToken,
+            qr_status: "generated",
+            status: "registered",
+            accepted_terms: true,
+            email_sent: false,
+          });
 
         if (createVolunteerError) {
           throw new TRPCError({
@@ -4026,17 +4299,24 @@ const volunteersRouter = router({
       if (updateError || !updated) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: updateError?.message || "Impossible de mettre à jour la demande",
+          message:
+            updateError?.message || "Impossible de mettre à jour la demande",
         });
       }
 
       try {
-        const normalizedResponsibleEmail = String(request.responsible_email || "")
+        const normalizedResponsibleEmail = String(
+          request.responsible_email || ""
+        )
           .toLowerCase()
           .trim();
 
         if (normalizedResponsibleEmail) {
-          const { sendEmail, generateVolunteerConfirmationEmail, generateGroupRefusalEmail } = await import("./email");
+          const {
+            sendEmail,
+            generateVolunteerConfirmationEmail,
+            generateGroupRefusalEmail,
+          } = await import("./email");
           const responsibleName = String(request.responsible_name || "").trim();
           const groupName = String(request.group_name || "").trim();
 
@@ -4051,12 +4331,16 @@ const volunteersRouter = router({
                 lastName: nameParts.slice(1).join(" ") || groupName,
                 email: normalizedResponsibleEmail,
                 dayNumber: validationDay.day_number,
-                dayDate: new Date(validationDay.date).toLocaleDateString("fr-FR", {
-                  weekday: "long",
-                  month: "long",
-                  day: "numeric",
-                }),
-                location: validationDay.location || "Association Bab Rayan, Casablanca",
+                dayDate: new Date(validationDay.date).toLocaleDateString(
+                  "fr-FR",
+                  {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                  }
+                ),
+                location:
+                  validationDay.location || "Association Bab Rayan, Casablanca",
                 startTime: validationDay.iftar_time || "18h00",
                 volunteerSlots: (request.volunteer_slots || []) as string[],
                 qrToken: validationQrToken,
@@ -4070,20 +4354,31 @@ const volunteersRouter = router({
               to: normalizedResponsibleEmail,
               subject,
               html,
-              apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
+              apiKey:
+                ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
             });
 
             // Process Excel file with participant list
             const requestFileBase64 = String(request.file_base64 ?? "").trim();
             if (requestFileBase64 && validationDay) {
               try {
-                const parsedRows = _parseGroupVolunteersFromSpreadsheet(requestFileBase64);
+                const parsedRows =
+                  _parseGroupVolunteersFromSpreadsheet(requestFileBase64);
                 if (parsedRows.length > 0) {
-                  let emailsSent = 0, emailsFailed = 0, qrCreated = 0;
+                  let emailsSent = 0,
+                    emailsFailed = 0,
+                    qrCreated = 0;
                   const CHUNK_SIZE = 50;
 
-                  for (let chunkStart = 0; chunkStart < parsedRows.length; chunkStart += CHUNK_SIZE) {
-                    const chunk = parsedRows.slice(chunkStart, chunkStart + CHUNK_SIZE);
+                  for (
+                    let chunkStart = 0;
+                    chunkStart < parsedRows.length;
+                    chunkStart += CHUNK_SIZE
+                  ) {
+                    const chunk = parsedRows.slice(
+                      chunkStart,
+                      chunkStart + CHUNK_SIZE
+                    );
                     for (const row of chunk) {
                       try {
                         // Skip if already registered for this day
@@ -4097,57 +4392,77 @@ const volunteersRouter = router({
                         if (existing) continue;
 
                         const qrToken = crypto.randomUUID();
-                        const { error: insertErr } = await supabase.from("volunteers").insert({
-                          first_name: row.firstName,
-                          last_name: row.lastName,
-                          email: row.email,
-                          phone: row.phone,
-                          city: row.city ?? null,
-                          day_id: dayId,
-                          volunteer_slots: request.volunteer_slots || [],
-                          qr_token: qrToken,
-                          qr_status: "generated",
-                          status: "registered",
-                          accepted_terms: true,
-                          email_sent: false,
-                        });
+                        const { error: insertErr } = await supabase
+                          .from("volunteers")
+                          .insert({
+                            first_name: row.firstName,
+                            last_name: row.lastName,
+                            email: row.email,
+                            phone: row.phone,
+                            city: row.city ?? null,
+                            day_id: dayId,
+                            volunteer_slots: request.volunteer_slots || [],
+                            qr_token: qrToken,
+                            qr_status: "generated",
+                            status: "registered",
+                            accepted_terms: true,
+                            email_sent: false,
+                          });
                         if (insertErr) {
-                          console.error("[ReviewGroupRequest] Insert error:", insertErr.message);
+                          console.error(
+                            "[ReviewGroupRequest] Insert error:",
+                            insertErr.message
+                          );
                           continue;
                         }
                         qrCreated++;
 
                         // Send confirmation email with QR code
-                        const participantEmailData = generateVolunteerConfirmationEmail({
-                          firstName: row.firstName,
-                          lastName: row.lastName,
-                          email: row.email,
-                          dayNumber: validationDay.day_number,
-                          dayDate: new Date(validationDay.date).toLocaleDateString("fr-FR", {
-                            weekday: "long",
-                            month: "long",
-                            day: "numeric",
-                          }),
-                          location: validationDay.location || "Association Bab Rayan, Casablanca",
-                          startTime: validationDay.iftar_time || "18h00",
-                          volunteerSlots: (request.volunteer_slots || []) as string[],
-                          qrToken,
-                          baseUrl: "https://www.ftourbabrayan.ma",
-                        });
+                        const participantEmailData =
+                          generateVolunteerConfirmationEmail({
+                            firstName: row.firstName,
+                            lastName: row.lastName,
+                            email: row.email,
+                            dayNumber: validationDay.day_number,
+                            dayDate: new Date(
+                              validationDay.date
+                            ).toLocaleDateString("fr-FR", {
+                              weekday: "long",
+                              month: "long",
+                              day: "numeric",
+                            }),
+                            location:
+                              validationDay.location ||
+                              "Association Bab Rayan, Casablanca",
+                            startTime: validationDay.iftar_time || "18h00",
+                            volunteerSlots: (request.volunteer_slots ||
+                              []) as string[],
+                            qrToken,
+                            baseUrl: "https://www.ftourbabrayan.ma",
+                          });
                         const emailResult = await sendEmail({
                           to: row.email,
                           subject: participantEmailData.subject,
                           html: participantEmailData.html,
-                          apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
+                          apiKey:
+                            ctx.env.RESEND_API_KEY ||
+                            ctx.env.EMAIL_PROVIDER_KEY ||
+                            "",
                         });
                         if (emailResult.success) {
                           emailsSent++;
-                          await supabase.from("volunteers").update({ email_sent: true }).eq("qr_token", qrToken);
+                          await supabase
+                            .from("volunteers")
+                            .update({ email_sent: true })
+                            .eq("qr_token", qrToken);
                         } else {
                           emailsFailed++;
                         }
                       } catch (rowErr) {
-                        console.error("[ReviewGroupRequest] Row processing error:", rowErr);
+                        console.error(
+                          "[ReviewGroupRequest] Row processing error:",
+                          rowErr
+                        );
                       }
                     }
                     // Delay between chunks to respect Resend rate limits
@@ -4158,7 +4473,9 @@ const volunteersRouter = router({
 
                   // Send dispatch summary to admins
                   try {
-                    const summaryDayDate = new Date(validationDay.date).toLocaleDateString("fr-FR", {
+                    const summaryDayDate = new Date(
+                      validationDay.date
+                    ).toLocaleDateString("fr-FR", {
                       weekday: "long",
                       month: "long",
                       day: "numeric",
@@ -4168,16 +4485,27 @@ const volunteersRouter = router({
                       cc: [...GROUP_MAIL_DISPATCH_CC],
                       subject: `QR groupe envoyés - ${groupName} (${emailsSent} emails envoyés)`,
                       html: `<p>Bonjour,</p><p>Les emails d'inscription du groupe ont été traités.</p><ul><li><strong>Groupe :</strong> ${groupName}</li><li><strong>Responsable :</strong> ${responsibleName}</li><li><strong>Email responsable :</strong> ${normalizedResponsibleEmail}</li><li><strong>Jour Ramadan :</strong> ${validationDay.day_number} (${summaryDayDate})</li><li><strong>QR codes produits :</strong> ${qrCreated}</li><li><strong>Emails envoyés :</strong> ${emailsSent}</li><li><strong>Emails en échec :</strong> ${emailsFailed}</li></ul><p>Ceci est un message d'information automatique.</p>`,
-                      apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
+                      apiKey:
+                        ctx.env.RESEND_API_KEY ||
+                        ctx.env.EMAIL_PROVIDER_KEY ||
+                        "",
                     });
                   } catch (summaryErr) {
-                    console.error("[ReviewGroupRequest] Failed to send dispatch summary:", summaryErr);
+                    console.error(
+                      "[ReviewGroupRequest] Failed to send dispatch summary:",
+                      summaryErr
+                    );
                   }
 
-                  console.log(`[ReviewGroupRequest] File processed for request ${input.requestId}: ${qrCreated} QR created, ${emailsSent} sent, ${emailsFailed} failed`);
+                  console.log(
+                    `[ReviewGroupRequest] File processed for request ${input.requestId}: ${qrCreated} QR created, ${emailsSent} sent, ${emailsFailed} failed`
+                  );
                 }
               } catch (fileErr) {
-                console.error(`[ReviewGroupRequest] Failed to process attachment for request ${input.requestId}:`, fileErr);
+                console.error(
+                  `[ReviewGroupRequest] Failed to process attachment for request ${input.requestId}:`,
+                  fileErr
+                );
               }
             }
           } else {
@@ -4190,12 +4518,16 @@ const volunteersRouter = router({
               to: normalizedResponsibleEmail,
               subject: refusalEmailData.subject,
               html: refusalEmailData.html,
-              apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
+              apiKey:
+                ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
             });
           }
         }
       } catch (error) {
-        console.error("[Group Request] Failed to send review notification email", error);
+        console.error(
+          "[Group Request] Failed to send review notification email",
+          error
+        );
       }
 
       return { success: true, request: updated };
@@ -4269,7 +4601,11 @@ const volunteersRouter = router({
       const results: { email: string; success: boolean; error?: string }[] = [];
       const CHUNK_SIZE = 50;
 
-      for (let chunkStart = 0; chunkStart < parsedRows.length; chunkStart += CHUNK_SIZE) {
+      for (
+        let chunkStart = 0;
+        chunkStart < parsedRows.length;
+        chunkStart += CHUNK_SIZE
+      ) {
         const chunk = parsedRows.slice(chunkStart, chunkStart + CHUNK_SIZE);
 
         for (const row of chunk) {
@@ -4283,7 +4619,11 @@ const volunteersRouter = router({
               .maybeSingle();
 
             if (existing) {
-              results.push({ email: row.email, success: false, error: "Déjà inscrit pour ce jour" });
+              results.push({
+                email: row.email,
+                success: false,
+                error: "Déjà inscrit pour ce jour",
+              });
               continue;
             }
 
@@ -4309,7 +4649,11 @@ const volunteersRouter = router({
               .single();
 
             if (volError) {
-              results.push({ email: row.email, success: false, error: volError.message });
+              results.push({
+                email: row.email,
+                success: false,
+                error: volError.message,
+              });
               continue;
             }
 
@@ -4336,11 +4680,15 @@ const volunteersRouter = router({
                 to: row.email,
                 subject: emailData.subject,
                 html: emailData.html,
-                apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
+                apiKey:
+                  ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
               });
 
               if (emailResult.success) {
-                await supabase.from("volunteers").update({ email_sent: true }).eq("id", volunteer!.id);
+                await supabase
+                  .from("volunteers")
+                  .update({ email_sent: true })
+                  .eq("id", volunteer!.id);
                 results.push({ email: row.email, success: true });
               } else {
                 results.push({
@@ -4350,11 +4698,19 @@ const volunteersRouter = router({
                 });
               }
             } catch (emailError) {
-              results.push({ email: row.email, success: true, error: "Inscrit mais email non envoyé" });
-              console.error(`[ProcessGroupExcel] Email error for ${row.email}:`, emailError);
+              results.push({
+                email: row.email,
+                success: true,
+                error: "Inscrit mais email non envoyé",
+              });
+              console.error(
+                `[ProcessGroupExcel] Email error for ${row.email}:`,
+                emailError
+              );
             }
           } catch (error) {
-            const errMsg = error instanceof Error ? error.message : "Erreur inconnue";
+            const errMsg =
+              error instanceof Error ? error.message : "Erreur inconnue";
             results.push({ email: row.email, success: false, error: errMsg });
             console.error(`[ProcessGroupExcel] Error for ${row.email}:`, error);
           }
@@ -4496,10 +4852,14 @@ const checkinRouter = router({
       }
 
       // Déjà validé sur site
-      if (volunteer.status === "present" || volunteer.qr_status === "validated") {
+      if (
+        volunteer.status === "present" ||
+        volunteer.qr_status === "validated"
+      ) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Impossible d'annuler : votre présence a déjà été validée sur site.",
+          message:
+            "Impossible d'annuler : votre présence a déjà été validée sur site.",
         });
       }
 
@@ -5261,28 +5621,39 @@ const donationsRouter = router({
         try {
           const { data: donation } = await supabase
             .from("donations")
-            .select("donor_name, donor_email, donation_reference, amount, payment_method")
+            .select(
+              "donor_name, donor_email, donation_reference, amount, payment_method"
+            )
             .eq("id", input.donationId)
             .single();
 
           if (donation) {
-            const { sendEmail, generateDonationReceivedEmail } = await import("./email");
+            const { sendEmail, generateDonationReceivedEmail } = await import(
+              "./email"
+            );
             const emailData = generateDonationReceivedEmail({
               donorName: donation.donor_name,
               donorEmail: donation.donor_email,
               donationReference: donation.donation_reference,
-              amount: typeof donation.amount === "string" ? parseFloat(donation.amount) || 0 : (donation.amount ?? 0),
+              amount:
+                typeof donation.amount === "string"
+                  ? parseFloat(donation.amount) || 0
+                  : (donation.amount ?? 0),
               paymentMethod: donation.payment_method,
             });
             await sendEmail({
               to: donation.donor_email,
               subject: emailData.subject,
               html: emailData.html,
-              apiKey: ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
+              apiKey:
+                ctx.env.RESEND_API_KEY || ctx.env.EMAIL_PROVIDER_KEY || "",
             });
           }
         } catch (emailError) {
-          console.error("[Worker] Error sending donation received email:", emailError);
+          console.error(
+            "[Worker] Error sending donation received email:",
+            emailError
+          );
           // Don't throw - status update was successful
         }
       }
@@ -6601,7 +6972,7 @@ async function sha256HexRouter(value: string): Promise<string> {
   const encoded = new TextEncoder().encode(value);
   const digest = await crypto.subtle.digest("SHA-256", encoded);
   return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
+    .map(b => b.toString(16).padStart(2, "0"))
     .join("");
 }
 
@@ -6621,9 +6992,11 @@ async function createProofUploadToken(
     const expiresAt = new Date(
       Date.now() + ttlDays * 24 * 60 * 60 * 1000
     ).toISOString();
-    const { error } = await supabase
-      .from("reservation_payment_tokens")
-      .insert({ reservation_id: reservationId, token_hash: tokenHash, expires_at: expiresAt });
+    const { error } = await supabase.from("reservation_payment_tokens").insert({
+      reservation_id: reservationId,
+      token_hash: tokenHash,
+      expires_at: expiresAt,
+    });
     if (error) {
       console.error("[ProofToken] Insert error:", error.message);
       return null;
@@ -6761,7 +7134,9 @@ function mapReservation(r: any) {
   };
 }
 
-function normalizeReservationType(value: unknown): "particulier" | "groupe" | "entreprise" | "unknown" {
+function normalizeReservationType(
+  value: unknown
+): "particulier" | "groupe" | "entreprise" | "unknown" {
   if (typeof value !== "string") return "unknown";
 
   const normalized = value
@@ -6770,15 +7145,32 @@ function normalizeReservationType(value: unknown): "particulier" | "groupe" | "e
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
-  if (["particulier", "particuliers", "individual", "individuel"].includes(normalized)) {
+  if (
+    ["particulier", "particuliers", "individual", "individuel"].includes(
+      normalized
+    )
+  ) {
     return "particulier";
   }
 
-  if (["groupe", "groupes", "group", "groups", "association", "associations"].includes(normalized)) {
+  if (
+    [
+      "groupe",
+      "groupes",
+      "group",
+      "groups",
+      "association",
+      "associations",
+    ].includes(normalized)
+  ) {
     return "groupe";
   }
 
-  if (["entreprise", "entreprises", "company", "companies", "corporate"].includes(normalized)) {
+  if (
+    ["entreprise", "entreprises", "company", "companies", "corporate"].includes(
+      normalized
+    )
+  ) {
     return "entreprise";
   }
 
@@ -6829,9 +7221,18 @@ const restaurantReservationsRouter = router({
           });
         }
         // Generate proof upload token
-        const baseUrl = (ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma");
-        const ttlDays = Math.max(1, Number(ctx.env.RESERVATION_PROOF_TOKEN_TTL_DAYS || "7"));
-        const proofUploadUrl = await createProofUploadToken(supabase, data.id, baseUrl, ttlDays);
+        const baseUrl =
+          ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma";
+        const ttlDays = Math.max(
+          1,
+          Number(ctx.env.RESERVATION_PROOF_TOKEN_TTL_DAYS || "7")
+        );
+        const proofUploadUrl = await createProofUploadToken(
+          supabase,
+          data.id,
+          baseUrl,
+          ttlDays
+        );
 
         // Send confirmation email to customer + internal notification
         try {
@@ -6928,9 +7329,18 @@ const restaurantReservationsRouter = router({
           });
         }
         // Generate proof upload token
-        const baseUrlE = (ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma");
-        const ttlDaysE = Math.max(1, Number(ctx.env.RESERVATION_PROOF_TOKEN_TTL_DAYS || "7"));
-        const proofUploadUrlE = await createProofUploadToken(supabase, data.id, baseUrlE, ttlDaysE);
+        const baseUrlE =
+          ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma";
+        const ttlDaysE = Math.max(
+          1,
+          Number(ctx.env.RESERVATION_PROOF_TOKEN_TTL_DAYS || "7")
+        );
+        const proofUploadUrlE = await createProofUploadToken(
+          supabase,
+          data.id,
+          baseUrlE,
+          ttlDaysE
+        );
 
         try {
           const { sendEmail } = await import("./email");
@@ -7022,9 +7432,18 @@ const restaurantReservationsRouter = router({
           });
         }
         // Generate proof upload token
-        const baseUrlG = (ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma");
-        const ttlDaysG = Math.max(1, Number(ctx.env.RESERVATION_PROOF_TOKEN_TTL_DAYS || "7"));
-        const proofUploadUrlG = await createProofUploadToken(supabase, data.id, baseUrlG, ttlDaysG);
+        const baseUrlG =
+          ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma";
+        const ttlDaysG = Math.max(
+          1,
+          Number(ctx.env.RESERVATION_PROOF_TOKEN_TTL_DAYS || "7")
+        );
+        const proofUploadUrlG = await createProofUploadToken(
+          supabase,
+          data.id,
+          baseUrlG,
+          ttlDaysG
+        );
 
         try {
           const { sendEmail } = await import("./email");
@@ -7075,7 +7494,13 @@ const restaurantReservationsRouter = router({
   validate: protectedProcedure
     .input(z.object({ reference: z.string(), baseUrl: z.string().url() }))
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
+      const allowedRoles = [
+        "admin",
+        "super_admin",
+        "admin_restaurant",
+        "vue_restaurant",
+        "manager_restaurant",
+      ];
       if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -7120,7 +7545,13 @@ const restaurantReservationsRouter = router({
   refuse: protectedProcedure
     .input(z.object({ reference: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
+      const allowedRoles = [
+        "admin",
+        "super_admin",
+        "admin_restaurant",
+        "vue_restaurant",
+        "manager_restaurant",
+      ];
       if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -7177,7 +7608,13 @@ const restaurantReservationsRouter = router({
     }),
 
   adminListParticuliers: protectedProcedure.query(async ({ ctx }) => {
-    const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
+    const allowedRoles = [
+      "admin",
+      "super_admin",
+      "admin_restaurant",
+      "vue_restaurant",
+      "manager_restaurant",
+    ];
     if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
     }
@@ -7198,7 +7635,13 @@ const restaurantReservationsRouter = router({
   }),
 
   adminListGroupes: protectedProcedure.query(async ({ ctx }) => {
-    const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
+    const allowedRoles = [
+      "admin",
+      "super_admin",
+      "admin_restaurant",
+      "vue_restaurant",
+      "manager_restaurant",
+    ];
     if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
     }
@@ -7215,12 +7658,20 @@ const restaurantReservationsRouter = router({
       });
     }
     return (data || [])
-      .filter((reservation) => normalizeReservationType(reservation.type) === "groupe")
+      .filter(
+        reservation => normalizeReservationType(reservation.type) === "groupe"
+      )
       .map(mapReservation);
   }),
 
   adminListEntreprises: protectedProcedure.query(async ({ ctx }) => {
-    const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
+    const allowedRoles = [
+      "admin",
+      "super_admin",
+      "admin_restaurant",
+      "vue_restaurant",
+      "manager_restaurant",
+    ];
     if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
     }
@@ -7237,7 +7688,10 @@ const restaurantReservationsRouter = router({
       });
     }
     return (data || [])
-      .filter((reservation) => normalizeReservationType(reservation.type) === "entreprise")
+      .filter(
+        reservation =>
+          normalizeReservationType(reservation.type) === "entreprise"
+      )
       .map(mapReservation);
   }),
 
@@ -7259,9 +7713,14 @@ const restaurantReservationsRouter = router({
         amountReceived: z.number().min(0).optional(),
         deposit: z.number().min(0).optional(),
         paymentMode: z.enum(["cash", "virement", "espece"]).optional(),
-        respResa: z.enum(["Nayla", "Hind", "Kamal", "Rita", "Réda", "Souad"]).optional(),
+        respResa: z
+          .enum(["Nayla", "Hind", "Kamal", "Rita", "Réda", "Souad"])
+          .optional(),
         modeDeposit: z.string().optional(),
-        dateAvReg: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide").optional(),
+        dateAvReg: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, "Format date invalide")
+          .optional(),
         notes: z.string().optional(),
         displayChoice: z.enum(["jardin", "brasserie"]).optional(),
         status: z
@@ -7274,7 +7733,13 @@ const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
+      const allowedRoles = [
+        "admin",
+        "super_admin",
+        "admin_restaurant",
+        "vue_restaurant",
+        "manager_restaurant",
+      ];
       if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -7355,7 +7820,13 @@ const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
+      const allowedRoles = [
+        "admin",
+        "super_admin",
+        "admin_restaurant",
+        "vue_restaurant",
+        "manager_restaurant",
+      ];
       if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -7394,9 +7865,18 @@ const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
+      const allowedRoles = [
+        "admin",
+        "super_admin",
+        "admin_restaurant",
+        "vue_restaurant",
+        "manager_restaurant",
+      ];
       if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Permission refusée",
+        });
       }
       const supabase = createSupabaseAdmin(ctx.env);
 
@@ -7406,7 +7886,10 @@ const restaurantReservationsRouter = router({
         .eq("id", input.reservationId)
         .single();
       if (resErr || !reservation) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Réservation introuvable" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Réservation introuvable",
+        });
       }
 
       // Invalidate any existing unused tokens for this reservation
@@ -7417,10 +7900,19 @@ const restaurantReservationsRouter = router({
         .is("used_at", null);
 
       // Create a new token
-      const baseUrl = (ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma").replace(/\/$/, "");
-      const proofUploadUrl = await createProofUploadToken(supabase, reservation.id, baseUrl);
+      const baseUrl = (
+        ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma"
+      ).replace(/\/$/, "");
+      const proofUploadUrl = await createProofUploadToken(
+        supabase,
+        reservation.id,
+        baseUrl
+      );
       if (!proofUploadUrl) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Impossible de générer le lien de dépôt" });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Impossible de générer le lien de dépôt",
+        });
       }
 
       // Send email to customer if requested
@@ -7446,15 +7938,28 @@ const restaurantReservationsRouter = router({
         }
       }
 
-      return { success: true, link: proofUploadUrl, emailSent: input.sendEmail && !!reservation.email };
+      return {
+        success: true,
+        link: proofUploadUrl,
+        emailSent: input.sendEmail && !!reservation.email,
+      };
     }),
 
   adminGetLatestProofUrl: protectedProcedure
     .input(z.object({ reservationId: z.number() }))
     .query(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
+      const allowedRoles = [
+        "admin",
+        "super_admin",
+        "admin_restaurant",
+        "vue_restaurant",
+        "manager_restaurant",
+      ];
       if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Permission refusée",
+        });
       }
       const supabase = createSupabaseAdmin(ctx.env);
       const { data: proof } = await supabase
@@ -7512,7 +8017,9 @@ const restaurantReservationsRouter = router({
           nbAdult: z.number().int().min(0).optional(),
           nbKids: z.number().int().min(0).optional(),
           paymentMode: z.enum(["cash", "virement", "espece"]).optional(),
-          respResa: z.enum(["Nayla", "Hind", "Kamal", "Rita", "Réda", "Souad"]).optional(),
+          respResa: z
+            .enum(["Nayla", "Hind", "Kamal", "Rita", "Réda", "Souad"])
+            .optional(),
           companyName: z.string().optional(),
           groupName: z.string().optional(),
           displayChoice: z.string().optional(),
@@ -7522,7 +8029,9 @@ const restaurantReservationsRouter = router({
         .refine(
           payload =>
             Object.keys(payload).some(
-              key => key !== "id" && payload[key as keyof typeof payload] !== undefined
+              key =>
+                key !== "id" &&
+                payload[key as keyof typeof payload] !== undefined
             ),
           {
             message: "Aucun champ valide à mettre à jour",
@@ -7609,7 +8118,13 @@ const restaurantReservationsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const allowedRoles = ["admin", "super_admin", "admin_restaurant", "vue_restaurant", "manager_restaurant"];
+      const allowedRoles = [
+        "admin",
+        "super_admin",
+        "admin_restaurant",
+        "vue_restaurant",
+        "manager_restaurant",
+      ];
       if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -7653,7 +8168,10 @@ const restaurantReservationsRouter = router({
     .mutation(async ({ input, ctx }) => {
       const allowedRoles = ["admin", "super_admin", "admin_restaurant"];
       if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Permission refusée" });
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Permission refusée",
+        });
       }
       const supabase = createSupabaseAdmin(ctx.env);
 
@@ -7664,12 +8182,23 @@ const restaurantReservationsRouter = router({
         .single();
 
       if (resError || !reservation) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Réservation introuvable" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Réservation introuvable",
+        });
       }
 
-      const baseUrl = (ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma");
-      const ttlDays = Math.max(1, Number(ctx.env.RESERVATION_PROOF_TOKEN_TTL_DAYS || "7"));
-      const proofUploadUrl = await createProofUploadToken(supabase, input.reservationId, baseUrl, ttlDays);
+      const baseUrl = ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma";
+      const ttlDays = Math.max(
+        1,
+        Number(ctx.env.RESERVATION_PROOF_TOKEN_TTL_DAYS || "7")
+      );
+      const proofUploadUrl = await createProofUploadToken(
+        supabase,
+        input.reservationId,
+        baseUrl,
+        ttlDays
+      );
 
       if (!proofUploadUrl) {
         throw new TRPCError({
@@ -7790,9 +8319,9 @@ const terroirModuleRouter = router({
     if (!joinQuery.error) {
       return (joinQuery.data || []).map((product: any) => ({
         ...product,
-        terroir_product_variants: (product.terroir_product_variants || []).filter(
-          (v: any) => v.is_active !== false
-        ),
+        terroir_product_variants: (
+          product.terroir_product_variants || []
+        ).filter((v: any) => v.is_active !== false),
       }));
     }
 
@@ -8090,7 +8619,8 @@ const terroirModuleRouter = router({
       if (input.label !== undefined) payload.label = input.label;
       if (input.sku !== undefined) payload.sku = input.sku;
       if (input.priceUnit !== undefined) payload.price_unit = input.priceUnit;
-      if (input.stockTotal !== undefined) payload.stock_total = input.stockTotal;
+      if (input.stockTotal !== undefined)
+        payload.stock_total = input.stockTotal;
       if (input.isActive !== undefined) payload.is_active = input.isActive;
       if (input.sortOrder !== undefined) payload.sort_order = input.sortOrder;
 
@@ -8241,7 +8771,6 @@ const terroirModuleRouter = router({
 
       return { success: true };
     }),
-
 
   adminListOrders: adminProcedure
     .input(
@@ -8637,8 +9166,6 @@ const ramadanRouter = router({
     }),
 });
 
-
-
 const partnerLeadsRouter = router({
   create: publicProcedure
     .input(
@@ -8703,70 +9230,94 @@ const partnerLeadsRouter = router({
 // ============================================
 
 function parseInvError(error: any): string {
-  return error?.message || error?.details || 'Erreur interne';
+  return error?.message || error?.details || "Erreur interne";
 }
 
 const inventoryEventsRouter = router({
   list: adminProcedure
-    .input(z.object({ status: z.enum(['draft', 'open', 'closed', 'archived']).optional() }))
+    .input(
+      z.object({
+        status: z.enum(["draft", "open", "closed", "archived"]).optional(),
+      })
+    )
     .query(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
-      let q = supabase.from('inventory_events').select('*').order('created_at', { ascending: false });
-      if (input.status) q = q.eq('status', input.status);
+      let q = supabase
+        .from("inventory_events")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (input.status) q = q.eq("status", input.status);
       const { data, error } = await q;
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(error),
+        });
       return data ?? [];
     }),
 
   create: adminProcedure
-    .input(z.object({
-      name: z.string().min(1),
-      description: z.string().optional(),
-      startsAt: z.string().optional(),
-      endsAt: z.string().optional(),
-      status: z.enum(['draft', 'open', 'closed', 'archived']).optional(),
-    }))
+    .input(
+      z.object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        startsAt: z.string().optional(),
+        endsAt: z.string().optional(),
+        status: z.enum(["draft", "open", "closed", "archived"]).optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       const { data, error } = await supabase
-        .from('inventory_events')
+        .from("inventory_events")
         .insert({
           name: input.name,
           description: input.description ?? null,
           starts_at: input.startsAt ?? null,
           ends_at: input.endsAt ?? null,
-          status: input.status ?? 'draft',
+          status: input.status ?? "draft",
         })
         .select()
         .single();
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(error),
+        });
       return data;
     }),
 
   update: adminProcedure
-    .input(z.object({
-      id: z.number(),
-      name: z.string().optional(),
-      description: z.string().nullable().optional(),
-      startsAt: z.string().nullable().optional(),
-      endsAt: z.string().nullable().optional(),
-      status: z.enum(['draft', 'open', 'closed', 'archived']).optional(),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        description: z.string().nullable().optional(),
+        startsAt: z.string().nullable().optional(),
+        endsAt: z.string().nullable().optional(),
+        status: z.enum(["draft", "open", "closed", "archived"]).optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       const patch: Record<string, unknown> = {};
       if (input.name !== undefined) patch.name = input.name;
-      if (input.description !== undefined) patch.description = input.description;
+      if (input.description !== undefined)
+        patch.description = input.description;
       if (input.startsAt !== undefined) patch.starts_at = input.startsAt;
       if (input.endsAt !== undefined) patch.ends_at = input.endsAt;
       if (input.status !== undefined) patch.status = input.status;
       const { data, error } = await supabase
-        .from('inventory_events')
+        .from("inventory_events")
         .update(patch)
-        .eq('id', input.id)
+        .eq("id", input.id)
         .select()
         .single();
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(error),
+        });
       return data;
     }),
 
@@ -8775,33 +9326,52 @@ const inventoryEventsRouter = router({
     .query(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       const { data: locations, error: locErr } = await supabase
-        .from('inventory_locations')
-        .select('*')
-        .eq('event_id', input.eventId);
-      if (locErr) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(locErr) });
+        .from("inventory_locations")
+        .select("*")
+        .eq("event_id", input.eventId);
+      if (locErr)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(locErr),
+        });
 
-      const posLocations = (locations ?? []).filter((l: any) => l.type === 'POS');
-      const bufferLocation = (locations ?? []).find((l: any) => l.type === 'EVENT_BUFFER') ?? null;
+      const posLocations = (locations ?? []).filter(
+        (l: any) => l.type === "POS"
+      );
+      const bufferLocation =
+        (locations ?? []).find((l: any) => l.type === "EVENT_BUFFER") ?? null;
 
       const locationIds = (locations ?? []).map((l: any) => l.id);
       const { data: balances } = locationIds.length
-        ? await supabase.from('inventory_stock_balances').select('*, inventory_products(*), inventory_locations(*)').in('location_id', locationIds)
+        ? await supabase
+            .from("inventory_stock_balances")
+            .select("*, inventory_products(*), inventory_locations(*)")
+            .in("location_id", locationIds)
         : { data: [] };
 
       const { data: movements } = await supabase
-        .from('inventory_movements')
-        .select('*')
-        .eq('event_id', input.eventId);
+        .from("inventory_movements")
+        .select("*")
+        .eq("event_id", input.eventId);
 
       const posReports = posLocations.map((pos: any) => {
         const dispatched = (movements ?? [])
-          .filter((m: any) => m.movement_type === 'TRANSFER_IN' && m.to_location_id === pos.id)
+          .filter(
+            (m: any) =>
+              m.movement_type === "TRANSFER_IN" && m.to_location_id === pos.id
+          )
           .reduce((s: number, m: any) => s + m.quantity, 0);
         const sold = (movements ?? [])
-          .filter((m: any) => m.movement_type === 'SALE' && m.pos_location_id === pos.id)
+          .filter(
+            (m: any) =>
+              m.movement_type === "SALE" && m.pos_location_id === pos.id
+          )
           .reduce((s: number, m: any) => s + m.quantity, 0);
         const returned = (movements ?? [])
-          .filter((m: any) => m.movement_type === 'RETURN_OUT' && m.from_location_id === pos.id)
+          .filter(
+            (m: any) =>
+              m.movement_type === "RETURN_OUT" && m.from_location_id === pos.id
+          )
           .reduce((s: number, m: any) => s + m.quantity, 0);
         const currentStock = (balances ?? [])
           .filter((b: any) => b.location_id === pos.id)
@@ -8817,62 +9387,85 @@ const inventoryEventsRouter = router({
         };
       });
 
-      return { eventId: input.eventId, bufferLocation, posReports, balances: balances ?? [] };
+      return {
+        eventId: input.eventId,
+        bufferLocation,
+        posReports,
+        balances: balances ?? [],
+      };
     }),
 });
 
 const inventoryProductsRouter = router({
   list: adminProcedure
-    .input(z.object({ isActive: z.boolean().optional(), productType: z.string().optional(), search: z.string().optional() }))
+    .input(
+      z.object({
+        isActive: z.boolean().optional(),
+        productType: z.string().optional(),
+        search: z.string().optional(),
+      })
+    )
     .query(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
-      let q = supabase.from('inventory_products').select('*').order('name');
-      if (input.isActive !== undefined) q = q.eq('is_active', input.isActive);
-      if (input.productType) q = q.eq('product_type', input.productType);
-      if (input.search) q = q.ilike('name', `%${input.search}%`);
+      let q = supabase.from("inventory_products").select("*").order("name");
+      if (input.isActive !== undefined) q = q.eq("is_active", input.isActive);
+      if (input.productType) q = q.eq("product_type", input.productType);
+      if (input.search) q = q.ilike("name", `%${input.search}%`);
       const { data, error } = await q;
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(error),
+        });
       return data ?? [];
     }),
 
   create: adminProcedure
-    .input(z.object({
-      productType: z.string(),
-      name: z.string().min(1),
-      sku: z.string().nullable().optional(),
-      barcode: z.string().nullable().optional(),
-      category: z.string().nullable().optional(),
-      unit: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        productType: z.string(),
+        name: z.string().min(1),
+        sku: z.string().nullable().optional(),
+        barcode: z.string().nullable().optional(),
+        category: z.string().nullable().optional(),
+        unit: z.string().optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       const { data, error } = await supabase
-        .from('inventory_products')
+        .from("inventory_products")
         .insert({
           product_type: input.productType,
           name: input.name,
           sku: input.sku ?? null,
           barcode: input.barcode ?? null,
           category: input.category ?? null,
-          unit: input.unit ?? 'piece',
+          unit: input.unit ?? "piece",
           is_active: true,
         })
         .select()
         .single();
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(error),
+        });
       return data;
     }),
 
   update: adminProcedure
-    .input(z.object({
-      id: z.number(),
-      name: z.string().optional(),
-      sku: z.string().nullable().optional(),
-      barcode: z.string().nullable().optional(),
-      category: z.string().nullable().optional(),
-      unit: z.string().optional(),
-      isActive: z.boolean().optional(),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        sku: z.string().nullable().optional(),
+        barcode: z.string().nullable().optional(),
+        category: z.string().nullable().optional(),
+        unit: z.string().optional(),
+        isActive: z.boolean().optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       const patch: Record<string, unknown> = {};
@@ -8883,42 +9476,58 @@ const inventoryProductsRouter = router({
       if (input.unit !== undefined) patch.unit = input.unit;
       if (input.isActive !== undefined) patch.is_active = input.isActive;
       const { data, error } = await supabase
-        .from('inventory_products')
+        .from("inventory_products")
         .update(patch)
-        .eq('id', input.id)
+        .eq("id", input.id)
         .select()
         .single();
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(error),
+        });
       return data;
     }),
 });
 
 const inventoryLocationsRouter = router({
   list: adminProcedure
-    .input(z.object({ type: z.string().optional(), eventId: z.number().optional(), isActive: z.boolean().optional() }))
+    .input(
+      z.object({
+        type: z.string().optional(),
+        eventId: z.number().optional(),
+        isActive: z.boolean().optional(),
+      })
+    )
     .query(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
-      let q = supabase.from('inventory_locations').select('*').order('name');
-      if (input.type) q = q.eq('type', input.type);
-      if (input.eventId !== undefined) q = q.eq('event_id', input.eventId);
-      if (input.isActive !== undefined) q = q.eq('is_active', input.isActive);
+      let q = supabase.from("inventory_locations").select("*").order("name");
+      if (input.type) q = q.eq("type", input.type);
+      if (input.eventId !== undefined) q = q.eq("event_id", input.eventId);
+      if (input.isActive !== undefined) q = q.eq("is_active", input.isActive);
       const { data, error } = await q;
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(error),
+        });
       return data ?? [];
     }),
 
   create: adminProcedure
-    .input(z.object({
-      type: z.enum(['GLOBAL', 'EVENT_BUFFER', 'POS']),
-      code: z.string(),
-      name: z.string().min(1),
-      eventId: z.number().nullable().optional(),
-      parentLocationId: z.number().nullable().optional(),
-    }))
+    .input(
+      z.object({
+        type: z.enum(["GLOBAL", "EVENT_BUFFER", "POS"]),
+        code: z.string(),
+        name: z.string().min(1),
+        eventId: z.number().nullable().optional(),
+        parentLocationId: z.number().nullable().optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       const { data, error } = await supabase
-        .from('inventory_locations')
+        .from("inventory_locations")
         .insert({
           type: input.type,
           code: input.code,
@@ -8929,212 +9538,288 @@ const inventoryLocationsRouter = router({
         })
         .select()
         .single();
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(error),
+        });
       return data;
     }),
 
-  globalLocation: adminProcedure
-    .query(async ({ ctx }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
-      const { data, error } = await supabase
-        .from('inventory_locations')
-        .select('*')
-        .eq('type', 'GLOBAL')
-        .eq('is_active', true)
-        .limit(1)
-        .single();
-      if (error) throw new TRPCError({ code: 'NOT_FOUND', message: 'Emplacement global non trouvé.' });
-      return data;
-    }),
+  globalLocation: adminProcedure.query(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+    const { data, error } = await supabase
+      .from("inventory_locations")
+      .select("*")
+      .eq("type", "GLOBAL")
+      .eq("is_active", true)
+      .limit(1)
+      .single();
+    if (error)
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Emplacement global non trouvé.",
+      });
+    return data;
+  }),
 });
 
 const inventoryStockRouter = router({
   transfer: adminProcedure
-    .input(z.object({
-      productId: z.number(),
-      quantity: z.number().positive(),
-      fromLocationId: z.number(),
-      toLocationId: z.number(),
-      eventId: z.number().nullable().optional(),
-      reason: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        productId: z.number(),
+        quantity: z.number().positive(),
+        fromLocationId: z.number(),
+        toLocationId: z.number(),
+        eventId: z.number().nullable().optional(),
+        reason: z.string().optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
-      const { data, error } = await supabase.rpc('inventory_transfer_stock', {
-        p_product_id:    input.productId,
-        p_quantity:      input.quantity,
+      const { data, error } = await supabase.rpc("inventory_transfer_stock", {
+        p_product_id: input.productId,
+        p_quantity: input.quantity,
         p_from_location: input.fromLocationId,
-        p_to_location:   input.toLocationId,
-        p_event_id:      input.eventId ?? null,
-        p_reason:        input.reason ?? null,
-        p_note:          null,
-        p_performed_by:  null,
+        p_to_location: input.toLocationId,
+        p_event_id: input.eventId ?? null,
+        p_reason: input.reason ?? null,
+        p_note: null,
+        p_performed_by: null,
       });
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(error),
+        });
       return { movementIds: data as number[] };
     }),
 
   addStock: adminProcedure
-    .input(z.object({
-      productId: z.number(),
-      locationId: z.number(),
-      quantity: z.number().positive(),
-      movementType: z.enum(['INITIAL_LOAD', 'PURCHASE_IN', 'DONATION_IN', 'PRODUCTION_IN']),
-      reason: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        productId: z.number(),
+        locationId: z.number(),
+        quantity: z.number().positive(),
+        movementType: z.enum([
+          "INITIAL_LOAD",
+          "PURCHASE_IN",
+          "DONATION_IN",
+          "PRODUCTION_IN",
+        ]),
+        reason: z.string().optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
-      const { data, error } = await supabase.rpc('inventory_add_stock', {
-        p_product_id:     input.productId,
-        p_location_id:    input.locationId,
-        p_quantity:       input.quantity,
-        p_movement_type:  input.movementType,
-        p_reason:         input.reason ?? null,
-        p_note:           null,
-        p_performed_by:   null,
+      const { data, error } = await supabase.rpc("inventory_add_stock", {
+        p_product_id: input.productId,
+        p_location_id: input.locationId,
+        p_quantity: input.quantity,
+        p_movement_type: input.movementType,
+        p_reason: input.reason ?? null,
+        p_note: null,
+        p_performed_by: null,
         p_reference_type: null,
-        p_reference_id:   null,
+        p_reference_id: null,
       });
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(error),
+        });
       return { movementId: data as number };
     }),
 
   recordReturn: adminProcedure
-    .input(z.object({
-      productId: z.number(),
-      quantity: z.number().positive(),
-      fromPosLocationId: z.number(),
-      toBufferLocationId: z.number(),
-      eventId: z.number().nullable().optional(),
-      reason: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        productId: z.number(),
+        quantity: z.number().positive(),
+        fromPosLocationId: z.number(),
+        toBufferLocationId: z.number(),
+        eventId: z.number().nullable().optional(),
+        reason: z.string().optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
-      const { data, error } = await supabase.rpc('inventory_record_return', {
-        p_product_id:         input.productId,
-        p_quantity:           input.quantity,
-        p_from_pos_location:  input.fromPosLocationId,
+      const { data, error } = await supabase.rpc("inventory_record_return", {
+        p_product_id: input.productId,
+        p_quantity: input.quantity,
+        p_from_pos_location: input.fromPosLocationId,
         p_to_buffer_location: input.toBufferLocationId,
-        p_event_id:           input.eventId ?? null,
-        p_reason:             input.reason ?? null,
-        p_note:               null,
-        p_performed_by:       null,
+        p_event_id: input.eventId ?? null,
+        p_reason: input.reason ?? null,
+        p_note: null,
+        p_performed_by: null,
       });
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(error),
+        });
       return { movementIds: data as number[] };
     }),
 
   adjust: adminProcedure
-    .input(z.object({
-      productId: z.number(),
-      locationId: z.number(),
-      qtyDelta: z.number(),
-      reason: z.string().min(1),
-    }))
+    .input(
+      z.object({
+        productId: z.number(),
+        locationId: z.number(),
+        qtyDelta: z.number(),
+        reason: z.string().min(1),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
-      const { data, error } = await supabase.rpc('inventory_adjust_stock', {
-        p_product_id:   input.productId,
-        p_location_id:  input.locationId,
-        p_qty_delta:    input.qtyDelta,
-        p_reason:       input.reason,
-        p_note:         null,
+      const { data, error } = await supabase.rpc("inventory_adjust_stock", {
+        p_product_id: input.productId,
+        p_location_id: input.locationId,
+        p_qty_delta: input.qtyDelta,
+        p_reason: input.reason,
+        p_note: null,
         p_performed_by: null,
       });
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(error),
+        });
       return { movementId: data as number };
     }),
 
-  overview: adminProcedure
-    .query(async ({ ctx }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
-      const { data, error } = await supabase
-        .from('inventory_stock_balances')
-        .select('quantity_on_hand, inventory_products(id, name, category, product_type), inventory_locations(id, type, name, event_id)');
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
-      return data ?? [];
-    }),
+  overview: adminProcedure.query(async ({ ctx }) => {
+    const supabase = createSupabaseAdmin(ctx.env);
+    const { data, error } = await supabase
+      .from("inventory_stock_balances")
+      .select(
+        "quantity_on_hand, inventory_products(id, name, category, product_type), inventory_locations(id, type, name, event_id)"
+      );
+    if (error)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: parseInvError(error),
+      });
+    return data ?? [];
+  }),
 
   movements: adminProcedure
-    .input(z.object({
-      productId: z.number().optional(),
-      locationId: z.number().optional(),
-      eventId: z.number().optional(),
-      limit: z.number().optional(),
-      offset: z.number().optional(),
-    }))
+    .input(
+      z.object({
+        productId: z.number().optional(),
+        locationId: z.number().optional(),
+        eventId: z.number().optional(),
+        limit: z.number().optional(),
+        offset: z.number().optional(),
+      })
+    )
     .query(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       const limit = Math.min(input.limit ?? 50, 500);
       const offset = input.offset ?? 0;
       let q = supabase
-        .from('inventory_movements')
-        .select(`*, inventory_products(id, name, category, product_type, sku), from_location:inventory_locations!inventory_movements_from_location_id_fkey(id, name, type, code), to_location:inventory_locations!inventory_movements_to_location_id_fkey(id, name, type, code), inventory_events(id, name)`, { count: 'exact' })
-        .order('created_at', { ascending: false })
+        .from("inventory_movements")
+        .select(
+          `*, inventory_products(id, name, category, product_type, sku), from_location:inventory_locations!inventory_movements_from_location_id_fkey(id, name, type, code), to_location:inventory_locations!inventory_movements_to_location_id_fkey(id, name, type, code), inventory_events(id, name)`,
+          { count: "exact" }
+        )
+        .order("created_at", { ascending: false })
         .range(offset, offset + limit - 1);
-      if (input.productId) q = q.eq('product_id', input.productId);
-      if (input.eventId) q = q.eq('event_id', input.eventId);
-      if (input.locationId) q = q.or(`from_location_id.eq.${input.locationId},to_location_id.eq.${input.locationId}`);
+      if (input.productId) q = q.eq("product_id", input.productId);
+      if (input.eventId) q = q.eq("event_id", input.eventId);
+      if (input.locationId)
+        q = q.or(
+          `from_location_id.eq.${input.locationId},to_location_id.eq.${input.locationId}`
+        );
       const { data, error, count } = await q;
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(error),
+        });
       return { movements: data ?? [], total: count ?? 0 };
     }),
 });
 
 const inventoryMovementsRouter = router({
   list: adminProcedure
-    .input(z.object({
-      productId: z.number().optional(),
-      locationId: z.number().optional(),
-      eventId: z.number().optional(),
-      movementType: z.string().optional(),
-      dateFrom: z.string().optional(),
-      dateTo: z.string().optional(),
-      limit: z.number().optional(),
-      offset: z.number().optional(),
-    }).optional())
+    .input(
+      z
+        .object({
+          productId: z.number().optional(),
+          locationId: z.number().optional(),
+          eventId: z.number().optional(),
+          movementType: z.string().optional(),
+          dateFrom: z.string().optional(),
+          dateTo: z.string().optional(),
+          limit: z.number().optional(),
+          offset: z.number().optional(),
+        })
+        .optional()
+    )
     .query(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       const limit = Math.min(input?.limit ?? 50, 500);
       const offset = input?.offset ?? 0;
       let q = supabase
-        .from('inventory_movements')
-        .select(`*, inventory_products(id, name, category, product_type, sku), from_location:inventory_locations!inventory_movements_from_location_id_fkey(id, name, type, code), to_location:inventory_locations!inventory_movements_to_location_id_fkey(id, name, type, code), inventory_events(id, name)`, { count: 'exact' })
-        .order('created_at', { ascending: false })
+        .from("inventory_movements")
+        .select(
+          `*, inventory_products(id, name, category, product_type, sku), from_location:inventory_locations!inventory_movements_from_location_id_fkey(id, name, type, code), to_location:inventory_locations!inventory_movements_to_location_id_fkey(id, name, type, code), inventory_events(id, name)`,
+          { count: "exact" }
+        )
+        .order("created_at", { ascending: false })
         .range(offset, offset + limit - 1);
-      if (input?.productId) q = q.eq('product_id', input.productId);
-      if (input?.eventId) q = q.eq('event_id', input.eventId);
-      if (input?.movementType) q = q.eq('movement_type', input.movementType);
-      if (input?.dateFrom) q = q.gte('created_at', input.dateFrom);
-      if (input?.dateTo) q = q.lte('created_at', input.dateTo);
-      if (input?.locationId) q = q.or(`from_location_id.eq.${input.locationId},to_location_id.eq.${input.locationId},pos_location_id.eq.${input.locationId}`);
+      if (input?.productId) q = q.eq("product_id", input.productId);
+      if (input?.eventId) q = q.eq("event_id", input.eventId);
+      if (input?.movementType) q = q.eq("movement_type", input.movementType);
+      if (input?.dateFrom) q = q.gte("created_at", input.dateFrom);
+      if (input?.dateTo) q = q.lte("created_at", input.dateTo);
+      if (input?.locationId)
+        q = q.or(
+          `from_location_id.eq.${input.locationId},to_location_id.eq.${input.locationId},pos_location_id.eq.${input.locationId}`
+        );
       const { data, error, count } = await q;
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(error),
+        });
       return { movements: data ?? [], total: count ?? 0 };
     }),
 });
 
 // ---- Stock Entry QR helpers ----
 function makeWorkerStockEntrySlug(productId: number): string {
-  const rand = crypto.randomUUID().replace(/-/g, '').slice(0, 20);
+  const rand = crypto.randomUUID().replace(/-/g, "").slice(0, 20);
   return `stk_${productId}_${rand}`;
 }
-async function workerEnsureStockEntryQrSlug(supabase: any, productId: number): Promise<string> {
+async function workerEnsureStockEntryQrSlug(
+  supabase: any,
+  productId: number
+): Promise<string> {
   const { data: existing } = await supabase
-    .from('inventory_products').select('id, stock_entry_qr_slug').eq('id', productId).single();
+    .from("inventory_products")
+    .select("id, stock_entry_qr_slug")
+    .eq("id", productId)
+    .single();
   if (existing?.stock_entry_qr_slug) return existing.stock_entry_qr_slug;
   for (let i = 0; i < 5; i++) {
     const slug = makeWorkerStockEntrySlug(productId);
     const { data, error } = await supabase
-      .from('inventory_products')
+      .from("inventory_products")
       .update({ stock_entry_qr_slug: slug })
-      .eq('id', productId)
-      .is('stock_entry_qr_slug', null)
-      .select('stock_entry_qr_slug')
+      .eq("id", productId)
+      .is("stock_entry_qr_slug", null)
+      .select("stock_entry_qr_slug")
       .single();
     if (!error && data?.stock_entry_qr_slug) return data.stock_entry_qr_slug;
     const { data: refreshed } = await supabase
-      .from('inventory_products').select('stock_entry_qr_slug').eq('id', productId).single();
+      .from("inventory_products")
+      .select("stock_entry_qr_slug")
+      .eq("id", productId)
+      .single();
     if (refreshed?.stock_entry_qr_slug) return refreshed.stock_entry_qr_slug;
   }
   throw new Error("Impossible de générer un QR d'entrée de stock");
@@ -9142,40 +9827,75 @@ async function workerEnsureStockEntryQrSlug(supabase: any, productId: number): P
 
 const inventoryStockEntryRouter = router({
   listProducts: adminProcedure
-    .input(z.object({ search: z.string().optional(), isActive: z.boolean().optional() }).optional())
+    .input(
+      z
+        .object({
+          search: z.string().optional(),
+          isActive: z.boolean().optional(),
+        })
+        .optional()
+    )
     .query(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
-      let q = supabase.from('inventory_products').select('*').order('name');
-      if (input?.isActive !== undefined) q = q.eq('is_active', input.isActive);
+      let q = supabase.from("inventory_products").select("*").order("name");
+      if (input?.isActive !== undefined) q = q.eq("is_active", input.isActive);
       if (input?.search) {
         const p = `%${input.search}%`;
-        q = q.or(`name.ilike.${p},sku.ilike.${p},category.ilike.${p},barcode.ilike.${p}`);
+        q = q.or(
+          `name.ilike.${p},sku.ilike.${p},category.ilike.${p},barcode.ilike.${p}`
+        );
       }
       const { data: products, error } = await q;
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(error),
+        });
       const rows = products ?? [];
       await Promise.all(
-        rows.filter((p: any) => !p.stock_entry_qr_slug).map((p: any) => workerEnsureStockEntryQrSlug(supabase, p.id)),
+        rows
+          .filter((p: any) => !p.stock_entry_qr_slug)
+          .map((p: any) => workerEnsureStockEntryQrSlug(supabase, p.id))
       );
       const productIds = rows.map((p: any) => p.id);
       let globalLocId: number | null = null;
       try {
         const { data: loc } = await supabase
-          .from('inventory_locations').select('id').eq('type', 'GLOBAL').eq('is_active', true).limit(1).single();
+          .from("inventory_locations")
+          .select("id")
+          .eq("type", "GLOBAL")
+          .eq("is_active", true)
+          .limit(1)
+          .single();
         globalLocId = loc?.id ?? null;
-      } catch { /* no global location yet */ }
-      let balances: Array<{ product_id: number; quantity_on_hand: number }> = [];
+      } catch {
+        /* no global location yet */
+      }
+      let balances: Array<{ product_id: number; quantity_on_hand: number }> =
+        [];
       if (globalLocId && productIds.length) {
         const { data } = await supabase
-          .from('inventory_stock_balances').select('product_id, quantity_on_hand')
-          .eq('location_id', globalLocId).in('product_id', productIds);
+          .from("inventory_stock_balances")
+          .select("product_id, quantity_on_hand")
+          .eq("location_id", globalLocId)
+          .in("product_id", productIds);
         balances = data ?? [];
       }
-      const byBalance = new Map<number, number>(balances.map((b: any) => [b.product_id, b.quantity_on_hand]));
-      const normalized = await Promise.all(rows.map(async (p: any) => {
-        const slug = p.stock_entry_qr_slug ?? await workerEnsureStockEntryQrSlug(supabase, p.id);
-        return { ...p, stock_entry_qr_slug: slug, global_stock: byBalance.get(p.id) ?? 0 };
-      }));
+      const byBalance = new Map<number, number>(
+        balances.map((b: any) => [b.product_id, b.quantity_on_hand])
+      );
+      const normalized = await Promise.all(
+        rows.map(async (p: any) => {
+          const slug =
+            p.stock_entry_qr_slug ??
+            (await workerEnsureStockEntryQrSlug(supabase, p.id));
+          return {
+            ...p,
+            stock_entry_qr_slug: slug,
+            global_stock: byBalance.get(p.id) ?? 0,
+          };
+        })
+      );
       return { globalLocationId: globalLocId, products: normalized };
     }),
 
@@ -9184,22 +9904,42 @@ const inventoryStockEntryRouter = router({
     .query(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       const { data: product, error } = await supabase
-        .from('inventory_products').select('*').eq('id', input.productId).single();
-      if (error) throw new TRPCError({ code: 'NOT_FOUND', message: parseInvError(error) });
-      const slug = product.stock_entry_qr_slug ?? await workerEnsureStockEntryQrSlug(supabase, input.productId);
+        .from("inventory_products")
+        .select("*")
+        .eq("id", input.productId)
+        .single();
+      if (error)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: parseInvError(error),
+        });
+      const slug =
+        product.stock_entry_qr_slug ??
+        (await workerEnsureStockEntryQrSlug(supabase, input.productId));
       const { data: globalLoc } = await supabase
-        .from('inventory_locations').select('*').eq('type', 'GLOBAL').eq('is_active', true).limit(1).single();
+        .from("inventory_locations")
+        .select("*")
+        .eq("type", "GLOBAL")
+        .eq("is_active", true)
+        .limit(1)
+        .single();
       let globalStock = 0;
       if (globalLoc) {
         const { data: bal } = await supabase
-          .from('inventory_stock_balances').select('quantity_on_hand')
-          .eq('product_id', input.productId).eq('location_id', globalLoc.id).maybeSingle();
+          .from("inventory_stock_balances")
+          .select("quantity_on_hand")
+          .eq("product_id", input.productId)
+          .eq("location_id", globalLoc.id)
+          .maybeSingle();
         globalStock = bal?.quantity_on_hand ?? 0;
       }
       const { data: history } = await supabase
-        .from('inventory_movements').select('*, users(id, username, email)')
-        .eq('product_id', input.productId).eq('reference_type', 'QR_STOCK_ENTRY')
-        .order('created_at', { ascending: false }).limit(20);
+        .from("inventory_movements")
+        .select("*, users(id, username, email)")
+        .eq("product_id", input.productId)
+        .eq("reference_type", "QR_STOCK_ENTRY")
+        .order("created_at", { ascending: false })
+        .limit(20);
       return {
         product: { ...product, stock_entry_qr_slug: slug },
         globalLocation: globalLoc ?? null,
@@ -9214,10 +9954,22 @@ const inventoryStockEntryRouter = router({
     .query(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       const { data, error } = await supabase
-        .from('inventory_products').select('*').eq('stock_entry_qr_slug', input.slug).maybeSingle();
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
-      if (!data) throw new TRPCError({ code: 'NOT_FOUND', message: 'Produit introuvable' });
-      if (!data.stock_entry_qr_enabled) throw new TRPCError({ code: 'FORBIDDEN', message: 'QR inactif' });
+        .from("inventory_products")
+        .select("*")
+        .eq("stock_entry_qr_slug", input.slug)
+        .maybeSingle();
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(error),
+        });
+      if (!data)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Produit introuvable",
+        });
+      if (!data.stock_entry_qr_enabled)
+        throw new TRPCError({ code: "FORBIDDEN", message: "QR inactif" });
       return data;
     }),
 
@@ -9225,7 +9977,10 @@ const inventoryStockEntryRouter = router({
     .input(z.object({ productId: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
-      const slug = await workerEnsureStockEntryQrSlug(supabase, input.productId);
+      const slug = await workerEnsureStockEntryQrSlug(
+        supabase,
+        input.productId
+      );
       return { slug };
     }),
 
@@ -9236,72 +9991,194 @@ const inventoryStockEntryRouter = router({
       for (let i = 0; i < 5; i++) {
         const slug = makeWorkerStockEntrySlug(input.productId);
         const { data, error } = await supabase
-          .from('inventory_products')
+          .from("inventory_products")
           .update({ stock_entry_qr_slug: slug, stock_entry_qr_enabled: true })
-          .eq('id', input.productId).select('stock_entry_qr_slug').single();
-        if (!error && data?.stock_entry_qr_slug) return { slug: data.stock_entry_qr_slug };
+          .eq("id", input.productId)
+          .select("stock_entry_qr_slug")
+          .single();
+        if (!error && data?.stock_entry_qr_slug)
+          return { slug: data.stock_entry_qr_slug };
       }
-      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Impossible de régénérer le QR' });
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Impossible de régénérer le QR",
+      });
     }),
 
   setQrEnabled: adminProcedure
-    .input(z.object({ productId: z.number().int().positive(), enabled: z.boolean() }))
+    .input(
+      z.object({ productId: z.number().int().positive(), enabled: z.boolean() })
+    )
     .mutation(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       const { data, error } = await supabase
-        .from('inventory_products').update({ stock_entry_qr_enabled: input.enabled })
-        .eq('id', input.productId).select('id, stock_entry_qr_enabled').single();
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+        .from("inventory_products")
+        .update({ stock_entry_qr_enabled: input.enabled })
+        .eq("id", input.productId)
+        .select("id, stock_entry_qr_enabled")
+        .single();
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(error),
+        });
       return data;
     }),
 
   submit: adminProcedure
-    .input(z.object({
-      productId: z.number().int().positive(),
-      qty: z.number().int().positive(),
-      entryType: z.enum(['INITIAL_LOAD', 'PURCHASE_IN', 'DONATION_IN', 'PRODUCTION_IN']).optional(),
-      note: z.string().max(500).optional(),
-      reason: z.string().max(500).optional(),
-    }))
+    .input(
+      z.object({
+        productId: z.number().int().positive(),
+        qty: z.number().int().positive(),
+        entryType: z
+          .enum(["INITIAL_LOAD", "PURCHASE_IN", "DONATION_IN", "PRODUCTION_IN"])
+          .optional(),
+        note: z.string().max(500).optional(),
+        reason: z.string().max(500).optional(),
+        eventId: z.number().int().positive().optional(),
+        posLocationId: z.number().int().positive().optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       const { data: product, error: pErr } = await supabase
-        .from('inventory_products').select('*').eq('id', input.productId).single();
-      if (pErr || !product) throw new TRPCError({ code: 'NOT_FOUND', message: 'Produit introuvable' });
-      if (!product.stock_entry_qr_enabled) throw new TRPCError({ code: 'FORBIDDEN', message: 'QR inactif' });
+        .from("inventory_products")
+        .select("*")
+        .eq("id", input.productId)
+        .single();
+      if (pErr || !product)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Produit introuvable",
+        });
+      if (!product.stock_entry_qr_enabled)
+        throw new TRPCError({ code: "FORBIDDEN", message: "QR inactif" });
       const { data: globalLoc, error: locErr } = await supabase
-        .from('inventory_locations').select('*').eq('type', 'GLOBAL').eq('is_active', true).limit(1).single();
-      if (locErr || !globalLoc) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Emplacement global non trouvé' });
-      const slug = product.stock_entry_qr_slug ?? await workerEnsureStockEntryQrSlug(supabase, input.productId);
-      const { data: mvt, error: mvtErr } = await supabase.rpc('inventory_add_stock', {
-        p_product_id:     input.productId,
-        p_location_id:    globalLoc.id,
-        p_quantity:       input.qty,
-        p_movement_type:  input.entryType ?? 'PURCHASE_IN',
-        p_reason:         input.reason ?? 'Entrée stock via QR',
-        p_note:           input.note ?? null,
-        p_performed_by:   ctx.user?.id ?? null,
-        p_reference_type: 'QR_STOCK_ENTRY',
-        p_reference_id:   slug,
-      });
-      if (mvtErr) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(mvtErr) });
+        .from("inventory_locations")
+        .select("*")
+        .eq("type", "GLOBAL")
+        .eq("is_active", true)
+        .limit(1)
+        .single();
+      if (locErr || !globalLoc)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Emplacement global non trouvé",
+        });
+      const slug =
+        product.stock_entry_qr_slug ??
+        (await workerEnsureStockEntryQrSlug(supabase, input.productId));
+      const { data: mvt, error: mvtErr } = await supabase.rpc(
+        "inventory_add_stock",
+        {
+          p_product_id: input.productId,
+          p_location_id: globalLoc.id,
+          p_quantity: input.qty,
+          p_movement_type: input.entryType ?? "PURCHASE_IN",
+          p_reason: input.reason ?? "Entrée stock via QR",
+          p_note: input.note ?? null,
+          p_performed_by: ctx.user?.id ?? null,
+          p_reference_type: "QR_STOCK_ENTRY",
+          p_reference_id: slug,
+        }
+      );
+      if (mvtErr)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(mvtErr),
+        });
+
+      let resolvedEventId = input.eventId ?? null;
+      let resolvedPosLocationId = input.posLocationId ?? null;
+
+      if (resolvedPosLocationId) {
+        const { data: posLocation, error: posErr } = await supabase
+          .from("inventory_locations")
+          .select("id, type, event_id")
+          .eq("id", resolvedPosLocationId)
+          .maybeSingle();
+        if (posErr || !posLocation) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Point de vente introuvable pour ce scanner.",
+          });
+        }
+        if (posLocation.type !== "POS") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "L’emplacement sélectionné n’est pas un point de vente.",
+          });
+        }
+        if (!posLocation.event_id) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Le point de vente sélectionné n’est lié à aucun événement.",
+          });
+        }
+        if (resolvedEventId && resolvedEventId !== posLocation.event_id) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Le point de vente ne correspond pas à l’événement configuré.",
+          });
+        }
+        resolvedEventId = posLocation.event_id;
+      }
+
+      if (resolvedEventId || resolvedPosLocationId) {
+        const { error: updateMovementErr } = await supabase
+          .from("inventory_movements")
+          .update({
+            event_id: resolvedEventId,
+            pos_location_id: resolvedPosLocationId,
+          })
+          .eq("id", mvt as number);
+        if (updateMovementErr) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: parseInvError(updateMovementErr),
+          });
+        }
+      }
+
       const { data: bal } = await supabase
-        .from('inventory_stock_balances').select('quantity_on_hand')
-        .eq('product_id', input.productId).eq('location_id', globalLoc.id).maybeSingle();
-      return { movementId: mvt as number, globalLocationId: globalLoc.id, newGlobalBalance: bal?.quantity_on_hand ?? 0 };
+        .from("inventory_stock_balances")
+        .select("quantity_on_hand")
+        .eq("product_id", input.productId)
+        .eq("location_id", globalLoc.id)
+        .maybeSingle();
+      return {
+        movementId: mvt as number,
+        globalLocationId: globalLoc.id,
+        newGlobalBalance: bal?.quantity_on_hand ?? 0,
+        eventId: resolvedEventId,
+        posLocationId: resolvedPosLocationId,
+      };
     }),
 
   history: adminProcedure
-    .input(z.object({ limit: z.number().int().min(1).max(300).optional() }).optional())
+    .input(
+      z
+        .object({ limit: z.number().int().min(1).max(300).optional() })
+        .optional()
+    )
     .query(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       const limit = Math.min(input?.limit ?? 100, 300);
       const { data, error } = await supabase
-        .from('inventory_movements')
-        .select('*, inventory_products(id, name, category, sku), users(id, username, email)')
-        .eq('reference_type', 'QR_STOCK_ENTRY')
-        .order('created_at', { ascending: false }).limit(limit);
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: parseInvError(error) });
+        .from("inventory_movements")
+        .select(
+          "*, inventory_products(id, name, category, sku), users(id, username, email)"
+        )
+        .eq("reference_type", "QR_STOCK_ENTRY")
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: parseInvError(error),
+        });
       return data ?? [];
     }),
 });
@@ -9330,30 +10207,34 @@ const inventoryRouter = router({
       category?: string | null;
     }) {
       let q = supabase
-        .from('inventory_products')
-        .select('id')
-        .eq('product_type', args.productType)
-        .eq('source_product_id', args.sourceProductId);
+        .from("inventory_products")
+        .select("id")
+        .eq("product_type", args.productType)
+        .eq("source_product_id", args.sourceProductId);
       q = args.sourceVariantId
-        ? q.eq('source_variant_id', args.sourceVariantId)
-        : q.is('source_variant_id', null);
+        ? q.eq("source_variant_id", args.sourceVariantId)
+        : q.is("source_variant_id", null);
       const { data: existing } = await q.maybeSingle();
 
       if (existing) {
         const { error } = await supabase
-          .from('inventory_products')
-          .update({ name: args.name, sku: args.sku ?? null, category: args.category ?? null })
-          .eq('id', existing.id);
+          .from("inventory_products")
+          .update({
+            name: args.name,
+            sku: args.sku ?? null,
+            category: args.category ?? null,
+          })
+          .eq("id", existing.id);
         if (error) throw new Error(error.message);
       } else {
-        const { error } = await supabase.from('inventory_products').insert({
+        const { error } = await supabase.from("inventory_products").insert({
           product_type: args.productType,
           source_product_id: args.sourceProductId,
           source_variant_id: args.sourceVariantId ?? null,
           name: args.name,
           sku: args.sku ?? null,
           category: args.category ?? null,
-          unit: 'piece',
+          unit: "piece",
           is_active: true,
         });
         if (error) throw new Error(error.message);
@@ -9361,23 +10242,33 @@ const inventoryRouter = router({
     }
 
     // Goodies
-    const { data: goodies } = await supabase.from('goodies').select('id, name, category');
+    const { data: goodies } = await supabase
+      .from("goodies")
+      .select("id, name, category");
     for (const g of goodies ?? []) {
       try {
-        await syncOne({ productType: 'goodie', sourceProductId: g.id, name: g.name, category: g.category ?? null });
+        await syncOne({
+          productType: "goodie",
+          sourceProductId: g.id,
+          name: g.name,
+          category: g.category ?? null,
+        });
         synced++;
-      } catch (e: any) { errors++; details.push(`goodie#${g.id}: ${e.message}`); }
+      } catch (e: any) {
+        errors++;
+        details.push(`goodie#${g.id}: ${e.message}`);
+      }
     }
 
     // Goodie variants
     const { data: goodieVariants } = await supabase
-      .from('goodie_variants')
-      .select('id, goodie_id, name, sku, goodies(name, category)');
+      .from("goodie_variants")
+      .select("id, goodie_id, name, sku, goodies(name, category)");
     for (const v of goodieVariants ?? []) {
       try {
         const parent = (v as any).goodies;
         await syncOne({
-          productType: 'goodie_variant',
+          productType: "goodie_variant",
           sourceProductId: (v as any).goodie_id,
           sourceVariantId: v.id,
           name: parent ? `${parent.name} – ${v.name}` : v.name,
@@ -9385,27 +10276,40 @@ const inventoryRouter = router({
           category: parent?.category ?? null,
         });
         synced++;
-      } catch (e: any) { errors++; details.push(`goodie_variant#${v.id}: ${e.message}`); }
+      } catch (e: any) {
+        errors++;
+        details.push(`goodie_variant#${v.id}: ${e.message}`);
+      }
     }
 
     // Terroir products
-    const { data: terroirProducts } = await supabase.from('terroir_products').select('id, name, category');
+    const { data: terroirProducts } = await supabase
+      .from("terroir_products")
+      .select("id, name, category");
     for (const t of terroirProducts ?? []) {
       try {
-        await syncOne({ productType: 'terroir_product', sourceProductId: t.id, name: t.name, category: t.category ?? null });
+        await syncOne({
+          productType: "terroir_product",
+          sourceProductId: t.id,
+          name: t.name,
+          category: t.category ?? null,
+        });
         synced++;
-      } catch (e: any) { errors++; details.push(`terroir_product#${t.id}: ${e.message}`); }
+      } catch (e: any) {
+        errors++;
+        details.push(`terroir_product#${t.id}: ${e.message}`);
+      }
     }
 
     // Terroir variants
     const { data: terroirVariants } = await supabase
-      .from('terroir_product_variants')
-      .select('id, product_id, label, sku, terroir_products(name, category)');
+      .from("terroir_product_variants")
+      .select("id, product_id, label, sku, terroir_products(name, category)");
     for (const v of terroirVariants ?? []) {
       try {
         const parent = (v as any).terroir_products;
         await syncOne({
-          productType: 'terroir_variant',
+          productType: "terroir_variant",
           sourceProductId: (v as any).product_id,
           sourceVariantId: v.id,
           name: parent ? `${parent.name} – ${v.label}` : v.label,
@@ -9413,16 +10317,29 @@ const inventoryRouter = router({
           category: parent?.category ?? null,
         });
         synced++;
-      } catch (e: any) { errors++; details.push(`terroir_variant#${v.id}: ${e.message}`); }
+      } catch (e: any) {
+        errors++;
+        details.push(`terroir_variant#${v.id}: ${e.message}`);
+      }
     }
 
     // Pastries
-    const { data: pastries } = await supabase.from('pastries').select('id, name, category');
+    const { data: pastries } = await supabase
+      .from("pastries")
+      .select("id, name, category");
     for (const p of pastries ?? []) {
       try {
-        await syncOne({ productType: 'pastry', sourceProductId: p.id, name: p.name, category: p.category ?? null });
+        await syncOne({
+          productType: "pastry",
+          sourceProductId: p.id,
+          name: p.name,
+          category: p.category ?? null,
+        });
         synced++;
-      } catch (e: any) { errors++; details.push(`pastry#${p.id}: ${e.message}`); }
+      } catch (e: any) {
+        errors++;
+        details.push(`pastry#${p.id}: ${e.message}`);
+      }
     }
 
     return { synced, errors, details };
@@ -9440,12 +10357,18 @@ const ELECTION_CURRENT_YEAR = new Date().getFullYear();
 const electionAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
   const allowed = ["admin", "super_admin", "admin_ops", "admin_operations"];
   if (!ctx.user || !allowed.includes(ctx.user.role)) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Accès administrateur requis" });
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Accès administrateur requis",
+    });
   }
   return next({ ctx });
 });
 
-async function getElectionParticipationCount(email: string, env: any): Promise<number> {
+async function getElectionParticipationCount(
+  email: string,
+  env: any
+): Promise<number> {
   const admin = createSupabaseAdmin(env);
   const { count, error } = await admin
     .from("volunteers")
@@ -9465,14 +10388,22 @@ const electionRouter = router({
       .select("*")
       .eq("election_year", year)
       .maybeSingle();
-    if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+    if (error)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      });
     if (!data) {
       const { data: created, error: err2 } = await admin
         .from("election_settings")
         .insert({ election_year: year, is_open: false, max_managers: 10 })
         .select()
         .single();
-      if (err2) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: err2.message });
+      if (err2)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: err2.message,
+        });
       return created;
     }
     return data;
@@ -9489,7 +10420,11 @@ const electionRouter = router({
         .eq("election_year", year)
         .eq("status", "approved")
         .order("created_at", { ascending: true });
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return data ?? [];
     }),
 
@@ -9503,7 +10438,11 @@ const electionRouter = router({
         .select("id, first_name, last_name, photo_url, participation_count")
         .eq("election_year", year)
         .eq("status", "approved");
-      if (candErr) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: candErr.message });
+      if (candErr)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: candErr.message,
+        });
       if (!candidates?.length) return [];
       const { data: votes } = await admin
         .from("manager_votes")
@@ -9551,9 +10490,18 @@ const electionRouter = router({
 
   checkMyEligibility: protectedProcedure.query(async ({ ctx }) => {
     const email = ctx.user.email;
-    if (!email) return { eligible: false, participationCount: 0, minRequired: ELECTION_MIN_PARTICIPATIONS };
+    if (!email)
+      return {
+        eligible: false,
+        participationCount: 0,
+        minRequired: ELECTION_MIN_PARTICIPATIONS,
+      };
     const count = await getElectionParticipationCount(email, ctx.env);
-    return { eligible: count >= ELECTION_MIN_PARTICIPATIONS, participationCount: count, minRequired: ELECTION_MIN_PARTICIPATIONS };
+    return {
+      eligible: count >= ELECTION_MIN_PARTICIPATIONS,
+      participationCount: count,
+      minRequired: ELECTION_MIN_PARTICIPATIONS,
+    };
   }),
 
   checkMyVote: protectedProcedure.query(async ({ ctx }) => {
@@ -9574,7 +10522,11 @@ const electionRouter = router({
     .mutation(async ({ ctx, input }) => {
       const admin = createSupabaseAdmin(ctx.env);
       const email = ctx.user.email;
-      if (!email) throw new TRPCError({ code: "UNAUTHORIZED", message: "Email introuvable" });
+      if (!email)
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Email introuvable",
+        });
       const year = ELECTION_CURRENT_YEAR;
       const { data: settings } = await admin
         .from("election_settings")
@@ -9582,7 +10534,10 @@ const electionRouter = router({
         .eq("election_year", year)
         .maybeSingle();
       if (!settings?.is_open) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "L'élection n'est pas ouverte." });
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "L'élection n'est pas ouverte.",
+        });
       }
       const count = await getElectionParticipationCount(email, ctx.env);
       if (count < ELECTION_MIN_PARTICIPATIONS) {
@@ -9597,7 +10552,11 @@ const electionRouter = router({
         .eq("voter_email", email.toLowerCase().trim())
         .eq("election_year", year)
         .maybeSingle();
-      if (existing) throw new TRPCError({ code: "CONFLICT", message: "Vous avez déjà voté." });
+      if (existing)
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Vous avez déjà voté.",
+        });
       const { data: candidate } = await admin
         .from("manager_candidates")
         .select("id")
@@ -9605,28 +10564,41 @@ const electionRouter = router({
         .eq("election_year", year)
         .eq("status", "approved")
         .maybeSingle();
-      if (!candidate) throw new TRPCError({ code: "NOT_FOUND", message: "Candidat introuvable." });
+      if (!candidate)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Candidat introuvable.",
+        });
       const { error } = await admin.from("manager_votes").insert({
         voter_email: email.toLowerCase().trim(),
         candidate_id: input.candidateId,
         election_year: year,
       });
       if (error) {
-        if (error.code === "23505") throw new TRPCError({ code: "CONFLICT", message: "Vous avez déjà voté." });
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+        if (error.code === "23505")
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Vous avez déjà voté.",
+          });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
       return { success: true };
     }),
 
   submitCandidacy: protectedProcedure
-    .input(z.object({
-      first_name: z.string().min(2).max(100),
-      last_name: z.string().min(2).max(100),
-      email: z.string().email(),
-      phone: z.string().optional(),
-      photo_url: z.string().url().optional(),
-      motivation_text: z.string().max(500).optional(),
-    }))
+    .input(
+      z.object({
+        first_name: z.string().min(2).max(100),
+        last_name: z.string().min(2).max(100),
+        email: z.string().email(),
+        phone: z.string().optional(),
+        photo_url: z.string().url().optional(),
+        motivation_text: z.string().max(500).optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const admin = createSupabaseAdmin(ctx.env);
       const userEmail = ctx.user.email ?? input.email;
@@ -9644,7 +10616,11 @@ const electionRouter = router({
         .ilike("email", userEmail.trim())
         .eq("election_year", year)
         .maybeSingle();
-      if (existing) throw new TRPCError({ code: "CONFLICT", message: "Vous avez déjà soumis une candidature pour cette année." });
+      if (existing)
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Vous avez déjà soumis une candidature pour cette année.",
+        });
       const { data, error } = await admin
         .from("manager_candidates")
         .insert({
@@ -9661,8 +10637,15 @@ const electionRouter = router({
         .select()
         .single();
       if (error) {
-        if (error.code === "23505") throw new TRPCError({ code: "CONFLICT", message: "Candidature déjà soumise." });
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+        if (error.code === "23505")
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Candidature déjà soumise.",
+          });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
       return data;
     }),
@@ -9677,13 +10660,23 @@ const electionRouter = router({
       const { data, error } = await admin.storage
         .from("manager-candidates")
         .createSignedUploadUrl(path);
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
-      const publicUrl = admin.storage.from("manager-candidates").getPublicUrl(path).data.publicUrl;
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      const publicUrl = admin.storage
+        .from("manager-candidates")
+        .getPublicUrl(path).data.publicUrl;
       return { signedUrl: data.signedUrl, token: data.token, path, publicUrl };
     }),
 
   admin_listCandidates: electionAdminProcedure
-    .input(z.object({ year: z.number().optional(), status: z.string().optional() }).optional())
+    .input(
+      z
+        .object({ year: z.number().optional(), status: z.string().optional() })
+        .optional()
+    )
     .query(async ({ ctx, input }) => {
       const admin = createSupabaseAdmin(ctx.env);
       const year = input?.year ?? ELECTION_CURRENT_YEAR;
@@ -9694,12 +10687,21 @@ const electionRouter = router({
         .order("created_at", { ascending: false });
       if (input?.status) query = query.eq("status", input.status);
       const { data, error } = await query;
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return data ?? [];
     }),
 
   admin_updateCandidateStatus: electionAdminProcedure
-    .input(z.object({ candidateId: z.string().uuid(), status: z.enum(["approved", "rejected", "pending"]) }))
+    .input(
+      z.object({
+        candidateId: z.string().uuid(),
+        status: z.enum(["approved", "rejected", "pending"]),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const admin = createSupabaseAdmin(ctx.env);
       const { data, error } = await admin
@@ -9708,7 +10710,11 @@ const electionRouter = router({
         .eq("id", input.candidateId)
         .select()
         .single();
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return data;
     }),
 
@@ -9723,10 +10729,24 @@ const electionRouter = router({
         { count: pendingCandidates },
         { count: totalVotes },
       ] = await Promise.all([
-        admin.from("manager_candidates").select("*", { count: "exact", head: true }).eq("election_year", year),
-        admin.from("manager_candidates").select("*", { count: "exact", head: true }).eq("election_year", year).eq("status", "approved"),
-        admin.from("manager_candidates").select("*", { count: "exact", head: true }).eq("election_year", year).eq("status", "pending"),
-        admin.from("manager_votes").select("*", { count: "exact", head: true }).eq("election_year", year),
+        admin
+          .from("manager_candidates")
+          .select("*", { count: "exact", head: true })
+          .eq("election_year", year),
+        admin
+          .from("manager_candidates")
+          .select("*", { count: "exact", head: true })
+          .eq("election_year", year)
+          .eq("status", "approved"),
+        admin
+          .from("manager_candidates")
+          .select("*", { count: "exact", head: true })
+          .eq("election_year", year)
+          .eq("status", "pending"),
+        admin
+          .from("manager_votes")
+          .select("*", { count: "exact", head: true })
+          .eq("election_year", year),
       ]);
       return {
         totalCandidates: totalCandidates ?? 0,
@@ -9743,10 +10763,16 @@ const electionRouter = router({
       const year = input?.year ?? ELECTION_CURRENT_YEAR;
       const { data: candidates, error } = await admin
         .from("manager_candidates")
-        .select("id, first_name, last_name, photo_url, participation_count, status")
+        .select(
+          "id, first_name, last_name, photo_url, participation_count, status"
+        )
         .eq("election_year", year)
         .eq("status", "approved");
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       const { data: votes } = await admin
         .from("manager_votes")
         .select("candidate_id")
@@ -9761,23 +10787,33 @@ const electionRouter = router({
     }),
 
   admin_updateSettings: electionAdminProcedure
-    .input(z.object({
-      year: z.number().optional(),
-      is_open: z.boolean().optional(),
-      max_managers: z.number().int().min(1).max(50).optional(),
-    }))
+    .input(
+      z.object({
+        year: z.number().optional(),
+        is_open: z.boolean().optional(),
+        max_managers: z.number().int().min(1).max(50).optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const admin = createSupabaseAdmin(ctx.env);
       const year = input.year ?? ELECTION_CURRENT_YEAR;
       const updates: Record<string, unknown> = {};
       if (input.is_open !== undefined) updates.is_open = input.is_open;
-      if (input.max_managers !== undefined) updates.max_managers = input.max_managers;
+      if (input.max_managers !== undefined)
+        updates.max_managers = input.max_managers;
       const { data, error } = await admin
         .from("election_settings")
-        .upsert({ election_year: year, ...updates }, { onConflict: "election_year" })
+        .upsert(
+          { election_year: year, ...updates },
+          { onConflict: "election_year" }
+        )
         .select()
         .single();
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return data;
     }),
 
@@ -9791,7 +10827,11 @@ const electionRouter = router({
         .select("id, voter_email, candidate_id, created_at")
         .eq("election_year", year)
         .order("created_at", { ascending: false });
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return data ?? [];
     }),
 
@@ -9803,7 +10843,11 @@ const electionRouter = router({
         .from("manager_candidates")
         .delete()
         .eq("id", input.candidateId);
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return { success: true };
     }),
 });
@@ -9813,31 +10857,48 @@ const electionRouter = router({
 // ============================================
 
 const teamAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const allowedRoles = ['admin', 'super_admin', 'admin_contenu', 'admin_ops', 'admin_operations'];
+  const allowedRoles = [
+    "admin",
+    "super_admin",
+    "admin_contenu",
+    "admin_ops",
+    "admin_operations",
+  ];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Accès administrateur requis' });
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Accès administrateur requis",
+    });
   }
   return next({ ctx });
 });
 
 function parseBase64ImageData(photoBase64: string) {
-  const match = photoBase64.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+  const match = photoBase64.match(
+    /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/
+  );
   if (!match) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Format image invalide' });
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Format image invalide",
+    });
   }
 
   const mimeType = match[1].toLowerCase();
   const base64Data = match[2];
   const extensionByMime: Record<string, string> = {
-    'image/jpeg': 'jpg',
-    'image/jpg': 'jpg',
-    'image/png': 'png',
-    'image/webp': 'webp',
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
   };
 
   const ext = extensionByMime[mimeType];
   if (!ext) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Format image non supporté (jpeg, png, webp)' });
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Format image non supporté (jpeg, png, webp)",
+    });
   }
 
   const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
@@ -9866,12 +10927,16 @@ const teamRouter = router({
     .query(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       const { data, error } = await supabase
-        .from('ftour_team_members')
-        .select('*')
-        .eq('edition', input.edition)
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        .from("ftour_team_members")
+        .select("*")
+        .eq("edition", input.edition)
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return (data ?? []).map(mapTeamMember);
     }),
 
@@ -9879,41 +10944,58 @@ const teamRouter = router({
     .input(z.object({ edition: z.number().int().min(1).optional() }))
     .query(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
-      let query = supabase.from('ftour_team_members').select('*').order('display_order', { ascending: true });
-      if (input.edition) query = query.eq('edition', input.edition);
+      let query = supabase
+        .from("ftour_team_members")
+        .select("*")
+        .order("display_order", { ascending: true });
+      if (input.edition) query = query.eq("edition", input.edition);
       const { data, error } = await query;
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return (data ?? []).map(mapTeamMember);
     }),
 
   create: teamAdminProcedure
-    .input(z.object({
-      firstName: z.string().min(1),
-      lastName: z.string().min(1),
-      role: z.string().optional(),
-      citation: z.string().optional(),
-      photoBase64: z.string().optional(),
-      photoUrl: z.string().optional(),
-      displayOrder: z.number().int().min(0).default(0),
-      edition: z.number().int().min(1).default(12),
-    }))
+    .input(
+      z.object({
+        firstName: z.string().min(1),
+        lastName: z.string().min(1),
+        role: z.string().optional(),
+        citation: z.string().optional(),
+        photoBase64: z.string().optional(),
+        photoUrl: z.string().optional(),
+        displayOrder: z.number().int().min(0).default(0),
+        edition: z.number().int().min(1).default(12),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       let photoUrl = input.photoUrl ?? null;
 
       if (input.photoBase64) {
-        const { mimeType, ext, buffer } = parseBase64ImageData(input.photoBase64);
+        const { mimeType, ext, buffer } = parseBase64ImageData(
+          input.photoBase64
+        );
         const key = `team/edition-${input.edition}/${Date.now()}-${input.firstName.toLowerCase()}-${input.lastName.toLowerCase()}.${ext}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('images')
+          .from("images")
           .upload(key, buffer, { contentType: mimeType, upsert: false });
-        if (uploadError) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: uploadError.message });
-        const { data: urlData } = supabase.storage.from('images').getPublicUrl(uploadData.path);
+        if (uploadError)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: uploadError.message,
+          });
+        const { data: urlData } = supabase.storage
+          .from("images")
+          .getPublicUrl(uploadData.path);
         photoUrl = urlData.publicUrl;
       }
 
       const { data, error } = await supabase
-        .from('ftour_team_members')
+        .from("ftour_team_members")
         .insert({
           first_name: input.firstName,
           last_name: input.lastName,
@@ -9926,23 +11008,29 @@ const teamRouter = router({
         })
         .select()
         .single();
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return data;
     }),
 
   update: teamAdminProcedure
-    .input(z.object({
-      id: z.number().int(),
-      firstName: z.string().min(1).optional(),
-      lastName: z.string().min(1).optional(),
-      role: z.string().optional(),
-      citation: z.string().optional(),
-      photoBase64: z.string().optional(),
-      photoUrl: z.string().optional(),
-      displayOrder: z.number().int().min(0).optional(),
-      edition: z.number().int().min(1).optional(),
-      isActive: z.boolean().optional(),
-    }))
+    .input(
+      z.object({
+        id: z.number().int(),
+        firstName: z.string().min(1).optional(),
+        lastName: z.string().min(1).optional(),
+        role: z.string().optional(),
+        citation: z.string().optional(),
+        photoBase64: z.string().optional(),
+        photoUrl: z.string().optional(),
+        displayOrder: z.number().int().min(0).optional(),
+        edition: z.number().int().min(1).optional(),
+        isActive: z.boolean().optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       const { id, photoBase64, ...rest } = input;
@@ -9953,10 +11041,16 @@ const teamRouter = router({
         const edition = rest.edition ?? 12;
         const key = `team/edition-${edition}/${Date.now()}-${id}.${ext}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('images')
+          .from("images")
           .upload(key, buffer, { contentType: mimeType, upsert: false });
-        if (uploadError) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: uploadError.message });
-        const { data: urlData } = supabase.storage.from('images').getPublicUrl(uploadData.path);
+        if (uploadError)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: uploadError.message,
+          });
+        const { data: urlData } = supabase.storage
+          .from("images")
+          .getPublicUrl(uploadData.path);
         photoUrl = urlData.publicUrl;
       }
 
@@ -9966,17 +11060,22 @@ const teamRouter = router({
       if (rest.role !== undefined) updates.role = rest.role;
       if (rest.citation !== undefined) updates.citation = rest.citation;
       if (photoUrl !== undefined) updates.photo_url = photoUrl;
-      if (rest.displayOrder !== undefined) updates.display_order = rest.displayOrder;
+      if (rest.displayOrder !== undefined)
+        updates.display_order = rest.displayOrder;
       if (rest.edition !== undefined) updates.edition = rest.edition;
       if (rest.isActive !== undefined) updates.is_active = rest.isActive;
 
       const { data, error } = await supabase
-        .from('ftour_team_members')
+        .from("ftour_team_members")
         .update(updates)
-        .eq('id', id)
+        .eq("id", id)
         .select()
         .single();
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return data;
     }),
 
@@ -9984,8 +11083,15 @@ const teamRouter = router({
     .input(z.object({ id: z.number().int() }))
     .mutation(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
-      const { error } = await supabase.from('ftour_team_members').delete().eq('id', input.id);
-      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      const { error } = await supabase
+        .from("ftour_team_members")
+        .delete()
+        .eq("id", input.id);
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return { success: true };
     }),
 
@@ -9994,7 +11100,10 @@ const teamRouter = router({
     .mutation(async ({ ctx, input }) => {
       const supabase = createSupabaseAdmin(ctx.env);
       const updates = input.orderedIds.map((id, index) =>
-        supabase.from('ftour_team_members').update({ display_order: index }).eq('id', id)
+        supabase
+          .from("ftour_team_members")
+          .update({ display_order: index })
+          .eq("id", id)
       );
       await Promise.all(updates);
       return { success: true };
@@ -10016,10 +11125,18 @@ const BLOG_CATEGORIES = [
 ] as const;
 const BLOG_STATUSES = ["pending", "approved", "rejected"] as const;
 
-const BLOG_ADMIN_ROLES = ["admin", "super_admin", "admin_ops", "admin_contenu"] as const;
+const BLOG_ADMIN_ROLES = [
+  "admin",
+  "super_admin",
+  "admin_ops",
+  "admin_contenu",
+] as const;
 
 const blogAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (!ctx.user || !(BLOG_ADMIN_ROLES as readonly string[]).includes(ctx.user.role)) {
+  if (
+    !ctx.user ||
+    !(BLOG_ADMIN_ROLES as readonly string[]).includes(ctx.user.role)
+  ) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Accès réservé aux administrateurs.",
@@ -10065,7 +11182,9 @@ const createBlogPostSchema = z.object({
   hook: z.string().max(255).optional(),
   coverImage: z.string().url().optional().or(z.literal("")),
   consented: z.literal(true, {
-    errorMap: () => ({ message: "Vous devez accepter les conditions de publication." }),
+    errorMap: () => ({
+      message: "Vous devez accepter les conditions de publication.",
+    }),
   }),
 });
 
@@ -10094,45 +11213,51 @@ const updateBlogPostSchema = z.object({
 });
 
 const blogRouter = router({
-  list: publicProcedure.input(listBlogPostsSchema).query(async ({ ctx, input }) => {
-    const db = createSupabaseAdmin(ctx.env);
-    const { page, pageSize, type, category, sort, search } = input;
-    const offset = (page - 1) * pageSize;
+  list: publicProcedure
+    .input(listBlogPostsSchema)
+    .query(async ({ ctx, input }) => {
+      const db = createSupabaseAdmin(ctx.env);
+      const { page, pageSize, type, category, sort, search } = input;
+      const offset = (page - 1) * pageSize;
 
-    let query = db
-      .from("blog_posts")
-      .select(
-        "id, title, slug, excerpt, hook, author_name, type, categories, cover_image, likes, views, created_at",
-        { count: "exact" }
-      )
-      .eq("status", "approved");
+      let query = db
+        .from("blog_posts")
+        .select(
+          "id, title, slug, excerpt, hook, author_name, type, categories, cover_image, likes, views, created_at",
+          { count: "exact" }
+        )
+        .eq("status", "approved");
 
-    if (type) query = query.eq("type", type);
-    if (category) query = query.contains("categories", [category]);
-    if (search) query = query.ilike("title", `%${search}%`);
+      if (type) query = query.eq("type", type);
+      if (category) query = query.contains("categories", [category]);
+      if (search) query = query.ilike("title", `%${search}%`);
 
-    if (sort === "popular") {
-      query = query.order("likes", { ascending: false });
-    } else if (sort === "views") {
-      query = query.order("views", { ascending: false });
-    } else {
-      query = query.order("created_at", { ascending: false });
-    }
+      if (sort === "popular") {
+        query = query.order("likes", { ascending: false });
+      } else if (sort === "views") {
+        query = query.order("views", { ascending: false });
+      } else {
+        query = query.order("created_at", { ascending: false });
+      }
 
-    query = query.range(offset, offset + pageSize - 1);
+      query = query.range(offset, offset + pageSize - 1);
 
-    const { data, error, count } = await query;
+      const { data, error, count } = await query;
 
-    if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
 
-    return {
-      posts: data ?? [],
-      total: count ?? 0,
-      page,
-      pageSize,
-      totalPages: Math.ceil((count ?? 0) / pageSize),
-    };
-  }),
+      return {
+        posts: data ?? [],
+        total: count ?? 0,
+        page,
+        pageSize,
+        totalPages: Math.ceil((count ?? 0) / pageSize),
+      };
+    }),
 
   bySlug: publicProcedure
     .input(z.object({ slug: z.string().min(1) }))
@@ -10149,20 +11274,27 @@ const blogRouter = router({
         .single();
 
       if (error || !data) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Article introuvable." });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Article introuvable.",
+        });
       }
 
       return data;
     }),
 
   related: publicProcedure
-    .input(z.object({ postId: z.number().int(), type: z.enum(BLOG_POST_TYPES) }))
+    .input(
+      z.object({ postId: z.number().int(), type: z.enum(BLOG_POST_TYPES) })
+    )
     .query(async ({ ctx, input }) => {
       const db = createSupabaseAdmin(ctx.env);
 
       const { data } = await db
         .from("blog_posts")
-        .select("id, title, slug, excerpt, author_name, type, cover_image, likes, created_at")
+        .select(
+          "id, title, slug, excerpt, author_name, type, cover_image, likes, created_at"
+        )
         .eq("status", "approved")
         .eq("type", input.type)
         .neq("id", input.postId)
@@ -10199,7 +11331,9 @@ const blogRouter = router({
 
     const { data } = await db
       .from("blog_posts")
-      .select("id, title, slug, excerpt, hook, author_name, type, cover_image, likes, created_at")
+      .select(
+        "id, title, slug, excerpt, hook, author_name, type, cover_image, likes, created_at"
+      )
       .eq("status", "approved")
       .order("created_at", { ascending: false })
       .limit(3);
@@ -10207,46 +11341,48 @@ const blogRouter = router({
     return data ?? [];
   }),
 
-  create: protectedProcedure.input(createBlogPostSchema).mutation(async ({ ctx, input }) => {
-    const db = createSupabaseAdmin(ctx.env);
-    const user = ctx.user;
+  create: protectedProcedure
+    .input(createBlogPostSchema)
+    .mutation(async ({ ctx, input }) => {
+      const db = createSupabaseAdmin(ctx.env);
+      const user = ctx.user;
 
-    const baseSlug = blogSlugify(input.title);
-    const slug = await ensureUniqueBlogSlug(db, baseSlug);
+      const baseSlug = blogSlugify(input.title);
+      const slug = await ensureUniqueBlogSlug(db, baseSlug);
 
-    const excerpt = input.content
-      .replace(/<[^>]*>/g, "")
-      .slice(0, 200)
-      .trim();
+      const excerpt = input.content
+        .replace(/<[^>]*>/g, "")
+        .slice(0, 200)
+        .trim();
 
-    const { data, error } = await db
-      .from("blog_posts")
-      .insert({
-        title: input.title,
-        slug,
-        content: input.content,
-        excerpt,
-        hook: input.hook || null,
-        author_id: user.id,
-        author_name: user.name || "Anonyme",
-        type: input.type,
-        categories: input.categories,
-        cover_image: input.coverImage || null,
-        consented: true,
-        status: "pending",
-      })
-      .select("id, slug")
-      .single();
+      const { data, error } = await db
+        .from("blog_posts")
+        .insert({
+          title: input.title,
+          slug,
+          content: input.content,
+          excerpt,
+          hook: input.hook || null,
+          author_id: user.id,
+          author_name: user.name || "Anonyme",
+          type: input.type,
+          categories: input.categories,
+          cover_image: input.coverImage || null,
+          consented: true,
+          status: "pending",
+        })
+        .select("id, slug")
+        .single();
 
-    if (error || !data) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: error?.message ?? "Erreur création.",
-      });
-    }
+      if (error || !data) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error?.message ?? "Erreur création.",
+        });
+      }
 
-    return { id: data.id, slug: data.slug };
-  }),
+      return { id: data.id, slug: data.slug };
+    }),
 
   toggleLike: protectedProcedure
     .input(z.object({ postId: z.number().int() }))
@@ -10276,7 +11412,9 @@ const blogRouter = router({
         }
         return { liked: false };
       } else {
-        await db.from("blog_post_likes").insert({ post_id: input.postId, user_id: userId });
+        await db
+          .from("blog_post_likes")
+          .insert({ post_id: input.postId, user_id: userId });
         const { data: post } = await db
           .from("blog_posts")
           .select("likes")
@@ -10307,45 +11445,51 @@ const blogRouter = router({
       return { liked: !!data };
     }),
 
-  adminList: blogAdminProcedure.input(listBlogPostsSchema).query(async ({ ctx, input }) => {
-    const db = createSupabaseAdmin(ctx.env);
-    const { page, pageSize, type, category, sort, search, status } = input;
-    const offset = (page - 1) * pageSize;
+  adminList: blogAdminProcedure
+    .input(listBlogPostsSchema)
+    .query(async ({ ctx, input }) => {
+      const db = createSupabaseAdmin(ctx.env);
+      const { page, pageSize, type, category, sort, search, status } = input;
+      const offset = (page - 1) * pageSize;
 
-    let query = db
-      .from("blog_posts")
-      .select(
-        "id, title, slug, excerpt, author_name, author_id, type, categories, status, likes, views, created_at, rejection_note",
-        { count: "exact" }
-      );
+      let query = db
+        .from("blog_posts")
+        .select(
+          "id, title, slug, excerpt, author_name, author_id, type, categories, status, likes, views, created_at, rejection_note",
+          { count: "exact" }
+        );
 
-    if (status) query = query.eq("status", status);
-    if (type) query = query.eq("type", type);
-    if (category) query = query.contains("categories", [category]);
-    if (search) query = query.ilike("title", `%${search}%`);
+      if (status) query = query.eq("status", status);
+      if (type) query = query.eq("type", type);
+      if (category) query = query.contains("categories", [category]);
+      if (search) query = query.ilike("title", `%${search}%`);
 
-    if (sort === "popular") {
-      query = query.order("likes", { ascending: false });
-    } else if (sort === "views") {
-      query = query.order("views", { ascending: false });
-    } else {
-      query = query.order("created_at", { ascending: false });
-    }
+      if (sort === "popular") {
+        query = query.order("likes", { ascending: false });
+      } else if (sort === "views") {
+        query = query.order("views", { ascending: false });
+      } else {
+        query = query.order("created_at", { ascending: false });
+      }
 
-    query = query.range(offset, offset + pageSize - 1);
+      query = query.range(offset, offset + pageSize - 1);
 
-    const { data, error, count } = await query;
+      const { data, error, count } = await query;
 
-    if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
 
-    return {
-      posts: data ?? [],
-      total: count ?? 0,
-      page,
-      pageSize,
-      totalPages: Math.ceil((count ?? 0) / pageSize),
-    };
-  }),
+      return {
+        posts: data ?? [],
+        total: count ?? 0,
+        page,
+        pageSize,
+        totalPages: Math.ceil((count ?? 0) / pageSize),
+      };
+    }),
 
   adminGetById: blogAdminProcedure
     .input(z.object({ id: z.number().int() }))
@@ -10359,7 +11503,10 @@ const blogRouter = router({
         .single();
 
       if (error || !data) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Article introuvable." });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Article introuvable.",
+        });
       }
 
       return data;
@@ -10375,13 +11522,19 @@ const blogRouter = router({
         .update({ status: "approved", rejection_note: null })
         .eq("id", input.id);
 
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
 
       return { success: true };
     }),
 
   reject: blogAdminProcedure
-    .input(z.object({ id: z.number().int(), note: z.string().max(500).optional() }))
+    .input(
+      z.object({ id: z.number().int(), note: z.string().max(500).optional() })
+    )
     .mutation(async ({ ctx, input }) => {
       const db = createSupabaseAdmin(ctx.env);
 
@@ -10390,38 +11543,52 @@ const blogRouter = router({
         .update({ status: "rejected", rejection_note: input.note || null })
         .eq("id", input.id);
 
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
 
       return { success: true };
     }),
 
-  update: blogAdminProcedure.input(updateBlogPostSchema).mutation(async ({ ctx, input }) => {
-    const db = createSupabaseAdmin(ctx.env);
-    const { id, coverImage, rejectionNote, ...rest } = input;
+  update: blogAdminProcedure
+    .input(updateBlogPostSchema)
+    .mutation(async ({ ctx, input }) => {
+      const db = createSupabaseAdmin(ctx.env);
+      const { id, coverImage, rejectionNote, ...rest } = input;
 
-    const payload: Record<string, unknown> = { ...rest };
+      const payload: Record<string, unknown> = { ...rest };
 
-    if (coverImage !== undefined) payload.cover_image = coverImage || null;
-    if (rejectionNote !== undefined) payload.rejection_note = rejectionNote || null;
+      if (coverImage !== undefined) payload.cover_image = coverImage || null;
+      if (rejectionNote !== undefined)
+        payload.rejection_note = rejectionNote || null;
 
-    if (rest.title) {
-      const baseSlug = blogSlugify(rest.title);
-      payload.slug = await ensureUniqueBlogSlug(db, baseSlug, id);
-    }
+      if (rest.title) {
+        const baseSlug = blogSlugify(rest.title);
+        payload.slug = await ensureUniqueBlogSlug(db, baseSlug, id);
+      }
 
-    if (rest.content) {
-      payload.excerpt = rest.content
-        .replace(/<[^>]*>/g, "")
-        .slice(0, 200)
-        .trim();
-    }
+      if (rest.content) {
+        payload.excerpt = rest.content
+          .replace(/<[^>]*>/g, "")
+          .slice(0, 200)
+          .trim();
+      }
 
-    const { error } = await db.from("blog_posts").update(payload).eq("id", id);
+      const { error } = await db
+        .from("blog_posts")
+        .update(payload)
+        .eq("id", id);
 
-    if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
 
-    return { success: true };
-  }),
+      return { success: true };
+    }),
 
   delete: blogAdminProcedure
     .input(z.object({ id: z.number().int() }))
@@ -10430,7 +11597,11 @@ const blogRouter = router({
 
       const { error } = await db.from("blog_posts").delete().eq("id", input.id);
 
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
 
       return { success: true };
     }),
@@ -10439,16 +11610,26 @@ const blogRouter = router({
     const db = createSupabaseAdmin(ctx.env);
 
     const [pending, approved, rejected] = await Promise.all([
-      db.from("blog_posts").select("id", { count: "exact", head: true }).eq("status", "pending"),
-      db.from("blog_posts").select("id", { count: "exact", head: true }).eq("status", "approved"),
-      db.from("blog_posts").select("id", { count: "exact", head: true }).eq("status", "rejected"),
+      db
+        .from("blog_posts")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending"),
+      db
+        .from("blog_posts")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "approved"),
+      db
+        .from("blog_posts")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "rejected"),
     ]);
 
     return {
       pending: pending.count ?? 0,
       approved: approved.count ?? 0,
       rejected: rejected.count ?? 0,
-      total: (pending.count ?? 0) + (approved.count ?? 0) + (rejected.count ?? 0),
+      total:
+        (pending.count ?? 0) + (approved.count ?? 0) + (rejected.count ?? 0),
     };
   }),
 });
@@ -10457,8 +11638,20 @@ const blogRouter = router({
 // EVENT FEEDBACK ROUTER
 // ============================================
 
-const FEEDBACK_ROLES = ["VOLUNTEER", "MANAGER", "GROUP", "BENEFICIARY", "VISITOR", "PARTNER"] as const;
-const PARTICIPATION_TYPES = ["FTOR", "NIGHT_26", "VOLUNTEER_EVENT", "THANK_YOU_EVENT"] as const;
+const FEEDBACK_ROLES = [
+  "VOLUNTEER",
+  "MANAGER",
+  "GROUP",
+  "BENEFICIARY",
+  "VISITOR",
+  "PARTNER",
+] as const;
+const PARTICIPATION_TYPES = [
+  "FTOR",
+  "NIGHT_26",
+  "VOLUNTEER_EVENT",
+  "THANK_YOU_EVENT",
+] as const;
 
 const LOW_SCORE_THRESHOLD = 3;
 
@@ -10467,20 +11660,32 @@ function generateEventFeedbackAutoTags(
   globalScore?: number | null,
   npsScore?: number | null
 ): Array<{ tag: string; sectionKey?: string; severity: string }> {
-  const tags: Array<{ tag: string; sectionKey?: string; severity: string }> = [];
+  const tags: Array<{ tag: string; sectionKey?: string; severity: string }> =
+    [];
   for (const section of sections) {
     if (section.rating === null || section.rating === undefined) continue;
-    const normalizedRating = section.rating > 5 ? Math.round(section.rating / 2) : section.rating;
+    const normalizedRating =
+      section.rating > 5 ? Math.round(section.rating / 2) : section.rating;
     if (normalizedRating < LOW_SCORE_THRESHOLD) {
       const severity = normalizedRating <= 1 ? "critical" : "warning";
-      tags.push({ tag: `low_${section.sectionKey.replace(/[^a-z0-9_]/gi, "_")}`, sectionKey: section.sectionKey, severity });
+      tags.push({
+        tag: `low_${section.sectionKey.replace(/[^a-z0-9_]/gi, "_")}`,
+        sectionKey: section.sectionKey,
+        severity,
+      });
     }
   }
   if (npsScore !== null && npsScore !== undefined && npsScore <= 6) {
-    tags.push({ tag: "nps_detractor", severity: npsScore <= 3 ? "critical" : "warning" });
+    tags.push({
+      tag: "nps_detractor",
+      severity: npsScore <= 3 ? "critical" : "warning",
+    });
   }
   if (globalScore !== null && globalScore !== undefined && globalScore <= 4) {
-    tags.push({ tag: "low_global_score", severity: globalScore <= 2 ? "critical" : "warning" });
+    tags.push({
+      tag: "low_global_score",
+      severity: globalScore <= 2 ? "critical" : "warning",
+    });
   }
   return tags;
 }
@@ -10498,7 +11703,10 @@ function enforceEventFeedbackRateLimit(ip: string) {
     return;
   }
   if (bucket.count >= max) {
-    throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Trop de soumissions. Réessayez dans une heure." });
+    throw new TRPCError({
+      code: "TOO_MANY_REQUESTS",
+      message: "Trop de soumissions. Réessayez dans une heure.",
+    });
   }
   bucket.count++;
   eventFeedbackRateLimit.set(ip, bucket);
@@ -10515,7 +11723,10 @@ function getWorkerClientIp(req: Request): string {
 const eventFeedbackAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
   const allowedRoles = ["admin", "super_admin", "admin_ops"];
   if (!ctx.user || !allowedRoles.includes(ctx.user.role)) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Accès réservé aux administrateurs" });
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Accès réservé aux administrateurs",
+    });
   }
   return next({ ctx });
 });
@@ -10548,15 +11759,24 @@ const eventFeedbackRouter = router({
     .input(submitEventFeedbackInput)
     .mutation(async ({ input, ctx }) => {
       if (input.website) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Requête invalide" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Requête invalide",
+        });
       }
       enforceEventFeedbackRateLimit(getWorkerClientIp(ctx.req));
 
       const db = createSupabaseAdmin(ctx.env);
 
-      const globalSection = input.sections.find(s => s.sectionKey === "global_experience");
-      const globalScore = (globalSection?.metadata?.["global_score"] as number | undefined) ?? globalSection?.rating ?? null;
-      const npsScore = (globalSection?.metadata?.["nps"] as number | undefined) ?? null;
+      const globalSection = input.sections.find(
+        s => s.sectionKey === "global_experience"
+      );
+      const globalScore =
+        (globalSection?.metadata?.["global_score"] as number | undefined) ??
+        globalSection?.rating ??
+        null;
+      const npsScore =
+        (globalSection?.metadata?.["nps"] as number | undefined) ?? null;
 
       const { data: feedbackRow, error: feedbackError } = await db
         .from("event_feedback")
@@ -10577,7 +11797,10 @@ const eventFeedbackRouter = router({
 
       if (feedbackError || !feedbackRow) {
         console.error("[EventFeedback] Insert main:", feedbackError);
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: feedbackError?.message ?? "Erreur lors de la sauvegarde" });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: feedbackError?.message ?? "Erreur lors de la sauvegarde",
+        });
       }
 
       const feedbackId = feedbackRow.id;
@@ -10589,21 +11812,44 @@ const eventFeedbackRouter = router({
           rating: s.rating ?? null,
           metadata: s.metadata ?? null,
         }));
-        const { error: sectionsError } = await db.from("event_feedback_section_responses").insert(sectionRows);
-        if (sectionsError) console.error("[EventFeedback] Insert sections:", sectionsError);
+        const { error: sectionsError } = await db
+          .from("event_feedback_section_responses")
+          .insert(sectionRows);
+        if (sectionsError)
+          console.error("[EventFeedback] Insert sections:", sectionsError);
       }
 
-      const validTextResponses = input.textResponses.filter(t => t.value.trim().length > 0);
+      const validTextResponses = input.textResponses.filter(
+        t => t.value.trim().length > 0
+      );
       if (validTextResponses.length > 0) {
-        const textRows = validTextResponses.map(t => ({ feedback_id: feedbackId, field_key: t.fieldKey, value: t.value.trim() }));
-        const { error: textError } = await db.from("event_feedback_text_responses").insert(textRows);
-        if (textError) console.error("[EventFeedback] Insert text responses:", textError);
+        const textRows = validTextResponses.map(t => ({
+          feedback_id: feedbackId,
+          field_key: t.fieldKey,
+          value: t.value.trim(),
+        }));
+        const { error: textError } = await db
+          .from("event_feedback_text_responses")
+          .insert(textRows);
+        if (textError)
+          console.error("[EventFeedback] Insert text responses:", textError);
       }
 
-      const autoTags = generateEventFeedbackAutoTags(input.sections, globalScore, npsScore);
+      const autoTags = generateEventFeedbackAutoTags(
+        input.sections,
+        globalScore,
+        npsScore
+      );
       if (autoTags.length > 0) {
-        const tagRows = autoTags.map(t => ({ feedback_id: feedbackId, tag: t.tag, section_key: t.sectionKey ?? null, severity: t.severity }));
-        const { error: tagsError } = await db.from("event_feedback_tags").insert(tagRows);
+        const tagRows = autoTags.map(t => ({
+          feedback_id: feedbackId,
+          tag: t.tag,
+          section_key: t.sectionKey ?? null,
+          severity: t.severity,
+        }));
+        const { error: tagsError } = await db
+          .from("event_feedback_tags")
+          .insert(tagRows);
         if (tagsError) console.error("[EventFeedback] Insert tags:", tagsError);
       }
 
@@ -10611,51 +11857,81 @@ const eventFeedbackRouter = router({
     }),
 
   getEventFeedbackAnalytics: eventFeedbackAdminProcedure
-    .input(z.object({
-      fromDate: z.string().optional(),
-      toDate: z.string().optional(),
-      role: z.enum(FEEDBACK_ROLES).optional(),
-      participationType: z.enum(PARTICIPATION_TYPES).optional(),
-    }))
+    .input(
+      z.object({
+        fromDate: z.string().optional(),
+        toDate: z.string().optional(),
+        role: z.enum(FEEDBACK_ROLES).optional(),
+        participationType: z.enum(PARTICIPATION_TYPES).optional(),
+      })
+    )
     .query(async ({ ctx, input }) => {
       const db = createSupabaseAdmin(ctx.env);
       let query = db.from("event_feedback").select("*");
       if (input.fromDate) query = query.gte("created_at", input.fromDate);
       if (input.toDate) query = query.lte("created_at", input.toDate);
       if (input.role) query = query.eq("role", input.role);
-      if (input.participationType) query = query.eq("participation_type", input.participationType);
+      if (input.participationType)
+        query = query.eq("participation_type", input.participationType);
       const { data, error } = await query;
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return data ?? [];
     }),
 
   getEventFeedbackList: eventFeedbackAdminProcedure
-    .input(z.object({
-      page: z.number().min(1).default(1),
-      pageSize: z.number().min(1).max(100).default(20),
-      role: z.enum(FEEDBACK_ROLES).optional(),
-      participationType: z.enum(PARTICIPATION_TYPES).optional(),
-      moderation: z.enum(["pending", "approved", "rejected"]).optional(),
-    }))
+    .input(
+      z.object({
+        page: z.number().min(1).default(1),
+        pageSize: z.number().min(1).max(100).default(20),
+        role: z.enum(FEEDBACK_ROLES).optional(),
+        participationType: z.enum(PARTICIPATION_TYPES).optional(),
+        moderation: z.enum(["pending", "approved", "rejected"]).optional(),
+      })
+    )
     .query(async ({ ctx, input }) => {
       const db = createSupabaseAdmin(ctx.env);
       const from = (input.page - 1) * input.pageSize;
       const to = from + input.pageSize - 1;
-      let query = db.from("event_feedback").select("*", { count: "exact" }).range(from, to).order("created_at", { ascending: false });
+      let query = db
+        .from("event_feedback")
+        .select("*", { count: "exact" })
+        .range(from, to)
+        .order("created_at", { ascending: false });
       if (input.role) query = query.eq("role", input.role);
-      if (input.participationType) query = query.eq("participation_type", input.participationType);
+      if (input.participationType)
+        query = query.eq("participation_type", input.participationType);
       if (input.moderation) query = query.eq("moderation", input.moderation);
       const { data, error, count } = await query;
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return { items: data ?? [], total: count ?? 0 };
     }),
 
   updateEventFeedbackModeration: eventFeedbackAdminProcedure
-    .input(z.object({ id: z.number(), moderation: z.enum(["pending", "approved", "rejected"]) }))
+    .input(
+      z.object({
+        id: z.number(),
+        moderation: z.enum(["pending", "approved", "rejected"]),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const db = createSupabaseAdmin(ctx.env);
-      const { error } = await db.from("event_feedback").update({ moderation: input.moderation }).eq("id", input.id);
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      const { error } = await db
+        .from("event_feedback")
+        .update({ moderation: input.moderation })
+        .eq("id", input.id);
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       return { success: true };
     }),
 });
