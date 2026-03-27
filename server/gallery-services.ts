@@ -177,3 +177,24 @@ export function resolveGalleryAssetUrl(
   const { data } = client.storage.from("images").getPublicUrl(storagePath);
   return data.publicUrl || fallbackUrl || null;
 }
+
+export async function resolveGalleryAssetUrlAsync(
+  storagePath?: string | null,
+  fallbackUrl?: string | null
+): Promise<string | null> {
+  if (!storagePath) return fallbackUrl ?? null;
+
+  const client = getSupabaseAdminClient();
+  if (!client) return fallbackUrl ?? null;
+
+  const { data: signedData, error: signedError } = await client.storage
+    .from("images")
+    .createSignedUrl(storagePath, 60 * 60 * 24 * 7);
+
+  if (!signedError && signedData?.signedUrl) {
+    return signedData.signedUrl;
+  }
+
+  const { data } = client.storage.from("images").getPublicUrl(storagePath);
+  return data.publicUrl || fallbackUrl || null;
+}
