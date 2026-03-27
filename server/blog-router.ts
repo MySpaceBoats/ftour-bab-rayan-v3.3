@@ -7,7 +7,6 @@ import { router, publicProcedure, protectedProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getSupabaseAdminClient } from "./supabase";
-import { storagePut } from "./storage";
 
 // ============================================
 // CONSTANTES
@@ -94,6 +93,42 @@ function requireDb(
     });
   }
   return db;
+}
+
+function parseImageDataUrl(dataUrl: string): {
+  buffer: Buffer;
+  contentType: string;
+  ext: "jpg" | "png" | "webp";
+} {
+  const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+  if (!match) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Format d'image invalide (data URL attendu).",
+    });
+  }
+
+  const [, contentType, base64Data] = match;
+  const extensions: Record<string, "jpg" | "png" | "webp"> = {
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+  };
+
+  const ext = extensions[contentType];
+  if (!ext) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Format d'image non supporté (jpeg, png, webp uniquement).",
+    });
+  }
+
+  return {
+    buffer: Buffer.from(base64Data, "base64"),
+    contentType,
+    ext,
+  };
 }
 
 // ============================================
@@ -287,17 +322,21 @@ export const blogRouter = router({
     // Handle base64 image upload
     let coverImageUrl = input.coverImage || null;
     if (input.coverImageBase64) {
-      const base64Data = input.coverImageBase64.replace(/^data:image\/\w+;base64,/, "");
-      const contentType = input.coverImageBase64.startsWith("data:image/png")
-        ? "image/png"
-        : input.coverImageBase64.startsWith("data:image/webp")
-        ? "image/webp"
-        : "image/jpeg";
-      const ext = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
-      const key = `blog-covers/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const buffer = Buffer.from(base64Data, "base64");
-      const { url } = await storagePut(key, buffer, contentType);
-      coverImageUrl = url;
+      const image = parseImageDataUrl(input.coverImageBase64);
+      const path = `blog-covers/${Date.now()}-${Math.random().toString(36).slice(2)}.${image.ext}`;
+      const { error: uploadError } = await db.storage.from("images").upload(path, image.buffer, {
+        contentType: image.contentType,
+        upsert: false,
+      });
+
+      if (uploadError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Upload image échoué: ${uploadError.message}`,
+        });
+      }
+
+      coverImageUrl = db.storage.from("images").getPublicUrl(path).data.publicUrl;
     }
 
     const baseSlug = slugify(input.title);
