@@ -39,7 +39,7 @@ function MemberCard({ member, index }: { member: any; index: number }) {
         transition: `opacity 0.5s ease ${delay}ms, transform 0.5s ease ${delay}ms`,
       }}
     >
-      <div className="bg-card border border-border rounded-2xl p-6 flex flex-col items-center text-center gap-4 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 h-full">
+      <div className="bg-card border border-border rounded-2xl p-6 flex flex-col items-center text-center gap-4 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
         {/* Photo */}
         <div className="relative">
           {member.photoUrl ? (
@@ -57,7 +57,7 @@ function MemberCard({ member, index }: { member: any; index: number }) {
         </div>
 
         {/* Info */}
-        <div className="space-y-1 flex-1">
+        <div className="space-y-1">
           <h3 className="font-bold text-foreground text-base leading-tight">{fullName}</h3>
           {member.role && (
             <p className="text-xs font-medium text-primary/80 uppercase tracking-wide">{member.role}</p>
@@ -185,7 +185,7 @@ export default function EquipeFtour() {
                 <FeaturedQuote members={members} />
 
                 {/* Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 items-start">
                   {members.map((member, i) => (
                     <MemberCard key={member.id} member={member} index={i} />
                   ))}
