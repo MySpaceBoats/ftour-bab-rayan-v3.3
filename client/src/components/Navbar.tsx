@@ -85,6 +85,11 @@ export default function Navbar() {
     { href: localizedHref("/blog"), label: t.nav.blog, icon: BookOpen },
     { href: localizedHref("/galerie"), label: t.nav.gallery, icon: Images },
     { href: localizedHref("/equipe-ftour"), label: t.nav.team, icon: Star },
+    {
+      href: localizedHref("/restaurant/particuliers"),
+      label: t.nav.restaurant,
+      icon: UtensilsCrossed,
+    },
   ];
 
   const handleLogout = async () => {
