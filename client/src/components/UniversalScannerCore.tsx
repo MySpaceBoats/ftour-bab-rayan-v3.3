@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import {
@@ -47,6 +49,10 @@ export default function UniversalScannerCore({ onBack }: UniversalScannerCorePro
   // Identified entity state
   const [identifiedResult, setIdentifiedResult] = useState<any>(null);
   const [validationDone, setValidationDone] = useState<{ success: boolean; message: string; state?: string } | null>(null);
+  const [productFlowMode, setProductFlowMode] = useState<'sale' | 'return'>('sale');
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [selectedPosLocationId, setSelectedPosLocationId] = useState<string>("");
+  const [selectedBufferLocationId, setSelectedBufferLocationId] = useState<string>("");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -100,6 +106,29 @@ export default function UniversalScannerCore({ onBack }: UniversalScannerCorePro
       toast.error(err.message);
     },
   });
+
+  const isCatalogProduct = identifiedResult
+    ? ['product_goodie', 'product_pastry', 'product_terroir'].includes(identifiedResult.type)
+    : false;
+  const selectedEventIdNum = selectedEventId ? Number(selectedEventId) : null;
+
+  const { data: inventoryEvents } = trpc.inventory.events.list.useQuery(
+    { status: 'open' },
+    { enabled: !!identifiedResult?.found && isCatalogProduct, staleTime: 60_000 }
+  );
+  const { data: posLocations } = trpc.inventory.locations.list.useQuery(
+    { type: 'POS', eventId: selectedEventIdNum ?? undefined, isActive: true },
+    { enabled: !!identifiedResult?.found && isCatalogProduct && !!selectedEventIdNum, staleTime: 60_000 }
+  );
+  const { data: bufferLocations } = trpc.inventory.locations.list.useQuery(
+    { type: 'EVENT_BUFFER', eventId: selectedEventIdNum ?? undefined, isActive: true },
+    { enabled: !!identifiedResult?.found && isCatalogProduct && !!selectedEventIdNum, staleTime: 60_000 }
+  );
+
+  useEffect(() => {
+    setSelectedPosLocationId("");
+    setSelectedBufferLocationId("");
+  }, [selectedEventId]);
 
   useEffect(() => {
     if (mode === 'camera' && !identifiedResult) {
@@ -200,10 +229,31 @@ export default function UniversalScannerCore({ onBack }: UniversalScannerCorePro
 
   const handleValidate = () => {
     if (!identifiedResult?.found || !identifiedResult.entity) return;
+
+    if (isCatalogProduct) {
+      if (!selectedEventIdNum || !selectedPosLocationId) {
+        toast.error("Sélectionnez un événement et un point de vente.");
+        return;
+      }
+      if (productFlowMode === 'return' && !selectedBufferLocationId && !(bufferLocations?.length)) {
+        toast.error("Aucun buffer événement disponible pour cet événement.");
+        return;
+      }
+    }
+
     validateMutation.mutate({
       token: identifiedResult.token,
       type: identifiedResult.type,
       entityId: identifiedResult.entity.id,
+      stockContext: isCatalogProduct
+        ? {
+            mode: productFlowMode,
+            eventId: selectedEventIdNum as number,
+            posLocationId: Number(selectedPosLocationId),
+            bufferLocationId: selectedBufferLocationId ? Number(selectedBufferLocationId) : undefined,
+            quantity: 1,
+          }
+        : undefined,
     });
   };
 
@@ -212,6 +262,10 @@ export default function UniversalScannerCore({ onBack }: UniversalScannerCorePro
     setValidationDone(null);
     setManualCode("");
     setLastScannedCode(null);
+    setSelectedEventId("");
+    setSelectedPosLocationId("");
+    setSelectedBufferLocationId("");
+    setProductFlowMode('sale');
     if (mode === 'camera') startCamera();
   };
 
@@ -428,6 +482,70 @@ export default function UniversalScannerCore({ onBack }: UniversalScannerCorePro
                 )}
 
                 {/* Action buttons */}
+                {isCatalogProduct && (
+                  <div className="border-t pt-4 space-y-3">
+                    <p className="text-sm font-semibold">Contexte stock du scan produit</p>
+                    <div>
+                      <Label className="text-xs">Mode du scan</Label>
+                      <Select value={productFlowMode} onValueChange={(v: 'sale' | 'return') => setProductFlowMode(v)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="sale">Vente (sortie de stock POS)</SelectItem>
+                          <SelectItem value="return">Retour (retour stock POS → buffer)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Événement</Label>
+                      <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choisir un événement" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(inventoryEvents ?? []).map((event: any) => (
+                            <SelectItem key={event.id} value={String(event.id)}>
+                              {event.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Point de vente (POS)</Label>
+                      <Select value={selectedPosLocationId} onValueChange={setSelectedPosLocationId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choisir un POS" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(posLocations ?? []).map((location: any) => (
+                            <SelectItem key={location.id} value={String(location.id)}>
+                              {location.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {productFlowMode === 'return' && (
+                      <div>
+                        <Label className="text-xs">Buffer événement (destination retour)</Label>
+                        <Select value={selectedBufferLocationId} onValueChange={setSelectedBufferLocationId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Auto si buffer unique" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(bufferLocations ?? []).map((location: any) => (
+                              <SelectItem key={location.id} value={String(location.id)}>
+                                {location.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="flex gap-2 pt-2">
                   {!validationDone && !identifiedResult.entity.alreadyValidated && !identifiedResult.autoValidated && (
                     <Button onClick={handleValidate} disabled={validateMutation.isPending} className="flex-1" size="lg">
