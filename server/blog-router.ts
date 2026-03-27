@@ -136,10 +136,19 @@ function extractImagesStoragePath(value: string): string | null {
   if (!trimmed) return null;
 
   if (/^https?:\/\//i.test(trimmed)) {
-    const marker = "/storage/v1/object/public/images/";
-    const index = trimmed.indexOf(marker);
-    if (index === -1) return null;
-    return decodeURIComponent(trimmed.slice(index + marker.length));
+    try {
+      const parsed = new URL(trimmed);
+      const markerRegex = /\/storage\/v1\/object\/(?:public|sign|authenticated)\/images\/(.+)$/;
+      const match = parsed.pathname.match(markerRegex);
+      if (!match?.[1]) return null;
+      return decodeURIComponent(match[1]);
+    } catch {
+      return null;
+    }
+  }
+
+  if (trimmed.startsWith("images/blog-covers/")) {
+    return trimmed.slice("images/".length);
   }
 
   if (trimmed.startsWith("images/")) {
@@ -153,14 +162,19 @@ function extractImagesStoragePath(value: string): string | null {
   return null;
 }
 
-function resolveBlogCoverImage(
+async function resolveBlogCoverImage(
   db: NonNullable<ReturnType<typeof getSupabaseAdminClient>>,
   coverImage?: string | null
-): string | null {
+) {
   if (!coverImage) return null;
 
   const storagePath = extractImagesStoragePath(coverImage);
   if (!storagePath) return coverImage;
+
+  const { data: signedData } = await db.storage
+    .from("images")
+    .createSignedUrl(storagePath, 60 * 60 * 24 * 30);
+  if (signedData?.signedUrl) return signedData.signedUrl;
 
   const { data } = db.storage.from("images").getPublicUrl(storagePath);
   return data.publicUrl || coverImage;
@@ -248,11 +262,15 @@ export const blogRouter = router({
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
     }
 
-    return {
-      posts: (data ?? []).map((post) => ({
+    const posts = await Promise.all(
+      (data ?? []).map(async (post) => ({
         ...post,
-        cover_image: resolveBlogCoverImage(db, post.cover_image),
-      })),
+        cover_image: await resolveBlogCoverImage(db, post.cover_image),
+      }))
+    );
+
+    return {
+      posts,
       total: count ?? 0,
       page,
       pageSize,
@@ -286,7 +304,7 @@ export const blogRouter = router({
 
       return {
         ...data,
-        cover_image: resolveBlogCoverImage(db, data.cover_image),
+        cover_image: await resolveBlogCoverImage(db, data.cover_image),
       };
     }),
 
@@ -307,10 +325,12 @@ export const blogRouter = router({
         .order("created_at", { ascending: false })
         .limit(3);
 
-      return (data ?? []).map((post) => ({
-        ...post,
-        cover_image: resolveBlogCoverImage(db, post.cover_image),
-      }));
+      return Promise.all(
+        (data ?? []).map(async (post) => ({
+          ...post,
+          cover_image: await resolveBlogCoverImage(db, post.cover_image),
+        }))
+      );
     }),
 
   // ──────────────────────────────────────
@@ -353,10 +373,12 @@ export const blogRouter = router({
       .order("created_at", { ascending: false })
       .limit(3);
 
-    return (data ?? []).map((post) => ({
-      ...post,
-      cover_image: resolveBlogCoverImage(db, post.cover_image),
-    }));
+    return Promise.all(
+      (data ?? []).map(async (post) => ({
+        ...post,
+        cover_image: await resolveBlogCoverImage(db, post.cover_image),
+      }))
+    );
   }),
 
   // ──────────────────────────────────────
@@ -531,11 +553,15 @@ export const blogRouter = router({
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
     }
 
-    return {
-      posts: (data ?? []).map((post) => ({
+    const posts = await Promise.all(
+      (data ?? []).map(async (post) => ({
         ...post,
-        cover_image: resolveBlogCoverImage(db, post.cover_image),
-      })),
+        cover_image: await resolveBlogCoverImage(db, post.cover_image),
+      }))
+    );
+
+    return {
+      posts,
       total: count ?? 0,
       page,
       pageSize,
@@ -563,7 +589,7 @@ export const blogRouter = router({
 
       return {
         ...data,
-        cover_image: resolveBlogCoverImage(db, data.cover_image),
+        cover_image: await resolveBlogCoverImage(db, data.cover_image),
       };
     }),
 
