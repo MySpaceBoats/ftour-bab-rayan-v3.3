@@ -131,6 +131,41 @@ function parseImageDataUrl(dataUrl: string): {
   };
 }
 
+function extractImagesStoragePath(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    const marker = "/storage/v1/object/public/images/";
+    const index = trimmed.indexOf(marker);
+    if (index === -1) return null;
+    return decodeURIComponent(trimmed.slice(index + marker.length));
+  }
+
+  if (trimmed.startsWith("images/")) {
+    return trimmed.slice("images/".length);
+  }
+
+  if (trimmed.startsWith("blog-covers/")) {
+    return trimmed;
+  }
+
+  return null;
+}
+
+function resolveBlogCoverImage(
+  db: NonNullable<ReturnType<typeof getSupabaseAdminClient>>,
+  coverImage?: string | null
+): string | null {
+  if (!coverImage) return null;
+
+  const storagePath = extractImagesStoragePath(coverImage);
+  if (!storagePath) return coverImage;
+
+  const { data } = db.storage.from("images").getPublicUrl(storagePath);
+  return data.publicUrl || coverImage;
+}
+
 // ============================================
 // SCHÉMAS ZOD
 // ============================================
@@ -214,7 +249,10 @@ export const blogRouter = router({
     }
 
     return {
-      posts: data ?? [],
+      posts: (data ?? []).map((post) => ({
+        ...post,
+        cover_image: resolveBlogCoverImage(db, post.cover_image),
+      })),
       total: count ?? 0,
       page,
       pageSize,
@@ -246,7 +284,10 @@ export const blogRouter = router({
         });
       }
 
-      return data;
+      return {
+        ...data,
+        cover_image: resolveBlogCoverImage(db, data.cover_image),
+      };
     }),
 
   // ──────────────────────────────────────
@@ -266,7 +307,10 @@ export const blogRouter = router({
         .order("created_at", { ascending: false })
         .limit(3);
 
-      return data ?? [];
+      return (data ?? []).map((post) => ({
+        ...post,
+        cover_image: resolveBlogCoverImage(db, post.cover_image),
+      }));
     }),
 
   // ──────────────────────────────────────
@@ -309,7 +353,10 @@ export const blogRouter = router({
       .order("created_at", { ascending: false })
       .limit(3);
 
-    return data ?? [];
+    return (data ?? []).map((post) => ({
+      ...post,
+      cover_image: resolveBlogCoverImage(db, post.cover_image),
+    }));
   }),
 
   // ──────────────────────────────────────
@@ -336,7 +383,7 @@ export const blogRouter = router({
         });
       }
 
-      coverImageUrl = db.storage.from("images").getPublicUrl(path).data.publicUrl;
+      coverImageUrl = path;
     }
 
     const baseSlug = slugify(input.title);
@@ -459,7 +506,7 @@ export const blogRouter = router({
     let query = db
       .from("blog_posts")
       .select(
-        "id, title, slug, excerpt, author_name, author_id, type, categories, status, likes, views, created_at, rejection_note",
+        "id, title, slug, excerpt, author_name, author_id, type, categories, cover_image, status, likes, views, created_at, rejection_note",
         { count: "exact" }
       );
 
@@ -485,7 +532,10 @@ export const blogRouter = router({
     }
 
     return {
-      posts: data ?? [],
+      posts: (data ?? []).map((post) => ({
+        ...post,
+        cover_image: resolveBlogCoverImage(db, post.cover_image),
+      })),
       total: count ?? 0,
       page,
       pageSize,
@@ -511,7 +561,10 @@ export const blogRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Article introuvable." });
       }
 
-      return data;
+      return {
+        ...data,
+        cover_image: resolveBlogCoverImage(db, data.cover_image),
+      };
     }),
 
   // ──────────────────────────────────────

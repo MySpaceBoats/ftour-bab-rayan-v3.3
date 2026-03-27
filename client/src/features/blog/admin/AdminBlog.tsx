@@ -72,6 +72,7 @@ type AdminPost = {
   author_name: string;
   type: string;
   categories: string[];
+  cover_image: string | null;
   status: string;
   likes: number;
   views: number;
@@ -107,6 +108,21 @@ function PostRow({
     <>
       <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-start gap-4">
+          <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
+            {post.cover_image ? (
+              <img
+                src={post.cover_image}
+                alt={post.title}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">
+                Sans image
+              </div>
+            )}
+          </div>
+
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1">
               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusBadge.className}`}>
