@@ -155,12 +155,26 @@ export default function AdminGalerie() {
             <Card key={item.id}>
               <CardContent className="p-3 space-y-3">
                 <img
-                  src={item.image_thumb_url ?? item.image_original_url ?? undefined}
+                  src={item.image_thumb_url ?? item.image_medium_url ?? item.image_original_url ?? undefined}
                   alt={item.title || "photo"}
                   className="h-44 w-full rounded object-cover bg-muted"
                   loading="lazy"
                   onError={e => {
-                    (e.target as HTMLImageElement).style.display = "none";
+                    const img = e.currentTarget;
+                    const original = item.image_original_url ?? undefined;
+                    const medium = item.image_medium_url ?? undefined;
+
+                    if (img.src !== medium && medium) {
+                      img.src = medium;
+                      return;
+                    }
+
+                    if (img.src !== original && original) {
+                      img.src = original;
+                      return;
+                    }
+
+                    img.style.display = "none";
                   }}
                 />
                 <div className="space-y-1">

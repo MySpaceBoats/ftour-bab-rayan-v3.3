@@ -234,6 +234,23 @@ export default function Galerie() {
                         alt={`${photo.title || "Photo"} ${photo.description || ""}`.trim()}
                         loading="lazy"
                         className="h-44 md:h-56 w-full object-cover transition-transform hover:scale-105"
+                        onError={e => {
+                          const img = e.currentTarget;
+                          const medium = photo.image_medium_url ?? undefined;
+                          const original = photo.image_original_url ?? undefined;
+
+                          if (img.src !== medium && medium) {
+                            img.src = medium;
+                            return;
+                          }
+
+                          if (img.src !== original && original) {
+                            img.src = original;
+                            return;
+                          }
+
+                          img.style.display = "none";
+                        }}
                       />
                     </button>
                   ))}
