@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -36,6 +35,7 @@ import {
   XCircle,
   Trash2,
   Eye,
+  Pencil,
   Search,
   ChevronLeft,
   ChevronRight,
@@ -53,6 +53,22 @@ const TYPE_LABELS: Record<string, string> = {
   equipe: "Équipe",
   autre: "Autre",
 };
+
+const POST_TYPES = [
+  { value: "participant", label: "Participant" },
+  { value: "benevole", label: "Bénévole" },
+  { value: "equipe", label: "Membre de l'équipe" },
+  { value: "autre", label: "Autre" },
+] as const;
+
+const CATEGORIES = [
+  { value: "ressenti", label: "Ressenti" },
+  { value: "analyse", label: "Analyse" },
+  { value: "feedback", label: "Feedback" },
+  { value: "histoire", label: "Histoire" },
+  { value: "spirituel", label: "Spirituel" },
+  { value: "organisation", label: "Organisation" },
+] as const;
 
 const STATUS_BADGES: Record<string, { label: string; className: string }> = {
   pending: { label: "En attente", className: "bg-yellow-100 text-yellow-800" },
@@ -82,12 +98,14 @@ type AdminPost = {
 
 function PostRow({
   post,
+  onEdit,
   onApprove,
   onReject,
   onDelete,
   isLoading,
 }: {
   post: AdminPost;
+  onEdit: () => void;
   onApprove: () => void;
   onReject: (note: string) => void;
   onDelete: () => void;
@@ -125,7 +143,9 @@ function PostRow({
 
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1">
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusBadge.className}`}>
+              <span
+                className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusBadge.className}`}
+              >
                 {statusBadge.label}
               </span>
               <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
@@ -138,13 +158,21 @@ function PostRow({
             </h3>
 
             {post.excerpt && (
-              <p className="text-xs text-gray-500 line-clamp-2 mb-2">{post.excerpt}</p>
+              <p className="text-xs text-gray-500 line-clamp-2 mb-2">
+                {post.excerpt}
+              </p>
             )}
 
             <div className="text-xs text-gray-400">
-              Par <span className="font-medium text-gray-600">{post.author_name}</span>
-              {" · "}{date}
-              {" · "}{post.views} vues {" · "}{post.likes} likes
+              Par{" "}
+              <span className="font-medium text-gray-600">
+                {post.author_name}
+              </span>
+              {" · "}
+              {date}
+              {" · "}
+              {post.views} vues {" · "}
+              {post.likes} likes
             </div>
 
             {post.rejection_note && (
@@ -165,6 +193,17 @@ function PostRow({
                 <Eye className="w-4 h-4" />
               </Button>
             </a>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              onClick={onEdit}
+              disabled={isLoading}
+              title="Modifier"
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
 
             {post.status !== "approved" && (
               <Button
@@ -208,7 +247,8 @@ function PostRow({
                 <AlertDialogHeader>
                   <AlertDialogTitle>Supprimer ce témoignage ?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Cette action est irréversible. L'article "{post.title}" sera définitivement supprimé.
+                    Cette action est irréversible. L'article "{post.title}" sera
+                    définitivement supprimé.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -234,18 +274,22 @@ function PostRow({
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-gray-600">
-              Vous pouvez ajouter une note pour expliquer le motif du refus (optionnel).
+              Vous pouvez ajouter une note pour expliquer le motif du refus
+              (optionnel).
             </p>
             <Textarea
               placeholder="Note de refus (optionnelle)…"
               value={rejectNote}
-              onChange={(e) => setRejectNote(e.target.value)}
+              onChange={e => setRejectNote(e.target.value)}
               rows={3}
               maxLength={500}
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowRejectDialog(false)}
+            >
               Annuler
             </Button>
             <Button
@@ -274,10 +318,26 @@ export default function AdminBlog() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [editingPostId, setEditingPostId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    hook: "",
+    content: "",
+    type: "participant",
+    status: "pending",
+    coverImage: "",
+    rejectionNote: "",
+    categories: [] as string[],
+  });
 
   const utils = trpc.useUtils();
 
   const { data: stats } = trpc.blog.stats.useQuery();
+  const { data: postToEdit, isFetching: isLoadingPostToEdit } =
+    trpc.blog.adminGetById.useQuery(
+      { id: editingPostId ?? 0 },
+      { enabled: editingPostId !== null }
+    );
 
   const { data, isLoading } = trpc.blog.adminList.useQuery({
     page,
@@ -294,7 +354,7 @@ export default function AdminBlog() {
       await utils.blog.adminList.invalidate();
       await utils.blog.stats.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: e => toast.error(e.message),
   });
 
   const reject = trpc.blog.reject.useMutation({
@@ -303,7 +363,7 @@ export default function AdminBlog() {
       await utils.blog.adminList.invalidate();
       await utils.blog.stats.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: e => toast.error(e.message),
   });
 
   const del = trpc.blog.delete.useMutation({
@@ -312,10 +372,86 @@ export default function AdminBlog() {
       await utils.blog.adminList.invalidate();
       await utils.blog.stats.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: e => toast.error(e.message),
   });
 
-  const isMutating = approve.isPending || reject.isPending || del.isPending;
+  const updatePost = trpc.blog.update.useMutation({
+    onSuccess: async () => {
+      toast.success("Article modifié avec succès.");
+      setEditingPostId(null);
+      await utils.blog.adminList.invalidate();
+      await utils.blog.stats.invalidate();
+    },
+    onError: e => toast.error(e.message),
+  });
+
+  useEffect(() => {
+    if (!postToEdit) return;
+
+    setEditForm({
+      title: postToEdit.title || "",
+      hook: postToEdit.hook || "",
+      content: postToEdit.content || "",
+      type: postToEdit.type || "participant",
+      status: postToEdit.status || "pending",
+      coverImage: postToEdit.cover_image || "",
+      rejectionNote: postToEdit.rejection_note || "",
+      categories: Array.isArray(postToEdit.categories)
+        ? (postToEdit.categories as string[])
+        : [],
+    });
+  }, [postToEdit]);
+
+  function toggleCategory(val: string) {
+    setEditForm(prev => ({
+      ...prev,
+      categories: prev.categories.includes(val)
+        ? prev.categories.filter(cat => cat !== val)
+        : [...prev.categories, val].slice(0, 4),
+    }));
+  }
+
+  function submitEdit() {
+    if (!editingPostId) return;
+
+    if (!editForm.title.trim() || editForm.title.trim().length < 5) {
+      toast.error("Le titre doit contenir au moins 5 caractères.");
+      return;
+    }
+    if (!editForm.content.trim() || editForm.content.trim().length < 50) {
+      toast.error("Le contenu doit contenir au moins 50 caractères.");
+      return;
+    }
+    if (editForm.categories.length === 0) {
+      toast.error("Sélectionnez au moins une catégorie.");
+      return;
+    }
+
+    updatePost.mutate({
+      id: editingPostId,
+      title: editForm.title.trim(),
+      hook: editForm.hook.trim() || undefined,
+      content: editForm.content.trim(),
+      type: editForm.type as "participant" | "benevole" | "equipe" | "autre",
+      status: editForm.status as "pending" | "approved" | "rejected",
+      categories: editForm.categories as (
+        | "ressenti"
+        | "analyse"
+        | "feedback"
+        | "histoire"
+        | "spirituel"
+        | "organisation"
+      )[],
+      coverImage: editForm.coverImage.trim() || undefined,
+      rejectionNote: editForm.rejectionNote.trim() || undefined,
+    });
+  }
+
+  const isMutating =
+    approve.isPending ||
+    reject.isPending ||
+    del.isPending ||
+    updatePost.isPending;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -323,7 +459,9 @@ export default function AdminBlog() {
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Blog Communautaire</h1>
+            <h1 className="text-xl font-bold text-gray-900">
+              Blog Communautaire
+            </h1>
             <p className="text-sm text-gray-500">Modération des témoignages</p>
           </div>
           <Link href="/admin">
@@ -340,12 +478,35 @@ export default function AdminBlog() {
         {stats && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-              { label: "Total", value: stats.total, icon: <BarChart3 className="w-4 h-4" />, color: "text-gray-600" },
-              { label: "En attente", value: stats.pending, icon: <Clock className="w-4 h-4" />, color: "text-yellow-600" },
-              { label: "Publiés", value: stats.approved, icon: <CheckCircle className="w-4 h-4" />, color: "text-emerald-600" },
-              { label: "Refusés", value: stats.rejected, icon: <XCircle className="w-4 h-4" />, color: "text-red-500" },
-            ].map((s) => (
-              <div key={s.label} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              {
+                label: "Total",
+                value: stats.total,
+                icon: <BarChart3 className="w-4 h-4" />,
+                color: "text-gray-600",
+              },
+              {
+                label: "En attente",
+                value: stats.pending,
+                icon: <Clock className="w-4 h-4" />,
+                color: "text-yellow-600",
+              },
+              {
+                label: "Publiés",
+                value: stats.approved,
+                icon: <CheckCircle className="w-4 h-4" />,
+                color: "text-emerald-600",
+              },
+              {
+                label: "Refusés",
+                value: stats.rejected,
+                icon: <XCircle className="w-4 h-4" />,
+                color: "text-red-500",
+              },
+            ].map(s => (
+              <div
+                key={s.label}
+                className="bg-white rounded-xl p-4 shadow-sm border border-gray-100"
+              >
                 <div className={`flex items-center gap-2 mb-1 ${s.color}`}>
                   {s.icon}
                   <span className="text-xs font-medium">{s.label}</span>
@@ -364,11 +525,20 @@ export default function AdminBlog() {
               placeholder="Rechercher un article…"
               className="pl-9 h-9 text-sm"
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              onChange={e => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
             />
           </div>
 
-          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+          <Select
+            value={statusFilter}
+            onValueChange={v => {
+              setStatusFilter(v);
+              setPage(1);
+            }}
+          >
             <SelectTrigger className="h-9 w-36 text-sm">
               <SelectValue placeholder="Statut" />
             </SelectTrigger>
@@ -380,7 +550,13 @@ export default function AdminBlog() {
             </SelectContent>
           </Select>
 
-          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(1); }}>
+          <Select
+            value={typeFilter}
+            onValueChange={v => {
+              setTypeFilter(v);
+              setPage(1);
+            }}
+          >
             <SelectTrigger className="h-9 w-36 text-sm">
               <SelectValue placeholder="Type" />
             </SelectTrigger>
@@ -408,13 +584,16 @@ export default function AdminBlog() {
           </div>
         ) : (
           <div className="space-y-3">
-            {data?.posts.map((post) => (
+            {data?.posts.map(post => (
               <PostRow
                 key={post.id}
                 post={post as AdminPost}
                 isLoading={isMutating}
+                onEdit={() => setEditingPostId(post.id)}
                 onApprove={() => approve.mutate({ id: post.id })}
-                onReject={(note) => reject.mutate({ id: post.id, note: note || undefined })}
+                onReject={note =>
+                  reject.mutate({ id: post.id, note: note || undefined })
+                }
                 onDelete={() => del.mutate({ id: post.id })}
               />
             ))}
@@ -428,7 +607,7 @@ export default function AdminBlog() {
               variant="outline"
               size="sm"
               disabled={page <= 1}
-              onClick={() => setPage((p) => p - 1)}
+              onClick={() => setPage(p => p - 1)}
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
@@ -439,13 +618,190 @@ export default function AdminBlog() {
               variant="outline"
               size="sm"
               disabled={page >= data.totalPages}
-              onClick={() => setPage((p) => p + 1)}
+              onClick={() => setPage(p => p + 1)}
             >
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
         )}
       </div>
+
+      <Dialog
+        open={editingPostId !== null}
+        onOpenChange={open => {
+          if (!open) setEditingPostId(null);
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Modifier l'article</DialogTitle>
+          </DialogHeader>
+
+          {isLoadingPostToEdit && !postToEdit ? (
+            <div className="py-8 text-center text-sm text-gray-500">
+              Chargement de l'article…
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Titre
+                </label>
+                <Input
+                  value={editForm.title}
+                  maxLength={255}
+                  onChange={e =>
+                    setEditForm(prev => ({ ...prev, title: e.target.value }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Phrase d'accroche (optionnel)
+                </label>
+                <Input
+                  value={editForm.hook}
+                  maxLength={255}
+                  onChange={e =>
+                    setEditForm(prev => ({ ...prev, hook: e.target.value }))
+                  }
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">
+                    Type
+                  </label>
+                  <Select
+                    value={editForm.type}
+                    onValueChange={v =>
+                      setEditForm(prev => ({ ...prev, type: v }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {POST_TYPES.map(t => (
+                        <SelectItem key={t.value} value={t.value}>
+                          {t.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">
+                    Statut
+                  </label>
+                  <Select
+                    value={editForm.status}
+                    onValueChange={v =>
+                      setEditForm(prev => ({ ...prev, status: v }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">En attente</SelectItem>
+                      <SelectItem value="approved">Publié</SelectItem>
+                      <SelectItem value="rejected">Refusé</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Catégories (max 4)
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {CATEGORIES.map(cat => {
+                    const selected = editForm.categories.includes(cat.value);
+                    return (
+                      <Button
+                        key={cat.value}
+                        variant="outline"
+                        type="button"
+                        className={
+                          selected
+                            ? "border-amber-500 bg-amber-50 text-amber-700"
+                            : ""
+                        }
+                        onClick={() => toggleCategory(cat.value)}
+                      >
+                        {cat.label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Image de couverture (URL)
+                </label>
+                <Input
+                  value={editForm.coverImage}
+                  onChange={e =>
+                    setEditForm(prev => ({
+                      ...prev,
+                      coverImage: e.target.value,
+                    }))
+                  }
+                  placeholder="https://..."
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Contenu
+                </label>
+                <Textarea
+                  value={editForm.content}
+                  rows={10}
+                  onChange={e =>
+                    setEditForm(prev => ({ ...prev, content: e.target.value }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Note de refus (optionnel)
+                </label>
+                <Textarea
+                  value={editForm.rejectionNote}
+                  maxLength={500}
+                  rows={3}
+                  onChange={e =>
+                    setEditForm(prev => ({
+                      ...prev,
+                      rejectionNote: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingPostId(null)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={submitEdit}
+              disabled={isLoadingPostToEdit || updatePost.isPending}
+            >
+              Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
