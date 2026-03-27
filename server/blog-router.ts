@@ -138,7 +138,8 @@ function extractImagesStoragePath(value: string): string | null {
   if (/^https?:\/\//i.test(trimmed)) {
     try {
       const parsed = new URL(trimmed);
-      const markerRegex = /\/storage\/v1\/object\/(?:public|sign|authenticated)\/images\/(.+)$/;
+      const markerRegex =
+        /\/storage\/v1\/(?:object|render\/image)\/(?:public|sign|authenticated)\/images\/(.+)$/;
       const match = parsed.pathname.match(markerRegex);
       if (!match?.[1]) return null;
       return decodeURIComponent(match[1]);
@@ -405,7 +406,8 @@ export const blogRouter = router({
         });
       }
 
-      coverImageUrl = path;
+      const { data: publicUrlData } = db.storage.from("images").getPublicUrl(path);
+      coverImageUrl = publicUrlData.publicUrl || path;
     }
 
     const baseSlug = slugify(input.title);
