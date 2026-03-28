@@ -24,6 +24,11 @@ const BLOG_CATEGORIES = [
 const BLOG_STATUSES = ["pending", "approved", "rejected"] as const;
 
 const ADMIN_ROLES = ["admin", "super_admin", "admin_ops", "admin_contenu"] as const;
+const SUPABASE_PUBLIC_URL =
+  process.env.SUPABASE_PUBLIC_URL ||
+  process.env.PUBLIC_SUPABASE_URL ||
+  process.env.VITE_SUPABASE_URL ||
+  null;
 
 // ============================================
 // MIDDLEWARE ADMIN
@@ -160,7 +165,26 @@ function extractImagesStoragePath(value: string): string | null {
     return trimmed;
   }
 
+  if (trimmed.startsWith("/blog-covers/")) {
+    return trimmed.slice(1);
+  }
+
   return null;
+}
+
+function normalizeSupabaseAssetUrl(url: string): string {
+  if (!SUPABASE_PUBLIC_URL) return url;
+
+  try {
+    const assetUrl = new URL(url);
+    const publicBase = new URL(SUPABASE_PUBLIC_URL);
+    if (assetUrl.origin === publicBase.origin) return url;
+    assetUrl.protocol = publicBase.protocol;
+    assetUrl.host = publicBase.host;
+    return assetUrl.toString();
+  } catch {
+    return url;
+  }
 }
 
 async function resolveBlogCoverImage(
@@ -175,10 +199,10 @@ async function resolveBlogCoverImage(
   const { data: signedData } = await db.storage
     .from("images")
     .createSignedUrl(storagePath, 60 * 60 * 24 * 30);
-  if (signedData?.signedUrl) return signedData.signedUrl;
+  if (signedData?.signedUrl) return normalizeSupabaseAssetUrl(signedData.signedUrl);
 
   const { data } = db.storage.from("images").getPublicUrl(storagePath);
-  return data.publicUrl || coverImage;
+  return data.publicUrl ? normalizeSupabaseAssetUrl(data.publicUrl) : coverImage;
 }
 
 // ============================================
