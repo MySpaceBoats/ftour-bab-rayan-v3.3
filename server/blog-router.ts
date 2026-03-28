@@ -406,8 +406,10 @@ export const blogRouter = router({
         });
       }
 
-      const { data: publicUrlData } = db.storage.from("images").getPublicUrl(path);
-      coverImageUrl = publicUrlData.publicUrl || path;
+      // Store the storage path instead of a generated public URL.
+      // This avoids persisting an internal/non-public Supabase host in DB
+      // when the server runtime uses a private SUPABASE_URL.
+      coverImageUrl = path;
     }
 
     const baseSlug = slugify(input.title);
