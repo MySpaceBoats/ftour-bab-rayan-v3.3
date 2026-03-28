@@ -73,11 +73,44 @@ export async function uploadGalleryAsset(
   return data.publicUrl;
 }
 
+function normalizeGalleryStoragePath(
+  storagePath?: string | null,
+  fallbackUrl?: string | null
+): string | null {
+  const fromStoragePath = (storagePath ?? "").trim();
+  const rawCandidate = fromStoragePath || (fallbackUrl ?? "").trim();
+  if (!rawCandidate) return null;
+
+  const withoutLeadingSlash = rawCandidate.replace(/^\/+/, "");
+  if (withoutLeadingSlash.startsWith("images/")) {
+    return withoutLeadingSlash.slice("images/".length);
+  }
+
+  if (/^https?:\/\//i.test(rawCandidate)) {
+    try {
+      const parsed = new URL(rawCandidate);
+      const match = parsed.pathname.match(
+        /\/storage\/v1\/(?:object|render\/image)\/(?:public|sign|authenticated)\/([^/]+)\/(.+)$/
+      );
+      if (!match) return null;
+      const [, bucket, path] = match;
+      if (bucket !== "images") return null;
+      return decodeURIComponent(path.replace(/^\/+/, ""));
+    } catch {
+      return null;
+    }
+  }
+
+  return withoutLeadingSlash;
+}
+
 export async function deleteGalleryAsset(path?: string | null) {
   if (!path) return;
   const client = getSupabaseAdminClient();
   if (!client) throw new Error("Supabase non configuré");
-  await client.storage.from("images").remove([path]);
+  const normalizedPath = normalizeGalleryStoragePath(path);
+  if (!normalizedPath) return;
+  await client.storage.from("images").remove([normalizedPath]);
 }
 
 export async function createGalleryPhoto(input: GalleryPhotoCreateInput) {
@@ -169,12 +202,13 @@ export function resolveGalleryAssetUrl(
   storagePath?: string | null,
   fallbackUrl?: string | null
 ): string | null {
-  if (!storagePath) return fallbackUrl ?? null;
+  const normalizedPath = normalizeGalleryStoragePath(storagePath, fallbackUrl);
+  if (!normalizedPath) return fallbackUrl ?? null;
 
   const client = getSupabaseAdminClient();
   if (!client) return fallbackUrl ?? null;
 
-  const { data } = client.storage.from("images").getPublicUrl(storagePath);
+  const { data } = client.storage.from("images").getPublicUrl(normalizedPath);
   return data.publicUrl || fallbackUrl || null;
 }
 
@@ -182,19 +216,22 @@ export async function resolveGalleryAssetUrlAsync(
   storagePath?: string | null,
   fallbackUrl?: string | null
 ): Promise<string | null> {
-  if (!storagePath) return fallbackUrl ?? null;
+  const normalizedPath = normalizeGalleryStoragePath(storagePath, fallbackUrl);
+  if (!normalizedPath) return fallbackUrl ?? null;
 
   const client = getSupabaseAdminClient();
   if (!client) return fallbackUrl ?? null;
 
   const { data: signedData, error: signedError } = await client.storage
     .from("images")
-    .createSignedUrl(storagePath, 60 * 60 * 24 * 7);
+    .createSignedUrl(normalizedPath, 60 * 60 * 24 * 7);
 
   if (!signedError && signedData?.signedUrl) {
     return signedData.signedUrl;
   }
 
-  const { data } = client.storage.from("images").getPublicUrl(storagePath);
-  return data.publicUrl || fallbackUrl || null;
+  if (fallbackUrl) return fallbackUrl;
+
+  const { data } = client.storage.from("images").getPublicUrl(normalizedPath);
+  return data.publicUrl || null;
 }
