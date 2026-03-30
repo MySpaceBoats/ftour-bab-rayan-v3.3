@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { PenSquare, Loader2, CheckCircle, ImagePlus, X } from "lucide-react";
+import { PenSquare, Loader2, CheckCircle } from "lucide-react";
 
 // ============================================
 // CONSTANTES
@@ -51,18 +51,15 @@ export default function BlogNew() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [hook, setHook] = useState("");
   const [content, setContent] = useState("");
-  const [coverImageBase64, setCoverImageBase64] = useState<string>("");
-  const [coverImagePreview, setCoverImagePreview] = useState<string>("");
   const [consented, setConsented] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const createPost = trpc.blog.create.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       setSubmitted(true);
       toast.success("Votre témoignage a été soumis avec succès !");
       setTimeout(() => navigate(`/blog/${data.slug}`), 3000);
     },
-    onError: (e) => {
+    onError: e => {
       if (e.data?.code === "UNAUTHORIZED") {
         toast.error("Vous devez être connecté pour publier.");
       } else {
@@ -71,34 +68,11 @@ export default function BlogNew() {
     },
   });
 
-  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      toast.error("L'image ne doit pas dépasser 5 Mo.");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      setCoverImageBase64(result);
-      setCoverImagePreview(result);
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function removeImage() {
-    setCoverImageBase64("");
-    setCoverImagePreview("");
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  }
-
   function toggleCategory(val: string) {
-    setSelectedCategories((prev) =>
-      prev.includes(val) ? prev.filter((c) => c !== val) : [...prev, val].slice(0, 4)
+    setSelectedCategories(prev =>
+      prev.includes(val)
+        ? prev.filter(c => c !== val)
+        : [...prev, val].slice(0, 4)
     );
   }
 
@@ -132,7 +106,6 @@ export default function BlogNew() {
       categories: selectedCategories as any,
       hook: hook.trim() || undefined,
       content: content.trim(),
-      coverImageBase64: coverImageBase64 || undefined,
       consented: true,
     });
   }
@@ -145,9 +118,12 @@ export default function BlogNew() {
         <main className="flex-1 flex items-center justify-center px-4">
           <div className="text-center max-w-md">
             <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Merci pour votre témoignage !</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Merci pour votre témoignage !
+            </h1>
             <p className="text-gray-500 mb-2">
-              Votre article a bien été soumis. Il sera visible après validation par notre équipe.
+              Votre article a bien été soumis. Il sera visible après validation
+              par notre équipe.
             </p>
             <p className="text-sm text-amber-600">Redirection en cours…</p>
           </div>
@@ -167,13 +143,16 @@ export default function BlogNew() {
           <PenSquare className="w-10 h-10 mx-auto mb-3 opacity-80" />
           <h1 className="text-3xl font-bold mb-2">Partagez votre expérience</h1>
           <p className="text-amber-200 max-w-lg mx-auto text-sm leading-relaxed">
-            Votre vécu est précieux. Que vous soyez bénévole, participant ou membre de l'équipe,
-            vos mots enrichissent notre mémoire collective.
+            Votre vécu est précieux. Que vous soyez bénévole, participant ou
+            membre de l'équipe, vos mots enrichissent notre mémoire collective.
           </p>
         </div>
 
         {/* Formulaire */}
-        <form onSubmit={handleSubmit} className="max-w-2xl mx-auto px-4 py-10 space-y-6">
+        <form
+          onSubmit={handleSubmit}
+          className="max-w-2xl mx-auto px-4 py-10 space-y-6"
+        >
           {/* Titre */}
           <div className="space-y-2">
             <Label htmlFor="title" className="font-semibold">
@@ -183,7 +162,7 @@ export default function BlogNew() {
               id="title"
               placeholder="Ex : Une soirée qui a changé ma vision…"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={e => setTitle(e.target.value)}
               maxLength={255}
               className="text-base"
             />
@@ -200,7 +179,7 @@ export default function BlogNew() {
               id="hook"
               placeholder="Ex : Ce soir-là, j'ai compris ce qu'est le partage."
               value={hook}
-              onChange={(e) => setHook(e.target.value)}
+              onChange={e => setHook(e.target.value)}
               maxLength={255}
             />
           </div>
@@ -215,7 +194,7 @@ export default function BlogNew() {
                 <SelectValue placeholder="Choisir votre profil" />
               </SelectTrigger>
               <SelectContent>
-                {POST_TYPES.map((t) => (
+                {POST_TYPES.map(t => (
                   <SelectItem key={t.value} value={t.value}>
                     {t.label}
                   </SelectItem>
@@ -231,7 +210,7 @@ export default function BlogNew() {
               <span className="text-gray-400 font-normal">(max 4)</span>
             </Label>
             <div className="flex flex-wrap gap-2">
-              {CATEGORIES.map((cat) => {
+              {CATEGORIES.map(cat => {
                 const selected = selectedCategories.includes(cat.value);
                 return (
                   <button
@@ -262,61 +241,11 @@ export default function BlogNew() {
 
 Minimum 50 caractères."
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={e => setContent(e.target.value)}
               rows={12}
               className="text-sm leading-relaxed resize-y"
             />
             <p className="text-xs text-gray-400">{content.length} caractères</p>
-          </div>
-
-          {/* Image de couverture (upload) */}
-          <div className="space-y-2">
-            <Label className="font-semibold">
-              Image de couverture{" "}
-              <span className="text-gray-400 font-normal">(optionnelle, max 5 Mo)</span>
-            </Label>
-            <input
-              ref={fileInputRef}
-              id="coverImageFile"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleImageChange}
-              className="hidden"
-            />
-            {!coverImagePreview ? (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full h-36 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-amber-400 hover:text-amber-600 transition-colors cursor-pointer"
-              >
-                <ImagePlus className="w-8 h-8" />
-                <span className="text-sm">Cliquez pour choisir une photo</span>
-                <span className="text-xs">JPG, PNG ou WEBP</span>
-              </button>
-            ) : (
-              <div className="relative rounded-xl overflow-hidden">
-                <img
-                  src={coverImagePreview}
-                  alt="Aperçu"
-                  className="w-full h-48 object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={removeImage}
-                  className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 transition-colors"
-                  aria-label="Supprimer l'image"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-2 right-2 bg-white/90 hover:bg-white text-gray-700 text-xs px-3 py-1.5 rounded-full font-medium shadow transition-colors"
-                >
-                  Changer
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Consentement */}
@@ -325,13 +254,16 @@ Minimum 50 caractères."
               <Checkbox
                 id="consent"
                 checked={consented}
-                onCheckedChange={(v) => setConsented(!!v)}
+                onCheckedChange={v => setConsented(!!v)}
                 className="mt-0.5"
               />
-              <Label htmlFor="consent" className="text-sm text-gray-700 leading-relaxed cursor-pointer">
-                J'accepte que mon témoignage soit publié sur le site Ftour Bab Rayan après
-                validation par l'équipe. Je confirme que le contenu est authentique et que
-                j'en suis l'auteur.
+              <Label
+                htmlFor="consent"
+                className="text-sm text-gray-700 leading-relaxed cursor-pointer"
+              >
+                J'accepte que mon témoignage soit publié sur le site Ftour Bab
+                Rayan après validation par l'équipe. Je confirme que le contenu
+                est authentique et que j'en suis l'auteur.
               </Label>
             </div>
             <p className="text-xs text-amber-700 pl-6">

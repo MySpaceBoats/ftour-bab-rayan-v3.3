@@ -36,12 +36,8 @@ function RelatedCard({ post }: { post: any }) {
   return (
     <Link href={`/blog/${post.slug}`}>
       <div className="group flex gap-3 p-3 rounded-xl hover:bg-amber-50 transition-colors cursor-pointer">
-        <div className="w-16 h-16 rounded-lg bg-amber-100 overflow-hidden flex-shrink-0">
-          {post.cover_image ? (
-            <img src={post.cover_image} alt={post.title} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-xl">✍️</div>
-          )}
+        <div className="w-16 h-16 rounded-lg bg-amber-100 overflow-hidden flex-shrink-0 flex items-center justify-center text-xl">
+          ✍️
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm text-gray-800 line-clamp-2 group-hover:text-amber-700 transition-colors">
@@ -62,10 +58,11 @@ export default function BlogPost() {
   const { slug } = useParams<{ slug: string }>();
   const { lang } = useI18n();
 
-  const { data: post, isLoading, isError } = trpc.blog.bySlug.useQuery(
-    { slug: slug ?? "" },
-    { enabled: !!slug }
-  );
+  const {
+    data: post,
+    isLoading,
+    isError,
+  } = trpc.blog.bySlug.useQuery({ slug: slug ?? "" }, { enabled: !!slug });
 
   const { data: related } = trpc.blog.related.useQuery(
     { postId: post?.id ?? 0, type: (post?.type as any) ?? "participant" },
@@ -79,11 +76,11 @@ export default function BlogPost() {
 
   const incrementViews = trpc.blog.incrementViews.useMutation();
   const toggleLike = trpc.blog.toggleLike.useMutation({
-    onSuccess: (res) => {
+    onSuccess: res => {
       refetchLike();
       toast.success(res.liked ? "Témoignage aimé ❤️" : "Like retiré");
     },
-    onError: (e) => {
+    onError: e => {
       if (e.data?.code === "UNAUTHORIZED") {
         toast.error("Connectez-vous pour aimer cet article.");
       } else {
@@ -101,11 +98,13 @@ export default function BlogPost() {
 
   function handleShare() {
     if (navigator.share) {
-      navigator.share({
-        title: post?.title,
-        text: post?.hook ?? post?.excerpt ?? "",
-        url: window.location.href,
-      }).catch(() => {});
+      navigator
+        .share({
+          title: post?.title,
+          text: post?.hook ?? post?.excerpt ?? "",
+          url: window.location.href,
+        })
+        .catch(() => {});
     } else {
       navigator.clipboard.writeText(window.location.href);
       toast.success("Lien copié !");
@@ -134,8 +133,12 @@ export default function BlogPost() {
         <main className="flex-1 flex items-center justify-center text-center px-4">
           <div>
             <p className="text-6xl mb-4">📭</p>
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">Témoignage introuvable</h1>
-            <p className="text-gray-500 mb-6">Cet article n'existe pas ou a été supprimé.</p>
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">
+              Témoignage introuvable
+            </h1>
+            <p className="text-gray-500 mb-6">
+              Cet article n'existe pas ou a été supprimé.
+            </p>
             <Link href="/blog">
               <Button variant="outline">
                 <ArrowLeft className="w-4 h-4 mr-2" />
@@ -162,20 +165,13 @@ export default function BlogPost() {
       <main className="flex-1">
         {/* Cover hero */}
         <div className="relative w-full bg-gradient-to-b from-amber-900 to-amber-700 overflow-hidden">
-          {post.cover_image && (
-            <img
-              src={post.cover_image}
-              alt={post.title}
-              className="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-30"
-            />
-          )}
           <div className="relative max-w-3xl mx-auto px-4 py-14 text-center text-white">
             {/* Badges */}
             <div className="flex flex-wrap justify-center gap-2 mb-4">
               <span className="bg-white/20 backdrop-blur text-white text-xs font-semibold px-3 py-1 rounded-full">
                 {TYPE_LABELS[post.type] ?? post.type}
               </span>
-              {(post.categories as string[]).map((cat) => (
+              {(post.categories as string[]).map(cat => (
                 <span
                   key={cat}
                   className="bg-amber-500/30 text-amber-100 text-xs px-2 py-1 rounded-full"
@@ -186,11 +182,15 @@ export default function BlogPost() {
             </div>
 
             {/* Titre */}
-            <h1 className="text-2xl md:text-4xl font-bold leading-tight mb-4">{post.title}</h1>
+            <h1 className="text-2xl md:text-4xl font-bold leading-tight mb-4">
+              {post.title}
+            </h1>
 
             {/* Hook */}
             {post.hook && (
-              <p className="text-amber-200 italic text-lg mb-6">"{post.hook}"</p>
+              <p className="text-amber-200 italic text-lg mb-6">
+                "{post.hook}"
+              </p>
             )}
 
             {/* Meta */}
@@ -234,12 +234,23 @@ export default function BlogPost() {
               <Button
                 variant={likeData?.liked ? "default" : "outline"}
                 size="sm"
-                className={likeData?.liked ? "bg-rose-500 hover:bg-rose-600 text-white" : ""}
+                className={
+                  likeData?.liked
+                    ? "bg-rose-500 hover:bg-rose-600 text-white"
+                    : ""
+                }
                 onClick={() => toggleLike.mutate({ postId: post.id })}
                 disabled={toggleLike.isPending}
               >
-                <Heart className={`w-4 h-4 mr-1.5 ${likeData?.liked ? "fill-current" : ""}`} />
-                {post.likes + (toggleLike.data?.liked === true && !likeData?.liked ? 1 : toggleLike.data?.liked === false && likeData?.liked ? -1 : 0)}{" "}
+                <Heart
+                  className={`w-4 h-4 mr-1.5 ${likeData?.liked ? "fill-current" : ""}`}
+                />
+                {post.likes +
+                  (toggleLike.data?.liked === true && !likeData?.liked
+                    ? 1
+                    : toggleLike.data?.liked === false && likeData?.liked
+                      ? -1
+                      : 0)}{" "}
                 J'aime
               </Button>
 
@@ -249,7 +260,11 @@ export default function BlogPost() {
               </Button>
 
               <Link href={`/${lang}/blog/nouveau`}>
-                <Button variant="ghost" size="sm" className="ml-auto text-amber-700 hover:bg-amber-50">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto text-amber-700 hover:bg-amber-50"
+                >
                   ✍️ Partager mon expérience
                 </Button>
               </Link>
@@ -263,7 +278,7 @@ export default function BlogPost() {
                 Témoignages similaires
               </h3>
               <div className="space-y-2">
-                {related.map((r) => (
+                {related.map(r => (
                   <RelatedCard key={r.id} post={r} />
                 ))}
               </div>
