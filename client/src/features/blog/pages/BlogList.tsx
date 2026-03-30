@@ -95,12 +95,12 @@ function BlogCard({ post }: { post: PostCard }) {
             </p>
           )}
 
-          <h2 className="font-bold text-gray-900 text-base leading-snug line-clamp-2 group-hover:text-amber-700 transition-colors">
+          <h2 className="font-bold text-black text-base leading-snug line-clamp-2 group-hover:text-amber-700 transition-colors">
             {post.title}
           </h2>
 
           {post.excerpt && (
-            <p className="text-gray-500 text-sm line-clamp-2 flex-1">
+            <p className="text-gray-900 text-sm line-clamp-2 flex-1">
               {post.excerpt}
             </p>
           )}
@@ -121,14 +121,14 @@ function BlogCard({ post }: { post: PostCard }) {
 
           {/* Footer card */}
           <div className="flex items-center justify-between pt-2 border-t border-gray-50 mt-auto">
-            <div className="text-xs text-gray-400">
-              <span className="font-medium text-gray-600">
+            <div className="text-xs text-gray-700">
+              <span className="font-medium text-black">
                 {post.author_name}
               </span>
               <span className="mx-1">·</span>
               {date}
             </div>
-            <div className="flex items-center gap-3 text-xs text-gray-400">
+            <div className="flex items-center gap-3 text-xs text-gray-700">
               <span className="flex items-center gap-1">
                 <Heart className="w-3 h-3" />
                 {post.likes}
@@ -291,7 +291,7 @@ export default function BlogList() {
           ) : data?.posts.length === 0 ? (
             <div className="text-center py-20">
               <p className="text-5xl mb-4">📖</p>
-              <p className="text-gray-500 text-lg">Aucun témoignage trouvé.</p>
+              <p className="text-gray-900 text-lg">Aucun témoignage trouvé.</p>
               <Link href={`/${lang}/blog/nouveau`}>
                 <Button variant="outline" className="mt-4">
                   Soyez le premier à partager
@@ -317,7 +317,7 @@ export default function BlogList() {
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-gray-900">
                 Page {page} / {data.totalPages}
               </span>
               <Button
