@@ -62,6 +62,8 @@ export default function Navbar() {
     return `/${lang}${path}`;
   };
 
+  const getBlogPath = () => (lang === "fr" ? "/temoignage" : "/blog");
+
   const trackNavCtaClick = (label: string) => {
     if (typeof window === "undefined") return;
     const gtag = (window as Window & { gtag?: (...args: unknown[]) => void })
@@ -82,7 +84,7 @@ export default function Navbar() {
       icon: ShoppingBag,
     },
     { href: localizedHref("/dons"), label: "Donation", icon: Heart },
-    { href: localizedHref("/blog"), label: t.nav.blog, icon: BookOpen },
+    { href: localizedHref(getBlogPath()), label: t.nav.blog, icon: BookOpen },
     { href: localizedHref("/galerie"), label: t.nav.gallery, icon: Images },
     { href: localizedHref("/equipe-ftour"), label: t.nav.team, icon: Star },
     {
