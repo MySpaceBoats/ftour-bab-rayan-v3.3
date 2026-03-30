@@ -217,7 +217,7 @@ export default function BlogPost() {
           <article className="flex-1 min-w-0">
             {/* Back */}
             <Link href="/blog">
-              <button className="flex items-center gap-1 text-sm text-gray-400 hover:text-amber-700 transition-colors mb-6">
+              <button className="flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-amber-700 transition-colors mb-6">
                 <ArrowLeft className="w-4 h-4" />
                 Tous les témoignages
               </button>
@@ -225,7 +225,7 @@ export default function BlogPost() {
 
             {/* Texte riche */}
             <div
-              className="prose prose-amber max-w-none prose-headings:font-bold prose-p:leading-relaxed prose-p:text-gray-700"
+              className="prose prose-amber max-w-none prose-headings:font-bold prose-headings:text-gray-900 prose-p:leading-relaxed prose-p:text-gray-800 prose-strong:text-gray-900 prose-li:text-gray-800 prose-blockquote:text-gray-800"
               dangerouslySetInnerHTML={{ __html: post.content }}
             />
 
@@ -254,7 +254,7 @@ export default function BlogPost() {
                 J'aime
               </Button>
 
-              <Button variant="outline" size="sm" onClick={handleShare}>
+              <Button variant="outline" size="sm" className="text-gray-800" onClick={handleShare}>
                 <Share2 className="w-4 h-4 mr-1.5" />
                 Partager
               </Button>
