@@ -13,7 +13,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Heart, Eye, Search, PenSquare, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Heart,
+  Eye,
+  Search,
+  PenSquare,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { useI18n } from "@/i18n";
 
 // ============================================
@@ -56,7 +63,6 @@ type PostCard = {
   author_name: string;
   type: string;
   categories: string[];
-  cover_image: string | null;
   likes: number;
   views: number;
   created_at: string;
@@ -72,24 +78,12 @@ function BlogCard({ post }: { post: PostCard }) {
   return (
     <Link href={`/blog/${post.slug}`}>
       <article className="group bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-amber-50 cursor-pointer h-full flex flex-col">
-        {/* Image cover */}
-        <div className="relative h-48 bg-gradient-to-br from-amber-50 to-orange-100 overflow-hidden">
-          {post.cover_image ? (
-            <img
-              src={post.cover_image}
-              alt={post.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-5xl opacity-30">✍️</span>
-            </div>
-          )}
-          <div className="absolute top-3 left-3">
-            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${TYPE_COLORS[post.type] ?? "bg-gray-100 text-gray-700"}`}>
-              {TYPE_LABELS[post.type] ?? post.type}
-            </span>
-          </div>
+        <div className="px-5 pt-5">
+          <span
+            className={`text-xs font-semibold px-2 py-1 rounded-full ${TYPE_COLORS[post.type] ?? "bg-gray-100 text-gray-700"}`}
+          >
+            {TYPE_LABELS[post.type] ?? post.type}
+          </span>
         </div>
 
         {/* Contenu */}
@@ -106,13 +100,15 @@ function BlogCard({ post }: { post: PostCard }) {
           </h2>
 
           {post.excerpt && (
-            <p className="text-gray-500 text-sm line-clamp-2 flex-1">{post.excerpt}</p>
+            <p className="text-gray-500 text-sm line-clamp-2 flex-1">
+              {post.excerpt}
+            </p>
           )}
 
           {/* Catégories */}
           {post.categories.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              {post.categories.slice(0, 2).map((cat) => (
+              {post.categories.slice(0, 2).map(cat => (
                 <span
                   key={cat}
                   className="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full"
@@ -126,7 +122,9 @@ function BlogCard({ post }: { post: PostCard }) {
           {/* Footer card */}
           <div className="flex items-center justify-between pt-2 border-t border-gray-50 mt-auto">
             <div className="text-xs text-gray-400">
-              <span className="font-medium text-gray-600">{post.author_name}</span>
+              <span className="font-medium text-gray-600">
+                {post.author_name}
+              </span>
               <span className="mx-1">·</span>
               {date}
             </div>
@@ -188,8 +186,8 @@ export default function BlogList() {
               Voix du Ftour
             </h1>
             <p className="text-amber-100 text-base md:text-lg mb-8 leading-relaxed">
-              Des témoignages humains, des histoires vraies, des expériences partagées autour
-              de notre table commune.
+              Des témoignages humains, des histoires vraies, des expériences
+              partagées autour de notre table commune.
             </p>
             <Link href={`/${lang}/blog/nouveau`}>
               <Button className="bg-white text-amber-800 hover:bg-amber-50 font-semibold px-6 py-3 rounded-full shadow">
@@ -210,38 +208,63 @@ export default function BlogList() {
                 placeholder="Rechercher…"
                 className="pl-9 h-9 text-sm"
                 value={search}
-                onChange={(e) => { setSearch(e.target.value); handleFilter(); }}
+                onChange={e => {
+                  setSearch(e.target.value);
+                  handleFilter();
+                }}
               />
             </div>
 
             {/* Filtre type */}
-            <Select value={type} onValueChange={(v) => { setType(v); handleFilter(); }}>
+            <Select
+              value={type}
+              onValueChange={v => {
+                setType(v);
+                handleFilter();
+              }}
+            >
               <SelectTrigger className="h-9 w-36 text-sm">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous les types</SelectItem>
                 {Object.entries(TYPE_LABELS).map(([v, l]) => (
-                  <SelectItem key={v} value={v}>{l}</SelectItem>
+                  <SelectItem key={v} value={v}>
+                    {l}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
             {/* Filtre catégorie */}
-            <Select value={category} onValueChange={(v) => { setCategory(v); handleFilter(); }}>
+            <Select
+              value={category}
+              onValueChange={v => {
+                setCategory(v);
+                handleFilter();
+              }}
+            >
               <SelectTrigger className="h-9 w-40 text-sm">
                 <SelectValue placeholder="Catégorie" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Toutes catégories</SelectItem>
                 {Object.entries(CATEGORY_LABELS).map(([v, l]) => (
-                  <SelectItem key={v} value={v}>{l}</SelectItem>
+                  <SelectItem key={v} value={v}>
+                    {l}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
             {/* Tri */}
-            <Select value={sort} onValueChange={(v) => { setSort(v as any); handleFilter(); }}>
+            <Select
+              value={sort}
+              onValueChange={v => {
+                setSort(v as any);
+                handleFilter();
+              }}
+            >
               <SelectTrigger className="h-9 w-36 text-sm">
                 <SelectValue placeholder="Trier par" />
               </SelectTrigger>
@@ -259,7 +282,10 @@ export default function BlogList() {
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-80 bg-white rounded-2xl animate-pulse" />
+                <div
+                  key={i}
+                  className="h-80 bg-white rounded-2xl animate-pulse"
+                />
               ))}
             </div>
           ) : data?.posts.length === 0 ? (
@@ -274,7 +300,7 @@ export default function BlogList() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {data?.posts.map((post) => (
+              {data?.posts.map(post => (
                 <BlogCard key={post.id} post={post as PostCard} />
               ))}
             </div>
@@ -287,7 +313,7 @@ export default function BlogList() {
                 variant="outline"
                 size="sm"
                 disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
+                onClick={() => setPage(p => p - 1)}
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
@@ -298,7 +324,7 @@ export default function BlogList() {
                 variant="outline"
                 size="sm"
                 disabled={page >= data.totalPages}
-                onClick={() => setPage((p) => p + 1)}
+                onClick={() => setPage(p => p + 1)}
               >
                 <ChevronRight className="w-4 h-4" />
               </Button>

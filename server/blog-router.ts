@@ -23,7 +23,12 @@ const BLOG_CATEGORIES = [
 ] as const;
 const BLOG_STATUSES = ["pending", "approved", "rejected"] as const;
 
-const ADMIN_ROLES = ["admin", "super_admin", "admin_ops", "admin_contenu"] as const;
+const ADMIN_ROLES = [
+  "admin",
+  "super_admin",
+  "admin_ops",
+  "admin_contenu",
+] as const;
 const SUPABASE_PUBLIC_URL =
   process.env.SUPABASE_PUBLIC_URL ||
   process.env.PUBLIC_SUPABASE_URL ||
@@ -35,7 +40,10 @@ const SUPABASE_PUBLIC_URL =
 // ============================================
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (!ctx.user || !(ADMIN_ROLES as readonly string[]).includes(ctx.user.role)) {
+  if (
+    !ctx.user ||
+    !(ADMIN_ROLES as readonly string[]).includes(ctx.user.role)
+  ) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Accès réservé aux administrateurs.",
@@ -69,11 +77,7 @@ async function ensureUniqueSlug(
   let attempt = 0;
 
   while (true) {
-    let query = db
-      .from("blog_posts")
-      .select("id")
-      .eq("slug", slug)
-      .limit(1);
+    let query = db.from("blog_posts").select("id").eq("slug", slug).limit(1);
 
     if (excludeId) {
       query = query.neq("id", excludeId);
@@ -98,42 +102,6 @@ function requireDb(
     });
   }
   return db;
-}
-
-function parseImageDataUrl(dataUrl: string): {
-  buffer: Buffer;
-  contentType: string;
-  ext: "jpg" | "png" | "webp";
-} {
-  const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
-  if (!match) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Format d'image invalide (data URL attendu).",
-    });
-  }
-
-  const [, contentType, base64Data] = match;
-  const extensions: Record<string, "jpg" | "png" | "webp"> = {
-    "image/jpeg": "jpg",
-    "image/jpg": "jpg",
-    "image/png": "png",
-    "image/webp": "webp",
-  };
-
-  const ext = extensions[contentType];
-  if (!ext) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Format d'image non supporté (jpeg, png, webp uniquement).",
-    });
-  }
-
-  return {
-    buffer: Buffer.from(base64Data, "base64"),
-    contentType,
-    ext,
-  };
 }
 
 function extractImagesStoragePath(value: string): string | null {
@@ -199,10 +167,13 @@ async function resolveBlogCoverImage(
   const { data: signedData } = await db.storage
     .from("images")
     .createSignedUrl(storagePath, 60 * 60 * 24 * 30);
-  if (signedData?.signedUrl) return normalizeSupabaseAssetUrl(signedData.signedUrl);
+  if (signedData?.signedUrl)
+    return normalizeSupabaseAssetUrl(signedData.signedUrl);
 
   const { data } = db.storage.from("images").getPublicUrl(storagePath);
-  return data.publicUrl ? normalizeSupabaseAssetUrl(data.publicUrl) : coverImage;
+  return data.publicUrl
+    ? normalizeSupabaseAssetUrl(data.publicUrl)
+    : coverImage;
 }
 
 // ============================================
@@ -215,10 +186,10 @@ const createPostSchema = z.object({
   type: z.enum(BLOG_POST_TYPES),
   categories: z.array(z.enum(BLOG_CATEGORIES)).min(1).max(4),
   hook: z.string().max(255).optional(),
-  coverImage: z.string().url().optional().or(z.literal("")),
-  coverImageBase64: z.string().optional(),
   consented: z.literal(true, {
-    errorMap: () => ({ message: "Vous devez accepter les conditions de publication." }),
+    errorMap: () => ({
+      message: "Vous devez accepter les conditions de publication.",
+    }),
   }),
 });
 
@@ -241,7 +212,6 @@ const updatePostSchema = z.object({
   type: z.enum(BLOG_POST_TYPES).optional(),
   categories: z.array(z.enum(BLOG_CATEGORIES)).min(1).max(4).optional(),
   hook: z.string().max(255).optional(),
-  coverImage: z.string().url().optional().or(z.literal("")),
   status: z.enum(BLOG_STATUSES).optional(),
   rejectionNote: z.string().max(500).optional(),
 });
@@ -284,11 +254,14 @@ export const blogRouter = router({
     const { data, error, count } = await query;
 
     if (error) {
-      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      });
     }
 
     const posts = await Promise.all(
-      (data ?? []).map(async (post) => ({
+      (data ?? []).map(async post => ({
         ...post,
         cover_image: await resolveBlogCoverImage(db, post.cover_image),
       }))
@@ -337,13 +310,17 @@ export const blogRouter = router({
   // PUBLIC — Articles similaires
   // ──────────────────────────────────────
   related: publicProcedure
-    .input(z.object({ postId: z.number().int(), type: z.enum(BLOG_POST_TYPES) }))
+    .input(
+      z.object({ postId: z.number().int(), type: z.enum(BLOG_POST_TYPES) })
+    )
     .query(async ({ input }) => {
       const db = requireDb(getSupabaseAdminClient());
 
       const { data } = await db
         .from("blog_posts")
-        .select("id, title, slug, excerpt, author_name, type, cover_image, likes, created_at")
+        .select(
+          "id, title, slug, excerpt, author_name, type, cover_image, likes, created_at"
+        )
         .eq("status", "approved")
         .eq("type", input.type)
         .neq("id", input.postId)
@@ -351,7 +328,7 @@ export const blogRouter = router({
         .limit(3);
 
       return Promise.all(
-        (data ?? []).map(async (post) => ({
+        (data ?? []).map(async post => ({
           ...post,
           cover_image: await resolveBlogCoverImage(db, post.cover_image),
         }))
@@ -393,13 +370,15 @@ export const blogRouter = router({
 
     const { data } = await db
       .from("blog_posts")
-      .select("id, title, slug, excerpt, hook, author_name, type, cover_image, likes, created_at")
+      .select(
+        "id, title, slug, excerpt, hook, author_name, type, cover_image, likes, created_at"
+      )
       .eq("status", "approved")
       .order("created_at", { ascending: false })
       .limit(3);
 
     return Promise.all(
-      (data ?? []).map(async (post) => ({
+      (data ?? []).map(async post => ({
         ...post,
         cover_image: await resolveBlogCoverImage(db, post.cover_image),
       }))
@@ -409,66 +388,48 @@ export const blogRouter = router({
   // ──────────────────────────────────────
   // PROTÉGÉ — Créer un article
   // ──────────────────────────────────────
-  create: protectedProcedure.input(createPostSchema).mutation(async ({ ctx, input }) => {
-    const db = requireDb(getSupabaseAdminClient());
-    const user = ctx.user;
+  create: protectedProcedure
+    .input(createPostSchema)
+    .mutation(async ({ ctx, input }) => {
+      const db = requireDb(getSupabaseAdminClient());
+      const user = ctx.user;
 
-    // Handle base64 image upload
-    let coverImageUrl = input.coverImage || null;
-    if (input.coverImageBase64) {
-      const image = parseImageDataUrl(input.coverImageBase64);
-      const path = `blog-covers/${Date.now()}-${Math.random().toString(36).slice(2)}.${image.ext}`;
-      const { error: uploadError } = await db.storage.from("images").upload(path, image.buffer, {
-        contentType: image.contentType,
-        upsert: false,
-      });
+      const baseSlug = slugify(input.title);
+      const slug = await ensureUniqueSlug(db, baseSlug);
 
-      if (uploadError) {
+      const excerpt = input.content
+        .replace(/<[^>]*>/g, "")
+        .slice(0, 200)
+        .trim();
+
+      const { data, error } = await db
+        .from("blog_posts")
+        .insert({
+          title: input.title,
+          slug,
+          content: input.content,
+          excerpt,
+          hook: input.hook || null,
+          author_id: user.id,
+          author_name: user.name || "Anonyme",
+          type: input.type,
+          categories: input.categories,
+          cover_image: null,
+          consented: true,
+          status: "pending",
+        })
+        .select("id, slug")
+        .single();
+
+      if (error || !data) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Upload image échoué: ${uploadError.message}`,
+          message: error?.message ?? "Erreur création.",
         });
       }
 
-      // Store the storage path instead of a generated public URL.
-      // This avoids persisting an internal/non-public Supabase host in DB
-      // when the server runtime uses a private SUPABASE_URL.
-      coverImageUrl = path;
-    }
-
-    const baseSlug = slugify(input.title);
-    const slug = await ensureUniqueSlug(db, baseSlug);
-
-    const excerpt = input.content
-      .replace(/<[^>]*>/g, "")
-      .slice(0, 200)
-      .trim();
-
-    const { data, error } = await db
-      .from("blog_posts")
-      .insert({
-        title: input.title,
-        slug,
-        content: input.content,
-        excerpt,
-        hook: input.hook || null,
-        author_id: user.id,
-        author_name: user.name || "Anonyme",
-        type: input.type,
-        categories: input.categories,
-        cover_image: coverImageUrl,
-        consented: true,
-        status: "pending",
-      })
-      .select("id, slug")
-      .single();
-
-    if (error || !data) {
-      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error?.message ?? "Erreur création." });
-    }
-
-    return { id: data.id, slug: data.slug };
-  }),
+      return { id: data.id, slug: data.slug };
+    }),
 
   // ──────────────────────────────────────
   // PROTÉGÉ — Like / Unlike
@@ -510,7 +471,9 @@ export const blogRouter = router({
         return { liked: false };
       } else {
         // Like
-        await db.from("blog_post_likes").insert({ post_id: input.postId, user_id: userId });
+        await db
+          .from("blog_post_likes")
+          .insert({ post_id: input.postId, user_id: userId });
 
         const { data: post } = await db
           .from("blog_posts")
@@ -578,11 +541,14 @@ export const blogRouter = router({
     const { data, error, count } = await query;
 
     if (error) {
-      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      });
     }
 
     const posts = await Promise.all(
-      (data ?? []).map(async (post) => ({
+      (data ?? []).map(async post => ({
         ...post,
         cover_image: await resolveBlogCoverImage(db, post.cover_image),
       }))
@@ -612,7 +578,10 @@ export const blogRouter = router({
         .single();
 
       if (error || !data) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Article introuvable." });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Article introuvable.",
+        });
       }
 
       return {
@@ -635,7 +604,10 @@ export const blogRouter = router({
         .eq("id", input.id);
 
       if (error) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
 
       return { success: true };
@@ -645,7 +617,9 @@ export const blogRouter = router({
   // ADMIN — Refuser un article
   // ──────────────────────────────────────
   reject: adminProcedure
-    .input(z.object({ id: z.number().int(), note: z.string().max(500).optional() }))
+    .input(
+      z.object({ id: z.number().int(), note: z.string().max(500).optional() })
+    )
     .mutation(async ({ input }) => {
       const db = requireDb(getSupabaseAdminClient());
 
@@ -655,7 +629,10 @@ export const blogRouter = router({
         .eq("id", input.id);
 
       if (error) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
 
       return { success: true };
@@ -666,12 +643,12 @@ export const blogRouter = router({
   // ──────────────────────────────────────
   update: adminProcedure.input(updatePostSchema).mutation(async ({ input }) => {
     const db = requireDb(getSupabaseAdminClient());
-    const { id, coverImage, rejectionNote, ...rest } = input;
+    const { id, rejectionNote, ...rest } = input;
 
     const payload: Record<string, unknown> = { ...rest };
 
-    if (coverImage !== undefined) payload.cover_image = coverImage || null;
-    if (rejectionNote !== undefined) payload.rejection_note = rejectionNote || null;
+    if (rejectionNote !== undefined)
+      payload.rejection_note = rejectionNote || null;
 
     if (rest.title) {
       const baseSlug = slugify(rest.title);
@@ -688,7 +665,10 @@ export const blogRouter = router({
     const { error } = await db.from("blog_posts").update(payload).eq("id", id);
 
     if (error) {
-      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      });
     }
 
     return { success: true };
@@ -705,7 +685,10 @@ export const blogRouter = router({
       const { error } = await db.from("blog_posts").delete().eq("id", input.id);
 
       if (error) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
       }
 
       return { success: true };
@@ -718,16 +701,26 @@ export const blogRouter = router({
     const db = requireDb(getSupabaseAdminClient());
 
     const [pending, approved, rejected] = await Promise.all([
-      db.from("blog_posts").select("id", { count: "exact", head: true }).eq("status", "pending"),
-      db.from("blog_posts").select("id", { count: "exact", head: true }).eq("status", "approved"),
-      db.from("blog_posts").select("id", { count: "exact", head: true }).eq("status", "rejected"),
+      db
+        .from("blog_posts")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending"),
+      db
+        .from("blog_posts")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "approved"),
+      db
+        .from("blog_posts")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "rejected"),
     ]);
 
     return {
       pending: pending.count ?? 0,
       approved: approved.count ?? 0,
       rejected: rejected.count ?? 0,
-      total: (pending.count ?? 0) + (approved.count ?? 0) + (rejected.count ?? 0),
+      total:
+        (pending.count ?? 0) + (approved.count ?? 0) + (rejected.count ?? 0),
     };
   }),
 });
