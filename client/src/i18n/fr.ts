@@ -21,7 +21,7 @@ export const fr = {
     searchPlaceholder: 'Rechercher sur le site...',
     boutique: 'Boutique Solidaire',
     gallery: 'Galerie',
-    blog: 'Blog',
+    blog: 'Témoignage',
     team: "L'équipe Ftour",
   },
 

@@ -473,6 +473,11 @@ function LocalizedRoutes() {
       <Route path="/:lang/blog/:slug" component={BlogPost} />
       <Route path="/:lang/blog" component={BlogList} />
 
+      {/* Alias FR: Témoignage */}
+      <Route path="/:lang/temoignage/nouveau" component={BlogNew} />
+      <Route path="/:lang/temoignage/:slug" component={BlogPost} />
+      <Route path="/:lang/temoignage" component={BlogList} />
+
       {/* Équipe Ftour – Trombinoscope */}
       <Route path="/:lang/equipe-ftour" component={EquipeFtour} />
 
@@ -578,7 +583,16 @@ function LocalizedRoutes() {
         {() => <Redirect to={`/${lang}/profil-benevole`} />}
       </Route>
       <Route path="/blog">
-        {() => <Redirect to={`/${lang}/blog`} />}
+        {() => <Redirect to={`/${lang}/${lang === "fr" ? "temoignage" : "blog"}`} />}
+      </Route>
+      <Route path="/fr/blog/nouveau">
+        {() => <Redirect to="/fr/temoignage/nouveau" />}
+      </Route>
+      <Route path="/fr/blog/:slug">
+        {(params) => <Redirect to={`/fr/temoignage/${params.slug}`} />}
+      </Route>
+      <Route path="/fr/blog">
+        {() => <Redirect to="/fr/temoignage" />}
       </Route>
       <Route path="/equipe-ftour">
         {() => <Redirect to={`/${lang}/equipe-ftour`} />}
