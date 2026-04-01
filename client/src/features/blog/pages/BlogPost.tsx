@@ -225,7 +225,7 @@ export default function BlogPost() {
 
             {/* Texte riche */}
             <div
-              className="prose prose-amber max-w-none prose-headings:font-bold prose-headings:text-gray-900 prose-p:leading-relaxed prose-p:text-gray-800 prose-strong:text-gray-900 prose-li:text-gray-800 prose-blockquote:text-gray-800"
+              className="blog-content-readable prose prose-amber max-w-none prose-headings:font-bold prose-headings:text-gray-900 prose-p:leading-relaxed prose-p:text-gray-800 prose-strong:text-gray-900 prose-li:text-gray-800 prose-blockquote:text-gray-800"
               dangerouslySetInnerHTML={{ __html: post.content }}
             />
 

@@ -375,6 +375,12 @@
 }
 
 @layer utilities {
+  /* Garantit une lisibilité élevée du contenu riche du blog */
+  .blog-content-readable,
+  .blog-content-readable * {
+    color: #111827 !important;
+  }
+
   /* Animation utilities */
   .animate-float {
     animation: float 6s ease-in-out infinite;
