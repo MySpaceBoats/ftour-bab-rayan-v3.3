@@ -40,6 +40,7 @@ import AdminGalerieEdit from "@/features/gallery/admin/AdminGalerieEdit";
 import Login from "@/features/auth/pages/Login";
 import Signup from "@/features/auth/pages/Signup";
 import ForgotPassword from "@/features/auth/pages/ForgotPassword";
+import DemoAccess from "@/features/auth/pages/DemoAccess";
 
 // ============================================
 // RESTAURANT — features/restaurant
@@ -427,6 +428,7 @@ function LocalizedRoutes() {
       {/* ================================================
           HOMEPAGE
           ================================================ */}
+      <Route path="/demo" component={DemoAccess} />
       <Route path="/" component={Home} />
 
       {/* Blog Communautaire */}

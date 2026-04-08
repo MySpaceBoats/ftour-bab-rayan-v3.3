@@ -11,6 +11,7 @@ import {
   isSessionExpiringSoon,
   setStoredSession,
 } from "./_core/authSession";
+import { isDemoAccessEnabled } from "./_core/demoAccess";
 import { I18nProvider } from "./i18n";
 import "./index.css";
 
@@ -93,9 +94,10 @@ const trpcClient = trpc.createClient({
       transformer: superjson,
       async headers() {
         const session = getStoredSession();
+        const demoAccess = isDemoAccessEnabled();
 
         if (!session) {
-          return {};
+          return demoAccess ? { "x-demo-access": "1" } : {};
         }
 
         let accessToken = session.accessToken;
@@ -103,8 +105,13 @@ const trpcClient = trpc.createClient({
           accessToken = (await refreshAccessToken(session.refreshToken)) ?? '';
         }
 
-        if (!accessToken) return {};
-        return { Authorization: `Bearer ${accessToken}` };
+        if (!accessToken) {
+          return demoAccess ? { "x-demo-access": "1" } : {};
+        }
+
+        return demoAccess
+          ? { Authorization: `Bearer ${accessToken}`, "x-demo-access": "1" }
+          : { Authorization: `Bearer ${accessToken}` };
       },
       fetch(input, init) {
         return globalThis.fetch(input, {
