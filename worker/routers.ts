@@ -25,10 +25,25 @@ export const router = t.router;
 export const publicProcedure = t.procedure;
 
 // Protected procedure - requires authenticated user
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
+export const protectedProcedure = t.procedure.use(({ ctx, next, type }) => {
   if (!ctx.user) {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Non authentifié" });
   }
+
+  if (ctx.user.isDemo) {
+    if (type !== "query") {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Mode démonstration : écriture désactivée.",
+      });
+    }
+
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Mode démonstration : les données réelles ne sont pas accessibles.",
+    });
+  }
+
   return next({ ctx: { ...ctx, user: ctx.user } });
 });
 
