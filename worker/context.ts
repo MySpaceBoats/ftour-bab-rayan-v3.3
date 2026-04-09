@@ -16,6 +16,7 @@ export interface WorkerUser {
   createdAt: Date;
   updatedAt: Date;
   lastSignedIn: Date;
+  isDemo?: boolean;
 }
 
 export interface WorkerContext {
@@ -89,6 +90,24 @@ export async function createWorkerContext(req: Request, env: Env): Promise<Worke
   let user: WorkerUser | null = null;
 
   try {
+    const demoAccessHeader = req.headers.get('x-demo-access');
+    if (demoAccessHeader === '1') {
+      const now = new Date();
+      user = {
+        id: -1,
+        openId: 'demo-access',
+        name: 'Compte Démo',
+        email: 'demo@ftourbabrayan.local',
+        phone: null,
+        role: 'super_admin',
+        createdAt: now,
+        updatedAt: now,
+        lastSignedIn: now,
+        isDemo: true,
+      };
+      return { req, env, user };
+    }
+
     // Get Authorization header
     const authHeader = req.headers.get('authorization');
     if (authHeader && authHeader.startsWith('Bearer ')) {

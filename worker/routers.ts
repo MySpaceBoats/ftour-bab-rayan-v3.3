@@ -25,10 +25,20 @@ export const router = t.router;
 export const publicProcedure = t.procedure;
 
 // Protected procedure - requires authenticated user
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
+export const protectedProcedure = t.procedure.use(({ ctx, next, type }) => {
   if (!ctx.user) {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Non authentifié" });
   }
+
+  if (ctx.user.isDemo) {
+    if (type !== "query") {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Mode démonstration : écriture désactivée.",
+      });
+    }
+  }
+
   return next({ ctx: { ...ctx, user: ctx.user } });
 });
 
@@ -95,6 +105,40 @@ const SITE_FEEDBACK_SOURCES = [
   "product",
 ] as const;
 const SITE_FEEDBACK_STATUSES = ["new", "processed"] as const;
+const DEMO_NOW_ISO = "2026-04-09T12:00:00.000Z";
+
+const DEMO_USERS = [
+  {
+    id: 9001,
+    openId: "demo-user-1",
+    name: "Leila Demo",
+    email: "leila.demo@ftourbabrayan.ma",
+    phone: "0600000001",
+    role: "admin_ops",
+    createdAt: "2026-03-01T10:00:00.000Z",
+    lastSignedIn: DEMO_NOW_ISO,
+  },
+  {
+    id: 9002,
+    openId: "demo-user-2",
+    name: "Yassine Demo",
+    email: "yassine.demo@ftourbabrayan.ma",
+    phone: "0600000002",
+    role: "admin_boutique",
+    createdAt: "2026-03-02T11:00:00.000Z",
+    lastSignedIn: DEMO_NOW_ISO,
+  },
+  {
+    id: 9003,
+    openId: "demo-user-3",
+    name: "Sara Demo",
+    email: "sara.demo@ftourbabrayan.ma",
+    phone: "0600000003",
+    role: "admin_dons",
+    createdAt: "2026-03-03T12:00:00.000Z",
+    lastSignedIn: DEMO_NOW_ISO,
+  },
+] as const;
 
 const catalogProductTypeEnum = z.enum(["goodies", "terroir", "patisserie"]);
 const catalogProductSelect =
@@ -3693,6 +3737,15 @@ const volunteersRouter = router({
     }),
 
   stats: adminProcedure.query(async ({ ctx }) => {
+    if (ctx.user?.isDemo) {
+      return {
+        total: 24,
+        present: 18,
+        registered: 4,
+        absent: 2,
+      };
+    }
+
     const supabase = createSupabaseAdmin(ctx.env);
 
     const { count: total } = await supabase
@@ -5307,6 +5360,25 @@ const ordersRouter = router({
     }),
 
   listAll: adminProcedure.query(async ({ ctx }) => {
+    if (ctx.user?.isDemo) {
+      return [
+        {
+          id: 7001,
+          orderReference: "DEMO-GOODIES-001",
+          customerName: "Leila Demo",
+          customerEmail: "leila.demo@ftourbabrayan.ma",
+          customerPhone: "0600000001",
+          totalAmount: 350,
+          status: "reserved",
+          pickupDate: "2026-04-10",
+          pickupLocation: "Stand Démo A",
+          notes: "Commande de démonstration",
+          createdAt: "2026-04-08T10:30:00.000Z",
+          items: [],
+        },
+      ];
+    }
+
     const supabase = createSupabaseAdmin(ctx.env);
 
     const { data, error } = await supabase
@@ -5566,6 +5638,25 @@ const donationsRouter = router({
     }),
 
   listAll: adminProcedure.query(async ({ ctx }) => {
+    if (ctx.user?.isDemo) {
+      return [
+        {
+          id: 7101,
+          donationReference: "DEMO-DON-001",
+          donorName: "Yassine Demo",
+          donorEmail: "yassine.demo@ftourbabrayan.ma",
+          donorPhone: "0600000002",
+          amount: 500,
+          paymentMethod: "transfer",
+          status: "pending",
+          message: "Don fictif",
+          isAnonymous: false,
+          acceptsUpdates: true,
+          createdAt: "2026-04-08T09:15:00.000Z",
+        },
+      ];
+    }
+
     const supabase = createSupabaseAdmin(ctx.env);
 
     const { data, error } = await supabase
@@ -5937,6 +6028,24 @@ const pastryOrdersRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
+      if (ctx.user?.isDemo) {
+        return [
+          {
+            id: 7201,
+            reference: "DEMO-PASTRY-001",
+            customer_name: "Sara Demo",
+            phone: "0600000003",
+            email: "sara.demo@ftourbabrayan.ma",
+            items: [],
+            total_amount: 220,
+            payment_method: "cash",
+            payment_status: "pending",
+            order_status: "reserved",
+            created_at: "2026-04-08T08:45:00.000Z",
+          },
+        ];
+      }
+
       const supabase = createSupabaseAdmin(ctx.env);
 
       let query = supabase.from("pastry_orders").select("*");
@@ -6130,6 +6239,10 @@ const contactRouter = router({
 
 const usersRouter = router({
   list: superAdminProcedure.query(async ({ ctx }) => {
+    if (ctx.user?.isDemo) {
+      return DEMO_USERS;
+    }
+
     const supabase = createSupabaseAdmin(ctx.env);
 
     const { data, error } = await supabase
@@ -8782,6 +8895,22 @@ const terroirModuleRouter = router({
         .optional()
     )
     .query(async ({ ctx, input }) => {
+      if (ctx.user?.isDemo) {
+        return [
+          {
+            id: 7301,
+            order_reference: "DEMO-TERROIR-001",
+            customer_name: "Leila Demo",
+            customer_phone: "0600000001",
+            total_amount: 180,
+            payment_status: "pending",
+            status: "created",
+            created_at: "2026-04-08T11:00:00.000Z",
+            terroir_order_items: [],
+          },
+        ];
+      }
+
       const supabase = createSupabaseAdmin(ctx.env);
       let query = supabase
         .from("terroir_orders")

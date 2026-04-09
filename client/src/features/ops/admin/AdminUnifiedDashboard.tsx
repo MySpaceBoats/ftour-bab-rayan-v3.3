@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { isDemoAccessEnabled } from '@/_core/demoAccess';
 import { toast } from 'sonner';
 import {
   ArrowLeft, CheckCircle, CreditCard, Download, ExternalLink,
@@ -73,6 +74,21 @@ export default function AdminUnifiedDashboard() {
 
   const fetchEntrees = useCallback(() => {
     if (!canReadEntrees) return;
+    if (isDemoAccessEnabled()) {
+      setCashOrders([
+        {
+          id: 'demo-entree-1',
+          reference: 'DEMO-ENTREE-001',
+          status: 'RESERVED',
+          customer_first_name: 'Compte',
+          customer_last_name: 'Démo',
+          total_mad: 140,
+          created_at: '2026-04-08T07:00:00.000Z',
+        },
+      ]);
+      return;
+    }
+
     setCashLoading(true);
     fetch('/api/orders')
       .then(async (res) => {
