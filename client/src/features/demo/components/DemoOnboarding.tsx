@@ -63,14 +63,16 @@ export function DemoOnboarding({ forceOpen = false, onClose }: DemoOnboardingPro
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="bg-white text-slate-900 sm:max-w-md">
         <DialogHeader>
           <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
             <Icon className="h-6 w-6" aria-hidden="true" />
           </div>
-          <DialogTitle className="text-left text-xl">{current.title}</DialogTitle>
+          <DialogTitle className="text-left text-xl text-slate-900">
+            {current.title}
+          </DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-slate-600">{current.body}</p>
+        <p className="text-sm font-medium text-slate-700">{current.body}</p>
 
         <div className="mt-4 flex items-center justify-between">
           <div className="flex gap-1.5" aria-label="Progression onboarding">
