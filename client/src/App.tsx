@@ -202,7 +202,7 @@ import AdminElections from "@/features/election/admin/AdminElections";
 // ============================================
 
 function LocalizedRoutes() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { lang, setLang } = useI18n();
 
   // Scroll to top on route change
@@ -229,6 +229,21 @@ function LocalizedRoutes() {
       }
     }
   }, [location, lang, setLang]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (location.startsWith("/admin3")) {
+      sessionStorage.setItem("public-admin3-mode", "1");
+      return;
+    }
+
+    const publicAdmin3Mode = sessionStorage.getItem("public-admin3-mode") === "1";
+    if (!publicAdmin3Mode) return;
+    if (!location.startsWith("/admin/")) return;
+
+    setLocation(location.replace(/^\/admin(\/|$)/, "/admin3$1"));
+  }, [location, setLocation]);
 
   useEffect(() => {
     const endpoint = import.meta.env.VITE_ANALYTICS_ENDPOINT as
