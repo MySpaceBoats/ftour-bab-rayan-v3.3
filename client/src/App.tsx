@@ -259,6 +259,7 @@ function LocalizedRoutes() {
           ADMIN ROUTES — sans :lang (section 4.2)
           ================================================ */}
       <Route path="/admin" component={AdminDashboard} />
+      <Route path="/admin3" component={AdminDashboard} />
       <Route
         path="/admin/unified-dashboard"
         component={AdminUnifiedDashboard}
