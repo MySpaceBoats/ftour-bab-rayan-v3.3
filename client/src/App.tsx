@@ -43,6 +43,16 @@ import ForgotPassword from "@/features/auth/pages/ForgotPassword";
 import DemoAccess from "@/features/auth/pages/DemoAccess";
 
 // ============================================
+// DEMO SANDBOX — features/demo
+// ============================================
+import DemoLanding from "@/features/demo/pages/DemoLanding";
+import DemoDashboard from "@/features/demo/pages/DemoDashboard";
+import DemoUtilisateurs from "@/features/demo/pages/DemoUtilisateurs";
+import DemoDons from "@/features/demo/pages/DemoDons";
+import DemoFtour from "@/features/demo/pages/DemoFtour";
+import DemoPartenaires from "@/features/demo/pages/DemoPartenaires";
+
+// ============================================
 // RESTAURANT — features/restaurant
 // ============================================
 import RestaurantGroupes from "@/features/restaurant/pages/RestaurantGroupes";
@@ -428,7 +438,17 @@ function LocalizedRoutes() {
       {/* ================================================
           HOMEPAGE
           ================================================ */}
-      <Route path="/demo" component={DemoAccess} />
+      {/* ================================================
+          DEMO SANDBOX — /demo/* (données fictives locales)
+          ================================================ */}
+      <Route path="/demo-access" component={DemoAccess} />
+      <Route path="/demo/dashboard" component={DemoDashboard} />
+      <Route path="/demo/utilisateurs" component={DemoUtilisateurs} />
+      <Route path="/demo/dons" component={DemoDons} />
+      <Route path="/demo/ftour" component={DemoFtour} />
+      <Route path="/demo/partenaires" component={DemoPartenaires} />
+      <Route path="/demo" component={DemoLanding} />
+
       <Route path="/" component={Home} />
 
       {/* Blog Communautaire */}
