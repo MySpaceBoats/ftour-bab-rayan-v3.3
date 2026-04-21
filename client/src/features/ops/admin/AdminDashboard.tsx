@@ -617,6 +617,8 @@ export default function Admin() {
   }
 
   const userRole = isPublicAdminAccess ? "super_admin" : (user?.role || "");
+  const getModuleHref = (route: string) =>
+    isPublicAdminAccess ? route.replace(/^\/admin(\/|$)/, "/admin3$1") : route;
   const activeDays = days?.filter(d => d.isOpen).length || 0;
   const totalDays = days?.length || 0;
 
@@ -798,7 +800,7 @@ export default function Admin() {
                     <p className="text-sm text-muted-foreground mb-4">
                       {mod.description}
                     </p>
-                    <Link href={mod.route}>
+                    <Link href={getModuleHref(mod.route)}>
                       <Button
                         variant={
                           mod.variant === "primary" ? "default" : "outline"

@@ -382,6 +382,70 @@ function LocalizedRoutes() {
       <Route path="/admin/feedback/evenement" component={AdminEventFeedback} />
       <Route path="/admin/feedback" component={AdminFeedback} />
 
+      {/* ADMIN3 ROUTES — alias public pour les modules admin */}
+      <Route
+        path="/admin3/unified-dashboard"
+        component={AdminUnifiedDashboard}
+      />
+      <Route
+        path="/admin3/restaurant/groupes"
+        component={AdminRestaurantGroupes}
+      />
+      <Route
+        path="/admin3/restaurant/entreprises"
+        component={AdminRestaurantEntreprises}
+      />
+      <Route path="/admin3/restaurants" component={AdminRestaurants} />
+      <Route
+        path="/admin3/restaurant-reservations"
+        component={AdminRestaurantReservations}
+      />
+      <Route path="/admin3/reservations" component={AdminRestaurantReservations} />
+      <Route path="/admin3/reservations-calendar" component={AdminReservationsCalendar} />
+      <Route path="/admin3/scan-reservation" component={AdminScanReservation} />
+      <Route path="/admin3/patisserie" component={AdminPastries} />
+      <Route path="/admin3/pastries" component={AdminPastries} />
+      <Route path="/admin3/patisserie/catalogue" component={AdminPastryCatalog} />
+      <Route path="/admin3/terroir/products" component={AdminTerroirProducts} />
+      <Route path="/admin3/terroir/orders" component={AdminTerroirOrders} />
+      <Route path="/admin3/goodies" component={AdminGoodies} />
+      <Route path="/admin3/catalogue/goodies">{() => <AdminGoodies />}</Route>
+      <Route path="/admin3/catalogue/terroir">{() => <AdminTerroirProducts />}</Route>
+      <Route path="/admin3/catalogue/patisserie">{() => <AdminPastryCatalog />}</Route>
+      <Route path="/admin3/commandes" component={AdminCommandes} />
+      <Route path="/admin3/dons" component={AdminDons} />
+      <Route path="/admin3/benevoles" component={AdminBenevoles} />
+      <Route path="/admin3/benevoles-groupes" component={AdminGroupesBenevoles} />
+      <Route path="/admin3/jours" component={AdminJours} />
+      <Route path="/admin3/ramadan-stats" component={AdminRamadanStats} />
+      <Route path="/admin3/cards" component={AdminMemberCards} />
+      <Route path="/admin3/scan-product" component={AdminScanProduct} />
+      <Route path="/admin3/payments" component={AdminPayments} />
+      <Route path="/admin3/utilisateurs" component={AdminUtilisateurs} />
+      <Route path="/admin3/qr-codes" component={AdminQRCodes} />
+      <Route path="/admin3/catalogue-unifie" component={AdminUnifiedCatalog} />
+      <Route path="/admin3/logs" component={AdminAuditLogs} />
+      <Route path="/admin3/orders-cash" component={AdminCashOrders} />
+      <Route path="/admin3/galerie" component={AdminGalerie} />
+      <Route path="/admin3/galerie/nouveau" component={AdminGalerieNouveau} />
+      <Route path="/admin3/galerie/:id" component={AdminGalerieEdit} />
+      <Route path="/admin3/inventory" component={AdminInventory} />
+      <Route path="/admin3/inventory/products" component={AdminInventoryProducts} />
+      <Route path="/admin3/inventory/events" component={AdminInventoryEvents} />
+      <Route path="/admin3/inventory/movements" component={AdminInventoryMovements} />
+      <Route path="/admin3/inventory/stock-entry" component={AdminInventoryStockEntry} />
+      <Route path="/admin3/inventory/stock-entry/:productId" component={AdminInventoryStockEntryProduct} />
+      <Route path="/admin3/contenu" component={AdminContenu} />
+      <Route path="/admin3/messages" component={AdminMessages} />
+      <Route path="/admin3/ftour" component={AdminFtour} />
+      <Route path="/admin3/equipe" component={AdminTeam} />
+      <Route path="/admin3/event-photos" component={AdminEventPhotos} />
+      <Route path="/admin3/elections" component={AdminElections} />
+      <Route path="/admin3/blog" component={AdminBlog} />
+      <Route path="/admin3/feedback/campagnes" component={AdminFeedbackCampagnes} />
+      <Route path="/admin3/feedback/evenement" component={AdminEventFeedback} />
+      <Route path="/admin3/feedback" component={AdminFeedback} />
+
       {/* ================================================
           SCANNER — route unique (section 4.3)
           ================================================ */}
