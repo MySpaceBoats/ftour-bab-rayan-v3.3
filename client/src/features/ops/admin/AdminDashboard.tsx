@@ -515,17 +515,20 @@ const sections: SectionDefinition[] = [
 
 export default function Admin() {
   const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
+  const isPublicAdminAccess = location === "/admin3";
 
-  const isAdmin = user?.role && ALL_ADMIN_ROLES.includes(user.role);
-  const isSuperAdmin = user?.role === "super_admin";
+  const isAdmin = Boolean(user?.role && ALL_ADMIN_ROLES.includes(user.role));
+  const isSuperAdmin = user?.role === "super_admin" || isPublicAdminAccess;
   const canManageVolunteers =
-    user?.role &&
+    isPublicAdminAccess ||
+    (user?.role &&
     ["admin", "super_admin", "admin_ops", "admin_operations"].includes(
       user.role
-    );
+    ));
   const canReadAdminDashboard =
-    user?.role &&
+    isPublicAdminAccess ||
+    (user?.role &&
     [
       "admin",
       "super_admin",
@@ -541,15 +544,15 @@ export default function Admin() {
       "admin_contenu",
       "admin_messages",
       "scanner",
-    ].includes(user.role);
+    ].includes(user.role));
 
   const { data: volunteerStats } = trpc.volunteers.stats.useQuery(undefined, {
-    enabled: isAuthenticated && !!canManageVolunteers,
+    enabled: isAuthenticated && !isPublicAdminAccess && !!canManageVolunteers,
   });
 
   const { data: adminDashboard } = useQuery({
     queryKey: ["admin-dashboard", 1, 50],
-    enabled: isAuthenticated && !!canReadAdminDashboard,
+    enabled: isAuthenticated && !isPublicAdminAccess && !!canReadAdminDashboard,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
     queryFn: async () => {
@@ -568,13 +571,15 @@ export default function Admin() {
     },
   });
 
-  const { data: days } = trpc.days.list.useQuery();
+  const { data: days } = trpc.days.list.useQuery(undefined, {
+    enabled: isAuthenticated || !isPublicAdminAccess,
+  });
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (!isPublicAdminAccess && !authLoading && !isAuthenticated) {
       window.location.href = getLoginUrl();
     }
-  }, [authLoading, isAuthenticated]);
+  }, [authLoading, isAuthenticated, isPublicAdminAccess]);
 
   const handleLogout = async () => {
     await logout();
@@ -589,7 +594,7 @@ export default function Admin() {
     );
   }
 
-  if (!isAdmin) {
+  if (!isPublicAdminAccess && !isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="max-w-md w-full">
@@ -611,7 +616,9 @@ export default function Admin() {
     );
   }
 
-  const userRole = user?.role || "";
+  const userRole = isPublicAdminAccess ? "super_admin" : (user?.role || "");
+  const getModuleHref = (route: string) =>
+    isPublicAdminAccess ? route.replace(/^\/admin(\/|$)/, "/admin3$1") : route;
   const activeDays = days?.filter(d => d.isOpen).length || 0;
   const totalDays = days?.length || 0;
 
@@ -641,14 +648,18 @@ export default function Admin() {
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-sm font-medium">{user?.name || user?.email}</p>
+              <p className="text-sm font-medium">
+                {user?.name || user?.email || "Accès public admin3"}
+              </p>
               <p className="text-xs text-muted-foreground capitalize">
-                {user?.role?.replace(/_/g, " ")}
+                {(user?.role || "public_access")?.replace(/_/g, " ")}
               </p>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleLogout}>
-              <LogOut className="h-5 w-5" />
-            </Button>
+            {!isPublicAdminAccess && (
+              <Button variant="ghost" size="icon" onClick={handleLogout}>
+                <LogOut className="h-5 w-5" />
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -789,7 +800,7 @@ export default function Admin() {
                     <p className="text-sm text-muted-foreground mb-4">
                       {mod.description}
                     </p>
-                    <Link href={mod.route}>
+                    <Link href={getModuleHref(mod.route)}>
                       <Button
                         variant={
                           mod.variant === "primary" ? "default" : "outline"

@@ -30,7 +30,8 @@ export default function RequireRole({
   redirectTo = "/admin",
 }: RequireRoleProps) {
   const { user, isAuthenticated, loading } = useAuth();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
+  const isPublicAdminAccess = location.startsWith("/admin3");
 
   // Résoudre les rôles : RBAC centralisé (route) > allowedRoles explicite
   const resolvedRoles: readonly string[] = route
@@ -38,10 +39,10 @@ export default function RequireRole({
     : (allowedRoles ?? []);
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
+    if (!isPublicAdminAccess && !loading && !isAuthenticated) {
       window.location.href = getLoginUrl();
     }
-  }, [loading, isAuthenticated]);
+  }, [loading, isAuthenticated, isPublicAdminAccess]);
 
   if (loading) {
     return (
@@ -51,7 +52,7 @@ export default function RequireRole({
     );
   }
 
-  if (!isAuthenticated || !user?.role || !resolvedRoles.includes(user.role)) {
+  if (!isPublicAdminAccess && (!isAuthenticated || !user?.role || !resolvedRoles.includes(user.role))) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="max-w-md w-full">
