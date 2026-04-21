@@ -61,6 +61,8 @@ const refreshAccessToken = async (refreshToken: string): Promise<string | null> 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
   if (typeof window === "undefined") return;
+  const isPublicAdmin3 = window.location.pathname.startsWith("/admin3");
+  if (isPublicAdmin3) return;
 
   const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
   if (!isUnauthorized) return;
