@@ -1,6 +1,5 @@
 // =============================================================================
 // Types — Demo Ftour Bab Rayan
-// Tous les types décrivent des données 100% fictives, simulées côté client.
 // =============================================================================
 
 export type UserRole = "benevole" | "beneficiaire" | "donateur";
@@ -13,15 +12,12 @@ export interface DemoUser {
   phone: string;
   email: string;
   city: string;
-  avatar: string; // initiales ou emoji
-  joinedAt: string; // ISO date
-  // Spécifique bénévoles
+  avatar: string;
+  joinedAt: string;
   hours?: number;
   missions?: number;
-  // Spécifique bénéficiaires
   ftoursReceived?: number;
   familySize?: number;
-  // Spécifique donateurs
   totalDonated?: number;
   donationsCount?: number;
 }
@@ -33,16 +29,16 @@ export interface DemoDonation {
   id: string;
   donorName: string;
   donorId?: string;
-  amount: number; // en MAD
+  amount: number;
   method: DonationMethod;
   status: DonationStatus;
-  createdAt: string; // ISO
+  createdAt: string;
   note?: string;
 }
 
 export interface DemoFtourDay {
   id: string;
-  date: string; // YYYY-MM-DD
+  date: string;
   plannedMeals: number;
   servedMeals: number;
   volunteersCount: number;
@@ -58,12 +54,12 @@ export interface DemoPartner {
   name: string;
   sector: string;
   tier: PartnerTier;
-  contribution: number; // MAD
+  contribution: number;
   contactName: string;
   contactEmail: string;
   city: string;
-  since: string; // ISO
-  logo: string; // emoji
+  since: string;
+  logo: string;
 }
 
 export type ActivityType =
@@ -71,16 +67,122 @@ export type ActivityType =
   | "volunteer_checkin"
   | "ftour_served"
   | "partner_join"
-  | "user_signup";
+  | "user_signup"
+  | "reservation_new"
+  | "order_paid";
 
 export interface DemoActivity {
   id: string;
   type: ActivityType;
   label: string;
-  createdAt: string; // ISO
+  createdAt: string;
   actor: string;
   meta?: Record<string, string | number>;
 }
+
+// ============================================
+// Réservations restaurant
+// ============================================
+
+export type ReservationType = "particulier" | "groupe" | "entreprise";
+export type ReservationStatus =
+  | "confirmee"
+  | "en_attente"
+  | "annulee"
+  | "terminee";
+
+export interface DemoReservation {
+  id: string;
+  reference: string;
+  customerName: string;
+  type: ReservationType;
+  status: ReservationStatus;
+  guests: number;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM
+  phone: string;
+  email: string;
+  note?: string;
+  createdAt: string;
+  totalAmount: number; // MAD
+}
+
+// ============================================
+// Boutique / Commandes
+// ============================================
+
+export type OrderCategory = "goodies" | "terroir" | "patisserie";
+export type OrderStatus = "en_preparation" | "prete" | "livree" | "annulee";
+
+export interface DemoOrderItem {
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface DemoOrder {
+  id: string;
+  reference: string;
+  customerName: string;
+  category: OrderCategory;
+  status: OrderStatus;
+  items: DemoOrderItem[];
+  total: number;
+  createdAt: string;
+  city: string;
+}
+
+// ============================================
+// Inventaire produits
+// ============================================
+
+export type ProductUnit = "u" | "kg" | "l" | "pack";
+
+export interface DemoProduct {
+  id: string;
+  name: string;
+  category: OrderCategory | "ingredients" | "logistique";
+  unit: ProductUnit;
+  stock: number;
+  threshold: number;
+  unitCost: number; // MAD
+  lastMovementAt: string;
+}
+
+// ============================================
+// Équipe / Trombinoscope
+// ============================================
+
+export interface DemoTeamMember {
+  id: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  avatar: string; // initials
+  city: string;
+  joinedAt: string;
+  bio: string;
+}
+
+// ============================================
+// Blog / Témoignages
+// ============================================
+
+export interface DemoBlogPost {
+  id: string;
+  title: string;
+  excerpt: string;
+  author: string;
+  publishedAt: string;
+  reactions: number;
+  comments: number;
+  tag: string;
+  cover: string; // emoji
+}
+
+// ============================================
+// Dataset complet
+// ============================================
 
 export interface DemoDataset {
   version: number;
@@ -90,4 +192,9 @@ export interface DemoDataset {
   ftourDays: DemoFtourDay[];
   partners: DemoPartner[];
   activity: DemoActivity[];
+  reservations: DemoReservation[];
+  orders: DemoOrder[];
+  products: DemoProduct[];
+  team: DemoTeamMember[];
+  blogPosts: DemoBlogPost[];
 }

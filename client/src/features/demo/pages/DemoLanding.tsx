@@ -5,35 +5,37 @@ import {
   BarChart3,
   HandCoins,
   Handshake,
-  ShieldCheck,
-  Sparkles,
   UtensilsCrossed,
   Users,
+  ShoppingBag,
+  CalendarDays,
+  Boxes,
+  Newspaper,
+  UserCheck,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
- * Landing page publique indexable pour /demo.
- * - SEO friendly : titre, meta description, JSON-LD
- * - Explique la valeur de la démo sans rien casser de la prod
+ * Landing publique et indexable pour /demo.
  */
 export default function DemoLanding() {
   useEffect(() => {
-    document.title = "Démo interactive — Ftour Bab Rayan";
+    document.title = "Aperçu interactif — Ftour Bab Rayan";
 
     const metaDesc = ensureMeta("name", "description");
     metaDesc.setAttribute(
       "content",
-      "Explorez librement la plateforme Ftour Bab Rayan en mode démo : dashboard, dons, bénévoles, ftours et partenaires — avec des données 100% fictives.",
+      "Découvrez la plateforme de pilotage Ftour Bab Rayan : dashboards, dons, ftours, partenaires, réservations, boutique, inventaire, équipe et témoignages.",
     );
 
     const ogTitle = ensureMeta("property", "og:title");
-    ogTitle.setAttribute("content", "Démo interactive — Ftour Bab Rayan");
+    ogTitle.setAttribute("content", "Aperçu interactif — Ftour Bab Rayan");
 
     const ogDesc = ensureMeta("property", "og:description");
     ogDesc.setAttribute(
       "content",
-      "Testez toutes les fonctionnalités sans inscription. Aucune donnée réelle, aucun risque.",
+      "Explorez la plateforme utilisée pour orchestrer l'opération Ftour Bab Rayan.",
     );
 
     const robots = ensureMeta("name", "robots");
@@ -45,12 +47,12 @@ export default function DemoLanding() {
     jsonLd.text = JSON.stringify({
       "@context": "https://schema.org",
       "@type": "WebApplication",
-      name: "Ftour Bab Rayan — Demo",
+      name: "Ftour Bab Rayan — Plateforme",
       applicationCategory: "NonprofitApplication",
       operatingSystem: "Web",
       url: "https://www.ftourbabrayan.ma/demo",
       description:
-        "Version de démonstration simulée de la plateforme Ftour Bab Rayan avec données fictives.",
+        "Plateforme associative de pilotage des dons, ftours, bénévoles et partenaires de l'opération Ftour Bab Rayan.",
     });
     document.head.appendChild(jsonLd);
     return () => {
@@ -79,36 +81,35 @@ export default function DemoLanding() {
       <main className="mx-auto max-w-6xl px-4 py-12 lg:px-10 lg:py-20">
         <section className="grid items-center gap-10 lg:grid-cols-2">
           <div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900 ring-1 ring-inset ring-amber-300">
-              <Sparkles className="h-3.5 w-3.5" />
-              Sandbox public · Aucune donnée réelle
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-800 ring-1 ring-inset ring-orange-200">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Espace d'aperçu
             </span>
             <h1 className="mt-5 text-3xl font-bold leading-tight tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
-              Explorez Ftour Bab Rayan{" "}
-              <span className="text-orange-600">comme si c'était réel.</span>
+              La plateforme qui orchestre{" "}
+              <span className="text-orange-600">Ftour Bab Rayan.</span>
             </h1>
             <p className="mt-4 text-base text-slate-600 sm:text-lg">
-              Une démonstration interactive complète du système associatif — dashboard,
-              dons, bénévoles, ftours et partenaires — entièrement simulée côté navigateur.
-              Aucun compte, aucun risque, aucun lien avec nos données de production.
+              Dons, bénévoles, ftours, réservations, boutique, inventaire, équipe
+              et témoignages — un outil unique pour piloter l'ensemble de
+              l'opération, du tableau de bord stratégique jusqu'au terrain.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link href="/demo/dashboard">
                 <Button size="lg" className="bg-orange-600 text-white hover:bg-orange-700">
-                  Lancer la démo
+                  Entrer dans la plateforme
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
               <Link href="/demo/dons">
                 <Button variant="outline" size="lg">
-                  Voir les dons simulés
+                  Voir l'impact des dons
                 </Button>
               </Link>
             </div>
-            <div className="mt-6 flex items-center gap-2 text-xs text-slate-500">
-              <ShieldCheck className="h-4 w-4 text-emerald-500" />
-              Sandbox total · Stockage local · Aucune API serveur appelée
-            </div>
+            <p className="mt-6 text-xs text-slate-500">
+              Environnement d'aperçu · libre d'accès · sans inscription
+            </p>
           </div>
 
           <div className="relative">
@@ -119,11 +120,13 @@ export default function DemoLanding() {
                   <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
                     Aperçu
                   </div>
-                  <div className="text-base font-semibold text-slate-900">Impact cumulé</div>
+                  <div className="text-base font-semibold text-slate-900">
+                    Impact cumulé
+                  </div>
                 </div>
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-                  Live simulé
+                  En direct
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -146,11 +149,15 @@ export default function DemoLanding() {
         </section>
 
         <section className="mt-20" aria-labelledby="modules-heading">
-          <h2 id="modules-heading" className="text-center text-2xl font-bold text-slate-900 sm:text-3xl">
-            Tout le système est accessible librement
+          <h2
+            id="modules-heading"
+            className="text-center text-2xl font-bold text-slate-900 sm:text-3xl"
+          >
+            Tous les outils de l'opération, au même endroit
           </h2>
           <p className="mx-auto mt-2 max-w-2xl text-center text-slate-600">
-            5 modules clés, entièrement simulés. Modifiez, ajoutez, réinitialisez à volonté.
+            Une suite complète pour coordonner les équipes, suivre les finances et
+            amplifier l'impact social.
           </p>
 
           <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -158,19 +165,19 @@ export default function DemoLanding() {
               to="/demo/dashboard"
               icon={BarChart3}
               title="Tableau de bord"
-              desc="KPI fictifs, graphiques interactifs et activité live simulée."
+              desc="Vision 360° sur les dons, repas servis, bénévoles et partenaires."
             />
             <ModuleCard
               to="/demo/utilisateurs"
               icon={Users}
               title="Utilisateurs"
-              desc="Bénévoles, bénéficiaires et donateurs avec fiches éditables."
+              desc="Bénévoles, bénéficiaires et donateurs avec fiches détaillées."
             />
             <ModuleCard
               to="/demo/dons"
               icon={HandCoins}
               title="Dons"
-              desc="Historique complet, charts Recharts et ajout de faux dons."
+              desc="Historique, graphiques et outils de collecte multicanaux."
             />
             <ModuleCard
               to="/demo/ftour"
@@ -179,16 +186,40 @@ export default function DemoLanding() {
               desc="Planning des repas, menus et statistiques journalières."
             />
             <ModuleCard
+              to="/demo/reservations"
+              icon={CalendarDays}
+              title="Réservations"
+              desc="Particuliers, groupes et entreprises pour l'iftar restaurant."
+            />
+            <ModuleCard
+              to="/demo/boutique"
+              icon={ShoppingBag}
+              title="Boutique"
+              desc="Commandes goodies, terroir et pâtisseries avec suivi en temps réel."
+            />
+            <ModuleCard
+              to="/demo/inventaire"
+              icon={Boxes}
+              title="Inventaire"
+              desc="Stocks, alertes et mouvements produits, sous contrôle."
+            />
+            <ModuleCard
+              to="/demo/equipe"
+              icon={UserCheck}
+              title="Équipe"
+              desc="Trombinoscope des responsables et référents de l'édition."
+            />
+            <ModuleCard
+              to="/demo/blog"
+              icon={Newspaper}
+              title="Témoignages"
+              desc="Histoires de bénévoles, coulisses et paroles de la communauté."
+            />
+            <ModuleCard
               to="/demo/partenaires"
               icon={Handshake}
               title="Partenaires"
-              desc="Entreprises fictives, paliers et contributions simulées."
-            />
-            <ModuleCard
-              to="/demo/dashboard"
-              icon={ShieldCheck}
-              title="Sandbox"
-              desc="Reset et régénération des données en un clic."
+              desc="Entreprises engagées, paliers de partenariat et contributions."
             />
           </div>
         </section>
@@ -196,16 +227,16 @@ export default function DemoLanding() {
         <section className="mt-20 rounded-2xl border border-slate-200 bg-white p-6 sm:p-10">
           <div className="grid gap-8 md:grid-cols-3">
             <Principle
-              title="100% simulé"
-              body="Toutes les données sont générées aléatoirement et stockées uniquement dans votre navigateur (localStorage)."
+              title="Pensée pour l'impact"
+              body="Chaque module est conçu pour accélérer la coordination sur le terrain et amplifier l'effet de chaque euro collecté."
             />
             <Principle
-              title="Zéro risque"
-              body="Aucune API réelle n'est appelée. Aucune écriture serveur. Idéal pour démonstrations commerciales et partenaires."
+              title="Prête à l'échelle"
+              body="Réservations particulières, groupes, entreprises, boutique multi-catégories : la plateforme absorbe la montée en charge."
             />
             <Principle
-              title="Reset à volonté"
-              body="« Générer de nouvelles données » ou « Reset démo » à tout moment depuis n'importe quelle page."
+              title="Transparence intégrée"
+              body="Indicateurs clairs, journaux d'activité en direct, rapports partageables avec les partenaires et donateurs."
             />
           </div>
         </section>
@@ -213,7 +244,7 @@ export default function DemoLanding() {
 
       <footer className="border-t border-slate-200 bg-white py-6">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 text-xs text-slate-500 sm:flex-row lg:px-10">
-          <span>© Ftour Bab Rayan — Espace de démonstration</span>
+          <span>© Ftour Bab Rayan</span>
           <Link href="/" className="hover:text-slate-700">
             ftourbabrayan.ma
           </Link>
@@ -251,7 +282,9 @@ function PreviewStat({
   } as const;
   return (
     <div className={`rounded-lg px-3 py-2 ${tones[tone]}`}>
-      <div className="text-[10px] font-medium uppercase tracking-wide opacity-70">{label}</div>
+      <div className="text-[10px] font-medium uppercase tracking-wide opacity-70">
+        {label}
+      </div>
       <div className="text-base font-bold">{value}</div>
     </div>
   );

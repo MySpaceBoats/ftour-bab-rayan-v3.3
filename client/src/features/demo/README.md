@@ -25,6 +25,11 @@ client/src/features/demo/
     ├── DemoUtilisateurs.tsx  # /demo/utilisateurs
     ├── DemoDons.tsx          # /demo/dons
     ├── DemoFtour.tsx         # /demo/ftour
+    ├── DemoReservations.tsx  # /demo/reservations
+    ├── DemoBoutique.tsx      # /demo/boutique
+    ├── DemoInventaire.tsx    # /demo/inventaire
+    ├── DemoEquipe.tsx        # /demo/equipe
+    ├── DemoBlog.tsx          # /demo/blog
     └── DemoPartenaires.tsx   # /demo/partenaires
 ```
 

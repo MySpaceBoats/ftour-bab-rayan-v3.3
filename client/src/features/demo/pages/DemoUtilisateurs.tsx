@@ -66,7 +66,7 @@ export default function DemoUtilisateurs() {
       users: prev.users.map((u) => (u.id === updated.id ? updated : u)),
     }));
     toast.success("Utilisateur mis à jour", {
-      description: "Modification locale simulée (non persistée côté serveur).",
+      description: "La fiche a été enregistrée.",
     });
     setSelected(null);
   };
@@ -74,8 +74,8 @@ export default function DemoUtilisateurs() {
   return (
     <DemoLayout
       title="Utilisateurs"
-      subtitle="Bénévoles, bénéficiaires et donateurs — fiches éditables"
-      tooltip="Fiches fictives : vos modifications sont sauvegardées uniquement dans votre navigateur et n'affectent aucune base réelle."
+      subtitle="Bénévoles, bénéficiaires et donateurs — fiches détaillées"
+      tooltip="Gérez les profils de chaque intervenant. Vos modifications restent dans votre espace d'aperçu."
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <SummaryBox

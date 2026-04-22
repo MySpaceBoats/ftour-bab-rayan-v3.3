@@ -8,18 +8,18 @@ const STORAGE_KEY = "ftour_demo_onboarding_done_v1";
 const STEPS = [
   {
     icon: BarChart3,
-    title: "Explorez le tableau de bord",
-    body: "Des KPI simulés et des graphiques dynamiques vous donnent une vision globale de l'activité de l'association.",
+    title: "Bienvenue sur la plateforme",
+    body: "Un tableau de bord global pour suivre dons, repas, bénévoles et partenaires en un coup d'œil.",
   },
   {
     icon: HandCoins,
-    title: "Testez les dons et partenaires",
-    body: "Ajoutez de faux dons, consultez l'historique et parcourez les entreprises partenaires avec leurs contributions.",
+    title: "Pilotez toute l'opération",
+    body: "Dons, réservations, boutique, inventaire et équipe — les modules sont accessibles depuis le menu latéral.",
   },
   {
     icon: UtensilsCrossed,
-    title: "Jouez avec les données",
-    body: "Utilisez « Générer de nouvelles données » ou « Reset » à tout moment : rien n'est connecté à un vrai système.",
+    title: "Naviguez librement",
+    body: "Les actions que vous réalisez restent dans cet espace. Vous pouvez rafraîchir l'aperçu à tout moment.",
   },
 ];
 
