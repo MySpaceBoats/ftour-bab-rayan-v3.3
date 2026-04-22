@@ -60,7 +60,7 @@ export default function DemoPartenaires() {
     <DemoLayout
       title="Partenaires"
       subtitle="Entreprises engagées dans l'opération ftour"
-      tooltip="Les entreprises listées ici sont fictives. Leurs contributions illustrent les paliers possibles de sponsoring."
+      tooltip="Suivi des entreprises partenaires, de leur palier d'engagement et de leur contribution annuelle."
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
@@ -150,7 +150,7 @@ export default function DemoPartenaires() {
         <header className="border-b border-slate-100 p-4">
           <h2 className="text-sm font-semibold text-slate-900">Liste complète</h2>
           <p className="text-xs text-slate-500">
-            Entreprises partenaires simulées — données 100% fictives
+            Entreprises partenaires triées par contribution
           </p>
         </header>
         <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">

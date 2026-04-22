@@ -51,7 +51,7 @@ export default function DemoFtour() {
     <DemoLayout
       title="Ftour"
       subtitle="Planning des repas, bénéficiaires et statistiques journalières"
-      tooltip="Chaque ligne représente un jour simulé. Sélectionnez un jour pour voir le menu servi et la fréquentation."
+      tooltip="Chaque ligne représente un jour d'opération. Sélectionnez un jour pour voir le menu servi et la fréquentation."
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
@@ -132,7 +132,7 @@ export default function DemoFtour() {
           <header className="border-b border-slate-100 p-4">
             <h2 className="text-sm font-semibold text-slate-900">Planning Ramadan</h2>
             <p className="text-xs text-slate-500">
-              Journées simulées — cliquez sur une ligne pour voir le détail
+              Cliquez sur une ligne pour voir le détail de la journée
             </p>
           </header>
           <div className="overflow-x-auto">

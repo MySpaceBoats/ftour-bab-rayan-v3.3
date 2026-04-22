@@ -5,19 +5,30 @@
 
 import type {
   DemoActivity,
+  DemoBlogPost,
   DemoDataset,
   DemoDonation,
   DemoFtourDay,
+  DemoOrder,
+  DemoOrderItem,
   DemoPartner,
+  DemoProduct,
+  DemoReservation,
+  DemoTeamMember,
   DemoUser,
   ActivityType,
   DonationMethod,
   DonationStatus,
+  OrderCategory,
+  OrderStatus,
   PartnerTier,
+  ProductUnit,
+  ReservationStatus,
+  ReservationType,
   UserRole,
 } from "./types";
 
-export const DEMO_DATASET_VERSION = 1;
+export const DEMO_DATASET_VERSION = 2;
 
 const MALE_FIRST_NAMES = [
   "Mohamed", "Ahmed", "Youssef", "Omar", "Khalid", "Hamza", "Ayoub",
@@ -234,6 +245,304 @@ function generatePartner(rng: Rng, now: Date): DemoPartner {
   };
 }
 
+// ============================================
+// Réservations restaurant
+// ============================================
+
+const RESERVATION_NOTES = [
+  "Table près de la fenêtre si possible",
+  "Groupe de collègues pour ftour d'équipe",
+  "Allergie fruits à coque - merci",
+  "Anniversaire — préparer petite attention",
+  "Client VIP, accueil soigné",
+];
+
+function generateReservation(rng: Rng, now: Date): DemoReservation {
+  const types: ReservationType[] = ["particulier", "groupe", "entreprise"];
+  const type = pick(rng, types);
+  const statuses: ReservationStatus[] = [
+    "confirmee",
+    "confirmee",
+    "confirmee",
+    "en_attente",
+    "terminee",
+    "annulee",
+  ];
+  const status = pick(rng, statuses);
+  const guestsByType: Record<ReservationType, [number, number]> = {
+    particulier: [2, 6],
+    groupe: [8, 25],
+    entreprise: [15, 80],
+  };
+  const [gMin, gMax] = guestsByType[type];
+  const guests = int(rng, gMin, gMax);
+
+  const daysAgo = int(rng, -7, 14); // certaines dans le futur
+  const date = new Date(now.getTime() - daysAgo * 86_400_000);
+  const hour = int(rng, 18, 21);
+  const minute = pick(rng, ["00", "15", "30", "45"]);
+
+  let customerName: string;
+  if (type === "entreprise") {
+    customerName = `${pick(rng, PARTNER_PREFIXES)} ${pick(rng, PARTNER_SUFFIXES)}`;
+  } else {
+    const first = pick(rng, chance(rng, 0.5) ? MALE_FIRST_NAMES : FEMALE_FIRST_NAMES);
+    const last = pick(rng, LAST_NAMES);
+    customerName = `${first} ${last}`;
+  }
+
+  const pricePerGuest = type === "entreprise" ? 180 : type === "groupe" ? 150 : 120;
+  const reference = `RES-${int(rng, 10000, 99999)}`;
+  const firstContact = pick(rng, chance(rng, 0.5) ? MALE_FIRST_NAMES : FEMALE_FIRST_NAMES);
+  const lastContact = pick(rng, LAST_NAMES);
+
+  return {
+    id: id("res", rng),
+    reference,
+    customerName,
+    type,
+    status,
+    guests,
+    date: date.toISOString().slice(0, 10),
+    time: `${String(hour).padStart(2, "0")}:${minute}`,
+    phone: moroccanPhone(rng),
+    email: slugEmail(firstContact, lastContact, rng),
+    note: chance(rng, 0.3) ? pick(rng, RESERVATION_NOTES) : undefined,
+    createdAt: new Date(now.getTime() - int(rng, 1, 30) * 86_400_000).toISOString(),
+    totalAmount: pricePerGuest * guests,
+  };
+}
+
+// ============================================
+// Boutique / Commandes
+// ============================================
+
+const PRODUCTS_BY_CATEGORY: Record<OrderCategory, { name: string; price: number }[]> = {
+  goodies: [
+    { name: "T-shirt Bab Rayan", price: 120 },
+    { name: "Mug solidaire", price: 60 },
+    { name: "Tote bag édition 12", price: 80 },
+    { name: "Casquette brodée", price: 90 },
+    { name: "Carnet Ramadan", price: 45 },
+  ],
+  terroir: [
+    { name: "Huile d'olive 1L", price: 95 },
+    { name: "Miel de thym 500g", price: 140 },
+    { name: "Amlou artisanal", price: 75 },
+    { name: "Dattes Medjool 1kg", price: 180 },
+    { name: "Thé à la menthe vrac", price: 55 },
+  ],
+  patisserie: [
+    { name: "Boîte Chebakia 500g", price: 85 },
+    { name: "Assortiment Briouates", price: 110 },
+    { name: "Makrout amande", price: 70 },
+    { name: "Ghriba variée", price: 90 },
+    { name: "Plateau Ramadan prestige", price: 260 },
+  ],
+};
+
+function generateOrder(rng: Rng, now: Date): DemoOrder {
+  const categories: OrderCategory[] = ["goodies", "terroir", "patisserie"];
+  const category = pick(rng, categories);
+  const productsCatalog = PRODUCTS_BY_CATEGORY[category];
+  const itemsCount = int(rng, 1, 3);
+  const items: DemoOrderItem[] = Array.from({ length: itemsCount }, () => {
+    const p = pick(rng, productsCatalog);
+    return {
+      productName: p.name,
+      quantity: int(rng, 1, 4),
+      unitPrice: p.price,
+    };
+  });
+  const total = items.reduce((a, it) => a + it.quantity * it.unitPrice, 0);
+
+  const statuses: OrderStatus[] = [
+    "livree",
+    "livree",
+    "prete",
+    "en_preparation",
+    "annulee",
+  ];
+  const first = pick(rng, chance(rng, 0.5) ? MALE_FIRST_NAMES : FEMALE_FIRST_NAMES);
+  const last = pick(rng, LAST_NAMES);
+
+  return {
+    id: id("ord", rng),
+    reference: `CMD-${int(rng, 10000, 99999)}`,
+    customerName: `${first} ${last}`,
+    category,
+    status: pick(rng, statuses),
+    items,
+    total,
+    createdAt: new Date(now.getTime() - int(rng, 0, 45) * 86_400_000).toISOString(),
+    city: pick(rng, CITIES),
+  };
+}
+
+// ============================================
+// Inventaire produits
+// ============================================
+
+const INVENTORY_TEMPLATES: {
+  name: string;
+  category: DemoProduct["category"];
+  unit: ProductUnit;
+  unitCost: number;
+  threshold: number;
+}[] = [
+  { name: "Huile d'olive 1L", category: "terroir", unit: "u", unitCost: 75, threshold: 30 },
+  { name: "Miel de thym", category: "terroir", unit: "kg", unitCost: 220, threshold: 8 },
+  { name: "Dattes Medjool", category: "terroir", unit: "kg", unitCost: 120, threshold: 20 },
+  { name: "Farine T55", category: "ingredients", unit: "kg", unitCost: 8, threshold: 50 },
+  { name: "Semoule fine", category: "ingredients", unit: "kg", unitCost: 12, threshold: 40 },
+  { name: "Lait entier", category: "ingredients", unit: "l", unitCost: 8, threshold: 60 },
+  { name: "Œufs (plateau 30)", category: "ingredients", unit: "pack", unitCost: 45, threshold: 15 },
+  { name: "Chebakia 500g", category: "patisserie", unit: "u", unitCost: 55, threshold: 25 },
+  { name: "Briouates", category: "patisserie", unit: "u", unitCost: 70, threshold: 20 },
+  { name: "T-shirt Bab Rayan", category: "goodies", unit: "u", unitCost: 60, threshold: 40 },
+  { name: "Mug solidaire", category: "goodies", unit: "u", unitCost: 25, threshold: 30 },
+  { name: "Tote bag édition 12", category: "goodies", unit: "u", unitCost: 35, threshold: 35 },
+  { name: "Sac emballage repas", category: "logistique", unit: "pack", unitCost: 90, threshold: 10 },
+  { name: "Couverts compostables", category: "logistique", unit: "pack", unitCost: 75, threshold: 12 },
+  { name: "Gobelets écologiques", category: "logistique", unit: "pack", unitCost: 60, threshold: 20 },
+];
+
+function generateProduct(
+  rng: Rng,
+  template: (typeof INVENTORY_TEMPLATES)[number],
+  now: Date,
+): DemoProduct {
+  const stockFactor = rng();
+  // 20% of products are near or below threshold (creates alerting)
+  const lowStock = stockFactor < 0.2;
+  const stock = lowStock
+    ? int(rng, 0, template.threshold)
+    : int(rng, template.threshold + 1, template.threshold * 4);
+  return {
+    id: id("prd", rng),
+    name: template.name,
+    category: template.category,
+    unit: template.unit,
+    stock,
+    threshold: template.threshold,
+    unitCost: template.unitCost,
+    lastMovementAt: new Date(now.getTime() - int(rng, 0, 20) * 86_400_000).toISOString(),
+  };
+}
+
+// ============================================
+// Équipe / Trombinoscope
+// ============================================
+
+const TEAM_ROLES = [
+  "Président",
+  "Trésorier",
+  "Responsable bénévoles",
+  "Coordinateur cuisine",
+  "Responsable partenariats",
+  "Responsable logistique",
+  "Responsable communication",
+  "Responsable hygiène",
+  "Animateur jeunesse",
+  "Référent QR & scan",
+  "Responsable accueil",
+  "Référent sécurité",
+];
+
+const TEAM_BIOS = [
+  "Bénévole depuis la 8e édition, passionné par l'engagement associatif.",
+  "Coordonne les équipes sur le terrain avec rigueur et bienveillance.",
+  "Formé en gestion, veille à la transparence de chaque opération.",
+  "Orchestre les arrivées et départs des bénévoles chaque soir.",
+  "Met son réseau au service de l'association depuis plusieurs années.",
+  "Allie créativité et méthode pour chaque campagne de communication.",
+];
+
+function generateTeamMember(rng: Rng, role: string, now: Date): DemoTeamMember {
+  const female = chance(rng, 0.5);
+  const firstName = pick(rng, female ? FEMALE_FIRST_NAMES : MALE_FIRST_NAMES);
+  const lastName = pick(rng, LAST_NAMES);
+  return {
+    id: id("tm", rng),
+    firstName,
+    lastName,
+    role,
+    avatar: `${firstName[0]}${lastName[0]}`.toUpperCase(),
+    city: pick(rng, CITIES),
+    joinedAt: new Date(now.getTime() - int(rng, 90, 1800) * 86_400_000).toISOString(),
+    bio: pick(rng, TEAM_BIOS),
+  };
+}
+
+// ============================================
+// Blog / Témoignages
+// ============================================
+
+const BLOG_TEMPLATES = [
+  {
+    title: "Mon premier soir comme bénévole",
+    excerpt:
+      "Une expérience qui m'a marquée à vie : l'effervescence de la cuisine, les sourires à la sortie…",
+    tag: "Témoignage",
+    cover: "🌙",
+  },
+  {
+    title: "Comment nous avons servi 600 repas en un soir",
+    excerpt:
+      "Coulisses de l'organisation : logistique, équipes, horaires et petits secrets de chef.",
+    tag: "Coulisses",
+    cover: "🍲",
+  },
+  {
+    title: "Le sens du partage pendant le Ramadan",
+    excerpt:
+      "Quand un simple plat devient un pont entre familles, bénévoles et bénéficiaires.",
+    tag: "Réflexion",
+    cover: "🤝",
+  },
+  {
+    title: "Rencontre avec nos partenaires historiques",
+    excerpt:
+      "Portrait croisé de trois entreprises qui soutiennent l'opération depuis la 1re édition.",
+    tag: "Partenariat",
+    cover: "🏢",
+  },
+  {
+    title: "Préparer 2000 chebakias : le making-of",
+    excerpt:
+      "Mains expertes, recettes familiales et bienveillance : plongée dans l'atelier pâtisserie.",
+    tag: "Pâtisserie",
+    cover: "🧁",
+  },
+  {
+    title: "Le QR code qui change tout",
+    excerpt:
+      "Retour sur l'implémentation du scan bénévoles et ses bénéfices sur le terrain.",
+    tag: "Tech",
+    cover: "📲",
+  },
+];
+
+function generateBlogPost(
+  rng: Rng,
+  template: (typeof BLOG_TEMPLATES)[number],
+  now: Date,
+): DemoBlogPost {
+  const firstName = pick(rng, chance(rng, 0.5) ? MALE_FIRST_NAMES : FEMALE_FIRST_NAMES);
+  const lastName = pick(rng, LAST_NAMES);
+  return {
+    id: id("blg", rng),
+    title: template.title,
+    excerpt: template.excerpt,
+    author: `${firstName} ${lastName}`,
+    publishedAt: new Date(now.getTime() - int(rng, 1, 180) * 86_400_000).toISOString(),
+    reactions: int(rng, 12, 480),
+    comments: int(rng, 0, 45),
+    tag: template.tag,
+    cover: template.cover,
+  };
+}
+
 function generateActivity(
   rng: Rng,
   users: DemoUser[],
@@ -248,6 +557,8 @@ function generateActivity(
     "ftour_served",
     "partner_join",
     "user_signup",
+    "reservation_new",
+    "order_paid",
   ];
 
   for (let i = 0; i < 30; i++) {
@@ -284,6 +595,20 @@ function generateActivity(
       const lastName = pick(rng, LAST_NAMES);
       actor = `${firstName} ${lastName}`;
       label = "Inscription bénévole";
+    } else if (type === "reservation_new") {
+      const firstName = pick(rng, chance(rng, 0.5) ? MALE_FIRST_NAMES : FEMALE_FIRST_NAMES);
+      const lastName = pick(rng, LAST_NAMES);
+      actor = `${firstName} ${lastName}`;
+      const guests = int(rng, 2, 40);
+      label = `Nouvelle réservation · ${guests} couverts`;
+      meta.guests = guests;
+    } else if (type === "order_paid") {
+      const firstName = pick(rng, chance(rng, 0.5) ? MALE_FIRST_NAMES : FEMALE_FIRST_NAMES);
+      const lastName = pick(rng, LAST_NAMES);
+      actor = `${firstName} ${lastName}`;
+      const amount = int(rng, 80, 1200);
+      label = `Commande boutique · ${amount} MAD`;
+      meta.amount = amount;
     }
 
     items.push({
@@ -329,6 +654,26 @@ export function generateDemoDataset(seed?: number): DemoDataset {
     generatePartner(rng, now),
   );
 
+  const reservations: DemoReservation[] = Array.from({ length: 36 }, () =>
+    generateReservation(rng, now),
+  ).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  const orders: DemoOrder[] = Array.from({ length: 48 }, () =>
+    generateOrder(rng, now),
+  ).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  const products: DemoProduct[] = INVENTORY_TEMPLATES.map((t) =>
+    generateProduct(rng, t, now),
+  );
+
+  const team: DemoTeamMember[] = TEAM_ROLES.map((role) =>
+    generateTeamMember(rng, role, now),
+  );
+
+  const blogPosts: DemoBlogPost[] = BLOG_TEMPLATES.map((t) =>
+    generateBlogPost(rng, t, now),
+  ).sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+
   const activity = generateActivity(rng, users, donations, partners, now);
 
   return {
@@ -339,5 +684,10 @@ export function generateDemoDataset(seed?: number): DemoDataset {
     ftourDays,
     partners,
     activity,
+    reservations,
+    orders,
+    products,
+    team,
+    blogPosts,
   };
 }

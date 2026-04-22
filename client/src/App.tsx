@@ -51,6 +51,11 @@ import DemoUtilisateurs from "@/features/demo/pages/DemoUtilisateurs";
 import DemoDons from "@/features/demo/pages/DemoDons";
 import DemoFtour from "@/features/demo/pages/DemoFtour";
 import DemoPartenaires from "@/features/demo/pages/DemoPartenaires";
+import DemoReservations from "@/features/demo/pages/DemoReservations";
+import DemoBoutique from "@/features/demo/pages/DemoBoutique";
+import DemoInventaire from "@/features/demo/pages/DemoInventaire";
+import DemoEquipe from "@/features/demo/pages/DemoEquipe";
+import DemoBlog from "@/features/demo/pages/DemoBlog";
 
 // ============================================
 // RESTAURANT — features/restaurant
@@ -519,13 +524,18 @@ function LocalizedRoutes() {
           HOMEPAGE
           ================================================ */}
       {/* ================================================
-          DEMO SANDBOX — /demo/* (données fictives locales)
+          DEMO — /demo/* (espace d'aperçu interactif)
           ================================================ */}
       <Route path="/demo-access" component={DemoAccess} />
       <Route path="/demo/dashboard" component={DemoDashboard} />
       <Route path="/demo/utilisateurs" component={DemoUtilisateurs} />
       <Route path="/demo/dons" component={DemoDons} />
       <Route path="/demo/ftour" component={DemoFtour} />
+      <Route path="/demo/reservations" component={DemoReservations} />
+      <Route path="/demo/boutique" component={DemoBoutique} />
+      <Route path="/demo/inventaire" component={DemoInventaire} />
+      <Route path="/demo/equipe" component={DemoEquipe} />
+      <Route path="/demo/blog" component={DemoBlog} />
       <Route path="/demo/partenaires" component={DemoPartenaires} />
       <Route path="/demo" component={DemoLanding} />
 

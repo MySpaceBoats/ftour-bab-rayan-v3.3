@@ -145,7 +145,7 @@ export default function DemoDons() {
       meta: { amount: d.amount },
     });
     toast.success("Don ajouté avec succès", {
-      description: `${d.donorName} — ${formatMAD(d.amount)} (simulation)`,
+      description: `${d.donorName} — ${formatMAD(d.amount)}`,
     });
     setAddOpen(false);
   };
@@ -153,8 +153,8 @@ export default function DemoDons() {
   return (
     <DemoLayout
       title="Dons"
-      subtitle="Historique, graphiques et ajout de faux dons"
-      tooltip="Vous pouvez ajouter, consulter et filtrer des dons — tout reste local, aucune transaction n'est réellement traitée."
+      subtitle="Collecte, historique et suivi des contributions"
+      tooltip="Ajoutez, consultez et filtrez les dons. L'ajout se fait directement dans cet espace d'aperçu."
       actions={
         <Button size="sm" onClick={() => setAddOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> Ajouter un don
@@ -269,7 +269,7 @@ export default function DemoDons() {
         <header className="border-b border-slate-100 p-4">
           <h2 className="text-sm font-semibold text-slate-900">Historique récent</h2>
           <p className="text-xs text-slate-500">
-            Derniers dons simulés — aucune vraie transaction effectuée
+            Derniers dons enregistrés dans l'aperçu
           </p>
         </header>
         <div className="overflow-x-auto">
@@ -358,7 +358,7 @@ function AddDonationDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Ajouter un don fictif</DialogTitle>
+          <DialogTitle>Ajouter un don</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1">
@@ -397,8 +397,9 @@ function AddDonationDialog({
               </SelectContent>
             </Select>
           </div>
-          <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            Rappel : ce don est 100% simulé. Aucun paiement n'est déclenché.
+          <p className="rounded-md bg-orange-50 px-3 py-2 text-xs text-orange-800">
+            Le don sera ajouté à l'aperçu pour vous permettre de tester le flux
+            de saisie.
           </p>
         </div>
         <DialogFooter>

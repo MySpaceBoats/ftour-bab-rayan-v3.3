@@ -8,18 +8,18 @@ const STORAGE_KEY = "ftour_demo_onboarding_done_v1";
 const STEPS = [
   {
     icon: BarChart3,
-    title: "Explorez le tableau de bord",
-    body: "Des KPI simulés et des graphiques dynamiques vous donnent une vision globale de l'activité de l'association.",
+    title: "Bienvenue sur la plateforme",
+    body: "Un tableau de bord global pour suivre dons, repas, bénévoles et partenaires en un coup d'œil.",
   },
   {
     icon: HandCoins,
-    title: "Testez les dons et partenaires",
-    body: "Ajoutez de faux dons, consultez l'historique et parcourez les entreprises partenaires avec leurs contributions.",
+    title: "Pilotez toute l'opération",
+    body: "Dons, réservations, boutique, inventaire et équipe — les modules sont accessibles depuis le menu latéral.",
   },
   {
     icon: UtensilsCrossed,
-    title: "Jouez avec les données",
-    body: "Utilisez « Générer de nouvelles données » ou « Reset » à tout moment : rien n'est connecté à un vrai système.",
+    title: "Naviguez librement",
+    body: "Les actions que vous réalisez restent dans cet espace. Vous pouvez rafraîchir l'aperçu à tout moment.",
   },
 ];
 
@@ -63,14 +63,16 @@ export function DemoOnboarding({ forceOpen = false, onClose }: DemoOnboardingPro
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="bg-white text-slate-900 sm:max-w-md">
         <DialogHeader>
           <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
             <Icon className="h-6 w-6" aria-hidden="true" />
           </div>
-          <DialogTitle className="text-left text-xl">{current.title}</DialogTitle>
+          <DialogTitle className="text-left text-xl text-slate-900">
+            {current.title}
+          </DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-slate-600">{current.body}</p>
+        <p className="text-sm font-medium text-slate-700">{current.body}</p>
 
         <div className="mt-4 flex items-center justify-between">
           <div className="flex gap-1.5" aria-label="Progression onboarding">

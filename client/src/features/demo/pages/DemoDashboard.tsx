@@ -83,8 +83,8 @@ export default function DemoDashboard() {
   return (
     <DemoLayout
       title="Tableau de bord"
-      subtitle="Vue d'ensemble simulée de l'activité de l'association"
-      tooltip="Toutes les valeurs affichées proviennent d'un dataset fictif généré localement. Cliquez sur « Générer nouvelles données » pour rafraîchir l'échantillon."
+      subtitle="Vue d'ensemble de l'activité de l'association"
+      tooltip="Les KPI agrègent l'ensemble des modules : dons, ftours, bénévoles, partenaires, réservations et boutique."
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
@@ -125,7 +125,7 @@ export default function DemoDashboard() {
                 Dons cumulés — 14 derniers jours
               </h2>
               <p className="text-xs text-slate-500">
-                Simulation de l'évolution des contributions quotidiennes
+                Évolution des contributions quotidiennes
               </p>
             </div>
             <TrendingUp className="h-4 w-4 text-orange-500" aria-hidden="true" />
@@ -164,7 +164,7 @@ export default function DemoDashboard() {
               Partenaires par niveau
             </h2>
             <p className="text-xs text-slate-500">
-              Répartition des entreprises partenaires fictives
+              Répartition des entreprises engagées
             </p>
           </header>
           <div className="h-64 w-full">
@@ -222,7 +222,7 @@ export default function DemoDashboard() {
             <h2 className="text-sm font-semibold text-slate-900">Activité récente</h2>
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-              Live simulé
+              En direct
             </span>
           </header>
           <ul className="space-y-3 text-sm">

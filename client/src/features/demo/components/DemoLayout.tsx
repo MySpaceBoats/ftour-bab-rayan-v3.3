@@ -33,15 +33,15 @@ export function DemoLayout({
 
   const handleRegenerate = useCallback(() => {
     regenerateDemoDataset();
-    toast.success("Nouvelles données générées", {
-      description: "Le dataset démo a été rafraîchi aléatoirement.",
+    toast.success("Aperçu rafraîchi", {
+      description: "Un nouvel échantillon d'activité vient d'être chargé.",
     });
   }, []);
 
   const handleReset = useCallback(() => {
     resetDemoDataset();
-    toast.success("Démo réinitialisée", {
-      description: "Toutes vos modifications locales ont été effacées.",
+    toast.success("Aperçu remis à zéro", {
+      description: "Vos modifications locales ont été effacées.",
     });
   }, []);
 
@@ -118,7 +118,7 @@ export function DemoLayout({
                 data-testid="btn-regenerate"
               >
                 <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                Générer nouvelles données
+                Rafraîchir l'aperçu
               </Button>
               <Button
                 variant="ghost"
@@ -127,7 +127,7 @@ export function DemoLayout({
                 data-testid="btn-reset"
               >
                 <RotateCcw className="mr-2 h-3.5 w-3.5" />
-                Reset démo
+                Remettre à zéro
               </Button>
               <Button
                 variant="ghost"
@@ -149,11 +149,11 @@ export function DemoLayout({
           <footer className="border-t border-slate-200 bg-white px-4 py-4 text-xs text-slate-500 lg:px-8">
             <div className="flex flex-col items-start justify-between gap-1 sm:flex-row sm:items-center">
               <span>
-                Environnement de démonstration — toutes les données sont fictives
-                et stockées localement dans votre navigateur.
+                Espace d'aperçu accessible librement — pensé pour explorer les
+                fonctionnalités de la plateforme.
               </span>
               <span className="font-medium text-slate-600">
-                Ftour Bab Rayan · Demo sandbox
+                Ftour Bab Rayan · Plateforme associative
               </span>
             </div>
           </footer>
