@@ -24,7 +24,6 @@ import {
   Globe,
   Lock,
   ShoppingCart,
-  UtensilsCrossed,
   UserCircle2,
   Star,
   BookOpen,
@@ -79,19 +78,14 @@ export default function Navbar() {
     { href: localizedHref("/evenement"), label: t.nav.event, icon: Info },
     { href: localizedHref("/benevole"), label: t.nav.volunteer, icon: Users },
     {
-      href: localizedHref("/boutique"),
-      label: t.nav.boutique,
+      href: localizedHref("/commerce-solidaire"),
+      label: t.nav.commerceSolidaire,
       icon: ShoppingBag,
     },
     { href: localizedHref("/dons"), label: "Donation", icon: Heart },
     { href: localizedHref(getBlogPath()), label: t.nav.blog, icon: BookOpen },
     { href: localizedHref("/galerie"), label: t.nav.gallery, icon: Images },
     { href: localizedHref("/equipe-ftour"), label: t.nav.team, icon: Star },
-    {
-      href: localizedHref("/restaurant/particuliers"),
-      label: t.nav.restaurant,
-      icon: UtensilsCrossed,
-    },
   ];
 
   const handleLogout = async () => {
