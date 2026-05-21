@@ -24,6 +24,8 @@ export const amz: Translations = {
     boutique: 'Solidarity Shop',
     gallery: 'Gallery',
     blog: 'Blog',
+    team: 'The Ftour Team',
+    commerceSolidaire: 'Commerce Solidaire',
   },
 
   // CTA Buttons

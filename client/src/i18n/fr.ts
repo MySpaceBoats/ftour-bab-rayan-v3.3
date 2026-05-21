@@ -23,6 +23,7 @@ export const fr = {
     gallery: 'Galerie',
     blog: 'Témoignage',
     team: "L'équipe Ftour",
+    commerceSolidaire: 'Commerce Solidaire',
   },
 
   // CTA Buttons

@@ -25,6 +25,7 @@ export const ar: Translations = {
     gallery: 'المعرض',
     blog: 'المدونة',
     team: 'فريق الفطور',
+    commerceSolidaire: 'التجارة التضامنية',
   },
 
   // CTA Buttons

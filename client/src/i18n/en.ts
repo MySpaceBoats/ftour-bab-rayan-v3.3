@@ -25,6 +25,7 @@ export const en: Translations = {
     gallery: 'Gallery',
     blog: 'Blog',
     team: 'The Ftour Team',
+    commerceSolidaire: 'Solidarity Commerce',
   },
 
   // CTA Buttons
