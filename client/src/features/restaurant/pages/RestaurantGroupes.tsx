@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { MapPin } from "lucide-react";
+import { MapPin, ExternalLink } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -145,9 +145,15 @@ export default function RestaurantGroupes() {
               <MapPin className="h-5 w-5" />
               <h2 className="text-xl font-bold">Nous trouver</h2>
             </div>
-            <p className="text-[#8b8b7a] text-sm mb-3">
+            <a
+              href="https://latabledujardin.ma/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-[#d4a574] hover:underline text-sm mb-3"
+            >
               La Table du Jardin by Bab Rayan
-            </p>
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
             <div className="rounded-lg overflow-hidden shadow-md">
               <iframe
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3323.9690513357727!2d-7.631227813238418!3d33.5801528045934!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xda7d30029a4e42d%3A0x3373083e51403fde!2sla%20Table%20du%20Jardin%20by%20Bab%20Rayan!5e0!3m2!1sfr!2sma!4v1771424452220!5m2!1sfr!2sma"
@@ -184,7 +190,16 @@ export default function RestaurantGroupes() {
             Réservation Ftour – Groupes
           </h1>
           <p className="text-[#8b8b7a] mt-2">
-            Demande de réservation pour le ftour solidaire — La Table du Jardin
+            Demande de réservation pour le ftour solidaire —{" "}
+            <a
+              href="https://latabledujardin.ma/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#d4a574] hover:underline inline-flex items-center gap-1"
+            >
+              La Table du Jardin
+              <ExternalLink className="h-3 w-3" />
+            </a>{" "}
             by Bab Rayan.
           </p>
           <p className="text-[#8b8b7a] text-sm mt-1">

@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 import FeedbackCta from "@/components/FeedbackCta";
 import { useI18n } from "@/i18n";
 import { Button } from "@/components/ui/button";
-import { MapPin } from "lucide-react";
+import { MapPin, ExternalLink } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function RestaurantParticuliers() {
@@ -26,7 +26,16 @@ export default function RestaurantParticuliers() {
             Réservation Ftour
           </h1>
           <p className="text-[#8b8b7a] mt-2">
-            Demande de réservation pour le ftour solidaire — La Table du Jardin
+            Demande de réservation pour le ftour solidaire —{" "}
+            <a
+              href="https://latabledujardin.ma/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#d4a574] hover:underline inline-flex items-center gap-1"
+            >
+              La Table du Jardin
+              <ExternalLink className="h-3 w-3" />
+            </a>{" "}
             by Bab Rayan.
           </p>
           <p className="text-sm text-[#8b8b7a] mt-3">

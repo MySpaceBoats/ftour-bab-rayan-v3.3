@@ -7,6 +7,7 @@ import {
   ShoppingBag,
   Utensils,
   ArrowRight,
+  ExternalLink,
   Heart,
   Leaf,
   UtensilsCrossed,
@@ -148,6 +149,15 @@ export default function CommerceSolidaire() {
                   {t.restaurant.particulierCta}
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
+                <a
+                  href="https://latabledujardin.ma/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full mt-2 py-2.5 px-4 rounded-md border border-[#F2E9D3]/30 text-[#F2E9D3] hover:bg-[#F2E9D3]/10 transition-colors text-sm font-medium"
+                >
+                  {t.restaurant.tableJardin.cta}
+                  <ExternalLink className="h-4 w-4" />
+                </a>
               </CardContent>
             </Card>
           </div>

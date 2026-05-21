@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { MapPin, Clock, Users, Heart, Leaf, UtensilsCrossed, Star } from 'lucide-react';
+import { MapPin, Clock, Users, Heart, Leaf, UtensilsCrossed, Star, ExternalLink } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { trpc } from '@/lib/trpc';
 
@@ -107,7 +107,18 @@ export default function Reservation() {
               <MapPin className="h-5 w-5" />
               <h2 className="text-xl font-bold">Nous trouver</h2>
             </div>
-            <p className="text-[#8b8b7a] text-sm mb-3">La Table du Jardin by Bab Rayan — 4 rue Bayt Lahm, quartier Palmier, Casablanca</p>
+            <p className="text-[#8b8b7a] text-sm mb-1">
+              <a
+                href="https://latabledujardin.ma/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#d4a574] hover:underline inline-flex items-center gap-1"
+              >
+                La Table du Jardin by Bab Rayan
+                <ExternalLink className="h-3 w-3" />
+              </a>
+              {" "}— 4 rue Bayt Lahm, quartier Palmier, Casablanca
+            </p>
             <div className="rounded-lg overflow-hidden shadow-md">
               <iframe
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3323.9690513357727!2d-7.631227813238418!3d33.5801528045934!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xda7d30029a4e42d%3A0x3373083e51403fde!2sla%20Table%20du%20Jardin%20by%20Bab%20Rayan!5e0!3m2!1sfr!2sma!4v1771424452220!5m2!1sfr!2sma"
@@ -145,6 +156,15 @@ export default function Reservation() {
             Rompez le jeûne autour d'une table garnie, dans un cadre élégant et convivial.
             Chaque couvert contribue à la mission solidaire de l'association Bab Rayan.
           </p>
+          <a
+            href="https://latabledujardin.ma/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-full border border-[#d4a574] text-[#d4a574] hover:bg-[#d4a574]/10 transition-colors text-sm font-medium"
+          >
+            Visiter le site de La Table du Jardin
+            <ExternalLink className="h-4 w-4" />
+          </a>
         </div>
       </section>
 
@@ -356,6 +376,15 @@ export default function Reservation() {
               </div>
               <p className="text-[#8b8b7a] text-sm mt-1">La Table du Jardin by Bab Rayan</p>
               <p className="text-[#8b8b7a] text-xs mt-0.5">4 rue Bayt Lahm, quartier Palmier, Casablanca</p>
+              <a
+                href="https://latabledujardin.ma/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 mt-2 text-[#d4a574] hover:underline text-xs font-medium"
+              >
+                latabledujardin.ma
+                <ExternalLink className="h-3 w-3" />
+              </a>
             </div>
             <div className="rounded-xl overflow-hidden shadow-md">
               <iframe
