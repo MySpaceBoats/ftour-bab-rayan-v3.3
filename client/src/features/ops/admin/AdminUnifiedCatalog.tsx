@@ -1,60 +1,21 @@
-import { useMemo, useRef, useState } from "react";
-import { Link } from "wouter";
-import RequireRole from "@/components/RequireRole";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { trpc } from '@/lib/trpc';
+import RequireRole from '@/components/RequireRole';
+import { useAdminPage } from './_shell/AdminFrame';
+import AdminBadge from '@/components/admin/AdminBadge';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { trpc } from "@/lib/trpc";
-import { toast } from "sonner";
-import {
-  ArrowLeft,
-  ExternalLink,
+  Search, Plus, X,
+  MoreHorizontal, Check, ChevronLeft, ChevronRight,
   Image as ImageIcon,
-  Loader2,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-  Upload,
-  X,
-} from "lucide-react";
+} from 'lucide-react';
 
-type ProductType = "all" | "goodies" | "pastry" | "terroir";
+type ProductType = 'all' | 'goodies' | 'pastry' | 'terroir';
 
 type UnifiedRow = {
   id: string;
   rawId: number;
-  type: Exclude<ProductType, "all">;
+  type: Exclude<ProductType, 'all'>;
   name: string;
   description: string;
   category: string;
@@ -63,328 +24,363 @@ type UnifiedRow = {
   price: number | null;
   stock: number;
   isActive: boolean;
-  manageRoute: string;
 };
 
 const BASE_FORM = {
-  name: "",
-  description: "",
-  category: "",
-  imageUrl: "",
-  price: 0,
-  stock: 0,
-  sortOrder: 0,
-  isActive: true,
-  variantLabel: "",
-  variantSku: "",
+  name: '', description: '', category: '', imageUrl: '', price: 0,
+  stock: 0, sortOrder: 0, isActive: true, variantLabel: '', variantSku: '',
 };
 
+const TYPE_LABEL: Record<string, string> = { goodies: 'Goodies', pastry: 'Pâtisserie', terroir: 'Terroir' };
+const TYPE_TONE: Record<string, 'info' | 'warn' | 'success'> = { goodies: 'info', pastry: 'warn', terroir: 'success' };
+
+function statusTone(stock: number, isActive: boolean): { tone: 'success' | 'warn' | 'danger' | 'neutral'; label: string } {
+  if (!isActive) return { tone: 'neutral', label: 'Inactif' };
+  if (stock === 0) return { tone: 'danger', label: 'Épuisé' };
+  if (stock < 10) return { tone: 'warn', label: 'Stock bas' };
+  return { tone: 'success', label: 'En stock' };
+}
+
+function StockBar({ stock, sold }: { stock: number; sold: number }) {
+  const total = stock + sold;
+  const pct = total ? Math.min((stock / total) * 100, 100) : 0;
+  const color = stock === 0 ? 'var(--danger)' : stock < 10 ? 'var(--warn)' : 'var(--success)';
+  return (
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      <span style={{
+        fontFamily: '"JetBrains Mono", monospace', fontWeight: 600,
+        color: stock === 0 ? 'var(--danger)' : stock < 10 ? 'var(--warn)' : 'var(--ink)',
+        fontSize: 12.5,
+      }}>{stock}</span>
+      <div style={{ width: 36, height: 3, background: 'var(--line-soft)', borderRadius: 99, overflow: 'hidden' }}>
+        <div style={{ width: `${Math.max(pct, 4)}%`, height: '100%', background: color }} />
+      </div>
+    </div>
+  );
+}
+
+// Slide-over Drawer for editing
+function ProductDrawer({
+  row, onClose, onSave,
+}: {
+  row: UnifiedRow; onClose: () => void;
+  onSave: (data: typeof BASE_FORM) => void;
+}) {
+  const [form, setForm] = useState({
+    ...BASE_FORM,
+    name: row.name,
+    description: row.description,
+    category: row.category,
+    imageUrl: row.imageUrl,
+    price: row.price ?? 0,
+    stock: row.stock,
+    sortOrder: row.sortOrder,
+    isActive: row.isActive,
+  });
+
+  return (
+    <div style={{
+      position: 'absolute', top: 0, right: 0, bottom: 0,
+      width: 380, background: 'var(--surface)',
+      borderLeft: '1px solid var(--line)',
+      boxShadow: '-12px 0 32px -16px rgba(38,36,26,0.18)',
+      display: 'flex', flexDirection: 'column', zIndex: 10,
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: '14px 18px', borderBottom: '1px solid var(--line-soft)',
+        display: 'flex', alignItems: 'flex-start', gap: 12,
+      }}>
+        {row.imageUrl ? (
+          <img src={row.imageUrl} alt={row.name} style={{ width: 48, height: 48, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+        ) : (
+          <div style={{
+            width: 48, height: 48, borderRadius: 6, flexShrink: 0,
+            background: `repeating-linear-gradient(135deg, var(--olive-soft) 0 6px, var(--sand-soft) 6px 12px)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <ImageIcon size={16} style={{ color: 'var(--ink-mute)' }} />
+          </div>
+        )}
+        <div style={{ flex: 1, minWidth: 0, lineHeight: 1.3 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+            <AdminBadge tone={TYPE_TONE[row.type]} dot>{TYPE_LABEL[row.type]}</AdminBadge>
+            <AdminBadge tone={row.isActive ? 'success' : 'neutral'} dot>{row.isActive ? 'Actif' : 'Inactif'}</AdminBadge>
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.name}</div>
+          <div style={{ fontSize: 11, color: 'var(--ink-mute)', marginTop: 2, fontFamily: '"JetBrains Mono", monospace' }}>
+            {row.type.toUpperCase()}-{String(row.rawId).padStart(3, '0')}
+          </div>
+        </div>
+        <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--ink-mute)', cursor: 'pointer', padding: 2 }}>
+          <X size={15} />
+        </button>
+      </div>
+
+      {/* Body */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: 18, display: 'flex', flexDirection: 'column', gap: 18 }}>
+        {/* Identité */}
+        <div>
+          <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'var(--ink-mute)', marginBottom: 8 }}>
+            Identité
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <input
+              value={form.name}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              placeholder="Nom du produit"
+              style={{ height: 32, padding: '0 10px', fontFamily: 'inherit', fontSize: 13, color: 'var(--ink)', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 5, outline: 'none', width: '100%', boxSizing: 'border-box' }}
+            />
+            <textarea
+              value={form.description}
+              onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+              placeholder="Description"
+              style={{ padding: '8px 10px', fontFamily: 'inherit', fontSize: 12.5, color: 'var(--ink)', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 5, resize: 'none', minHeight: 60, outline: 'none', lineHeight: 1.5, width: '100%', boxSizing: 'border-box' }}
+            />
+          </div>
+        </div>
+
+        {/* Prix & stock */}
+        <div>
+          <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'var(--ink-mute)', marginBottom: 8 }}>
+            Prix & stock
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {[
+              { label: 'Prix (DH)', field: 'price' as const, type: 'number' },
+              { label: 'Stock', field: 'stock' as const, type: 'number' },
+              { label: 'Catégorie', field: 'category' as const, type: 'text' },
+              { label: 'Ordre', field: 'sortOrder' as const, type: 'number' },
+            ].map(f => (
+              <div key={f.field}>
+                <div style={{ fontSize: 10.5, color: 'var(--ink-mute)', marginBottom: 4 }}>{f.label}</div>
+                <input
+                  type={f.type}
+                  value={form[f.field] as string | number}
+                  onChange={e => setForm(prev => ({ ...prev, [f.field]: f.type === 'number' ? Number(e.target.value) : e.target.value }))}
+                  style={{ height: 32, padding: '0 10px', fontFamily: 'inherit', fontSize: 13, color: 'var(--ink)', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 5, outline: 'none', width: '100%', boxSizing: 'border-box' }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Statut */}
+        <div>
+          <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'var(--ink-mute)', marginBottom: 8 }}>
+            Statut
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={form.isActive}
+              onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
+            />
+            <span style={{ fontSize: 13, color: 'var(--ink)' }}>Produit actif</span>
+          </label>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{
+        padding: '12px 16px', borderTop: '1px solid var(--line-soft)',
+        display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between',
+      }}>
+        <button
+          onClick={onClose}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            height: 26, padding: '0 8px',
+            background: 'var(--surface)', color: 'var(--danger)',
+            border: '1px solid var(--line)', borderRadius: 5,
+            fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >
+          Annuler
+        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => { onSave(form); onClose(); }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              height: 26, padding: '0 12px',
+              background: 'var(--olive)', color: '#F5F1E2',
+              border: 'none', borderRadius: 5,
+              fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Create product dialog/form (simple modal)
+function CreateProductModal({
+  createType, onClose, onCreate,
+}: {
+  createType: Exclude<ProductType, 'all'>;
+  onClose: () => void;
+  onCreate: (data: typeof BASE_FORM) => void;
+}) {
+  const [form, setForm] = useState({ ...BASE_FORM });
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0,
+      background: 'rgba(38,36,26,0.32)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 9999,
+    }} onClick={onClose}>
+      <div style={{
+        width: 480, background: 'var(--surface)',
+        border: '1px solid var(--line)', borderRadius: 8,
+        boxShadow: '0 24px 64px -16px rgba(38,36,26,0.25)',
+        overflow: 'hidden',
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{
+          padding: '14px 18px', borderBottom: '1px solid var(--line)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>
+            Ajouter · {TYPE_LABEL[createType]}
+          </div>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--ink-mute)', cursor: 'pointer' }}>
+            <X size={15} />
+          </button>
+        </div>
+        <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {[
+            { label: 'Nom *', field: 'name' as const, type: 'text', required: true },
+            { label: 'Catégorie', field: 'category' as const, type: 'text' },
+            { label: 'Prix (DH)', field: 'price' as const, type: 'number' },
+            { label: 'Stock initial', field: 'stock' as const, type: 'number' },
+            { label: 'Description', field: 'description' as const, type: 'text' },
+            { label: 'URL image', field: 'imageUrl' as const, type: 'text' },
+          ].map(f => (
+            <div key={f.field}>
+              <div style={{ fontSize: 11, color: 'var(--ink-mute)', marginBottom: 4 }}>{f.label}</div>
+              <input
+                type={f.type}
+                value={form[f.field] as string | number}
+                onChange={e => setForm(prev => ({ ...prev, [f.field]: f.type === 'number' ? Number(e.target.value) : e.target.value }))}
+                style={{ height: 32, padding: '0 10px', fontFamily: 'inherit', fontSize: 13, color: 'var(--ink)', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 5, outline: 'none', width: '100%', boxSizing: 'border-box' }}
+              />
+            </div>
+          ))}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 4 }}>
+            <input type="checkbox" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))} />
+            <span style={{ fontSize: 13 }}>Actif dès création</span>
+          </label>
+        </div>
+        <div style={{ padding: '12px 18px', borderTop: '1px solid var(--line)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button onClick={onClose} style={{ height: 32, padding: '0 12px', background: 'var(--surface)', color: 'var(--ink)', border: '1px solid var(--line)', borderRadius: 5, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Annuler
+          </button>
+          <button
+            onClick={() => { if (!form.name) return; onCreate(form); onClose(); }}
+            style={{ height: 32, padding: '0 12px', background: 'var(--olive)', color: '#F5F1E2', border: 'none', borderRadius: 5, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            Créer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const PAGE_SIZE = 20;
+
 export default function AdminUnifiedCatalog() {
-  const [selectedType, setSelectedType] = useState<ProductType>("all");
-  const [search, setSearch] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
-  const [createType, setCreateType] =
-    useState<Exclude<ProductType, "all">>("goodies");
+  const [tab, setTab] = useState<ProductType>('all');
+  const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [editingRow, setEditingRow] = useState<UnifiedRow | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [createType, setCreateType] = useState<Exclude<ProductType, 'all'>>('goodies');
+  const [page, setPage] = useState(1);
 
-  const [form, setForm] = useState(BASE_FORM);
-
+  // tRPC
+  const { data: rawGoodies, refetch: refetchGoodies } = trpc.goodies.listAll.useQuery();
+  const { data: rawPastries, refetch: refetchPastries } = trpc.pastries.list.useQuery();
+  const { data: rawTerroir, refetch: refetchTerroir } = trpc.terroirModule.adminListProducts.useQuery();
   const utils = trpc.useUtils();
 
-  const goodiesQuery = trpc.goodies.listAll.useQuery();
-  const pastriesQuery = trpc.pastries.list.useQuery();
-  const terroirQuery = trpc.terroirModule.adminListProducts.useQuery();
-
-  const uploadMutation = trpc.upload.image.useMutation({
-    onError: (error: any) => {
-      toast.error(`Erreur upload: ${error.message}`);
-      setIsUploading(false);
-    },
-  });
-
-  const createGoodie = trpc.goodies.create.useMutation({
-    onSuccess: () => {
-      toast.success("Produit goodies créé");
-      postCreate();
-      goodiesQuery.refetch();
-      utils.qr.catalogQRCodes.invalidate();
-    },
-    onError: (err: any) => toast.error(err.message),
-  });
-
-  const createPastry = trpc.pastries.create.useMutation({
-    onSuccess: () => {
-      toast.success("Produit pâtisserie créé");
-      postCreate();
-      pastriesQuery.refetch();
-      utils.qr.catalogQRCodes.invalidate();
-    },
-    onError: (err: any) => toast.error(err.message),
-  });
-
-  const createTerroirProduct =
-    trpc.terroirModule.adminCreateProduct.useMutation({
-      onSuccess: async created => {
-        if (form.variantLabel || form.stock > 0 || form.price > 0) {
-          await createTerroirVariant.mutateAsync({
-            productId: created.id,
-            label: form.variantLabel || "Standard",
-            sku: form.variantSku,
-            priceUnit: form.price,
-            stockTotal: form.stock,
-            isActive: form.isActive,
-          });
-        }
-        toast.success("Produit terroir créé");
-        postCreate();
-        terroirQuery.refetch();
-        utils.qr.catalogQRCodes.invalidate();
-      },
-      onError: (err: any) => toast.error(err.message),
-    });
-
-  const createTerroirVariant =
-    trpc.terroirModule.adminCreateVariant.useMutation({
-      onError: (err: any) => toast.error(err.message),
-    });
-
-  const updateGoodie = trpc.goodies.update.useMutation({
-    onSuccess: () => {
-      toast.success("Produit goodies mis à jour");
-      goodiesQuery.refetch();
-      postEdit();
-    },
-    onError: (err: any) => toast.error(err.message),
-  });
-
-  const updatePastry = trpc.pastries.update.useMutation({
-    onSuccess: () => {
-      toast.success("Produit pâtisserie mis à jour");
-      pastriesQuery.refetch();
-      postEdit();
-    },
-    onError: (err: any) => toast.error(err.message),
-  });
-
-  const updateTerroir = trpc.terroirModule.adminUpdateProduct.useMutation({
-    onSuccess: () => {
-      toast.success("Produit terroir mis à jour");
-      terroirQuery.refetch();
-      postEdit();
-    },
-    onError: (err: any) => toast.error(err.message),
-  });
-
-  const deleteGoodie = trpc.goodies.delete.useMutation({
-    onSuccess: () => {
-      toast.success("Produit goodies supprimé");
-      goodiesQuery.refetch();
-    },
-    onError: (err: any) => toast.error(err.message),
-  });
-
-  const deletePastry = trpc.pastries.delete.useMutation({
-    onSuccess: () => {
-      toast.success("Produit pâtisserie supprimé");
-      pastriesQuery.refetch();
-    },
-    onError: (err: any) => toast.error(err.message),
-  });
-
-  const postCreate = () => {
-    setShowCreate(false);
-    setImagePreview(null);
-    setForm(BASE_FORM);
+  const invalidateAll = () => {
+    refetchGoodies();
+    refetchPastries();
+    refetchTerroir();
+    utils.qr.catalogQRCodes.invalidate();
   };
 
-  const postEdit = () => {
-    setShowEdit(false);
-    setEditingRow(null);
-    setImagePreview(null);
-    setForm(BASE_FORM);
-  };
+  // Mutations
+  const createGoodie = trpc.goodies.create.useMutation({ onSuccess: () => { toast.success('Produit Goodies créé'); invalidateAll(); }, onError: (e: any) => toast.error(e.message) });
+  const updateGoodie = trpc.goodies.update.useMutation({ onSuccess: () => { toast.success('Goodies mis à jour'); invalidateAll(); }, onError: (e: any) => toast.error(e.message) });
+  const deleteGoodie = trpc.goodies.delete.useMutation({ onSuccess: () => { toast.success('Produit supprimé'); invalidateAll(); }, onError: (e: any) => toast.error(e.message) });
+  const createPastry = trpc.pastries.create.useMutation({ onSuccess: () => { toast.success('Pâtisserie créée'); invalidateAll(); }, onError: (e: any) => toast.error(e.message) });
+  const updatePastry = trpc.pastries.update.useMutation({ onSuccess: () => { toast.success('Pâtisserie mise à jour'); invalidateAll(); }, onError: (e: any) => toast.error(e.message) });
+  const deletePastry = trpc.pastries.delete.useMutation({ onSuccess: () => { toast.success('Pâtisserie supprimée'); invalidateAll(); }, onError: (e: any) => toast.error(e.message) });
+  const createTerroir = trpc.terroirModule.adminCreateProduct.useMutation({ onSuccess: () => { toast.success('Produit Terroir créé'); invalidateAll(); }, onError: (e: any) => toast.error(e.message) });
+  const updateTerroir = trpc.terroirModule.adminUpdateProduct.useMutation({ onSuccess: () => { toast.success('Terroir mis à jour'); invalidateAll(); }, onError: (e: any) => toast.error(e.message) });
 
-  const unifiedRows = useMemo<UnifiedRow[]>(() => {
-    const goodies = (goodiesQuery.data || []).map((item: any) => ({
-      id: `goodies-${item.id}`,
-      type: "goodies" as const,
-      name: item.name,
-      description: item.description || "",
-      category: item.category || "-",
-      imageUrl: item.image_url || "",
-      sortOrder: item.sort_order || 0,
-      price: item.price,
-      stock: item.stock ?? 0,
-      isActive: item.is_active,
-      manageRoute: "/admin/goodies",
-      rawId: item.id,
+  // Normalize data
+  const rows: UnifiedRow[] = useMemo(() => {
+    const goodies: UnifiedRow[] = (rawGoodies ?? []).map((g: any) => ({
+      id: `goodies-${g.id}`, rawId: g.id, type: 'goodies' as const,
+      name: g.name, description: g.description ?? '', category: g.category ?? '',
+      imageUrl: g.image_url ?? '', sortOrder: g.sort_order ?? 0,
+      price: g.price ?? 0, stock: g.stock ?? 0, isActive: g.is_active ?? true,
     }));
-
-    const pastries = (pastriesQuery.data || []).map((item: any) => ({
-      id: `pastry-${item.id}`,
-      type: "pastry" as const,
-      name: item.name,
-      description: item.description || "",
-      category: item.category || "-",
-      imageUrl: item.image_url || "",
-      sortOrder: item.sort_order || 0,
-      price: item.price,
-      stock: item.stock ?? 0,
-      isActive: item.active,
-      manageRoute: "/admin/patisserie/catalogue",
-      rawId: item.id,
+    const pastries: UnifiedRow[] = (rawPastries ?? []).map((p: any) => ({
+      id: `pastry-${p.id}`, rawId: p.id, type: 'pastry' as const,
+      name: p.name, description: p.description ?? '', category: p.category ?? '',
+      imageUrl: p.image_url ?? '', sortOrder: p.sort_order ?? 0,
+      price: p.price ?? 0, stock: p.stock ?? 0, isActive: p.active ?? true,
     }));
-
-    const terroir = (terroirQuery.data || []).filter((item: any) => item.is_active !== false).map((item: any) => ({
-      id: `terroir-${item.id}`,
-      type: "terroir" as const,
-      name: item.name,
-      description: item.description || "",
-      category: item.category || "-",
-      imageUrl: item.image_url || "",
-      sortOrder: item.sort_order || 0,
-      price: item.terroir_product_variants?.[0]?.price_unit
-        ? Number(item.terroir_product_variants[0].price_unit)
+    const terroir: UnifiedRow[] = (rawTerroir ?? []).map((t: any) => ({
+      id: `terroir-${t.id}`, rawId: t.id, type: 'terroir' as const,
+      name: t.name, description: t.description ?? '', category: t.category ?? '',
+      imageUrl: t.image_url ?? '', sortOrder: t.sort_order ?? 0,
+      price: t.terroir_product_variants?.[0]?.price_unit != null
+        ? Number(t.terroir_product_variants[0].price_unit)
         : null,
-      stock: (item.terroir_product_variants || []).reduce(
-        (sum: number, v: any) => sum + (v.stock_total - v.stock_reserved),
+      stock: (t.terroir_product_variants ?? []).reduce(
+        (s: number, v: any) => s + ((v.stock_total ?? 0) - (v.stock_reserved ?? 0)),
         0
       ),
-      isActive: item.is_active,
-      manageRoute: "/admin/terroir/products",
-      rawId: item.id,
+      isActive: t.is_active ?? true,
     }));
+    return [...goodies, ...pastries, ...terroir];
+  }, [rawGoodies, rawPastries, rawTerroir]);
 
-    return [...goodies, ...pastries, ...terroir]
-      .filter(row =>
-        selectedType === "all" ? true : row.type === selectedType
-      )
-      .filter(row =>
-        `${row.name} ${row.description} ${row.category}`
-          .toLowerCase()
-          .includes(search.toLowerCase())
-      );
-  }, [
-    goodiesQuery.data,
-    pastriesQuery.data,
-    terroirQuery.data,
-    selectedType,
-    search,
-  ]);
+  const filtered = useMemo(() => {
+    let r = rows;
+    if (tab !== 'all') r = r.filter(row => row.type === tab);
+    if (search) r = r.filter(row =>
+      row.name.toLowerCase().includes(search.toLowerCase()) ||
+      row.category.toLowerCase().includes(search.toLowerCase())
+    );
+    return r;
+  }, [rows, tab, search]);
 
-  const loading =
-    goodiesQuery.isLoading || pastriesQuery.isLoading || terroirQuery.isLoading;
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // KPI stats
+  const stats = useMemo(() => ({
+    total: rows.length,
+    stockTotal: rows.reduce((s, r) => s + r.stock, 0),
+    lowStock: rows.filter(r => r.stock > 0 && r.stock < 10).length,
+    outOfStock: rows.filter(r => r.stock === 0).length,
+    active: rows.filter(r => r.isActive).length,
+  }), [rows]);
 
-    const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-    if (!allowedTypes.includes(file.type)) {
-      toast.error("Type de fichier non autorisé. Utilisez PNG, JPEG ou WebP.");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Le fichier est trop volumineux. Maximum 5 Mo.");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = async e => {
-      const base64 = e.target?.result as string;
-      setImagePreview(base64);
-      setIsUploading(true);
-      try {
-        const result = await uploadMutation.mutateAsync({
-          fileName: file.name,
-          fileType: file.type,
-          fileData: base64,
-          folder: createType === "pastry" ? "pastries" : createType,
-        });
-        setForm(prev => ({ ...prev, imageUrl: result.url }));
-      } finally {
-        setIsUploading(false);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const openEditDialog = (row: UnifiedRow) => {
-    setEditingRow(row);
-    setCreateType(row.type);
-    setForm({
-      name: row.name,
-      description: row.description,
-      category: row.category === "-" ? "" : row.category,
-      imageUrl: row.imageUrl,
-      price: row.price || 0,
-      stock: row.stock,
-      sortOrder: row.sortOrder,
-      isActive: row.isActive,
-      variantLabel: "",
-      variantSku: "",
-    });
-    setImagePreview(row.imageUrl || null);
-    setShowEdit(true);
-  };
-
-  const handleCreate = () => {
-    if (!form.name.trim()) {
-      toast.error("Le nom du produit est obligatoire");
-      return;
-    }
-
-    if (createType !== "terroir" && !form.price) {
-      toast.error("Le prix est obligatoire");
-      return;
-    }
-
-    if (createType === "goodies") {
-      createGoodie.mutate({
-        name: form.name,
-        description: form.description,
-        category: form.category,
-        imageUrl: form.imageUrl,
-        price: form.price,
-        stock: form.stock,
-        sortOrder: form.sortOrder,
-        isActive: form.isActive,
-      });
-      return;
-    }
-
-    if (createType === "pastry") {
-      createPastry.mutate({
-        name: form.name,
-        description: form.description || undefined,
-        category: form.category || undefined,
-        imageUrl: form.imageUrl || undefined,
-        price: form.price,
-        stock: form.stock,
-        sortOrder: form.sortOrder,
-      });
-      return;
-    }
-
-    createTerroirProduct.mutate({
-      name: form.name,
-      description: form.description,
-      category: form.category,
-      imageUrl: form.imageUrl,
-      isActive: form.isActive,
-      sortOrder: form.sortOrder,
-    });
-  };
-
-  const handleUpdate = () => {
+  // Handle save (edit drawer)
+  function handleSave(form: typeof BASE_FORM) {
     if (!editingRow) return;
-
-    if (editingRow.type === "goodies") {
+    if (editingRow.type === 'goodies') {
       updateGoodie.mutate({
         id: editingRow.rawId,
         name: form.name,
@@ -396,10 +392,7 @@ export default function AdminUnifiedCatalog() {
         sortOrder: form.sortOrder,
         isActive: form.isActive,
       });
-      return;
-    }
-
-    if (editingRow.type === "pastry") {
+    } else if (editingRow.type === 'pastry') {
       updatePastry.mutate({
         id: editingRow.rawId,
         name: form.name,
@@ -411,533 +404,350 @@ export default function AdminUnifiedCatalog() {
         sortOrder: form.sortOrder,
         active: form.isActive,
       });
-      return;
+    } else if (editingRow.type === 'terroir') {
+      updateTerroir.mutate({
+        id: editingRow.rawId,
+        name: form.name,
+        description: form.description,
+        category: form.category,
+        imageUrl: form.imageUrl,
+        sortOrder: form.sortOrder,
+        isActive: form.isActive,
+        stockTotal: form.stock,
+      });
     }
+  }
 
-    updateTerroir.mutate({
-      id: editingRow.rawId,
-      name: form.name,
-      description: form.description,
-      category: form.category,
-      imageUrl: form.imageUrl,
-      sortOrder: form.sortOrder,
-      isActive: form.isActive,
-      stockTotal: form.stock,
+  // Handle create
+  function handleCreate(form: typeof BASE_FORM) {
+    if (createType === 'goodies') {
+      createGoodie.mutate({
+        name: form.name,
+        description: form.description,
+        category: form.category,
+        imageUrl: form.imageUrl,
+        price: form.price,
+        stock: form.stock,
+        sortOrder: form.sortOrder,
+        isActive: form.isActive,
+      });
+    } else if (createType === 'pastry') {
+      createPastry.mutate({
+        name: form.name,
+        description: form.description || undefined,
+        category: form.category || undefined,
+        imageUrl: form.imageUrl || undefined,
+        price: form.price,
+        stock: form.stock,
+        sortOrder: form.sortOrder,
+      });
+    } else if (createType === 'terroir') {
+      createTerroir.mutate({
+        name: form.name,
+        description: form.description,
+        category: form.category,
+        imageUrl: form.imageUrl,
+        isActive: form.isActive,
+        sortOrder: form.sortOrder,
+      });
+    }
+  }
+
+  // Bulk deactivate
+  function handleBulkDeactivate() {
+    selectedIds.forEach(id => {
+      const row = rows.find(r => r.id === id);
+      if (!row) return;
+      if (row.type === 'goodies') {
+        updateGoodie.mutate({ id: row.rawId, isActive: false });
+      } else if (row.type === 'pastry') {
+        updatePastry.mutate({ id: row.rawId, active: false });
+      } else if (row.type === 'terroir') {
+        updateTerroir.mutate({ id: row.rawId, isActive: false });
+      }
     });
-  };
+    setSelectedIds(new Set());
+    toast.success('Produits désactivés');
+  }
 
-  const toggleActive = (row: UnifiedRow) => {
-    if (row.type === "goodies") {
-      updateGoodie.mutate({ id: row.rawId, isActive: !row.isActive });
-    } else if (row.type === "pastry") {
-      updatePastry.mutate({ id: row.rawId, active: !row.isActive });
-    } else {
-      updateTerroir.mutate({ id: row.rawId, isActive: !row.isActive });
-    }
-  };
-
-  const handleDelete = (row: UnifiedRow) => {
-    if (row.type === "goodies") {
-      deleteGoodie.mutate({ id: row.rawId });
-      return;
-    }
-
-    if (row.type === "pastry") {
-      deletePastry.mutate({ id: row.rawId });
-      return;
-    }
-
-    updateTerroir.mutate({ id: row.rawId, isActive: false });
-  };
-
-  const renderFormFields = () => (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label>Type de catalogue</Label>
-        <div className="flex gap-2 flex-wrap">
-          {(["goodies", "pastry", "terroir"] as const).map(type => (
-            <Button
-              key={type}
-              type="button"
-              variant={createType === type ? "default" : "outline"}
-              onClick={() => setCreateType(type)}
-              disabled={showEdit}
-            >
-              {type === "goodies"
-                ? "Goodies"
-                : type === "pastry"
-                  ? "Pâtisserie"
-                  : "Terroir"}
-            </Button>
-          ))}
-        </div>
+  // Topbar actions
+  useAdminPage({
+    actions: (
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          onClick={() => { setCreateType('goodies'); setShowCreate(true); }}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            height: 32, padding: '0 12px',
+            background: 'var(--olive)', color: '#F5F1E2',
+            border: 'none', borderRadius: 5,
+            fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >
+          <Plus size={13} strokeWidth={1.5} />
+          Ajouter un produit
+        </button>
       </div>
-
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="space-y-2 md:col-span-2">
-          <Label>Nom du produit *</Label>
-          <Input
-            value={form.name}
-            onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
-          />
-        </div>
-        <div className="space-y-2 md:col-span-2">
-          <Label>Description</Label>
-          <Textarea
-            value={form.description}
-            onChange={e =>
-              setForm(prev => ({
-                ...prev,
-                description: e.target.value,
-              }))
-            }
-            rows={3}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Catégorie</Label>
-          <Input
-            value={form.category}
-            onChange={e =>
-              setForm(prev => ({
-                ...prev,
-                category: e.target.value,
-              }))
-            }
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Ordre</Label>
-          <Input
-            type="number"
-            min="0"
-            value={form.sortOrder || ""}
-            onChange={e =>
-              setForm(prev => ({
-                ...prev,
-                sortOrder: Number(e.target.value) || 0,
-              }))
-            }
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>
-            Prix (DH)
-            {createType === "terroir" ? " (pour 1ère variante)" : " *"}
-          </Label>
-          <Input
-            type="number"
-            min="0"
-            step="0.01"
-            value={form.price || ""}
-            onChange={e =>
-              setForm(prev => ({
-                ...prev,
-                price: Number(e.target.value) || 0,
-              }))
-            }
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>
-            Stock{createType === "terroir" ? " (1ère variante)" : ""}
-          </Label>
-          <Input
-            type="number"
-            min="0"
-            value={form.stock || ""}
-            onChange={e =>
-              setForm(prev => ({
-                ...prev,
-                stock: Number(e.target.value) || 0,
-              }))
-            }
-          />
-        </div>
-
-        {createType === "terroir" && !showEdit && (
-          <>
-            <div className="space-y-2">
-              <Label>Label variante (optionnel)</Label>
-              <Input
-                value={form.variantLabel}
-                onChange={e =>
-                  setForm(prev => ({
-                    ...prev,
-                    variantLabel: e.target.value,
-                  }))
-                }
-                placeholder="250g, 500ml..."
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>SKU variante (optionnel)</Label>
-              <Input
-                value={form.variantSku}
-                onChange={e =>
-                  setForm(prev => ({
-                    ...prev,
-                    variantSku: e.target.value,
-                  }))
-                }
-              />
-            </div>
-          </>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label>Image</Label>
-        <div className="border rounded-md p-3">
-          {imagePreview || form.imageUrl ? (
-            <div className="relative inline-block">
-              <img
-                src={imagePreview || form.imageUrl}
-                alt="preview"
-                className="max-h-40 rounded"
-              />
-              <Button
-                type="button"
-                size="icon"
-                variant="destructive"
-                className="absolute -top-2 -right-2 h-6 w-6"
-                onClick={() => {
-                  setImagePreview(null);
-                  setForm(prev => ({ ...prev, imageUrl: "" }));
-                  if (fileInputRef.current) fileInputRef.current.value = "";
-                }}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Choisir une image
-            </Button>
-          )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            accept="image/png,image/jpeg,image/jpg,image/webp"
-            onChange={handleUpload}
-          />
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <Label>Actif</Label>
-        <Switch
-          checked={form.isActive}
-          onCheckedChange={checked =>
-            setForm(prev => ({ ...prev, isActive: checked }))
-          }
-        />
-      </div>
-    </div>
-  );
-
-  const isBusy =
-    isUploading ||
-    createGoodie.isPending ||
-    createPastry.isPending ||
-    createTerroirProduct.isPending ||
-    updateGoodie.isPending ||
-    updatePastry.isPending ||
-    updateTerroir.isPending ||
-    deleteGoodie.isPending ||
-    deletePastry.isPending;
+    ),
+  });
 
   return (
-    <RequireRole
-      allowedRoles={[
-        "admin",
-        "super_admin",
-        "admin_boutique",
-        "admin_patisserie",
-        "admin_terroir",
-      ]}
-    >
-      <div className="min-h-screen bg-muted/30">
-        <header className="sticky top-0 z-50 bg-background border-b">
-          <div className="container flex h-16 items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <Link href="/admin">
-                <Button variant="ghost" size="icon">
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              </Link>
-              <div>
-                <h1 className="font-bold text-lg">
-                  Dashboard catalogue unifié
-                </h1>
-                <p className="text-xs text-muted-foreground">
-                  Goodies, pâtisseries et terroir depuis un seul écran
-                </p>
+    <RequireRole allowedRoles={['admin', 'super_admin', 'admin_boutique', 'admin_patisserie', 'admin_terroir']}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, position: 'relative', minHeight: 0 }}>
+
+        {/* Compact KPI strip */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+          {[
+            { l: 'Total', v: stats.total, t: 'références', c: undefined },
+            { l: 'Stock total', v: stats.stockTotal.toLocaleString('fr'), t: 'unités', c: 'var(--info)' },
+            { l: 'Actifs', v: stats.active, t: 'produits', c: 'var(--success)' },
+            { l: 'Stocks bas', v: stats.lowStock, t: '< 10 unités', c: 'var(--warn)' },
+            { l: 'Épuisés', v: stats.outOfStock, t: 'à réapprovisionner', c: 'var(--danger)' },
+          ].map((s, i) => (
+            <div key={i} style={{
+              background: 'var(--surface)', border: '1px solid var(--line)',
+              borderRadius: 6, padding: '10px 12px',
+            }}>
+              <div style={{ fontSize: 10.5, color: 'var(--ink-mute)', marginBottom: 4 }}>{s.l}</div>
+              <div style={{ fontSize: 18, fontWeight: 600, color: s.c || 'var(--ink)', letterSpacing: -0.3 }}>{s.v}</div>
+              <div style={{ fontSize: 10.5, color: 'var(--ink-mute)', marginTop: 2 }}>{s.t}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Toolbar */}
+        <div style={{
+          background: 'var(--surface)', border: '1px solid var(--line)',
+          borderRadius: 6, padding: '8px 10px',
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          {/* Type tabs */}
+          <div style={{ display: 'flex', gap: 2, padding: 2, background: 'var(--surface-alt)', borderRadius: 5 }}>
+            {(['all', 'goodies', 'pastry', 'terroir'] as const).map(t => {
+              const isActive = tab === t;
+              const count = t === 'all' ? rows.length : rows.filter(r => r.type === t).length;
+              return (
+                <button key={t} onClick={() => { setTab(t); setPage(1); }} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '5px 10px', borderRadius: 4,
+                  background: isActive ? 'var(--ink)' : 'transparent',
+                  color: isActive ? '#fff' : 'var(--ink-soft)',
+                  border: 'none', fontFamily: 'inherit', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                }}>
+                  {t !== 'all' && (
+                    <span style={{
+                      width: 7, height: 7, borderRadius: 99,
+                      background: isActive
+                        ? 'rgba(255,255,255,0.6)'
+                        : (t === 'goodies' ? 'var(--info)' : t === 'pastry' ? 'var(--warn)' : 'var(--success)'),
+                    }} />
+                  )}
+                  {t === 'all' ? 'Tous' : TYPE_LABEL[t]}
+                  <span style={{
+                    fontSize: 10.5, padding: '0 5px', borderRadius: 99,
+                    background: isActive ? 'rgba(255,255,255,0.18)' : 'var(--line-soft)',
+                    color: isActive ? '#fff' : 'var(--ink-mute)',
+                  }}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ width: 1, height: 22, background: 'var(--line)' }} />
+
+          <div style={{ flex: 1 }} />
+
+          {/* Search */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 28, padding: '0 10px', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 5 }}>
+            <Search size={13} strokeWidth={1.5} style={{ color: 'var(--ink-mute)', flexShrink: 0 }} />
+            <input
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Rechercher dans le catalogue…"
+              style={{ width: 240, border: 'none', outline: 'none', background: 'transparent', fontSize: 12.5, color: 'var(--ink)', fontFamily: 'inherit' }}
+            />
+          </div>
+        </div>
+
+        {/* Bulk action bar */}
+        {selectedIds.size > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '8px 12px', background: 'var(--olive)', color: '#F5F1E2',
+            borderRadius: 6, fontSize: 12,
+          }}>
+            <Check size={13} strokeWidth={2} />
+            <strong>{selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}</strong>
+            <span style={{ opacity: 0.5 }}>·</span>
+            <button onClick={handleBulkDeactivate} style={{ background: 'transparent', border: 'none', color: '#F5F1E2', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>Désactiver</button>
+            <div style={{ flex: 1 }} />
+            <button onClick={() => setSelectedIds(new Set())} style={{ background: 'transparent', border: 'none', color: '#F5F1E2', cursor: 'pointer', padding: 2 }}>
+              <X size={13} />
+            </button>
+          </div>
+        )}
+
+        {/* Table + Drawer */}
+        <div style={{ position: 'relative', display: 'flex' }}>
+          <div style={{
+            flex: 1,
+            background: 'var(--surface)', border: '1px solid var(--line)',
+            borderRadius: 6, overflow: 'hidden',
+            marginRight: editingRow ? 380 : 0,
+            transition: 'margin-right 200ms ease',
+          }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--line-soft)', background: 'var(--surface-alt)' }}>
+                  <th style={{ padding: '8px 8px 8px 14px', textAlign: 'left', width: 32 }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.size === paginated.length && paginated.length > 0}
+                      onChange={e => setSelectedIds(e.target.checked ? new Set(paginated.map(r => r.id)) : new Set())}
+                    />
+                  </th>
+                  {['Produit', 'Type', 'Catégorie', 'Prix', 'Stock', 'Statut', ''].map((h, i) => (
+                    <th key={i} style={{
+                      padding: '8px 12px',
+                      textAlign: ['Prix', 'Stock'].includes(h) ? 'right' : 'left',
+                      fontSize: 11, fontWeight: 600, letterSpacing: '0.5px',
+                      color: 'var(--ink-mute)', textTransform: 'uppercase',
+                    }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {paginated.map(row => {
+                  const isSelected = selectedIds.has(row.id);
+                  const { tone, label } = statusTone(row.stock, row.isActive);
+                  return (
+                    <tr
+                      key={row.id}
+                      style={{
+                        borderBottom: '1px solid var(--line-soft)',
+                        background: isSelected
+                          ? 'color-mix(in srgb, var(--olive) 8%, transparent)'
+                          : editingRow?.id === row.id
+                            ? 'var(--olive-soft)'
+                            : 'transparent',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => setEditingRow(editingRow?.id === row.id ? null : row)}
+                    >
+                      <td style={{ padding: '9px 8px 9px 14px' }} onClick={e => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={e => {
+                            const next = new Set(selectedIds);
+                            e.target.checked ? next.add(row.id) : next.delete(row.id);
+                            setSelectedIds(next);
+                          }}
+                        />
+                      </td>
+                      <td style={{ padding: '9px 12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          {row.imageUrl ? (
+                            <img src={row.imageUrl} alt={row.name} style={{ width: 28, height: 28, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} />
+                          ) : (
+                            <div style={{ width: 28, height: 28, borderRadius: 4, background: 'var(--olive-soft)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <ImageIcon size={12} style={{ color: 'var(--ink-mute)' }} />
+                            </div>
+                          )}
+                          <div style={{ lineHeight: 1.3 }}>
+                            <div style={{ fontWeight: 500, color: 'var(--ink)' }}>{row.name}</div>
+                            <div style={{ fontSize: 10.5, color: 'var(--ink-mute)', fontFamily: '"JetBrains Mono", monospace' }}>
+                              {row.type.toUpperCase()}-{String(row.rawId).padStart(3, '0')}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '9px 12px' }}>
+                        <AdminBadge tone={TYPE_TONE[row.type]} dot>{TYPE_LABEL[row.type]}</AdminBadge>
+                      </td>
+                      <td style={{ padding: '9px 12px', color: 'var(--ink-soft)' }}>{row.category || '—'}</td>
+                      <td style={{ padding: '9px 12px', textAlign: 'right', fontFamily: '"JetBrains Mono", monospace', fontWeight: 500 }}>
+                        {row.price !== null ? (
+                          <>
+                            {row.price}
+                            <span style={{ color: 'var(--ink-mute)', fontSize: 10.5, marginLeft: 2 }}>DH</span>
+                          </>
+                        ) : '—'}
+                      </td>
+                      <td style={{ padding: '9px 12px', textAlign: 'right' }}>
+                        <StockBar stock={row.stock} sold={50} />
+                      </td>
+                      <td style={{ padding: '9px 12px' }}>
+                        <AdminBadge tone={tone} dot>{label}</AdminBadge>
+                      </td>
+                      <td style={{ padding: '9px 14px 9px 12px', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
+                        <button style={{ background: 'transparent', border: 'none', color: 'var(--ink-mute)', cursor: 'pointer', padding: 4 }}>
+                          <MoreHorizontal size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {paginated.length === 0 && (
+                  <tr>
+                    <td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: 'var(--ink-mute)', fontSize: 13 }}>
+                      Aucun produit trouvé
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+
+            {/* Pagination */}
+            <div style={{
+              padding: '10px 16px', borderTop: '1px solid var(--line-soft)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              background: 'var(--surface-alt)', fontSize: 11.5, color: 'var(--ink-mute)',
+            }}>
+              <span>
+                {filtered.length === 0
+                  ? 'Aucun résultat'
+                  : `Affiche ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filtered.length)} sur ${filtered.length}`}
+              </span>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                  disabled={page <= 1}
+                  onClick={() => setPage(p => p - 1)}
+                  style={{ height: 26, padding: '0 8px', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 4, fontSize: 12, cursor: 'pointer', color: page <= 1 ? 'var(--ink-mute)' : 'var(--ink)', display: 'flex', alignItems: 'center' }}
+                >
+                  <ChevronLeft size={12} />
+                </button>
+                <button
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(p => p + 1)}
+                  style={{ height: 26, padding: '0 8px', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 4, fontSize: 12, cursor: 'pointer', color: page >= totalPages ? 'var(--ink-mute)' : 'var(--ink)', display: 'flex', alignItems: 'center' }}
+                >
+                  <ChevronRight size={12} />
+                </button>
               </div>
             </div>
-
-            <Dialog
-              open={showCreate}
-              onOpenChange={open => {
-                setShowCreate(open);
-                if (!open) {
-                  setForm(BASE_FORM);
-                  setImagePreview(null);
-                }
-              }}
-            >
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" /> Ajouter un produit
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Créer un produit</DialogTitle>
-                </DialogHeader>
-                {renderFormFields()}
-                <Button
-                  className="w-full"
-                  onClick={handleCreate}
-                  disabled={isBusy}
-                >
-                  {isBusy ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Plus className="h-4 w-4 mr-2" />
-                  )}
-                  Créer le produit
-                </Button>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </header>
-
-        <main className="container py-8 space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground">Tous</p>
-                <p className="text-2xl font-bold">
-                  {(goodiesQuery.data?.length || 0) +
-                    (pastriesQuery.data?.length || 0) +
-                    (terroirQuery.data?.length || 0)}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground">Goodies</p>
-                <p className="text-2xl font-bold">
-                  {goodiesQuery.data?.length || 0}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground">Pâtisserie</p>
-                <p className="text-2xl font-bold">
-                  {pastriesQuery.data?.length || 0}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground">Terroir</p>
-                <p className="text-2xl font-bold">
-                  {terroirQuery.data?.length || 0}
-                </p>
-              </CardContent>
-            </Card>
           </div>
 
-          <div className="flex gap-2 flex-wrap">
-            {[
-              { key: "all", label: "Tous" },
-              { key: "goodies", label: "Goodies" },
-              { key: "pastry", label: "Pâtisserie" },
-              { key: "terroir", label: "Terroir" },
-            ].map(item => (
-              <Button
-                key={item.key}
-                variant={selectedType === item.key ? "default" : "outline"}
-                onClick={() => setSelectedType(item.key as ProductType)}
-              >
-                {item.label}
-              </Button>
-            ))}
+          {/* Slide-over drawer */}
+          {editingRow && (
+            <ProductDrawer
+              row={editingRow}
+              onClose={() => setEditingRow(null)}
+              onSave={handleSave}
+            />
+          )}
+        </div>
 
-            <div className="relative ml-auto w-full md:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                className="pl-9"
-                placeholder="Rechercher un produit..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <Card>
-            <CardContent className="p-0">
-              {loading ? (
-                <div className="py-10 flex justify-center">
-                  <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Produit</TableHead>
-                      <TableHead>Catégorie</TableHead>
-                      <TableHead>Prix</TableHead>
-                      <TableHead>Stock</TableHead>
-                      <TableHead>Statut</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {unifiedRows.map(row => (
-                      <TableRow key={row.id}>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {row.type === "pastry"
-                              ? "Pâtisserie"
-                              : row.type === "goodies"
-                                ? "Goodies"
-                                : "Terroir"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {row.name}
-                        </TableCell>
-                        <TableCell>{row.category}</TableCell>
-                        <TableCell>
-                          {row.price !== null && row.price !== undefined
-                            ? `${Number(row.price).toFixed(2)} DH`
-                            : "-"}
-                        </TableCell>
-                        <TableCell>{row.stock}</TableCell>
-                        <TableCell>
-                          <Badge
-                            className={
-                              row.isActive
-                                ? "bg-green-100 text-green-700"
-                                : "bg-gray-100 text-gray-500"
-                            }
-                          >
-                            {row.isActive ? "Actif" : "Inactif"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => toggleActive(row)}
-                            >
-                              {row.isActive ? "Désactiver" : "Activer"}
-                            </Button>
-
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openEditDialog(row)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-red-600 hover:bg-red-50"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>
-                                    Supprimer ce produit ?
-                                  </AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Cette action est définitive pour
-                                    Goodies/Pâtisserie. Pour le terroir, le
-                                    produit sera désactivé.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    className="bg-red-600 hover:bg-red-700"
-                                    onClick={() => handleDelete(row)}
-                                  >
-                                    Confirmer
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-
-                            <Link href={row.manageRoute}>
-                              <Button size="sm" variant="outline">
-                                <ExternalLink className="h-4 w-4 mr-1" /> Gérer
-                              </Button>
-                            </Link>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-
-          <Dialog
-            open={showEdit}
-            onOpenChange={open => {
-              setShowEdit(open);
-              if (!open) {
-                postEdit();
-              }
-            }}
-          >
-            <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Modifier le produit</DialogTitle>
-              </DialogHeader>
-              {renderFormFields()}
-              <Button
-                className="w-full"
-                onClick={handleUpdate}
-                disabled={isBusy}
-              >
-                {isBusy ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Pencil className="h-4 w-4 mr-2" />
-                )}
-                Enregistrer
-              </Button>
-            </DialogContent>
-          </Dialog>
-
-          <p className="text-xs text-muted-foreground flex items-center gap-2">
-            <ImageIcon className="h-3 w-3" />
-            Pour les variantes terroir avancées et les modifications détaillées,
-            le bouton "Gérer" ouvre le module dédié.
-          </p>
-        </main>
+        {/* Create product modal */}
+        {showCreate && (
+          <CreateProductModal
+            createType={createType}
+            onClose={() => setShowCreate(false)}
+            onCreate={handleCreate}
+          />
+        )}
       </div>
     </RequireRole>
   );

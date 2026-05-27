@@ -1,13 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import DashboardLayout from '@/app/layout/DashboardLayout';
+import { useAdminPage } from './_shell/AdminFrame';
 import { getStoredSession } from '@/_core/authToken';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Download, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import AdminBadge from '@/components/admin/AdminBadge';
+import {
+  Loader2,
+  Download,
+  Check,
+  RefreshCw,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  X,
+} from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -54,44 +60,82 @@ type CardStatus =
 // Constants
 // ---------------------------------------------------------------------------
 
-const STATUSES: Array<{ value: string; label: string }> = [
-  { value: 'ALL', label: 'Tous les statuts' },
-  { value: 'INSCRIT', label: 'Inscrit' },
-  { value: 'MAIL_COMMANDE_ENVOYE', label: 'Mail commande envoyé' },
-  { value: 'CARTE_DEMANDEE', label: 'Carte demandée' },
-  { value: 'MAIL_PAIEMENT_ENVOYE', label: 'Mail paiement envoyé' },
-  { value: 'PAIEMENT_RECU', label: 'Paiement reçu' },
-  { value: 'A_IMPRIMER', label: 'À imprimer' },
-  { value: 'IMPRIMEE', label: 'Imprimée' },
-  { value: 'LIVREE', label: 'Livrée' },
+const PIPELINE: CardStatus[] = [
+  'INSCRIT',
+  'MAIL_COMMANDE_ENVOYE',
+  'CARTE_DEMANDEE',
+  'MAIL_PAIEMENT_ENVOYE',
+  'PAIEMENT_RECU',
+  'A_IMPRIMER',
+  'IMPRIMEE',
+  'LIVREE',
 ];
 
-const STATUS_BADGE: Record<CardStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  INSCRIT:               { label: 'Inscrit',               variant: 'outline' },
-  MAIL_COMMANDE_ENVOYE:  { label: 'Mail commande envoyé',  variant: 'secondary' },
-  CARTE_DEMANDEE:        { label: 'Carte demandée',         variant: 'secondary' },
-  MAIL_PAIEMENT_ENVOYE:  { label: 'Mail paiement envoyé',  variant: 'secondary' },
-  PAIEMENT_RECU:         { label: 'Paiement reçu',         variant: 'default' },
-  A_IMPRIMER:            { label: 'À imprimer',            variant: 'default' },
-  IMPRIMEE:              { label: 'Imprimée',              variant: 'default' },
-  LIVREE:                { label: 'Livrée',                variant: 'default' },
+const STATUS_LABEL: Record<CardStatus, string> = {
+  INSCRIT: 'Inscrit',
+  MAIL_COMMANDE_ENVOYE: 'Mail envoyé',
+  CARTE_DEMANDEE: 'Carte demandée',
+  MAIL_PAIEMENT_ENVOYE: 'Mail paiement',
+  PAIEMENT_RECU: 'Paiement reçu',
+  A_IMPRIMER: 'À imprimer',
+  IMPRIMEE: 'Imprimée',
+  LIVREE: 'Livrée',
 };
 
-const PAGE_SIZE = 20;
+type BadgeTone = 'neutral' | 'success' | 'warn' | 'danger' | 'info' | 'sand' | 'olive' | 'ghost';
+
+const STATUS_TONE: Record<CardStatus, BadgeTone> = {
+  INSCRIT: 'neutral',
+  MAIL_COMMANDE_ENVOYE: 'info',
+  CARTE_DEMANDEE: 'info',
+  MAIL_PAIEMENT_ENVOYE: 'warn',
+  PAIEMENT_RECU: 'success',
+  A_IMPRIMER: 'warn',
+  IMPRIMEE: 'sand',
+  LIVREE: 'olive',
+};
+
+// Funnel bar segment colors per status index
+const FUNNEL_COLORS: string[] = [
+  'var(--olive-soft)',
+  'var(--info-bg)',
+  'var(--info-bg)',
+  'var(--warn-bg)',
+  'var(--success-bg)',
+  'var(--warn-bg)',
+  'var(--sand-soft)',
+  'var(--olive)',
+];
+
+const FUNNEL_FG: string[] = [
+  'var(--olive-deep)',
+  'var(--info)',
+  'var(--info)',
+  'var(--warn)',
+  'var(--success)',
+  'var(--warn)',
+  '#7B5E1E',
+  '#F5F1E2',
+];
 
 // ---------------------------------------------------------------------------
 // API helper
 // ---------------------------------------------------------------------------
 
-function apiFetch(path: string, init?: RequestInit) {
-  const token = getStoredSession()?.accessToken;
-  const headers: Record<string, string> = { ...(init?.headers as Record<string, string>) };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  if (!(init?.body instanceof FormData)) headers['Content-Type'] = 'application/json';
-  return fetch(path, { ...init, headers });
+function authHeaders(): Record<string, string> {
+  const session = getStoredSession();
+  return {
+    'Content-Type': 'application/json',
+    ...(session?.accessToken ? { Authorization: `Bearer ${session.accessToken}` } : {}),
+    ...(session?.refreshToken ? { 'x-refresh-token': session.refreshToken } : {}),
+  };
 }
 
-async function parseApiResponse<T>(res: Response): Promise<T> {
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(path, {
+    ...init,
+    headers: { ...authHeaders(), ...(init?.headers as Record<string, string> | undefined) },
+  });
   const contentType = res.headers.get('content-type') || '';
   const rawBody = await res.text();
 
@@ -102,55 +146,570 @@ async function parseApiResponse<T>(res: Response): Promise<T> {
     throw new Error('Réponse invalide du serveur (format JSON attendu)');
   }
 
+  let data: unknown;
   try {
-    return JSON.parse(rawBody) as T;
+    data = JSON.parse(rawBody);
   } catch {
     throw new Error('Réponse JSON invalide reçue du serveur');
   }
+
+  if (!res.ok) {
+    throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
+  }
+
+  return data as T;
 }
 
 // ---------------------------------------------------------------------------
-// Status badge component
+// Data fetching
 // ---------------------------------------------------------------------------
 
-function StatusBadge({ status }: { status: CardStatus }) {
-  const { label, variant } = STATUS_BADGE[status] ?? { label: status, variant: 'outline' as const };
-  const colorClass: Record<CardStatus, string> = {
-    INSCRIT:               'border-gray-300 text-gray-600',
-    MAIL_COMMANDE_ENVOYE:  'border-blue-300 text-blue-700 bg-blue-50',
-    CARTE_DEMANDEE:        'border-indigo-300 text-indigo-700 bg-indigo-50',
-    MAIL_PAIEMENT_ENVOYE:  'border-violet-300 text-violet-700 bg-violet-50',
-    PAIEMENT_RECU:         'border-amber-300 text-amber-700 bg-amber-50',
-    A_IMPRIMER:            'border-orange-300 text-orange-700 bg-orange-50',
-    IMPRIMEE:              'border-teal-300 text-teal-700 bg-teal-50',
-    LIVREE:                'border-green-300 text-green-700 bg-green-50',
-  };
+async function fetchAllCards(): Promise<OrderItem[]> {
+  // Fetch all without status filter; we group client-side
+  const data = await apiFetch<{ items?: OrderItem[]; count?: number }>('/api/admin/cards?page=1');
+  return data.items ?? [];
+}
+
+async function fetchEvents(orderId: number): Promise<EventItem[]> {
+  const data = await apiFetch<{ items?: EventItem[] } | EventItem[]>(
+    `/api/admin/cards/${orderId}/events`,
+  );
+  if (Array.isArray(data)) return data;
+  return (data as { items?: EventItem[] }).items ?? [];
+}
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+function PipelineFunnel({
+  counts,
+}: {
+  counts: Record<CardStatus, number>;
+}) {
+  const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
   return (
-    <Badge variant="outline" className={`whitespace-nowrap text-xs ${colorClass[status] ?? ''}`}>
-      {label}
-    </Badge>
+    <div
+      style={{
+        display: 'flex',
+        gap: 2,
+        height: 36,
+        borderRadius: 8,
+        overflow: 'hidden',
+        marginBottom: 16,
+      }}
+    >
+      {PIPELINE.map((status, idx) => {
+        const count = counts[status] ?? 0;
+        const pct = Math.max((count / total) * 100, count > 0 ? 2 : 0);
+        return (
+          <div
+            key={status}
+            title={`${STATUS_LABEL[status]}: ${count}`}
+            style={{
+              flex: `${pct} 0 0`,
+              minWidth: count > 0 ? 32 : 4,
+              background: FUNNEL_COLORS[idx],
+              color: FUNNEL_FG[idx],
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 11,
+              fontWeight: 600,
+              transition: 'flex 0.3s',
+              cursor: 'default',
+              userSelect: 'none',
+            }}
+          >
+            {count > 0 ? count : ''}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function EventTimeline({ orderId, onClose }: { orderId: number; onClose: () => void }) {
+  const { data: events = [], isLoading } = useQuery<EventItem[]>({
+    queryKey: ['card-events', orderId],
+    queryFn: () => fetchEvents(orderId),
+    staleTime: 30_000,
+  });
+
+  return (
+    <div
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--line)',
+        borderRadius: 8,
+        padding: 16,
+        marginTop: 8,
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 12,
+        }}
+      >
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)' }}>
+          Timeline #{orderId}
+        </span>
+        <button
+          onClick={onClose}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'var(--ink-mute)',
+            padding: 2,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          <X size={14} />
+        </button>
+      </div>
+      {isLoading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
+          <Loader2 size={16} className="animate-spin" style={{ color: 'var(--ink-mute)' }} />
+        </div>
+      ) : events.length === 0 ? (
+        <p style={{ fontSize: 12, color: 'var(--ink-mute)', margin: 0 }}>
+          Aucun événement enregistré.
+        </p>
+      ) : (
+        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {events.map((ev) => {
+            const date = new Date(ev.created_at).toLocaleString('fr-MA', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+            return (
+              <li
+                key={ev.id}
+                style={{
+                  borderLeft: '2px solid var(--olive)',
+                  paddingLeft: 10,
+                  paddingTop: 4,
+                  paddingBottom: 4,
+                }}
+              >
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: 'var(--olive-deep)',
+                  }}
+                >
+                  {ev.event_type}
+                </p>
+                <p style={{ margin: 0, fontSize: 10, color: 'var(--ink-mute)' }}>{date}</p>
+                {Object.keys(ev.payload).length > 0 && (
+                  <pre
+                    style={{
+                      fontSize: 10,
+                      marginTop: 4,
+                      background: 'var(--surface-alt)',
+                      padding: '4px 6px',
+                      borderRadius: 4,
+                      overflow: 'auto',
+                      color: 'var(--ink-soft)',
+                    }}
+                  >
+                    {JSON.stringify(ev.payload, null, 2)}
+                  </pre>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Timeline event row
+// KCard — single card in a kanban column
 // ---------------------------------------------------------------------------
 
-function EventRow({ ev }: { ev: EventItem }) {
-  const date = new Date(ev.created_at).toLocaleString('fr-MA', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
+function KCard({
+  item,
+  onAction,
+  actionLoading,
+}: {
+  item: OrderItem;
+  onAction: (path: string, payload: Record<string, unknown>, label: string) => Promise<void>;
+  actionLoading: number | null;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(false);
+
+  const isLoading = actionLoading === item.id || actionLoading === item.members?.id;
+
+  const memberName = `${item.members?.first_name ?? ''} ${item.members?.last_name ?? ''}`.trim() || '—';
+  const memberEmail = item.members?.email ?? '—';
+
+  const downloadProof = async () => {
+    try {
+      const data = await apiFetch<{ url?: string; error?: string }>(
+        `/api/admin/card/proof-url?order_id=${item.id}`,
+      );
+      if (!data.url) throw new Error(data.error ?? 'URL indisponible');
+      window.open(data.url, '_blank', 'noopener,noreferrer');
+    } catch (err: unknown) {
+      toast.error(`Preuve : ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
   return (
-    <li className="flex gap-3 items-start border-l-2 border-green-200 pl-3 py-1">
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-green-800">{ev.event_type}</p>
-        <p className="text-xs text-muted-foreground">{date}</p>
-        {Object.keys(ev.payload).length > 0 && (
-          <pre className="text-xs mt-1 bg-muted p-2 rounded overflow-x-auto">{JSON.stringify(ev.payload, null, 2)}</pre>
+    <div
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--line-soft)',
+        borderRadius: 6,
+        padding: '10px 10px 8px',
+        cursor: 'pointer',
+        transition: 'box-shadow 0.15s',
+      }}
+      onMouseEnter={(e) =>
+        (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)')
+      }
+      onMouseLeave={(e) => (e.currentTarget.style.boxShadow = 'none')}
+    >
+      {/* Header row */}
+      <div
+        style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4 }}
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <div style={{ minWidth: 0 }}>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 13,
+              fontWeight: 600,
+              color: 'var(--ink)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {memberName}
+          </p>
+          <p
+            style={{
+              margin: '2px 0 0',
+              fontSize: 11,
+              color: 'var(--ink-mute)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {memberEmail}
+          </p>
+          <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--ink-soft)' }}>
+            #{item.id}
+          </p>
+        </div>
+        <span style={{ flexShrink: 0, color: 'var(--ink-mute)', marginTop: 2 }}>
+          {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+        </span>
+      </div>
+
+      {/* Expanded details */}
+      {expanded && (
+        <div style={{ marginTop: 10, borderTop: '1px solid var(--line-soft)', paddingTop: 8 }}>
+          {/* Address & phone */}
+          {item.members?.address && (
+            <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--ink-soft)' }}>
+              {item.members.address}
+            </p>
+          )}
+          {item.members?.phone && (
+            <p style={{ margin: '0 0 6px', fontSize: 11, color: 'var(--ink-soft)' }}>
+              {item.members.phone}
+            </p>
+          )}
+
+          {/* Paiement info */}
+          {item.payment_method && (
+            <p style={{ margin: '0 0 6px', fontSize: 11, color: 'var(--ink-soft)' }}>
+              Paiement:{' '}
+              {item.payment_method === 'bank_transfer' ? 'Virement' : 'Sur place'}
+            </p>
+          )}
+
+          {/* Action buttons based on status */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 6 }}>
+            {item.status === 'INSCRIT' && (
+              <SmallBtn
+                loading={isLoading}
+                onClick={() =>
+                  onAction(
+                    '/api/admin/card/send-order-email',
+                    { member_id: item.members.id },
+                    'Mail commande envoyé',
+                  )
+                }
+              >
+                Envoyer mail cmd
+              </SmallBtn>
+            )}
+
+            {item.status === 'CARTE_DEMANDEE' && (
+              <SmallBtn
+                loading={isLoading}
+                onClick={() =>
+                  onAction(
+                    '/api/admin/card/resend-payment-email',
+                    { order_id: item.id },
+                    'Mail paiement envoyé',
+                  )
+                }
+              >
+                Envoyer mail paiement
+              </SmallBtn>
+            )}
+
+            {item.status === 'MAIL_PAIEMENT_ENVOYE' && (
+              <SmallBtn
+                loading={isLoading}
+                onClick={() =>
+                  onAction(
+                    '/api/admin/card/mark-paid',
+                    { order_id: item.id },
+                    'Paiement enregistré',
+                  )
+                }
+              >
+                Marquer payé
+              </SmallBtn>
+            )}
+
+            {item.status === 'A_IMPRIMER' && (
+              <SmallBtn
+                loading={isLoading}
+                onClick={() =>
+                  onAction(
+                    '/api/admin/card/mark-printed',
+                    { order_id: item.id },
+                    'Carte marquée imprimée',
+                  )
+                }
+              >
+                Marquer imprimée
+              </SmallBtn>
+            )}
+
+            {item.status === 'IMPRIMEE' && (
+              <SmallBtn
+                loading={isLoading}
+                onClick={() =>
+                  onAction(
+                    '/api/admin/card/mark-delivered',
+                    { order_id: item.id },
+                    'Carte marquée livrée',
+                  )
+                }
+              >
+                Marquer livrée
+              </SmallBtn>
+            )}
+
+            {item.status === 'LIVREE' && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 11,
+                  color: 'var(--success)',
+                  fontWeight: 500,
+                }}
+              >
+                <Check size={12} />
+                Livrée
+              </div>
+            )}
+
+            {/* Download proof (available whenever there's a proof path) */}
+            {item.payment_proof_path && (
+              <SmallBtn
+                loading={false}
+                variant="ghost"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  downloadProof();
+                }}
+              >
+                <Download size={11} style={{ marginRight: 4 }} />
+                Justificatif
+              </SmallBtn>
+            )}
+
+            {/* Timeline toggle */}
+            <SmallBtn
+              loading={false}
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowTimeline((v) => !v);
+              }}
+            >
+              {showTimeline ? 'Masquer timeline' : 'Voir timeline'}
+            </SmallBtn>
+          </div>
+
+          {showTimeline && (
+            <EventTimeline orderId={item.id} onClose={() => setShowTimeline(false)} />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// SmallBtn — tiny action button
+// ---------------------------------------------------------------------------
+
+function SmallBtn({
+  children,
+  onClick,
+  loading,
+  variant = 'primary',
+  disabled,
+}: {
+  children: React.ReactNode;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  loading: boolean;
+  variant?: 'primary' | 'ghost';
+  disabled?: boolean;
+}) {
+  const isPrimary = variant === 'primary';
+  return (
+    <button
+      disabled={loading || disabled}
+      onClick={onClick}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4,
+        padding: '4px 8px',
+        fontSize: 11,
+        fontWeight: 500,
+        borderRadius: 4,
+        border: isPrimary ? '1px solid var(--line)' : 'none',
+        background: isPrimary ? 'var(--surface-alt)' : 'transparent',
+        color: isPrimary ? 'var(--ink)' : 'var(--ink-soft)',
+        cursor: loading || disabled ? 'not-allowed' : 'pointer',
+        opacity: loading || disabled ? 0.6 : 1,
+        whiteSpace: 'nowrap',
+        transition: 'background 0.12s',
+      }}
+    >
+      {loading ? <Loader2 size={11} className="animate-spin" /> : children}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// KanbanColumn
+// ---------------------------------------------------------------------------
+
+function KanbanColumn({
+  status,
+  items,
+  onAction,
+  actionLoading,
+}: {
+  status: CardStatus;
+  items: OrderItem[];
+  onAction: (path: string, payload: Record<string, unknown>, label: string) => Promise<void>;
+  actionLoading: number | null;
+}) {
+  const tone = STATUS_TONE[status];
+  return (
+    <div
+      style={{
+        width: 188,
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+      }}
+    >
+      {/* Column header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '8px 4px 10px',
+          gap: 6,
+        }}
+      >
+        <AdminBadge tone={tone} dot>
+          {STATUS_LABEL[status]}
+        </AdminBadge>
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            color: 'var(--ink-mute)',
+            background: 'var(--surface-alt)',
+            borderRadius: 12,
+            padding: '1px 7px',
+          }}
+        >
+          {items.length}
+        </span>
+      </div>
+
+      {/* Cards list */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+          paddingBottom: 8,
+        }}
+      >
+        {items.length === 0 ? (
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '24px 8px',
+              color: 'var(--ink-mute)',
+              fontSize: 11,
+              borderRadius: 6,
+              border: '1px dashed var(--line-soft)',
+            }}
+          >
+            —
+          </div>
+        ) : (
+          items.map((item) => (
+            <KCard
+              key={item.id}
+              item={item}
+              onAction={onAction}
+              actionLoading={actionLoading}
+            />
+          ))
         )}
       </div>
-    </li>
+    </div>
   );
 }
 
@@ -159,377 +718,223 @@ function EventRow({ ev }: { ev: EventItem }) {
 // ---------------------------------------------------------------------------
 
 export default function AdminMemberCards() {
-  const [items, setItems] = useState<OrderItem[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('ALL');
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
-  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
-  const [events, setEvents] = useState<EventItem[]>([]);
-  const [eventsLoading, setEventsLoading] = useState(false);
+  const queryClient = useQueryClient();
 
-  const selectedOrder = useMemo(
-    () => items.find((item) => item.id === selectedOrderId) ?? null,
-    [items, selectedOrderId],
-  );
+  const { data: allItems = [], isLoading, isFetching, refetch } = useQuery<OrderItem[]>({
+    queryKey: ['admin-cards'],
+    queryFn: fetchAllCards,
+    staleTime: 60_000,
+  });
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  // Group by status, filtered by search
+  const { grouped, counts } = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const filtered = q
+      ? allItems.filter((item) => {
+          const name =
+            `${item.members?.first_name ?? ''} ${item.members?.last_name ?? ''}`.toLowerCase();
+          const email = (item.members?.email ?? '').toLowerCase();
+          const phone = (item.members?.phone ?? '').toLowerCase();
+          return name.includes(q) || email.includes(q) || phone.includes(q);
+        })
+      : allItems;
 
-  // ---- Data loading ----
+    const grouped: Record<CardStatus, OrderItem[]> = {
+      INSCRIT: [],
+      MAIL_COMMANDE_ENVOYE: [],
+      CARTE_DEMANDEE: [],
+      MAIL_PAIEMENT_ENVOYE: [],
+      PAIEMENT_RECU: [],
+      A_IMPRIMER: [],
+      IMPRIMEE: [],
+      LIVREE: [],
+    };
 
-  const load = useCallback(async (pageOverride?: number) => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (status !== 'ALL') params.set('status', status);
-      if (search.trim()) params.set('search', search.trim());
-      params.set('page', String(pageOverride ?? page));
-      const res = await apiFetch(`/api/admin/cards?${params.toString()}`);
-      const data = await parseApiResponse<{ items?: OrderItem[]; count?: number }>(res);
-      if (!res.ok) throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
-      setItems(data.items ?? []);
-      setTotalCount(data.count ?? 0);
-    } catch (err: any) {
-      toast.error(`Erreur lors du chargement : ${err.message}`);
-    } finally {
-      setLoading(false);
+    for (const item of filtered) {
+      if (grouped[item.status]) {
+        grouped[item.status].push(item);
+      }
     }
-  }, [status, search, page]);
 
-  const loadEvents = useCallback(async (orderId: number) => {
-    setEventsLoading(true);
-    try {
-      const res = await apiFetch(`/api/admin/cards/${orderId}/events`);
-      const data = await parseApiResponse<{ items?: EventItem[] }>(res);
-      if (!res.ok) throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
-      setEvents(data.items ?? []);
-    } catch {
-      setEvents([]);
-    } finally {
-      setEventsLoading(false);
+    const counts: Record<CardStatus, number> = {} as Record<CardStatus, number>;
+    for (const s of PIPELINE) {
+      counts[s] = grouped[s].length;
     }
-  }, []);
 
-  useEffect(() => {
-    load();
-  }, [status, page]);
+    return { grouped, counts };
+  }, [allItems, search]);
 
-  useEffect(() => {
-    if (selectedOrderId) loadEvents(selectedOrderId);
-  }, [selectedOrderId, loadEvents]);
-
-  // ---- Search + filter ----
-
-  const handleSearch = () => {
-    setPage(1);
-    load(1);
-  };
-
-  const handleStatusChange = (val: string) => {
-    setStatus(val);
-    setPage(1);
-  };
-
-  // ---- Pagination ----
-
-  const goToPage = (p: number) => {
-    const clamped = Math.max(1, Math.min(p, totalPages));
-    setPage(clamped);
-  };
+  const totalFiltered = Object.values(counts).reduce((a, b) => a + b, 0);
 
   // ---- Actions ----
 
-  const postAction = async (path: string, payload: Record<string, unknown>, label: string) => {
-    const orderId = (payload.order_id ?? payload.member_id) as number;
-    setActionLoading(orderId);
+  const postAction = async (
+    path: string,
+    payload: Record<string, unknown>,
+    label: string,
+  ) => {
+    const loadingId = (payload.order_id ?? payload.member_id) as number;
+    setActionLoading(loadingId);
     try {
-      const res = await apiFetch(path, { method: 'POST', body: JSON.stringify(payload) });
-      const data = await parseApiResponse<{ error?: string }>(res);
-      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+      await apiFetch<{ error?: string }>(path, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
       toast.success(`${label} — succès`);
-      await load();
-      if (selectedOrderId) await loadEvents(selectedOrderId);
-    } catch (err: any) {
-      toast.error(`${label} — ${err.message}`);
+      await queryClient.invalidateQueries({ queryKey: ['admin-cards'] });
+    } catch (err: unknown) {
+      toast.error(`${label} — ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setActionLoading(null);
     }
   };
 
-  const downloadProof = async (orderId: number) => {
-    try {
-      const res = await apiFetch(`/api/admin/card/proof-url?order_id=${orderId}`);
-      const data = await parseApiResponse<{ error?: string; url?: string }>(res);
-      if (!res.ok || !data.url) throw new Error(data.error ?? 'URL indisponible');
-      window.open(data.url, '_blank', 'noopener,noreferrer');
-    } catch (err: any) {
-      toast.error(`Preuve : ${err.message}`);
-    }
-  };
+  // ---- useAdminPage ----
+
+  useAdminPage({
+    title: 'Cartes membres',
+    crumb: ['Solidarité & Équipe', 'Cartes membres'],
+    actions: (
+      <button
+        onClick={() => refetch()}
+        disabled={isFetching}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '6px 14px',
+          fontSize: 13,
+          fontWeight: 500,
+          borderRadius: 6,
+          border: '1px solid var(--line)',
+          background: 'var(--surface)',
+          color: 'var(--ink)',
+          cursor: isFetching ? 'not-allowed' : 'pointer',
+          opacity: isFetching ? 0.7 : 1,
+        }}
+      >
+        <RefreshCw
+          size={14}
+          style={{
+            animation: isFetching ? 'spin 1s linear infinite' : 'none',
+          }}
+        />
+        Actualiser
+      </button>
+    ),
+  });
 
   // ---- Render ----
 
   return (
-    <DashboardLayout>
-      <div className="space-y-4">
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-        {/* Filters */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Cartes membres</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-3">
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Recherche nom, email, téléphone…"
-                className="flex-1 min-w-48"
-              />
-              <Select value={status} onValueChange={handleStatusChange}>
-                <SelectTrigger className="w-56">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUSES.map((st) => (
-                    <SelectItem key={st.value} value={st.value}>{st.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button onClick={handleSearch} disabled={loading}>
-                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                Rechercher
-              </Button>
-              <Button variant="outline" size="icon" onClick={() => load()} disabled={loading} title="Actualiser">
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Table */}
-        <Card>
-          <CardContent className="p-0">
-            {loading && items.length === 0 ? (
-              <div className="flex items-center justify-center py-16">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : items.length === 0 ? (
-              <div className="text-center py-16 text-muted-foreground">
-                Aucune carte membre trouvée.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/40">
-                      <th className="text-left px-4 py-3 font-medium">Prénom</th>
-                      <th className="text-left px-4 py-3 font-medium">Nom</th>
-                      <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Adresse</th>
-                      <th className="text-left px-4 py-3 font-medium">Téléphone</th>
-                      <th className="text-left px-4 py-3 font-medium">Email</th>
-                      <th className="text-left px-4 py-3 font-medium">Statut</th>
-                      <th className="text-left px-4 py-3 font-medium">Preuve</th>
-                      <th className="text-left px-4 py-3 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((item) => {
-                      const isLoading = actionLoading === item.id || actionLoading === item.members?.id;
-                      return (
-                        <tr
-                          key={item.id}
-                          className={`border-b hover:bg-muted/20 transition-colors ${selectedOrderId === item.id ? 'bg-green-50' : ''}`}
-                        >
-                          <td className="px-4 py-3">{item.members?.first_name ?? '—'}</td>
-                          <td className="px-4 py-3 font-medium">{item.members?.last_name ?? '—'}</td>
-                          <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground">{item.members?.address ?? '—'}</td>
-                          <td className="px-4 py-3">{item.members?.phone ?? '—'}</td>
-                          <td className="px-4 py-3 text-muted-foreground">{item.members?.email}</td>
-                          <td className="px-4 py-3">
-                            <StatusBadge status={item.status} />
-                          </td>
-                          <td className="px-4 py-3">
-                            {item.payment_proof_path ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 px-2 text-xs gap-1"
-                                onClick={() => downloadProof(item.id)}
-                              >
-                                <Download className="h-3 w-3" />
-                                Voir
-                              </Button>
-                            ) : (
-                              <span className="text-muted-foreground text-xs">—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex flex-wrap gap-1">
-                              <ActionButton
-                                label="Mail commande"
-                                disabled={isLoading}
-                                onClick={() =>
-                                  postAction(
-                                    '/api/admin/card/send-order-email',
-                                    { member_id: item.members.id },
-                                    'Mail commande',
-                                  )
-                                }
-                              />
-                              <ActionButton
-                                label="Mail paiement"
-                                disabled={isLoading}
-                                onClick={() =>
-                                  postAction(
-                                    '/api/admin/card/resend-payment-email',
-                                    { order_id: item.id },
-                                    'Mail paiement renvoyé',
-                                  )
-                                }
-                              />
-                              <ActionButton
-                                label="Marquer payé"
-                                disabled={isLoading}
-                                onClick={() =>
-                                  postAction(
-                                    '/api/admin/card/mark-paid',
-                                    { order_id: item.id },
-                                    'Paiement enregistré',
-                                  )
-                                }
-                              />
-                              <ActionButton
-                                label="Imprimée"
-                                disabled={isLoading}
-                                onClick={() =>
-                                  postAction(
-                                    '/api/admin/card/mark-printed',
-                                    { order_id: item.id },
-                                    'Carte marquée imprimée',
-                                  )
-                                }
-                              />
-                              <ActionButton
-                                label="Livrée"
-                                disabled={isLoading}
-                                onClick={() =>
-                                  postAction(
-                                    '/api/admin/card/mark-delivered',
-                                    { order_id: item.id },
-                                    'Carte marquée livrée',
-                                  )
-                                }
-                              />
-                              <Button
-                                size="sm"
-                                variant={selectedOrderId === item.id ? 'default' : 'outline'}
-                                className="h-7 px-2 text-xs"
-                                onClick={() =>
-                                  setSelectedOrderId(selectedOrderId === item.id ? null : item.id)
-                                }
-                              >
-                                Timeline
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* Pagination */}
-            {totalCount > PAGE_SIZE && (
-              <div className="flex items-center justify-between px-4 py-3 border-t text-sm text-muted-foreground">
-                <span>
-                  {totalCount} résultat{totalCount > 1 ? 's' : ''} — page {page} / {totalPages}
-                </span>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page <= 1 || loading}
-                    onClick={() => goToPage(page - 1)}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page >= totalPages || loading}
-                    onClick={() => goToPage(page + 1)}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Timeline panel */}
-        {selectedOrder && (
-          <Card>
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-base">
-                  Timeline — commande #{selectedOrder.id}
-                </CardTitle>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  {selectedOrder.members.first_name} {selectedOrder.members.last_name}
-                  {' · '}
-                  <StatusBadge status={selectedOrder.status} />
-                </p>
-              </div>
-              <Button size="sm" variant="ghost" onClick={() => setSelectedOrderId(null)}>✕</Button>
-            </CardHeader>
-            <CardContent>
-              {eventsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : events.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Aucun événement enregistré.</p>
-              ) : (
-                <ul className="space-y-3">
-                  {events.map((ev) => <EventRow key={ev.id} ev={ev} />)}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
+      {/* Search bar */}
+      <div style={{ marginBottom: 16 }}>
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            background: 'var(--surface)',
+            border: '1px solid var(--line)',
+            borderRadius: 7,
+            padding: '6px 12px',
+            width: '100%',
+            maxWidth: 380,
+          }}
+        >
+          <Search size={14} style={{ color: 'var(--ink-mute)', flexShrink: 0 }} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Recherche nom, email, téléphone…"
+            style={{
+              flex: 1,
+              background: 'none',
+              border: 'none',
+              outline: 'none',
+              fontSize: 13,
+              color: 'var(--ink)',
+            }}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--ink-mute)',
+                display: 'flex',
+                alignItems: 'center',
+                padding: 0,
+              }}
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+        {search && (
+          <span style={{ marginLeft: 12, fontSize: 12, color: 'var(--ink-mute)' }}>
+            {totalFiltered} résultat{totalFiltered !== 1 ? 's' : ''}
+          </span>
         )}
-
       </div>
-    </DashboardLayout>
-  );
-}
 
-// Small reusable action button
-function ActionButton({
-  label,
-  onClick,
-  disabled,
-}: {
-  label: string;
-  onClick: () => void;
-  disabled: boolean;
-}) {
-  return (
-    <Button
-      size="sm"
-      variant="outline"
-      className="h-7 px-2 text-xs"
-      disabled={disabled}
-      onClick={onClick}
-    >
-      {disabled ? <Loader2 className="h-3 w-3 animate-spin" /> : label}
-    </Button>
+      {/* Pipeline funnel */}
+      <PipelineFunnel counts={counts} />
+
+      {/* Loading state */}
+      {isLoading ? (
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--ink-mute)',
+            gap: 10,
+            fontSize: 14,
+          }}
+        >
+          <Loader2 size={20} className="animate-spin" />
+          Chargement…
+        </div>
+      ) : (
+        /* Kanban board */
+        <div
+          style={{
+            flex: 1,
+            overflowX: 'auto',
+            overflowY: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              gap: 10,
+              height: '100%',
+              minWidth: 'max-content',
+              paddingBottom: 8,
+            }}
+          >
+            {PIPELINE.map((status) => (
+              <KanbanColumn
+                key={status}
+                status={status}
+                items={grouped[status]}
+                onAction={postAction}
+                actionLoading={actionLoading}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+    </div>
   );
 }
