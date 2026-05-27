@@ -1,0 +1,166 @@
+export type AdminNavItem = {
+  id: string;
+  label: string;
+  route: string;
+  badge?: string | null;
+};
+
+export type AdminNavGroup = {
+  group: string;
+  items: AdminNavItem[];
+};
+
+export const ADMIN_NAV: AdminNavGroup[] = [
+  {
+    group: 'Pilotage',
+    items: [
+      { id: 'dashboard',   label: "Vue d'ensemble",    route: '/admin'              },
+      { id: 'stats',       label: 'Stats Ramadan',      route: '/admin/ramadan-stats'},
+      { id: 'logs',        label: 'Journal activité',   route: '/admin/logs'         },
+      { id: 'payments',    label: 'Paiements',          route: '/admin/payments'     },
+    ],
+  },
+  {
+    group: 'Restaurant',
+    items: [
+      { id: 'reservations',      label: 'Réservations',        route: '/admin/restaurant-reservations' },
+      { id: 'reservations-cal',  label: 'Calendrier',          route: '/admin/reservations-calendar'  },
+      { id: 'groupes',           label: 'Groupes & Entreprises',route: '/admin/restaurant/groupes'     },
+      { id: 'restaurants',       label: 'Restaurants',         route: '/admin/restaurants'            },
+    ],
+  },
+  {
+    group: 'Commerce',
+    items: [
+      { id: 'catalog',          label: 'Catalogue unifié',  route: '/admin/catalogue-unifie'    },
+      { id: 'orders',           label: 'Commandes goodies', route: '/admin/commandes'            },
+      { id: 'orders-cash',      label: 'Commandes cash',    route: '/admin/orders-cash'          },
+      { id: 'patisserie',       label: 'Pâtisserie',        route: '/admin/patisserie/catalogue' },
+      { id: 'terroir',          label: 'Terroir produits',  route: '/admin/terroir/products'     },
+      { id: 'terroir-orders',   label: 'Terroir commandes', route: '/admin/terroir/orders'       },
+      { id: 'qrcodes',          label: 'QR codes',          route: '/admin/qr-codes'             },
+      { id: 'scan-product',     label: 'Scanner produits',  route: '/admin/scan-product'         },
+      { id: 'inventory',        label: 'Inventaire',        route: '/admin/inventory'            },
+    ],
+  },
+  {
+    group: 'Solidarité & Équipe',
+    items: [
+      { id: 'dons',             label: 'Dons',              route: '/admin/dons'              },
+      { id: 'benevoles',        label: 'Bénévoles',         route: '/admin/benevoles'         },
+      { id: 'benevoles-groupes',label: 'Groupes bénévoles', route: '/admin/benevoles-groupes' },
+      { id: 'cards',            label: 'Cartes membres',    route: '/admin/cards'             },
+      { id: 'ftour',            label: 'Ftour bénévoles',   route: '/admin/ftour'             },
+      { id: 'elections',        label: 'Élections',         route: '/admin/elections'         },
+      { id: 'galerie',          label: 'Galerie',           route: '/admin/galerie'           },
+      { id: 'event-photos',     label: 'Photos événement',  route: '/admin/event-photos'      },
+      { id: 'jours',            label: 'Jours Ramadan',     route: '/admin/jours'             },
+    ],
+  },
+  {
+    group: 'Contenu & Communication',
+    items: [
+      { id: 'messages',    label: 'Messages',           route: '/admin/messages'    },
+      { id: 'blog',        label: 'Blog',               route: '/admin/blog'        },
+      { id: 'feedback',    label: 'Feedback',           route: '/admin/feedback'    },
+      { id: 'contenu',     label: 'Contenu éditorial',  route: '/admin/contenu'     },
+      { id: 'equipe',      label: 'Équipe',             route: '/admin/equipe'      },
+    ],
+  },
+  {
+    group: 'Système',
+    items: [
+      { id: 'utilisateurs', label: 'Utilisateurs',      route: '/admin/utilisateurs' },
+      { id: 'unified',      label: 'Dashboard unifié',  route: '/admin/unified-dashboard' },
+    ],
+  },
+];
+
+// Map from route path to nav item id
+export const ROUTE_TO_NAV_ID: Record<string, string> = {
+  '/admin': 'dashboard',
+  '/admin/ramadan-stats': 'stats',
+  '/admin/logs': 'logs',
+  '/admin/payments': 'payments',
+  '/admin/restaurant-reservations': 'reservations',
+  '/admin/reservations': 'reservations',
+  '/admin/reservations-calendar': 'reservations-cal',
+  '/admin/restaurant/groupes': 'groupes',
+  '/admin/restaurant/entreprises': 'groupes',
+  '/admin/restaurants': 'restaurants',
+  '/admin/catalogue-unifie': 'catalog',
+  '/admin/commandes': 'orders',
+  '/admin/orders-cash': 'orders-cash',
+  '/admin/patisserie': 'patisserie',
+  '/admin/patisserie/catalogue': 'patisserie',
+  '/admin/pastries': 'patisserie',
+  '/admin/terroir/products': 'terroir',
+  '/admin/terroir/orders': 'terroir-orders',
+  '/admin/qr-codes': 'qrcodes',
+  '/admin/scan-product': 'scan-product',
+  '/admin/inventory': 'inventory',
+  '/admin/inventory/products': 'inventory',
+  '/admin/inventory/events': 'inventory',
+  '/admin/inventory/movements': 'inventory',
+  '/admin/inventory/stock-entry': 'inventory',
+  '/admin/dons': 'dons',
+  '/admin/benevoles': 'benevoles',
+  '/admin/benevoles-groupes': 'benevoles-groupes',
+  '/admin/cards': 'cards',
+  '/admin/ftour': 'ftour',
+  '/admin/elections': 'elections',
+  '/admin/galerie': 'galerie',
+  '/admin/event-photos': 'event-photos',
+  '/admin/jours': 'jours',
+  '/admin/messages': 'messages',
+  '/admin/blog': 'blog',
+  '/admin/feedback': 'feedback',
+  '/admin/feedback/campagnes': 'feedback',
+  '/admin/feedback/evenement': 'feedback',
+  '/admin/contenu': 'contenu',
+  '/admin/equipe': 'equipe',
+  '/admin/utilisateurs': 'utilisateurs',
+  '/admin/unified-dashboard': 'unified',
+  '/admin/scan-reservation': 'reservations',
+  '/admin/goodies': 'orders',
+};
+
+export const ROUTE_TO_TITLE: Record<string, string> = {
+  '/admin': "Vue d'ensemble",
+  '/admin/ramadan-stats': 'Stats Ramadan',
+  '/admin/logs': 'Journal activité',
+  '/admin/payments': 'Paiements',
+  '/admin/restaurant-reservations': 'Réservations',
+  '/admin/reservations': 'Réservations',
+  '/admin/reservations-calendar': 'Calendrier réservations',
+  '/admin/restaurant/groupes': 'Groupes & Entreprises',
+  '/admin/restaurant/entreprises': 'Réservations Entreprises',
+  '/admin/restaurants': 'Restaurants',
+  '/admin/catalogue-unifie': 'Catalogue unifié',
+  '/admin/commandes': 'Commandes Goodies',
+  '/admin/orders-cash': 'Commandes Cash',
+  '/admin/patisserie': 'Pâtisserie',
+  '/admin/patisserie/catalogue': 'Catalogue Pâtisserie',
+  '/admin/pastries': 'Commandes Pâtisserie',
+  '/admin/terroir/products': 'Produits Terroir',
+  '/admin/terroir/orders': 'Commandes Terroir',
+  '/admin/qr-codes': 'QR Codes',
+  '/admin/scan-product': 'Scanner Produits',
+  '/admin/inventory': 'Inventaire',
+  '/admin/dons': 'Dons',
+  '/admin/benevoles': 'Bénévoles',
+  '/admin/benevoles-groupes': 'Groupes Bénévoles',
+  '/admin/cards': 'Cartes Membres',
+  '/admin/ftour': 'Ftour Bénévoles',
+  '/admin/elections': 'Élections',
+  '/admin/galerie': 'Galerie',
+  '/admin/event-photos': 'Photos Événement',
+  '/admin/jours': 'Jours Ramadan',
+  '/admin/messages': 'Messages',
+  '/admin/blog': 'Blog',
+  '/admin/feedback': 'Feedback',
+  '/admin/contenu': 'Contenu Éditorial',
+  '/admin/equipe': 'Équipe',
+  '/admin/utilisateurs': 'Utilisateurs',
+  '/admin/unified-dashboard': 'Dashboard Unifié',
+};
