@@ -167,6 +167,110 @@
   --sidebar-foreground: #F2E9D3;
 }
 
+/* =============================================================
+ * Admin Back-Office Theme (v2) — warm-white, dense, tool-like
+ * ============================================================= */
+[data-theme="admin-v2"] {
+  --bg:           #F7F4EB;
+  --surface:      #FFFFFF;
+  --surface-alt:  #FBF9F3;
+  --ink:          #26241A;
+  --ink-soft:     #5E5B4A;
+  --ink-mute:     #8C8978;
+  --line:         #E7E2D2;
+  --line-soft:    #F0EBDB;
+  --olive:        #5E5B34;
+  --olive-deep:   #3D3B22;
+  --olive-soft:   #EFEDE0;
+  --sand:         #CDBB8A;
+  --sand-soft:    #F1E9D2;
+  --success:      #2E7D55;
+  --success-bg:   #E4F1E9;
+  --warn:         #B47A1F;
+  --warn-bg:      #FBEFD8;
+  --danger:       #A85454;
+  --danger-bg:    #F6E4E4;
+  --info:         #3C6E94;
+  --info-bg:      #E2ECF3;
+  --selected-row: #F4F0DE;
+
+  --background:           var(--bg);
+  --foreground:           var(--ink);
+  --card:                 var(--surface);
+  --card-foreground:      var(--ink);
+  --popover:              var(--surface);
+  --popover-foreground:   var(--ink);
+  --primary:              var(--olive);
+  --primary-foreground:   #F5F1E2;
+  --secondary:            var(--surface);
+  --secondary-foreground: var(--ink);
+  --muted:                var(--surface-alt);
+  --muted-foreground:     var(--ink-soft);
+  --accent:               var(--sand-soft);
+  --accent-foreground:    var(--olive-deep);
+  --destructive:          var(--danger);
+  --destructive-foreground: #FFFFFF;
+  --border:               var(--line);
+  --input:                var(--line);
+  --ring:                 var(--olive);
+  --sidebar:              var(--surface-alt);
+  --sidebar-foreground:   var(--ink);
+  --sidebar-primary:      var(--olive);
+  --sidebar-primary-foreground: #F5F1E2;
+  --sidebar-accent:       var(--olive-soft);
+  --sidebar-accent-foreground: var(--olive-deep);
+  --sidebar-border:       var(--line);
+  --sidebar-ring:         var(--olive);
+  --radius:    0.375rem;
+}
+
+[data-theme="admin-v2"] {
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+[data-theme="admin-v2"] h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
+[data-theme="admin-v2"] h2 { font-size: 15px; font-weight: 600; letter-spacing: -0.1px; }
+[data-theme="admin-v2"] h3 { font-size: 13px; font-weight: 600; }
+
+[data-theme="admin-v2"] .font-edition {
+  font-family: "Cormorant Garamond", serif;
+  font-style: italic;
+}
+
+[data-theme="admin-v2"] .num,
+[data-theme="admin-v2"] code,
+[data-theme="admin-v2"] [data-tabular] {
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-theme="admin-v2"] .section-label {
+  font-size: 10.5px; font-weight: 600; letter-spacing: 1.2px;
+  text-transform: uppercase; color: var(--ink-mute);
+}
+
+[data-theme="admin-v2"] table { font-size: 12.5px; }
+[data-theme="admin-v2"] th {
+  font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--ink-mute);
+  background: var(--surface-alt);
+  border-bottom: 1px solid var(--line);
+  padding: 8px 12px;
+}
+[data-theme="admin-v2"] td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+[data-theme="admin-v2"] ::-webkit-scrollbar { width: 6px; height: 6px; }
+[data-theme="admin-v2"] ::-webkit-scrollbar-track { background: var(--surface-alt); }
+[data-theme="admin-v2"] ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
