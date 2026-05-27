@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
-import DashboardLayout from '@/app/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -115,8 +114,7 @@ export default function AdminRestaurants() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -344,7 +342,6 @@ export default function AdminRestaurants() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </DashboardLayout>
+    </div>
   );
 }

@@ -12,7 +12,6 @@ import { useI18n, SUPPORTED_LOCALES, type Locale } from "./i18n";
 // RAMADAN CLOSING PAGE
 // ============================================
 import RamadanClosingPage from "@/features/closing/components/RamadanClosingPage";
-import AdminEventPhotos from "@/features/closing/admin/AdminEventPhotos";
 
 // ============================================
 // PUBLIC PAGES — features/public
@@ -30,9 +29,6 @@ import RibDownload from "@/features/public/pages/RibDownload";
 import Galerie from "@/features/gallery/pages/Galerie";
 import BenevoleGalerieUpload from "@/features/gallery/pages/BenevoleGalerieUpload";
 import GalerieValidationUpload from "@/features/gallery/pages/GalerieValidationUpload";
-import AdminGalerie from "@/features/gallery/admin/AdminGalerie";
-import AdminGalerieNouveau from "@/features/gallery/admin/AdminGalerieNouveau";
-import AdminGalerieEdit from "@/features/gallery/admin/AdminGalerieEdit";
 
 // ============================================
 // AUTH — features/auth
@@ -70,27 +66,17 @@ import CheckinReservation from "@/features/restaurant/pages/CheckinReservation";
 import GroupReservationEmailConfirmation from "@/features/restaurant/pages/GroupReservationEmailConfirmation";
 import AdminReservationValidation from "@/features/restaurant/pages/AdminReservationValidation";
 import ReservationProofUpload from "@/features/restaurant/pages/ReservationProofUpload";
-import AdminRestaurantGroupes from "@/features/restaurant/admin/AdminRestaurantGroupes";
-import AdminRestaurantEntreprises from "@/features/restaurant/admin/AdminRestaurantEntreprises";
-import AdminRestaurants from "@/features/restaurant/admin/AdminRestaurants";
-import AdminRestaurantReservations from "@/features/restaurant/admin/AdminRestaurantReservations";
-import AdminScanReservation from "@/features/restaurant/admin/AdminScanReservation";
-import AdminReservationsCalendar from "@/features/restaurant/admin/AdminReservationsCalendar";
 
 // ============================================
 // PATISSERIE — features/patisserie
 // ============================================
 import Pastries from "@/features/patisserie/pages/Pastries";
-import AdminPastries from "@/features/patisserie/admin/AdminPastries";
-import AdminPastryCatalog from "@/features/patisserie/admin/AdminPastryCatalog";
 
 // ============================================
 // TERROIR — features/terroir
 // ============================================
 import Terroir from "@/features/terroir/pages/Terroir";
 import TerroirQRPage from "@/features/terroir/pages/TerroirQRPage";
-import AdminTerroirProducts from "@/features/terroir/admin/AdminTerroirProducts";
-import AdminTerroirOrders from "@/features/terroir/admin/AdminTerroirOrders";
 
 // ============================================
 // BOUTIQUE — features/boutique
@@ -106,32 +92,16 @@ import BoutiqueProductTypePage from "@/features/boutique/pages/BoutiqueProductTy
 import Cart from "@/features/goodies/pages/Cart";
 import { Checkout as UnifiedCheckout } from "@/features/goodies/pages/Checkout";
 import GoodiesQRPage from "@/features/goodies/pages/GoodiesQRPage";
-import AdminGoodies from "@/features/goodies/admin/AdminGoodies";
-import AdminCommandes from "@/features/goodies/admin/AdminCommandes";
 
 // ============================================
 // DONS — features/dons
 // ============================================
 import Dons from "@/features/dons/pages/Dons";
-import AdminDons from "@/features/dons/admin/AdminDons";
 
 // ============================================
 // OPS — features/ops
 // ============================================
-import AdminDashboard from "@/features/ops/admin/AdminDashboard";
-import AdminBenevoles from "@/features/ops/admin/AdminBenevoles";
-import AdminGroupesBenevoles from "@/features/ops/admin/AdminGroupesBenevoles";
-import AdminJours from "@/features/ops/admin/AdminJours";
-
-import AdminScanProduct from "@/features/ops/admin/AdminScanProduct";
-import AdminPayments from "@/features/ops/admin/AdminPayments";
-import AdminUtilisateurs from "@/features/ops/admin/AdminUtilisateurs";
-import AdminUnifiedDashboard from "@/features/ops/admin/AdminUnifiedDashboard";
-import AdminQRCodes from "@/features/ops/admin/AdminQRCodes";
-import AdminRamadanStats from "@/features/ops/admin/AdminRamadanStats";
-import AdminMemberCards from "@/features/ops/admin/AdminMemberCards";
-import AdminUnifiedCatalog from "@/features/ops/admin/AdminUnifiedCatalog";
-import AdminAuditLogs from "@/features/ops/admin/AdminAuditLogs";
+import AdminRoutes from "@/features/ops/admin/AdminRoutes";
 
 // ============================================
 // SCANNER — features/scanner
@@ -148,28 +118,12 @@ import ScannerFtours from "@/features/scanner/pages/ScannerFtours";
 // ============================================
 // INVENTORY — features/inventory
 // ============================================
-import AdminInventory from "@/features/inventory/admin/AdminInventory";
-import AdminInventoryProducts from "@/features/inventory/admin/AdminInventoryProducts";
-import AdminInventoryEvents from "@/features/inventory/admin/AdminInventoryEvents";
-import AdminInventoryMovements from "@/features/inventory/admin/AdminInventoryMovements";
-import AdminInventoryStockEntry from "@/features/inventory/admin/AdminInventoryStockEntry";
-import AdminInventoryStockEntryProduct from "@/features/inventory/admin/AdminInventoryStockEntryProduct";
 import StockEntryScanPage from "@/features/inventory/pages/StockEntryScanPage";
 
-// ============================================
-// CONTENU — features/contenu
-// ============================================
-import AdminContenu from "@/features/contenu/admin/AdminContenu";
-
-// ============================================
-// MESSAGES — features/messages
-// ============================================
-import AdminMessages from "@/features/messages/admin/AdminMessages";
 import MenuSolidaire from "@/features/menu/pages/MenuSolidaire";
 import VolunteerCancellation from "@/features/volunteer/pages/VolunteerCancellation";
 import MenuCheckout from "@/features/menu/pages/MenuCheckout";
 import MenuProof from "@/features/menu/pages/MenuProof";
-import AdminCashOrders from "@/features/menu/admin/AdminCashOrders";
 import VolunteerProfilePage from "@/features/volunteer/pages/VolunteerProfile";
 
 import WhatsAppFloatingButton from "./components/WhatsAppFloatingButton";
@@ -177,14 +131,12 @@ import WhatsAppFloatingButton from "./components/WhatsAppFloatingButton";
 // ============================================
 // FTOUR BÉNÉVOLES — features/ftour
 // ============================================
-import AdminFtour from "@/features/ftour/admin/AdminFtour";
 import FtourConfirmation from "@/features/ftour/pages/FtourConfirmation";
 
 // ============================================
 // TEAM TROMBINOSCOPE — features/team
 // ============================================
 import EquipeFtour from "@/features/team/pages/EquipeFtour";
-import AdminTeam from "@/features/team/admin/AdminTeam";
 
 // ============================================
 // BLOG COMMUNAUTAIRE — features/blog
@@ -192,7 +144,6 @@ import AdminTeam from "@/features/team/admin/AdminTeam";
 import BlogList from "@/features/blog/pages/BlogList";
 import BlogPost from "@/features/blog/pages/BlogPost";
 import BlogNew from "@/features/blog/pages/BlogNew";
-import AdminBlog from "@/features/blog/admin/AdminBlog";
 
 // ============================================
 // FEEDBACK — features/feedback
@@ -200,9 +151,6 @@ import AdminBlog from "@/features/blog/admin/AdminBlog";
 import FeedbackPage from "@/features/feedback/pages/FeedbackPage";
 import SiteFeedbackPage from "@/features/feedback/pages/SiteFeedbackPage";
 import EventFeedbackForm from "@/features/feedback/pages/EventFeedbackForm";
-import AdminFeedback from "@/features/feedback/admin/AdminFeedback";
-import AdminFeedbackCampagnes from "@/features/feedback/admin/AdminFeedbackCampagnes";
-import AdminEventFeedback from "@/features/feedback/admin/AdminEventFeedback";
 
 // ============================================
 // ELECTION MANAGERS — features/election
@@ -211,7 +159,6 @@ import ElectionManagers from "@/features/election/pages/ElectionManagers";
 import CandidatureManager from "@/features/election/pages/CandidatureManager";
 import ResultatsElection from "@/features/election/pages/ResultatsElection";
 import ManagersHistory from "@/features/election/pages/ManagersHistory";
-import AdminElections from "@/features/election/admin/AdminElections";
 
 // ============================================
 // ROUTES
@@ -287,195 +234,13 @@ function LocalizedRoutes() {
   return (
     <Switch>
       {/* ================================================
-          ADMIN ROUTES — sans :lang (section 4.2)
+          ADMIN ROUTES — wrapped by AdminFrame shell
+          Both /admin and /admin3 handled inside AdminRoutes
           ================================================ */}
-      <Route path="/admin" component={AdminDashboard} />
-      <Route path="/admin3" component={AdminDashboard} />
-      <Route
-        path="/admin/unified-dashboard"
-        component={AdminUnifiedDashboard}
-      />
-
-      {/* Admin Restaurant */}
-      <Route
-        path="/admin/restaurant/groupes"
-        component={AdminRestaurantGroupes}
-      />
-      <Route
-        path="/admin/restaurant/entreprises"
-        component={AdminRestaurantEntreprises}
-      />
-      <Route path="/admin/restaurants" component={AdminRestaurants} />
-      <Route
-        path="/admin/restaurant-reservations"
-        component={AdminRestaurantReservations}
-      />
-      <Route
-        path="/admin/reservations"
-        component={AdminRestaurantReservations}
-      />
-      <Route
-        path="/admin/reservations-calendar"
-        component={AdminReservationsCalendar}
-      />
-      <Route path="/admin/scan-reservation" component={AdminScanReservation} />
-
-      {/* Admin Pâtisserie */}
-      <Route path="/admin/patisserie" component={AdminPastries} />
-      <Route path="/admin/pastries" component={AdminPastries} />
-      <Route
-        path="/admin/patisserie/catalogue"
-        component={AdminPastryCatalog}
-      />
-
-      {/* Admin Terroir */}
-      <Route path="/admin/terroir/products" component={AdminTerroirProducts} />
-      <Route path="/admin/terroir/orders" component={AdminTerroirOrders} />
-
-      {/* Admin Goodies */}
-      <Route path="/admin/goodies" component={AdminGoodies} />
-      <Route path="/admin/catalogue/goodies">{() => <AdminGoodies />}</Route>
-      <Route path="/admin/catalogue/terroir">{() => <AdminTerroirProducts />}</Route>
-      <Route path="/admin/catalogue/patisserie">{() => <AdminPastryCatalog />}</Route>
-      <Route path="/admin/commandes" component={AdminCommandes} />
-
-      {/* Admin Dons */}
-      <Route path="/admin/dons" component={AdminDons} />
-
-      {/* Admin Ops */}
-      <Route path="/admin/benevoles" component={AdminBenevoles} />
-      <Route
-        path="/admin/benevoles-groupes"
-        component={AdminGroupesBenevoles}
-      />
-      <Route path="/admin/jours" component={AdminJours} />
-      <Route path="/admin/ramadan-stats" component={AdminRamadanStats} />
-      <Route path="/admin/cards" component={AdminMemberCards} />
-      <Route path="/admin/scan-product" component={AdminScanProduct} />
-      <Route path="/admin/payments" component={AdminPayments} />
-      <Route path="/admin/utilisateurs" component={AdminUtilisateurs} />
-
-      {/* Admin QR Codes Catalogue */}
-      <Route path="/admin/qr-codes" component={AdminQRCodes} />
-      <Route path="/admin/catalogue-unifie" component={AdminUnifiedCatalog} />
-      <Route path="/admin/logs" component={AdminAuditLogs} />
-      <Route path="/admin/orders-cash" component={AdminCashOrders} />
-      <Route path="/admin/galerie" component={AdminGalerie} />
-      <Route path="/admin/galerie/nouveau" component={AdminGalerieNouveau} />
-      <Route path="/admin/galerie/:id" component={AdminGalerieEdit} />
-
-      {/* Admin Inventory */}
-      <Route path="/admin/inventory" component={AdminInventory} />
-      <Route
-        path="/admin/inventory/products"
-        component={AdminInventoryProducts}
-      />
-      <Route path="/admin/inventory/events" component={AdminInventoryEvents} />
-      <Route
-        path="/admin/inventory/movements"
-        component={AdminInventoryMovements}
-      />
-      <Route
-        path="/admin/inventory/stock-entry"
-        component={AdminInventoryStockEntry}
-      />
-      <Route
-        path="/admin/inventory/stock-entry/:productId"
-        component={AdminInventoryStockEntryProduct}
-      />
-
-      {/* Admin Contenu */}
-      <Route path="/admin/contenu" component={AdminContenu} />
-
-      {/* Admin Messages */}
-      <Route path="/admin/messages" component={AdminMessages} />
-
-      {/* Admin Ftour Bénévoles */}
-      <Route path="/admin/ftour" component={AdminFtour} />
-
-      {/* Admin Team Trombinoscope */}
-      <Route path="/admin/equipe" component={AdminTeam} />
-
-      {/* Admin Event Photos (Ramadan Closing Page) */}
-      <Route path="/admin/event-photos" component={AdminEventPhotos} />
-
-      {/* Admin Election Managers */}
-      <Route path="/admin/elections" component={AdminElections} />
-
-      {/* Admin Blog Communautaire */}
-      <Route path="/admin/blog" component={AdminBlog} />
-
-      {/* Admin Feedback */}
-      <Route
-        path="/admin/feedback/campagnes"
-        component={AdminFeedbackCampagnes}
-      />
-      <Route path="/admin/feedback/evenement" component={AdminEventFeedback} />
-      <Route path="/admin/feedback" component={AdminFeedback} />
-
-      {/* ADMIN3 ROUTES — alias public pour les modules admin */}
-      <Route
-        path="/admin3/unified-dashboard"
-        component={AdminUnifiedDashboard}
-      />
-      <Route
-        path="/admin3/restaurant/groupes"
-        component={AdminRestaurantGroupes}
-      />
-      <Route
-        path="/admin3/restaurant/entreprises"
-        component={AdminRestaurantEntreprises}
-      />
-      <Route path="/admin3/restaurants" component={AdminRestaurants} />
-      <Route
-        path="/admin3/restaurant-reservations"
-        component={AdminRestaurantReservations}
-      />
-      <Route path="/admin3/reservations" component={AdminRestaurantReservations} />
-      <Route path="/admin3/reservations-calendar" component={AdminReservationsCalendar} />
-      <Route path="/admin3/scan-reservation" component={AdminScanReservation} />
-      <Route path="/admin3/patisserie" component={AdminPastries} />
-      <Route path="/admin3/pastries" component={AdminPastries} />
-      <Route path="/admin3/patisserie/catalogue" component={AdminPastryCatalog} />
-      <Route path="/admin3/terroir/products" component={AdminTerroirProducts} />
-      <Route path="/admin3/terroir/orders" component={AdminTerroirOrders} />
-      <Route path="/admin3/goodies" component={AdminGoodies} />
-      <Route path="/admin3/catalogue/goodies">{() => <AdminGoodies />}</Route>
-      <Route path="/admin3/catalogue/terroir">{() => <AdminTerroirProducts />}</Route>
-      <Route path="/admin3/catalogue/patisserie">{() => <AdminPastryCatalog />}</Route>
-      <Route path="/admin3/commandes" component={AdminCommandes} />
-      <Route path="/admin3/dons" component={AdminDons} />
-      <Route path="/admin3/benevoles" component={AdminBenevoles} />
-      <Route path="/admin3/benevoles-groupes" component={AdminGroupesBenevoles} />
-      <Route path="/admin3/jours" component={AdminJours} />
-      <Route path="/admin3/ramadan-stats" component={AdminRamadanStats} />
-      <Route path="/admin3/cards" component={AdminMemberCards} />
-      <Route path="/admin3/scan-product" component={AdminScanProduct} />
-      <Route path="/admin3/payments" component={AdminPayments} />
-      <Route path="/admin3/utilisateurs" component={AdminUtilisateurs} />
-      <Route path="/admin3/qr-codes" component={AdminQRCodes} />
-      <Route path="/admin3/catalogue-unifie" component={AdminUnifiedCatalog} />
-      <Route path="/admin3/logs" component={AdminAuditLogs} />
-      <Route path="/admin3/orders-cash" component={AdminCashOrders} />
-      <Route path="/admin3/galerie" component={AdminGalerie} />
-      <Route path="/admin3/galerie/nouveau" component={AdminGalerieNouveau} />
-      <Route path="/admin3/galerie/:id" component={AdminGalerieEdit} />
-      <Route path="/admin3/inventory" component={AdminInventory} />
-      <Route path="/admin3/inventory/products" component={AdminInventoryProducts} />
-      <Route path="/admin3/inventory/events" component={AdminInventoryEvents} />
-      <Route path="/admin3/inventory/movements" component={AdminInventoryMovements} />
-      <Route path="/admin3/inventory/stock-entry" component={AdminInventoryStockEntry} />
-      <Route path="/admin3/inventory/stock-entry/:productId" component={AdminInventoryStockEntryProduct} />
-      <Route path="/admin3/contenu" component={AdminContenu} />
-      <Route path="/admin3/messages" component={AdminMessages} />
-      <Route path="/admin3/ftour" component={AdminFtour} />
-      <Route path="/admin3/equipe" component={AdminTeam} />
-      <Route path="/admin3/event-photos" component={AdminEventPhotos} />
-      <Route path="/admin3/elections" component={AdminElections} />
-      <Route path="/admin3/blog" component={AdminBlog} />
-      <Route path="/admin3/feedback/campagnes" component={AdminFeedbackCampagnes} />
-      <Route path="/admin3/feedback/evenement" component={AdminEventFeedback} />
-      <Route path="/admin3/feedback" component={AdminFeedback} />
+      <Route path="/admin/:path*" component={AdminRoutes} />
+      <Route path="/admin" component={AdminRoutes} />
+      <Route path="/admin3/:path*" component={AdminRoutes} />
+      <Route path="/admin3" component={AdminRoutes} />
 
       {/* ================================================
           SCANNER — route unique (section 4.3)
