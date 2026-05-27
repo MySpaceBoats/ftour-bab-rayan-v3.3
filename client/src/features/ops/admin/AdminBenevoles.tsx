@@ -16,7 +16,6 @@ import {
   QrCode,
   Mail,
   Phone,
-  Calendar,
   Trash2,
   Upload,
   FileSpreadsheet,
@@ -25,7 +24,6 @@ import {
   ArrowUp,
   ArrowDown,
   ScanLine,
-  Wifi,
   X,
 } from "lucide-react";
 
