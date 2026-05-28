@@ -261,7 +261,7 @@ export default function AdminReservationsCalendar() {
 
   if (!hasAccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="flex items-center justify-center p-8">
         <Card className="max-w-md w-full">
           <CardContent className="p-8 text-center space-y-4">
             <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">
@@ -283,7 +283,7 @@ export default function AdminReservationsCalendar() {
   const weekDays = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="bg-muted/30">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background border-b">
         <div className="container flex h-16 items-center gap-4">

@@ -529,7 +529,7 @@ export default function AdminRestaurantGroupes() {
 
   if (!hasAccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="flex items-center justify-center p-8">
         <Card className="max-w-md w-full">
           <CardContent className="p-8 text-center space-y-4">
             <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">

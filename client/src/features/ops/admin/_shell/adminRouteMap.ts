@@ -123,6 +123,11 @@ export const ROUTE_TO_NAV_ID: Record<string, string> = {
   '/admin/unified-dashboard': 'unified',
   '/admin/scan-reservation': 'reservations',
   '/admin/goodies': 'orders',
+  '/admin/pastries': 'patisserie',
+  '/admin/galerie/nouveau': 'galerie',
+  '/admin/catalogue/goodies': 'orders',
+  '/admin/catalogue/terroir': 'terroir',
+  '/admin/catalogue/patisserie': 'patisserie',
 };
 
 export const ROUTE_TO_TITLE: Record<string, string> = {
@@ -163,4 +168,17 @@ export const ROUTE_TO_TITLE: Record<string, string> = {
   '/admin/equipe': 'Équipe',
   '/admin/utilisateurs': 'Utilisateurs',
   '/admin/unified-dashboard': 'Dashboard Unifié',
+  '/admin/goodies': 'Commandes Goodies',
+  '/admin/pastries': 'Commandes Pâtisserie',
+  '/admin/scan-reservation': 'Scanner Réservation',
+  '/admin/galerie/nouveau': 'Nouvelle Photo',
+  '/admin/feedback/campagnes': 'Campagnes Feedback',
+  '/admin/feedback/evenement': 'Feedback Événement',
+  '/admin/inventory/products': 'Produits Inventaire',
+  '/admin/inventory/events': 'Événements Inventaire',
+  '/admin/inventory/movements': 'Mouvements Inventaire',
+  '/admin/inventory/stock-entry': 'Saisie Stock',
+  '/admin/catalogue/goodies': 'Catalogue Goodies',
+  '/admin/catalogue/terroir': 'Catalogue Terroir',
+  '/admin/catalogue/patisserie': 'Catalogue Pâtisserie',
 };

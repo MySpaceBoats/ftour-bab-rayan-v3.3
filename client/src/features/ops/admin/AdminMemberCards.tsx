@@ -165,9 +165,22 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 // ---------------------------------------------------------------------------
 
 async function fetchAllCards(): Promise<OrderItem[]> {
-  // Fetch all without status filter; we group client-side
-  const data = await apiFetch<{ items?: OrderItem[]; count?: number }>('/api/admin/cards?page=1');
-  return data.items ?? [];
+  const PAGE_SIZE = 20; // matches server's hardcoded pageSize
+  let page = 1;
+  let all: OrderItem[] = [];
+
+  while (true) {
+    const data = await apiFetch<{ items?: OrderItem[]; count?: number }>(
+      `/api/admin/cards?page=${page}`,
+    );
+    const items = data.items ?? [];
+    all = [...all, ...items];
+    const total = data.count ?? 0;
+    if (items.length < PAGE_SIZE || all.length >= total) break;
+    page++;
+  }
+
+  return all;
 }
 
 async function fetchEvents(orderId: number): Promise<EventItem[]> {
@@ -490,6 +503,21 @@ function KCard({
                 }
               >
                 Marquer payé
+              </SmallBtn>
+            )}
+
+            {item.status === 'PAIEMENT_RECU' && (
+              <SmallBtn
+                loading={isLoading}
+                onClick={() =>
+                  onAction(
+                    '/api/admin/card/queue-print',
+                    { order_id: item.id },
+                    'Ajouté à la file impression',
+                  )
+                }
+              >
+                Mettre en file impression
               </SmallBtn>
             )}
 

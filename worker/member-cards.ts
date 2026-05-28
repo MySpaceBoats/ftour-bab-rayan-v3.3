@@ -362,6 +362,15 @@ export async function handleMemberCardRequest(request: Request, env: Env): Promi
     `), { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   }
 
+  if (url.pathname === '/api/admin/card/queue-print' && request.method === 'POST') {
+    const auth = await requireAdmin(request, env); if (!auth.ok) return auth.response;
+    const { order_id } = await request.json() as { order_id: number };
+    const res = await advanceStatus(order_id, 'A_IMPRIMER', env);
+    if (!res.ok) return json({ error: 'transition impossible', current: res.status }, 400);
+    await logEvent(order_id, 'A_IMPRIMER', { by_admin: true }, env);
+    return json({ ok: true });
+  }
+
   if (url.pathname === '/api/admin/card/mark-printed' && request.method === 'POST') {
     const auth = await requireAdmin(request, env); if (!auth.ok) return auth.response;
     const { order_id } = await request.json() as { order_id: number };
