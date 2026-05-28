@@ -1,3 +1,4 @@
+import { useState, useMemo, type ReactNode } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useQuery } from '@tanstack/react-query';
@@ -6,251 +7,339 @@ import { getStoredSession } from '@/_core/authToken';
 import { useAdminPage } from './_shell/AdminFrame';
 import Sparkline from '@/components/admin/Sparkline';
 import {
-  Moon, Plus, Calendar, Trophy, AlertTriangle, ArrowUpRight, ArrowDownRight,
-  Printer, Users, Mail, QrCode, ChevronRight,
+  Moon, Calendar, Users, ShoppingBag, Heart, QrCode, CreditCard,
+  AlertTriangle, CheckCircle, ChevronRight, RefreshCw, Package,
+  Printer, Mail, TrendingUp, ScanLine, UserPlus, Bell,
+  Clock, Utensils, ArrowUpRight,
 } from 'lucide-react';
 
-// Utility: get initials from name
-function initials(name: string) {
-  return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-}
+// ── Types ──────────────────────────────────────────────────────────────────
 
-// Tiny stat tile component
-function StatTile({
-  label, value, suffix, delta, trend, sparkValues, color,
+type ActivityCategory = 'reservation' | 'benevole' | 'paiement' | 'don' | 'boutique' | 'scan' | 'admin';
+type HealthTone = 'ok' | 'warn' | 'danger';
+
+// ── Static data (realistic for a Ramadan solidarity event) ─────────────────
+
+const ACTIVITY_ITEMS: Array<{
+  id: number;
+  category: ActivityCategory;
+  text: string;
+  detail: string;
+  minsAgo: number;
+}> = [
+  { id: 1,  category: 'scan',        text: 'QR scanné',              detail: 'Khadija B. — poste Accueil', minsAgo: 2 },
+  { id: 2,  category: 'reservation', text: 'Réservation confirmée',  detail: 'Groupe Berrada — 12 pers. · 19h00', minsAgo: 5 },
+  { id: 3,  category: 'paiement',    text: 'Paiement reçu',          detail: 'Carte membre #0234 — 150 MAD', minsAgo: 8 },
+  { id: 4,  category: 'boutique',    text: 'Commande validée',        detail: '3 Goodies — livraison sur place', minsAgo: 13 },
+  { id: 5,  category: 'don',         text: 'Don reçu',               detail: 'Virement — 500 MAD · anonyme', minsAgo: 19 },
+  { id: 6,  category: 'benevole',    text: 'Bénévole arrivé',        detail: 'Omar T. — Cuisine · 17h–21h', minsAgo: 24 },
+  { id: 7,  category: 'admin',       text: 'Stock mis à jour',       detail: 'Pâtisserie — 48 unités ajoutées', minsAgo: 33 },
+  { id: 8,  category: 'reservation', text: 'Annulation traitée',     detail: 'Famille Chaoui — remboursement initié', minsAgo: 41 },
+  { id: 9,  category: 'scan',        text: 'Entrée enregistrée',     detail: '42 personnes — créneau 18h30', minsAgo: 47 },
+  { id: 10, category: 'boutique',    text: 'Commande Terroir',        detail: '1 panier — Mohammed A.', minsAgo: 55 },
+  { id: 11, category: 'paiement',    text: 'Paiement en attente',    detail: 'Carte membre #0198 — vérification', minsAgo: 70 },
+  { id: 12, category: 'admin',       text: 'Session ouverte',        detail: 'Admin connecté — mobile', minsAgo: 92 },
+];
+
+const CAT_CONFIG: Record<ActivityCategory, { label: string; color: string; bg: string; icon: ReactNode }> = {
+  reservation: { label: 'Réservation', color: 'var(--olive)',      bg: 'var(--olive-soft)',  icon: <Utensils size={11} /> },
+  benevole:    { label: 'Bénévole',    color: 'var(--info)',       bg: 'var(--info-bg)',     icon: <Users size={11} /> },
+  paiement:    { label: 'Paiement',    color: 'var(--warn)',       bg: 'var(--warn-bg)',     icon: <CreditCard size={11} /> },
+  don:         { label: 'Don',         color: 'var(--success)',    bg: 'var(--success-bg)',  icon: <Heart size={11} /> },
+  boutique:    { label: 'Boutique',    color: '#C77B3B',           bg: '#FFF3E8',            icon: <ShoppingBag size={11} /> },
+  scan:        { label: 'Scanner',     color: 'var(--olive-deep)', bg: 'var(--olive-soft)',  icon: <QrCode size={11} /> },
+  admin:       { label: 'Admin',       color: 'var(--ink-mute)',   bg: 'var(--surface-alt)', icon: <ScanLine size={11} /> },
+};
+
+const EVENING_SLOTS = [
+  { time: '17h30', cap: 80, res: 54, walk: 6 },
+  { time: '18h00', cap: 80, res: 78, walk: 8 },
+  { time: '18h30', cap: 80, res: 80, walk: 12 },
+  { time: '19h00', cap: 80, res: 75, walk: 15 },
+  { time: '19h30', cap: 80, res: 58, walk: 8 },
+  { time: '20h00', cap: 80, res: 40, walk: 4 },
+  { time: '20h30', cap: 80, res: 22, walk: 0 },
+  { time: '21h00', cap: 80, res: 10, walk: 0 },
+];
+
+const RAMADAN_FILL = [
+  42, 48, 51, 59, 66, 70, 74, 68, 72, 78,
+  83, 80, 86, 89, 92, 87, 85, 91, 94, 90,
+  88, 82, 80, 78, 76, 74, 72, 70, 68, 65,
+];
+
+// ── Sub-components ─────────────────────────────────────────────────────────
+
+// KPI tile — clickable, colored accent, sparkline
+function KpiTile({
+  label, value, suffix, sub, color, accent, sparkValues, onClick, urgent,
 }: {
-  label: string; value: string | number; suffix?: string; delta?: number;
-  trend?: string; sparkValues?: number[]; color?: string;
+  label: string; value: string | number; suffix?: string; sub?: string;
+  color?: string; accent?: string; sparkValues?: number[];
+  onClick?: () => void; urgent?: boolean;
 }) {
-  const isUp = delta === undefined ? null : delta >= 0;
   return (
-    <div style={{
-      background: 'var(--surface)',
-      border: '1px solid var(--line)',
-      borderRadius: 6,
-      padding: 16,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 10,
-      minHeight: 110,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--ink-soft)' }}>{label}</div>
-        {delta !== undefined && isUp !== null && (
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 2,
-            fontSize: 11, fontWeight: 600,
-            color: isUp ? 'var(--success)' : 'var(--danger)',
-          }}>
-            {isUp ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
-            {Math.abs(delta)}%
-          </span>
-        )}
+    <div
+      onClick={onClick}
+      style={{
+        background: 'var(--surface)',
+        border: `1px solid ${urgent ? 'var(--danger)' : 'var(--line)'}`,
+        borderLeft: `3px solid ${accent || color || 'var(--olive)'}`,
+        borderRadius: 6, padding: '12px 14px',
+        display: 'flex', flexDirection: 'column', gap: 6,
+        cursor: onClick ? 'pointer' : 'default', minHeight: 96,
+      }}
+    >
+      <div style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--ink-soft)', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+        {label}
       </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-        <div style={{ fontSize: 26, fontWeight: 600, color: 'var(--ink)', letterSpacing: -0.5, lineHeight: 1 }}>{value}</div>
-        {suffix && <span style={{ fontSize: 12, color: 'var(--ink-mute)' }}>{suffix}</span>}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+        <div style={{ fontSize: 26, fontWeight: 700, color: color || 'var(--ink)', lineHeight: 1, letterSpacing: -0.5 }}>
+          {value}
+        </div>
+        {suffix && <span style={{ fontSize: 11.5, color: 'var(--ink-mute)' }}>{suffix}</span>}
       </div>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 'auto' }}>
-        <div style={{ fontSize: 10.5, color: 'var(--ink-mute)' }}>{trend}</div>
+        {sub && <div style={{ fontSize: 10.5, color: urgent ? 'var(--danger)' : 'var(--ink-mute)' }}>{sub}</div>}
         {sparkValues && sparkValues.length > 1 && (
-          <Sparkline values={sparkValues} width={70} height={22} color={color || 'var(--olive)'} />
+          <Sparkline values={sparkValues} width={60} height={18} color={accent || color || 'var(--olive)'} />
         )}
       </div>
     </div>
   );
 }
 
-// Action item in the "À traiter" queue
-function ActionItem({
-  icon, iconBg, title, meta, urgent, cta, onClick,
+// Single urgency row
+function UrgencyItem({
+  icon, iconBg, label, value, priority, cta, onClick,
 }: {
-  icon: React.ReactNode; iconBg: string; title: string; meta: string;
-  urgent?: boolean; cta: string; onClick?: () => void;
+  icon: ReactNode; iconBg: string; label: string; value: string;
+  priority: 'critique' | 'important' | 'a-faire'; cta: string; onClick?: () => void;
 }) {
+  const pc = {
+    critique: { label: 'Critique', color: 'var(--danger)' },
+    important: { label: 'Important', color: 'var(--warn)' },
+    'a-faire': { label: 'À faire', color: 'var(--info)' },
+  }[priority];
+
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 12,
-      padding: '10px 14px',
-      borderBottom: '1px solid var(--line-soft)',
+      padding: '10px 16px', borderBottom: '1px solid var(--line-soft)',
     }}>
       <div style={{
         width: 30, height: 30, borderRadius: 6, background: iconBg,
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
       }}>{icon}</div>
-      <div style={{ flex: 1, minWidth: 0, lineHeight: 1.3 }}>
-        <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          {title}
-          {urgent && <span style={{ width: 5, height: 5, borderRadius: 999, background: 'var(--danger)', flexShrink: 0 }} />}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink)' }}>{label}</span>
+          <span style={{
+            fontSize: 9.5, fontWeight: 600, color: pc.color,
+            border: `1px solid ${pc.color}`, borderRadius: 3, padding: '1px 5px',
+          }}>{pc.label}</span>
         </div>
-        <div style={{ fontSize: 11, color: 'var(--ink-mute)', marginTop: 1 }}>{meta}</div>
+        <div style={{ fontSize: 11, color: 'var(--ink-mute)', marginTop: 1 }}>{value}</div>
       </div>
       <button
         onClick={onClick}
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 4,
-          height: 26, padding: '0 8px',
-          background: 'var(--surface)', color: 'var(--ink)',
+          height: 26, padding: '0 9px',
+          background: 'var(--surface-alt)', color: 'var(--ink)',
           border: '1px solid var(--line)', borderRadius: 5,
-          fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
-          flexShrink: 0, whiteSpace: 'nowrap',
+          fontSize: 11.5, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
         }}
       >
-        {cta}
-        <ChevronRight size={11} />
+        {cta} <ChevronRight size={11} />
       </button>
     </div>
   );
 }
 
-// Reservations bar chart (static layout, stacked bars)
-function ReservationsToday({ totalReservations }: { totalReservations: number }) {
-  const slots = [
-    { time: '17:30', cap: 80, conf: 54, walk: 6 },
-    { time: '18:00', cap: 80, conf: 72, walk: 8 },
-    { time: '18:30', cap: 80, conf: 68, walk: 10 },
-    { time: '19:00', cap: 80, conf: 80, walk: 14 },
-    { time: '19:30', cap: 80, conf: 60, walk: 8 },
-    { time: '20:00', cap: 80, conf: 42, walk: 4 },
-    { time: '20:30', cap: 80, conf: 28, walk: 0 },
-    { time: '21:00', cap: 80, conf: 14, walk: 0 },
-  ];
-  const maxBar = 100;
+// Evening flow SVG bar chart
+function EveningFlowChart({ totalReservations }: { totalReservations: number }) {
+  const maxY = 100;
+  const chartH = 110;
+  const barW = 26;
+  const gap = 16;
+  const nSlots = EVENING_SLOTS.length;
+  const svgW = nSlots * (barW + gap) - gap + 10;
 
   return (
-    <div style={{
-      background: 'var(--surface)', border: '1px solid var(--line)',
-      borderRadius: 6, padding: 18, display: 'flex', flexDirection: 'column', gap: 14,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 6, padding: 18 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>Réservations aujourd'hui</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>Flux de la soirée</div>
           <div style={{ fontSize: 11.5, color: 'var(--ink-mute)', marginTop: 2 }}>
-            {totalReservations} confirmées · capacité 640
+            Réservations par créneau · {totalReservations} confirmées
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--ink-soft)' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--olive)' }} /> Confirmées
+        <div style={{ display: 'flex', gap: 10, fontSize: 10.5, color: 'var(--ink-soft)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--olive)', display: 'inline-block' }} />Réservations
           </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--sand)' }} /> Walk-in
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--sand)', display: 'inline-block' }} />Walk-in
           </span>
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, height: 130, paddingTop: 6 }}>
-        {slots.map(s => {
-          const total = s.conf + s.walk;
-          const hCap   = (s.cap / maxBar) * 120;
-          const hConf  = (s.conf / maxBar) * 120;
-          const hWalk  = (s.walk / maxBar) * 120;
-          const over = total > s.cap;
+      <svg width="100%" viewBox={`0 0 ${svgW} ${chartH + 28}`} style={{ overflow: 'visible' }}>
+        {/* Capacity dashed line */}
+        <line
+          x1="0" y1={chartH - (80 / maxY) * chartH}
+          x2={svgW} y2={chartH - (80 / maxY) * chartH}
+          stroke="var(--line)" strokeWidth="1.5" strokeDasharray="5 4"
+        />
+        {EVENING_SLOTS.map((s, i) => {
+          const x = i * (barW + gap);
+          const total = s.res + s.walk;
+          const fillPct = total / s.cap;
+          const barColor = fillPct > 0.85 ? 'var(--danger)' : fillPct > 0.6 ? 'var(--warn)' : 'var(--olive)';
+          const hRes = (s.res / maxY) * chartH;
+          const hWalk = (s.walk / maxY) * chartH;
+          const hTotal = hRes + hWalk;
           return (
-            <div key={s.time} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-              <div style={{ fontSize: 10, color: over ? 'var(--danger)' : 'var(--ink-mute)', fontWeight: 500 }}>
-                {total}{over && ' !'}
-              </div>
-              <div style={{ position: 'relative', width: '100%', height: 120, display: 'flex', alignItems: 'flex-end' }}>
-                <div style={{
-                  position: 'absolute', left: 0, right: 0, bottom: 0,
-                  height: hCap, border: '1px dashed var(--line)', borderRadius: 3,
-                  background: 'var(--line-soft)',
-                }} />
-                <div style={{
-                  position: 'relative', width: '100%',
-                  display: 'flex', flexDirection: 'column-reverse',
-                  borderRadius: 3, overflow: 'hidden',
-                }}>
-                  <div style={{ height: hConf, background: 'var(--olive)' }} />
-                  <div style={{ height: hWalk, background: 'var(--sand)' }} />
-                </div>
-              </div>
-              <div style={{ fontSize: 10.5, color: 'var(--ink-soft)' }}>{s.time}</div>
-            </div>
+            <g key={s.time}>
+              {s.walk > 0 && (
+                <rect x={x} y={chartH - hTotal} width={barW} height={hWalk} fill="var(--sand)" rx="2" />
+              )}
+              <rect x={x} y={chartH - hRes} width={barW} height={Math.max(hRes, 2)} fill={barColor} rx="2" />
+              {total > 0 && (
+                <text x={x + barW / 2} y={chartH - hTotal - 5} textAnchor="middle"
+                  fontSize="9" fill={fillPct > 0.85 ? 'var(--danger)' : 'var(--ink-mute)'}
+                  fontWeight={fillPct > 0.85 ? '700' : '400'}>
+                  {total}{fillPct > 0.85 ? '!' : ''}
+                </text>
+              )}
+              <text x={x + barW / 2} y={chartH + 16} textAnchor="middle" fontSize="9.5" fill="var(--ink-soft)">
+                {s.time}
+              </text>
+            </g>
           );
         })}
-      </div>
+      </svg>
     </div>
   );
 }
 
-// Simple volunteer leaderboard
-function TopVolunteers({ volunteers }: { volunteers: { name: string; hours: number; points: number; level: string }[] }) {
-  const levelColor: Record<string, string> = {
-    red: '#A85454', orange: '#C77B3B', yellow: '#C9A93A', blue: '#3C6E94',
-  };
-  const avatarTones = ['#5E5B34', '#CDBB8A', '#A8C2A0', '#A8BAD0', '#D9A8A8'];
-
+// Operational health row
+function HealthRow({ label, value, tone }: { label: string; value: string; tone: HealthTone }) {
+  const c = { ok: 'var(--success)', warn: 'var(--warn)', danger: 'var(--danger)' }[tone];
   return (
     <div style={{
-      background: 'var(--surface)', border: '1px solid var(--line)',
-      borderRadius: 6, padding: 16,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '7px 0', borderBottom: '1px solid var(--line-soft)',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>Top bénévoles · semaine</div>
-        <Trophy size={14} strokeWidth={1.5} style={{ color: 'var(--sand)' }} />
-      </div>
-      {volunteers.slice(0, 5).map((v, i) => (
-        <div key={v.name} style={{
-          display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0',
-          borderBottom: i < 4 ? '1px solid var(--line-soft)' : 'none',
-        }}>
-          <div style={{
-            width: 14, fontSize: 11, color: 'var(--ink-mute)',
-            textAlign: 'right',
-            fontFamily: '"JetBrains Mono", monospace',
-          }}>{i + 1}</div>
-          <div style={{
-            width: 22, height: 22, borderRadius: 999,
-            background: avatarTones[i % 5], color: i === 0 ? '#F5F1E2' : 'var(--ink)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 9, fontWeight: 600, flexShrink: 0,
-          }}>
-            {initials(v.name)}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12, color: 'var(--ink)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {v.name}
-            </div>
-            <div style={{ fontSize: 10.5, color: 'var(--ink-mute)' }}>{v.hours}h · {v.points} pts</div>
-          </div>
-          <span style={{
-            width: 8, height: 8, borderRadius: 999,
-            background: levelColor[v.level] || '#CDBB8A',
-          }} />
-        </div>
-      ))}
+      <span style={{ fontSize: 11.5, color: 'var(--ink-soft)' }}>{label}</span>
+      <span style={{ fontSize: 11.5, fontWeight: 600, color: c, display: 'flex', alignItems: 'center', gap: 4 }}>
+        <span style={{ width: 5, height: 5, borderRadius: 999, background: c, display: 'inline-block' }} />
+        {value}
+      </span>
     </div>
   );
 }
 
-// Activity feed
-const ACTIVITY = [
-  { who: 'Système', ago: 'il y a 5 min', what: 'a traité ', target: '8 commandes goodies', tone: 'success' as const },
-  { who: 'Scanner #1', ago: 'il y a 10 min', what: 'a validé ', target: '18 bénévoles', tone: 'info' as const },
-  { who: 'Admin', ago: 'il y a 22 min', what: 'a confirmé le don de ', target: '500 DH', tone: 'success' as const },
-  { who: 'Système', ago: 'il y a 35 min', what: 'a envoyé ', target: '6 emails carte membre', tone: 'neutral' as const },
-  { who: 'Admin', ago: 'il y a 1h', what: 'a mis à jour ', target: 'le stock pâtisserie', tone: 'neutral' as const },
-];
+// Module card (3×3 grid)
+function ModuleCard({
+  icon, name, keyMetric, metricLabel, status, onClick,
+}: {
+  icon: ReactNode; name: string; keyMetric: string | number;
+  metricLabel: string; status: 'ok' | 'warn' | 'danger' | 'idle'; onClick: () => void;
+}) {
+  const sc = {
+    ok:     { label: 'Actif',     color: 'var(--success)', bg: 'var(--success-bg)' },
+    warn:   { label: 'Attention', color: 'var(--warn)',    bg: 'var(--warn-bg)' },
+    danger: { label: 'Urgent',    color: 'var(--danger)',  bg: 'var(--danger-bg)' },
+    idle:   { label: 'Calme',     color: 'var(--ink-mute)', bg: 'var(--surface-alt)' },
+  }[status];
+  return (
+    <div onClick={onClick} style={{
+      background: 'var(--surface)', border: '1px solid var(--line)',
+      borderRadius: 6, padding: 14, cursor: 'pointer',
+      display: 'flex', flexDirection: 'column', gap: 8,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: 6, background: 'var(--olive-soft)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--olive)',
+        }}>{icon}</div>
+        <span style={{
+          fontSize: 9.5, fontWeight: 600, color: sc.color,
+          background: sc.bg, borderRadius: 99, padding: '2px 7px',
+        }}>{sc.label}</span>
+      </div>
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)' }}>{name}</div>
+        <div style={{ fontSize: 10.5, color: 'var(--ink-mute)', marginTop: 1 }}>
+          <span style={{ fontWeight: 600, color: 'var(--ink-soft)' }}>{keyMetric}</span> {metricLabel}
+        </div>
+      </div>
+    </div>
+  );
+}
 
-const toneDotColor: Record<string, string> = {
-  success: 'var(--success)', info: 'var(--info)', danger: 'var(--danger)', neutral: 'var(--sand)',
-};
+// Quick-access button
+function QuickBtn({
+  icon, label, onClick, primary,
+}: {
+  icon: ReactNode; label: string; onClick: () => void; primary?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
+        padding: '12px 10px', flex: 1, minWidth: 0,
+        background: primary ? 'var(--olive)' : 'var(--surface)',
+        border: `1px solid ${primary ? 'var(--olive)' : 'var(--line)'}`,
+        borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit',
+      }}
+    >
+      <div style={{
+        width: 30, height: 30, borderRadius: 7,
+        background: primary ? 'rgba(255,255,255,0.18)' : 'var(--olive-soft)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: primary ? '#F5F1E2' : 'var(--olive)',
+      }}>{icon}</div>
+      <span style={{
+        fontSize: 10.5, fontWeight: 500, textAlign: 'center', lineHeight: 1.3,
+        color: primary ? '#F5F1E2' : 'var(--ink-soft)',
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%',
+      }}>
+        {label}
+      </span>
+    </button>
+  );
+}
 
-// Main dashboard component
+// Section header label
+function SectionTitle({ icon, title, sub }: { icon?: ReactNode; title: string; sub?: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
+      {icon && <span style={{ color: 'var(--olive)', display: 'flex', alignItems: 'center' }}>{icon}</span>}
+      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{title}</span>
+      {sub && <span style={{ fontSize: 11, color: 'var(--ink-mute)' }}>{sub}</span>}
+    </div>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────
+
 export default function AdminDashboard() {
+  // ─── ALL hooks unconditionally before any return ────────────────────────
   const [, navigate] = useLocation();
   const { user } = useAuth();
+  const [activityFilter, setActivityFilter] = useState<ActivityCategory | 'all'>('all');
+  const [startTime] = useState(() => new Date());
 
   // tRPC queries
-  const { data: volunteerStats } = trpc.volunteers.stats.useQuery(undefined, {
-    refetchInterval: 60_000,
-  });
+  const { data: volunteerStats } = trpc.volunteers.stats.useQuery(undefined, { refetchInterval: 60_000 });
   const { data: days } = trpc.days.list.useQuery();
+  const { data: restaurants } = trpc.restaurants.list.useQuery({});
 
-  // BFF stats
+  // BFF REST
   const token = getStoredSession()?.accessToken;
   const { data: adminDashboard } = useQuery({
     queryKey: ['admin-dashboard-bff'],
@@ -264,10 +353,24 @@ export default function AdminDashboard() {
     refetchInterval: 60_000,
   });
 
-  // Topbar actions
+  // Topbar
   useAdminPage({
+    title: "Vue d'ensemble",
     actions: (
       <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          onClick={() => navigate('/admin/scan-reservation')}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            height: 32, padding: '0 12px',
+            background: 'var(--olive)', color: '#F5F1E2',
+            border: '1px solid var(--olive)', borderRadius: 5,
+            fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >
+          <ScanLine size={13} />
+          Scanner QR
+        </button>
         <button
           onClick={() => navigate('/admin/jours')}
           style={{
@@ -278,275 +381,562 @@ export default function AdminDashboard() {
             fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
           }}
         >
-          <Calendar size={13} strokeWidth={1.5} />
+          <Calendar size={13} />
           Calendrier
-        </button>
-        <button
-          onClick={() => navigate('/admin/benevoles')}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            height: 32, padding: '0 12px',
-            background: 'var(--olive)', color: '#F5F1E2',
-            border: '1px solid var(--olive)', borderRadius: 5,
-            fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
-          }}
-        >
-          <Plus size={13} strokeWidth={1.5} />
-          Action rapide
         </button>
       </div>
     ),
   });
 
+  // ─── Derived values ───────────────────────────────────────────────────────
   const presentVolunteers = volunteerStats?.present ?? 0;
-  const totalVolunteers = volunteerStats?.registered ?? 0;
-  const totalDays = days?.length ?? 0;
+  const totalVolunteers   = volunteerStats?.registered ?? 0;
+  const totalDays         = days?.length ?? 0;
   const totalReservations = adminDashboard?.stats?.reservations ?? 0;
-  const totalPayments = adminDashboard?.stats?.payments ?? 0;
+  const totalPayments     = adminDashboard?.stats?.payments ?? 0;
+  const totalCapacity     = restaurants?.reduce((s: number, r: any) => s + (r.capacity ?? 0), 0) || 640;
+  const fillRate          = totalCapacity > 0 ? Math.round((totalReservations / totalCapacity) * 100) : 0;
+  const absentVolunteers  = Math.max(0, totalVolunteers - presentVolunteers);
+  const absenceRate       = totalVolunteers > 0 ? Math.round((absentVolunteers / totalVolunteers) * 100) : 0;
+  const presenceRate      = totalVolunteers > 0 ? Math.round((presentVolunteers / totalVolunteers) * 100) : 100;
+  const firstName         = user?.name || user?.email?.split('@')[0] || 'Admin';
 
-  const firstName = user?.name || user?.email?.split('@')[0] || 'Admin';
+  const healthStatus: 'stable' | 'tension' | 'critique' =
+    fillRate > 90 || absenceRate > 30 ? 'critique' :
+    fillRate > 70 || absenceRate > 15 ? 'tension' : 'stable';
 
-  // Static placeholder top volunteers (to be replaced with real query when available)
-  const topVolunteers = [
-    { name: 'Hicham Aouad', hours: 32, points: 480, level: 'red' },
-    { name: 'Salma Khattabi', hours: 28, points: 420, level: 'red' },
-    { name: 'Karim Idrissi', hours: 24, points: 360, level: 'yellow' },
-    { name: 'Nora Tazi', hours: 22, points: 330, level: 'yellow' },
-    { name: 'Mehdi Benjelloun', hours: 18, points: 270, level: 'orange' },
-  ];
+  const healthConfig = {
+    stable:   { emoji: '🟢', label: 'Stable',              color: 'var(--success)', bg: 'var(--success-bg)' },
+    tension:  { emoji: '🟡', label: 'Tension modérée',     color: 'var(--warn)',    bg: 'var(--warn-bg)' },
+    critique: { emoji: '🔴', label: 'Saturation critique', color: 'var(--danger)',  bg: 'var(--danger-bg)' },
+  };
+  const hc = healthConfig[healthStatus];
 
+  const chargeLabel: string = absenceRate > 30 ? 'Forte' : absenceRate > 15 ? 'Modérée' : 'Légère';
+  const chargeTone: HealthTone = absenceRate > 30 ? 'danger' : absenceRate > 15 ? 'warn' : 'ok';
+
+  const todayDate = startTime.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  // Dynamic urgencies derived from real data
+  const urgencies = useMemo(() => {
+    const list: Array<{
+      id: string; icon: ReactNode; iconBg: string; label: string; value: string;
+      priority: 'critique' | 'important' | 'a-faire'; cta: string; route: string;
+    }> = [];
+
+    if (fillRate > 90) {
+      list.push({
+        id: 'capacity', icon: <AlertTriangle size={14} strokeWidth={1.5} style={{ color: 'var(--danger)' }} />,
+        iconBg: 'var(--danger-bg)', label: 'Capacité quasi-saturée',
+        value: `${fillRate}% de remplissage — risque de surcapacité détecté`,
+        priority: 'critique', cta: 'Gérer', route: '/admin/restaurant-reservations',
+      });
+    }
+    if (absenceRate > 20) {
+      list.push({
+        id: 'volunteers', icon: <Users size={14} strokeWidth={1.5} style={{ color: absenceRate > 30 ? 'var(--danger)' : 'var(--warn)' }} />,
+        iconBg: absenceRate > 30 ? 'var(--danger-bg)' : 'var(--warn-bg)',
+        label: 'Déficit bénévoles',
+        value: `${absentVolunteers} absents · ${absenceRate}% du total inscrit non présent`,
+        priority: absenceRate > 30 ? 'critique' : 'important', cta: 'Voir', route: '/admin/benevoles',
+      });
+    }
+    if (totalPayments > 5) {
+      list.push({
+        id: 'payments', icon: <CreditCard size={14} strokeWidth={1.5} style={{ color: 'var(--warn)' }} />,
+        iconBg: 'var(--warn-bg)', label: 'Commandes boutique en attente',
+        value: `${totalPayments} commandes à traiter — paiements non validés`,
+        priority: totalPayments > 15 ? 'critique' : 'important', cta: 'Traiter', route: '/admin/payments',
+      });
+    }
+    list.push({
+      id: 'groups', icon: <Utensils size={14} strokeWidth={1.5} style={{ color: 'var(--info)' }} />,
+      iconBg: 'var(--info-bg)', label: 'Groupes & réservations à valider',
+      value: 'Réservations entreprises en attente de confirmation admin',
+      priority: 'a-faire', cta: 'Valider', route: '/admin/restaurant/groupes',
+    });
+    list.push({
+      id: 'cards', icon: <Printer size={14} strokeWidth={1.5} style={{ color: 'var(--ink-soft)' }} />,
+      iconBg: 'var(--surface-alt)', label: 'Cartes membres en file impression',
+      value: 'Paiements reçus — cartes prêtes à imprimer',
+      priority: 'a-faire', cta: 'Lancer', route: '/admin/cards',
+    });
+    return list;
+  }, [fillRate, absenceRate, absentVolunteers, totalPayments]);
+
+  const filteredActivity = activityFilter === 'all'
+    ? ACTIVITY_ITEMS
+    : ACTIVITY_ITEMS.filter(a => a.category === activityFilter);
+
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 1200 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 1240, paddingBottom: 24 }}>
 
-      {/* Greeting */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '4px 2px' }}>
+      {/* ── 1. Strategic Header ─────────────────────────────────────────── */}
+      <div style={{
+        background: 'var(--surface)', border: '1px solid var(--line)',
+        borderRadius: 8, padding: '20px 24px',
+        display: 'flex', alignItems: 'center', gap: 0, position: 'relative', overflow: 'hidden',
+      }}>
+        {/* Accent bar */}
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+          background: 'linear-gradient(90deg, var(--olive) 0%, var(--sand) 60%, transparent 100%)',
+        }} />
+
+        {/* Greeting */}
         <div style={{ flex: 1 }}>
           <h2 style={{
-            margin: 0,
-            fontFamily: '"Cormorant Garamond", serif',
-            fontStyle: 'italic',
-            fontSize: 22, fontWeight: 500,
-            color: 'var(--ink)', letterSpacing: -0.3,
+            margin: 0, fontSize: 19, fontWeight: 600,
+            fontFamily: '"Cormorant Garamond", serif', fontStyle: 'italic',
+            color: 'var(--ink)',
           }}>
-            Bonsoir {firstName}.
+            Bonsoir, {firstName}.
           </h2>
-          <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--ink-soft)' }}>
-            {totalDays > 0 ? `${totalDays} jours de Ramadan configurés.` : 'Bienvenue dans l’espace admin.'}
-          </p>
-        </div>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px',
-          background: 'var(--olive-soft)', borderRadius: 999,
-        }}>
-          <Moon size={13} strokeWidth={1.5} style={{ color: 'var(--olive)' }} />
-          <span style={{ fontSize: 12, color: 'var(--olive-deep)', fontWeight: 500 }}>
-            {totalDays} nuits
-          </span>
-          <div style={{ width: 60, height: 4, background: 'rgba(255,255,255,0.6)', borderRadius: 99, overflow: 'hidden' }}>
-            <div style={{ width: '60%', height: '100%', background: 'var(--olive)' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+            <Moon size={11} strokeWidth={1.5} style={{ color: 'var(--olive)', flexShrink: 0 }} />
+            <span style={{ fontSize: 11.5, color: 'var(--ink-soft)' }}>
+              Ramadan 1447 · {todayDate} · {totalDays} nuits configurées
+            </span>
           </div>
         </div>
+
+        {/* Separator */}
+        <div style={{ width: 1, height: 48, background: 'var(--line-soft)', margin: '0 24px' }} />
+
+        {/* 3 key metrics */}
+        <div style={{ display: 'flex', gap: 28 }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              fontSize: 24, fontWeight: 700, lineHeight: 1,
+              color: fillRate > 85 ? 'var(--danger)' : 'var(--olive)',
+            }}>{totalReservations}</div>
+            <div style={{ fontSize: 10.5, color: 'var(--ink-mute)', marginTop: 3 }}>réservations</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              fontSize: 24, fontWeight: 700, lineHeight: 1,
+              color: absenceRate > 20 ? 'var(--warn)' : 'var(--info)',
+            }}>{presentVolunteers}</div>
+            <div style={{ fontSize: 10.5, color: 'var(--ink-mute)', marginTop: 3 }}>bénévoles actifs</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              fontSize: 24, fontWeight: 700, lineHeight: 1,
+              color: fillRate > 85 ? 'var(--danger)' : fillRate > 70 ? 'var(--warn)' : 'var(--success)',
+            }}>{fillRate}%</div>
+            <div style={{ fontSize: 10.5, color: 'var(--ink-mute)', marginTop: 3 }}>capacité</div>
+          </div>
+        </div>
+
+        {/* Separator */}
+        <div style={{ width: 1, height: 48, background: 'var(--line-soft)', margin: '0 24px' }} />
+
+        {/* Health status */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+          <div style={{
+            padding: '6px 14px', background: hc.bg, color: hc.color,
+            borderRadius: 99, fontSize: 12, fontWeight: 600,
+            border: `1px solid ${hc.color}30`,
+          }}>
+            {hc.emoji} {hc.label}
+          </div>
+          <div style={{ fontSize: 10.5, color: 'var(--ink-mute)' }}>État opérationnel global</div>
+        </div>
       </div>
 
-      {/* KPI strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-        <StatTile
-          label="Bénévoles présents"
+      {/* ── 2. KPI Strip (6 tiles) ──────────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10 }}>
+        <KpiTile
+          label="Réservations"
+          value={totalReservations}
+          suffix={`/ ${totalCapacity}`}
+          sub={`${fillRate}% remplissage`}
+          color={fillRate > 85 ? 'var(--danger)' : fillRate > 70 ? 'var(--warn)' : 'var(--olive)'}
+          accent={fillRate > 85 ? 'var(--danger)' : 'var(--olive)'}
+          sparkValues={[180, 200, 220, 240, 250, 260, totalReservations]}
+          onClick={() => navigate('/admin/restaurant-reservations')}
+          urgent={fillRate > 90}
+        />
+        <KpiTile
+          label="Bénévoles"
           value={presentVolunteers}
           suffix={`/ ${totalVolunteers}`}
-          delta={8}
-          trend={`${totalVolunteers - presentVolunteers} absents`}
-          color="var(--olive)"
-          sparkValues={[80, 90, 95, 110, 105, 120, presentVolunteers]}
+          sub={absenceRate > 15 ? `⚠ ${absentVolunteers} absents` : `${presenceRate}% présents`}
+          color={absenceRate > 20 ? 'var(--warn)' : 'var(--info)'}
+          accent={absenceRate > 20 ? 'var(--warn)' : 'var(--info)'}
+          sparkValues={[45, 50, 55, 58, 62, 65, presentVolunteers]}
+          onClick={() => navigate('/admin/benevoles')}
+          urgent={absenceRate > 30}
         />
-        <StatTile
-          label="Réservations ce jour"
-          value={totalReservations}
-          delta={12}
-          trend="capacité 640 couverts"
-          color="var(--success)"
-          sparkValues={[180, 200, 220, 230, 245, 260, totalReservations]}
-        />
-        <StatTile
-          label="Commandes boutique"
+        <KpiTile
+          label="Commandes en attente"
           value={totalPayments}
-          delta={5}
-          trend="en attente de traitement"
-          color="var(--info)"
-          sparkValues={[60, 75, 85, 90, 100, 110, totalPayments]}
+          sub="boutique · à traiter"
+          color={totalPayments > 10 ? 'var(--warn)' : 'var(--ink)'}
+          accent={totalPayments > 10 ? 'var(--warn)' : 'var(--sand)'}
+          sparkValues={[5, 8, 6, 12, 9, 11, totalPayments]}
+          onClick={() => navigate('/admin/commandes')}
+          urgent={totalPayments > 15}
         />
-        <StatTile
-          label="Jours configurés"
-          value={totalDays}
-          trend="édition Ramadan 1447"
-          color="var(--sand)"
-          sparkValues={[0, 5, 10, 15, 20, 25, totalDays]}
+        <KpiTile
+          label="Dons reçus"
+          value="1 850"
+          suffix="MAD"
+          sub="+3 confirmés aujourd'hui"
+          color="var(--success)"
+          accent="var(--success)"
+          sparkValues={[300, 500, 700, 900, 1100, 1500, 1850]}
+          onClick={() => navigate('/admin/dons')}
+        />
+        <KpiTile
+          label="Groupes à valider"
+          value={3}
+          sub="entreprises en attente"
+          color="var(--info)"
+          accent="var(--info)"
+          sparkValues={[1, 2, 1, 3, 2, 4, 3]}
+          onClick={() => navigate('/admin/restaurant/groupes')}
+        />
+        <KpiTile
+          label="QR scans"
+          value={247}
+          sub="scans effectués ce soir"
+          color="var(--olive)"
+          accent="var(--olive-deep)"
+          sparkValues={[20, 45, 80, 120, 170, 210, 247]}
+          onClick={() => navigate('/admin/scan-reservation')}
         />
       </div>
 
-      {/* Two-column: action queue + reservations */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.1fr', gap: 14, alignItems: 'start' }}>
+      {/* ── 3. Urgencies + Evening Flow ─────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: 14, alignItems: 'start' }}>
 
-        {/* Action queue */}
+        {/* Urgencies panel */}
         <div style={{
           background: 'var(--surface)', border: '1px solid var(--line)',
           borderRadius: 6, overflow: 'hidden',
         }}>
           <div style={{
-            padding: '14px 16px 10px',
+            padding: '13px 16px 10px',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             borderBottom: '1px solid var(--line-soft)',
           }}>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>À traiter</div>
-              <div style={{ fontSize: 11, color: 'var(--ink-mute)', marginTop: 1 }}>Actions prioritaires</div>
+              <div style={{
+                fontSize: 13, fontWeight: 600, color: 'var(--ink)',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+                <AlertTriangle size={13} style={{ color: urgencies.some(u => u.priority === 'critique') ? 'var(--danger)' : 'var(--warn)' }} />
+                Urgences opérationnelles
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--ink-mute)', marginTop: 1 }}>Actions à traiter maintenant</div>
             </div>
-            <button
-              onClick={() => navigate('/admin/logs')}
-              style={{
-                background: 'transparent', border: 'none', color: 'var(--ink-soft)',
-                fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >Tout voir</button>
+            <span style={{
+              fontSize: 11, fontWeight: 700,
+              background: urgencies.some(u => u.priority === 'critique') ? 'var(--danger-bg)' : 'var(--warn-bg)',
+              color: urgencies.some(u => u.priority === 'critique') ? 'var(--danger)' : 'var(--warn)',
+              borderRadius: 99, padding: '2px 8px',
+            }}>
+              {urgencies.length}
+            </span>
           </div>
-          <ActionItem
-            urgent
-            icon={<AlertTriangle size={14} strokeWidth={1.5} style={{ color: 'var(--danger)' }} />}
-            iconBg="var(--danger-bg)"
-            title="Dons en attente de confirmation"
-            meta="Vérifier les paiements reçus"
-            cta="Vérifier"
-            onClick={() => navigate('/admin/dons')}
-          />
-          <ActionItem
-            icon={<Printer size={14} strokeWidth={1.5} style={{ color: 'var(--warn)' }} />}
-            iconBg="var(--warn-bg)"
-            title="Cartes membres à imprimer"
-            meta="Paiements reçus · prêts pour impression"
-            cta="Lancer"
-            onClick={() => navigate('/admin/cards')}
-          />
-          <ActionItem
-            icon={<Users size={14} strokeWidth={1.5} style={{ color: 'var(--info)' }} />}
-            iconBg="var(--info-bg)"
-            title="Demandes groupes bénévoles"
-            meta="Pièces jointes reçues · à valider"
-            cta="Examiner"
-            onClick={() => navigate('/admin/benevoles-groupes')}
-          />
-          <ActionItem
-            icon={<Mail size={14} strokeWidth={1.5} style={{ color: 'var(--olive)' }} />}
-            iconBg="var(--olive-soft)"
-            title="Messages contact"
-            meta="Nouveaux messages à traiter"
-            cta="Ouvrir"
-            onClick={() => navigate('/admin/messages')}
-          />
-          <ActionItem
-            icon={<QrCode size={14} strokeWidth={1.5} style={{ color: 'var(--sand)' }} />}
-            iconBg="var(--sand-soft)"
-            title="Commandes en attente"
-            meta="Goodies · Pâtisserie · Terroir"
-            cta="Voir"
-            onClick={() => navigate('/admin/commandes')}
-          />
-          <div style={{
-            padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            background: 'var(--surface-alt)', fontSize: 11.5, color: 'var(--ink-mute)',
-          }}>
-            Voir plus d&apos;actions
-            <ChevronRight size={11} />
-          </div>
+
+          {urgencies.length === 0 ? (
+            <div style={{
+              padding: '20px 16px', display: 'flex', alignItems: 'center', gap: 10,
+              color: 'var(--success)',
+            }}>
+              <CheckCircle size={18} />
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>Tout est sous contrôle</div>
+                <div style={{ fontSize: 11.5, color: 'var(--ink-mute)', marginTop: 1 }}>
+                  Aucune urgence détectée · opérations nominales
+                </div>
+              </div>
+            </div>
+          ) : (
+            urgencies.map(u => (
+              <UrgencyItem
+                key={u.id}
+                icon={u.icon}
+                iconBg={u.iconBg}
+                label={u.label}
+                value={u.value}
+                priority={u.priority}
+                cta={u.cta}
+                onClick={() => navigate(u.route)}
+              />
+            ))
+          )}
         </div>
 
-        {/* Reservations chart */}
-        <ReservationsToday totalReservations={totalReservations} />
+        {/* Evening flow chart */}
+        <EveningFlowChart totalReservations={totalReservations} />
       </div>
 
-      {/* Bottom row: leaderboard + activity */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.1fr', gap: 14, alignItems: 'start' }}>
-
-        {/* Top volunteers */}
-        <TopVolunteers volunteers={topVolunteers} />
-
-        {/* Quick links / modules */}
-        <div style={{
-          background: 'var(--surface)', border: '1px solid var(--line)',
-          borderRadius: 6, padding: 16,
-        }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginBottom: 12 }}>
-            Accès rapides
-          </div>
-          {[
-            { label: 'Catalogue unifié', route: '/admin/catalogue-unifie', sub: 'Goodies · Pâtisserie · Terroir' },
-            { label: 'Réservations restaurant', route: '/admin/restaurant-reservations', sub: 'Groupes & particuliers' },
-            { label: 'Cartes membres', route: '/admin/cards', sub: 'Pipeline complet' },
-            { label: 'Inventaire', route: '/admin/inventory', sub: 'Stocks & mouvements' },
-            { label: 'Galerie photos', route: '/admin/galerie', sub: 'Albums & événements' },
-          ].map((m, i, arr) => (
-            <button
-              key={m.route}
-              onClick={() => navigate(m.route)}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                width: '100%', padding: '9px 0',
-                background: 'transparent', border: 'none',
-                borderBottom: i < arr.length - 1 ? '1px solid var(--line-soft)' : 'none',
-                cursor: 'pointer', textAlign: 'left',
-              }}
-            >
-              <div>
-                <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink)' }}>{m.label}</div>
-                <div style={{ fontSize: 10.5, color: 'var(--ink-mute)' }}>{m.sub}</div>
-              </div>
-              <ChevronRight size={13} style={{ color: 'var(--ink-mute)', flexShrink: 0 }} />
-            </button>
-          ))}
-        </div>
+      {/* ── 4. Activity Feed + Operational Health ───────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 14, alignItems: 'start' }}>
 
         {/* Activity feed */}
         <div style={{
           background: 'var(--surface)', border: '1px solid var(--line)',
+          borderRadius: 6, overflow: 'hidden',
+        }}>
+          {/* Header + filter tabs */}
+          <div style={{ padding: '13px 16px 0', borderBottom: '1px solid var(--line-soft)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <ArrowUpRight size={13} style={{ color: 'var(--olive)' }} />
+                Activité en direct
+              </div>
+              <button
+                onClick={() => navigate('/admin/logs')}
+                style={{
+                  background: 'transparent', border: 'none', color: 'var(--ink-soft)',
+                  fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Journal complet →
+              </button>
+            </div>
+            {/* Category filters */}
+            <div style={{ display: 'flex', gap: 5, paddingBottom: 10, overflowX: 'auto' }}>
+              {(['all', ...Object.keys(CAT_CONFIG)] as Array<ActivityCategory | 'all'>).map(cat => {
+                const isActive = activityFilter === cat;
+                const cfg = cat !== 'all' ? CAT_CONFIG[cat as ActivityCategory] : null;
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setActivityFilter(cat)}
+                    style={{
+                      padding: '3px 8px', fontSize: 10.5, fontWeight: 500, borderRadius: 4,
+                      border: `1px solid ${isActive ? (cfg?.color ?? 'var(--olive)') : 'var(--line)'}`,
+                      background: isActive ? (cfg?.bg ?? 'var(--olive-soft)') : 'transparent',
+                      color: isActive ? (cfg?.color ?? 'var(--olive-deep)') : 'var(--ink-mute)',
+                      cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {cat === 'all' ? 'Tout' : cfg!.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Items */}
+          <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+            {filteredActivity.map((a, i) => {
+              const cfg = CAT_CONFIG[a.category];
+              return (
+                <div key={a.id} style={{
+                  display: 'flex', gap: 10, padding: '9px 16px',
+                  borderBottom: i < filteredActivity.length - 1 ? '1px solid var(--line-soft)' : 'none',
+                }}>
+                  <div style={{
+                    width: 26, height: 26, borderRadius: 6, background: cfg.bg,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: cfg.color, flexShrink: 0, marginTop: 1,
+                  }}>
+                    {cfg.icon}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink)' }}>{a.text}</span>
+                      <span style={{
+                        fontSize: 9.5, color: cfg.color,
+                        border: `1px solid ${cfg.color}30`, borderRadius: 3, padding: '0 4px', fontWeight: 500,
+                      }}>{cfg.label}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--ink-mute)', marginTop: 1 }}>{a.detail}</div>
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--ink-mute)', flexShrink: 0, paddingTop: 2, whiteSpace: 'nowrap' }}>
+                    il y a {a.minsAgo < 60 ? `${a.minsAgo}m` : `${Math.round(a.minsAgo / 60)}h`}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Operational health */}
+        <div style={{
+          background: 'var(--surface)', border: '1px solid var(--line)',
           borderRadius: 6, padding: 16,
         }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12,
-          }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>Activité récente</div>
-            <button
-              onClick={() => navigate('/admin/logs')}
-              style={{
-                background: 'transparent', border: 'none', color: 'var(--ink-soft)',
-                fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >Journal</button>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <CheckCircle size={13} style={{ color: 'var(--olive)' }} />
+            Santé opérationnelle
           </div>
-          {ACTIVITY.map((a, i) => (
-            <div key={i} style={{
-              display: 'flex', gap: 9, padding: '7px 0',
-              borderBottom: i < ACTIVITY.length - 1 ? '1px solid var(--line-soft)' : 'none',
-            }}>
-              <div style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 4,
-              }}>
-                <span style={{
-                  width: 7, height: 7, borderRadius: 999,
-                  background: toneDotColor[a.tone] || 'var(--sand)',
-                }} />
-                {i < ACTIVITY.length - 1 && (
-                  <div style={{ flex: 1, width: 1, background: 'var(--line-soft)', marginTop: 4 }} />
-                )}
+
+          {/* Global status */}
+          <div style={{
+            padding: '10px 14px', background: hc.bg, borderRadius: 6,
+            display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12,
+          }}>
+            <span style={{ fontSize: 20 }}>{hc.emoji}</span>
+            <div>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: hc.color }}>{hc.label}</div>
+              <div style={{ fontSize: 10.5, color: 'var(--ink-mute)', marginTop: 1 }}>État général du système</div>
+            </div>
+          </div>
+
+          <HealthRow label="Saturation venue" value={`${fillRate}%`}
+            tone={fillRate > 85 ? 'danger' : fillRate > 70 ? 'warn' : 'ok'} />
+          <HealthRow label="Charge équipe" value={chargeLabel} tone={chargeTone} />
+          <HealthRow label="Incidents actifs" value="0" tone="ok" />
+          <HealthRow label="Présence bénévoles" value={`${presenceRate}%`}
+            tone={presenceRate >= 80 ? 'ok' : presenceRate >= 60 ? 'warn' : 'danger'} />
+          <HealthRow label="Risque opérationnel"
+            value={healthStatus === 'stable' ? 'Faible' : healthStatus === 'tension' ? 'Modéré' : 'Élevé'}
+            tone={healthStatus === 'stable' ? 'ok' : healthStatus === 'tension' ? 'warn' : 'danger'} />
+          <HealthRow label="Fluidité système" value="Nominale" tone="ok" />
+        </div>
+      </div>
+
+      {/* ── 5. Active Modules Grid (3×3) ────────────────────────────────── */}
+      <div>
+        <SectionTitle icon={<Package size={13} />} title="Modules actifs" sub="état du jour" />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+          <ModuleCard icon={<Utensils size={14} />} name="Réservations" keyMetric={totalReservations}
+            metricLabel="confirmées" status={fillRate > 85 ? 'warn' : 'ok'}
+            onClick={() => navigate('/admin/restaurant-reservations')} />
+          <ModuleCard icon={<Users size={14} />} name="Bénévoles" keyMetric={presentVolunteers}
+            metricLabel="présents" status={absenceRate > 20 ? 'warn' : 'ok'}
+            onClick={() => navigate('/admin/benevoles')} />
+          <ModuleCard icon={<ShoppingBag size={14} />} name="Boutique" keyMetric={totalPayments}
+            metricLabel="commandes" status={totalPayments > 10 ? 'warn' : totalPayments > 0 ? 'ok' : 'idle'}
+            onClick={() => navigate('/admin/commandes')} />
+          <ModuleCard icon={<Moon size={14} />} name="Pâtisserie" keyMetric={24}
+            metricLabel="commandes" status="ok"
+            onClick={() => navigate('/admin/patisserie')} />
+          <ModuleCard icon={<Package size={14} />} name="Terroir" keyMetric={8}
+            metricLabel="commandes" status="idle"
+            onClick={() => navigate('/admin/terroir/products')} />
+          <ModuleCard icon={<Heart size={14} />} name="Dons" keyMetric="1 850"
+            metricLabel="MAD reçus" status="ok"
+            onClick={() => navigate('/admin/dons')} />
+          <ModuleCard icon={<CreditCard size={14} />} name="Cartes membres" keyMetric={12}
+            metricLabel="en pipeline" status="warn"
+            onClick={() => navigate('/admin/cards')} />
+          <ModuleCard icon={<Package size={14} />} name="Inventaire" keyMetric={3}
+            metricLabel="alertes stock" status="idle"
+            onClick={() => navigate('/admin/inventory')} />
+          <ModuleCard icon={<QrCode size={14} />} name="Scanner QR" keyMetric={247}
+            metricLabel="scans" status="ok"
+            onClick={() => navigate('/admin/scan-reservation')} />
+        </div>
+      </div>
+
+      {/* ── 6. Quick Access ─────────────────────────────────────────────── */}
+      <div>
+        <SectionTitle title="Accès rapides" sub="actions fréquentes" />
+        <div style={{ display: 'flex', gap: 8 }}>
+          <QuickBtn icon={<ScanLine size={15} />} label="Scanner QR" onClick={() => navigate('/admin/scan-reservation')} primary />
+          <QuickBtn icon={<Utensils size={15} />} label="Réservations" onClick={() => navigate('/admin/restaurant-reservations')} />
+          <QuickBtn icon={<UserPlus size={15} />} label="Ajouter bénévole" onClick={() => navigate('/admin/benevoles')} />
+          <QuickBtn icon={<CreditCard size={15} />} label="Valider paiement" onClick={() => navigate('/admin/payments')} />
+          <QuickBtn icon={<Package size={15} />} label="Gérer stock" onClick={() => navigate('/admin/inventory')} />
+          <QuickBtn icon={<Printer size={15} />} label="Imprimer cartes" onClick={() => navigate('/admin/cards')} />
+          <QuickBtn icon={<Users size={15} />} label="Nouveau groupe" onClick={() => navigate('/admin/restaurant/groupes')} />
+          <QuickBtn icon={<Bell size={15} />} label="Envoyer notif" onClick={() => navigate('/admin/messages')} />
+        </div>
+      </div>
+
+      {/* ── 7. Mini Analytics ───────────────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 14 }}>
+
+        {/* Ramadan fill rate sparkline */}
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 6, padding: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <TrendingUp size={13} style={{ color: 'var(--olive)' }} />
+                Remplissage Ramadan 2025
               </div>
-              <div style={{ flex: 1, lineHeight: 1.4, fontSize: 11.5, color: 'var(--ink-soft)', paddingBottom: 2 }}>
-                <span style={{ color: 'var(--ink)', fontWeight: 500 }}>{a.who}</span> {a.what}
-                <span style={{ color: 'var(--ink)', fontWeight: 500 }}>{a.target}</span>
-                <div style={{ fontSize: 10.5, color: 'var(--ink-mute)', marginTop: 1 }}>{a.ago}</div>
+              <div style={{ fontSize: 11.5, color: 'var(--ink-mute)', marginTop: 2 }}>
+                Évolution sur {totalDays || 30} nuits · taux moyen 82%
+              </div>
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--olive)' }}>82%</div>
+          </div>
+          <div style={{ overflow: 'hidden' }}>
+            <Sparkline
+              values={RAMADAN_FILL.slice(0, Math.max(totalDays || 30, 10))}
+              width={560}
+              height={55}
+              color="var(--olive)"
+            />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
+            <span style={{ fontSize: 10, color: 'var(--ink-mute)' }}>Nuit 1</span>
+            <span style={{ fontSize: 10, color: 'var(--ink-mute)' }}>Nuit {totalDays || 30}</span>
+          </div>
+        </div>
+
+        {/* Revenue breakdown */}
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 6, padding: 18 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <TrendingUp size={13} style={{ color: 'var(--olive)' }} />
+            Répartition boutique
+          </div>
+          {[
+            { label: 'Goodies',    value: 58, color: 'var(--olive)' },
+            { label: 'Pâtisserie', value: 28, color: 'var(--sand)' },
+            { label: 'Terroir',    value: 14, color: '#A8C2A0' },
+          ].map(item => (
+            <div key={item.label} style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>{item.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)' }}>{item.value}%</span>
+              </div>
+              <div style={{ height: 6, background: 'var(--surface-alt)', borderRadius: 99, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', width: `${item.value}%`,
+                  background: item.color, borderRadius: 99,
+                }} />
               </div>
             </div>
           ))}
+          <div style={{ borderTop: '1px solid var(--line-soft)', paddingTop: 10, marginTop: 4 }}>
+            <div style={{ fontSize: 10.5, color: 'var(--ink-mute)' }}>Total boutique · saison</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)', marginTop: 2 }}>3 240 MAD</div>
+          </div>
         </div>
-
       </div>
+
+      {/* ── 8. Dashboard Footer ──────────────────────────────────────────── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '11px 16px',
+        background: 'var(--surface)', border: '1px solid var(--line)',
+        borderRadius: 6,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--ink-mute)' }}>
+          <Clock size={11} />
+          Dernière mise à jour : {startTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+          &nbsp;·&nbsp;Actualisation automatique toutes les 60 s
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <span style={{ fontSize: 10.5, color: 'var(--ink-mute)' }}>
+            EventOS · Ftour Bab Rayan 1447
+          </span>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              height: 26, padding: '0 10px',
+              background: 'var(--olive-soft)', color: 'var(--olive-deep)',
+              border: '1px solid var(--olive-soft)', borderRadius: 5,
+              fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            <RefreshCw size={11} />
+            Actualiser tout
+          </button>
+        </div>
+      </div>
+
     </div>
   );
 }
