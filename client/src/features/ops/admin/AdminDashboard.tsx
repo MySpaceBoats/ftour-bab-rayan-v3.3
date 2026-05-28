@@ -416,6 +416,8 @@ export default function AdminDashboard() {
   const chargeTone: HealthTone = absenceRate > 30 ? 'danger' : absenceRate > 15 ? 'warn' : 'ok';
 
   const todayDate = startTime.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const jourRamadan = totalDays || 1;
+  const readinessRate = Math.round((presenceRate * 0.5) + (fillRate < 90 ? 30 : 10) + (totalPayments < 5 ? 20 : 5));
 
   // Dynamic urgencies derived from real data
   const urgencies = useMemo(() => {
@@ -449,18 +451,25 @@ export default function AdminDashboard() {
         priority: totalPayments > 15 ? 'critique' : 'important', cta: 'Traiter', route: '/admin/payments',
       });
     }
-    list.push({
-      id: 'groups', icon: <Utensils size={14} strokeWidth={1.5} style={{ color: 'var(--info)' }} />,
-      iconBg: 'var(--info-bg)', label: 'Groupes & réservations à valider',
-      value: 'Réservations entreprises en attente de confirmation admin',
-      priority: 'a-faire', cta: 'Valider', route: '/admin/restaurant/groupes',
-    });
-    list.push({
-      id: 'cards', icon: <Printer size={14} strokeWidth={1.5} style={{ color: 'var(--ink-soft)' }} />,
-      iconBg: 'var(--surface-alt)', label: 'Cartes membres en file impression',
-      value: 'Paiements reçus — cartes prêtes à imprimer',
-      priority: 'a-faire', cta: 'Lancer', route: '/admin/cards',
-    });
+    // pendingGroups / pendingCards: replace with real API data when available
+    const pendingGroups = adminDashboard?.stats?.reservations ?? 3;
+    const pendingCards = 2;
+    if (pendingGroups > 0) {
+      list.push({
+        id: 'groups', icon: <Utensils size={14} strokeWidth={1.5} style={{ color: 'var(--info)' }} />,
+        iconBg: 'var(--info-bg)', label: 'Groupes & réservations à valider',
+        value: `${pendingGroups} réservations entreprises en attente de confirmation admin`,
+        priority: 'a-faire', cta: 'Valider', route: '/admin/restaurant/groupes',
+      });
+    }
+    if (pendingCards > 0) {
+      list.push({
+        id: 'cards', icon: <Printer size={14} strokeWidth={1.5} style={{ color: 'var(--ink-soft)' }} />,
+        iconBg: 'var(--surface-alt)', label: 'Cartes membres en file impression',
+        value: `${pendingCards} cartes prêtes à imprimer — paiements reçus`,
+        priority: 'a-faire', cta: 'Lancer', route: '/admin/cards',
+      });
+    }
     return list;
   }, [fillRate, absenceRate, absentVolunteers, totalPayments]);
 
@@ -496,7 +505,7 @@ export default function AdminDashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
             <Moon size={11} strokeWidth={1.5} style={{ color: 'var(--olive)', flexShrink: 0 }} />
             <span style={{ fontSize: 11.5, color: 'var(--ink-soft)' }}>
-              Ramadan 1447 · {todayDate} · {totalDays} nuits configurées
+              Jour {jourRamadan} Ramadan 1447 · Soirée du {todayDate}
             </span>
           </div>
         </div>
@@ -781,16 +790,25 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <HealthRow label="Saturation venue" value={`${fillRate}%`}
-            tone={fillRate > 85 ? 'danger' : fillRate > 70 ? 'warn' : 'ok'} />
-          <HealthRow label="Charge équipe" value={chargeLabel} tone={chargeTone} />
-          <HealthRow label="Incidents actifs" value="0" tone="ok" />
-          <HealthRow label="Présence bénévoles" value={`${presenceRate}%`}
-            tone={presenceRate >= 80 ? 'ok' : presenceRate >= 60 ? 'warn' : 'danger'} />
-          <HealthRow label="Risque opérationnel"
-            value={healthStatus === 'stable' ? 'Faible' : healthStatus === 'tension' ? 'Modéré' : 'Élevé'}
-            tone={healthStatus === 'stable' ? 'ok' : healthStatus === 'tension' ? 'warn' : 'danger'} />
-          <HealthRow label="Fluidité système" value="Nominale" tone="ok" />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+            {([
+              { label: 'Saturation', value: `${fillRate}%`, tone: fillRate > 85 ? 'danger' : fillRate > 70 ? 'warn' : 'ok' },
+              { label: 'Charge équipe', value: chargeLabel, tone: chargeTone },
+              { label: 'Incidents', value: '0', tone: 'ok' },
+              { label: 'Présence', value: `${presenceRate}%`, tone: presenceRate >= 80 ? 'ok' : presenceRate >= 60 ? 'warn' : 'danger' },
+              { label: 'Préparation', value: `${Math.min(readinessRate, 100)}%`, tone: readinessRate >= 80 ? 'ok' : readinessRate >= 60 ? 'warn' : 'danger' },
+              { label: 'Risque', value: healthStatus === 'stable' ? 'Faible' : healthStatus === 'tension' ? 'Modéré' : 'Élevé', tone: healthStatus === 'stable' ? 'ok' : healthStatus === 'tension' ? 'warn' : 'danger' },
+            ] as Array<{ label: string; value: string; tone: HealthTone }>).map(m => {
+              const c = { ok: 'var(--success)', warn: 'var(--warn)', danger: 'var(--danger)' }[m.tone];
+              const bg = { ok: 'var(--success-bg)', warn: 'var(--warn-bg)', danger: 'var(--danger-bg)' }[m.tone];
+              return (
+                <div key={m.label} style={{ background: bg, borderRadius: 5, padding: '8px 10px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: c, lineHeight: 1 }}>{m.value}</div>
+                  <div style={{ fontSize: 9.5, color: 'var(--ink-mute)', marginTop: 3 }}>{m.label}</div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -880,24 +898,29 @@ export default function AdminDashboard() {
             <TrendingUp size={13} style={{ color: 'var(--olive)' }} />
             Répartition boutique
           </div>
-          {[
-            { label: 'Goodies',    value: 58, color: 'var(--olive)' },
-            { label: 'Pâtisserie', value: 28, color: 'var(--sand)' },
-            { label: 'Terroir',    value: 14, color: '#A8C2A0' },
-          ].map(item => (
-            <div key={item.label} style={{ marginBottom: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>{item.label}</span>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)' }}>{item.value}%</span>
-              </div>
-              <div style={{ height: 6, background: 'var(--surface-alt)', borderRadius: 99, overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%', width: `${item.value}%`,
-                  background: item.color, borderRadius: 99,
-                }} />
-              </div>
-            </div>
-          ))}
+          {(() => {
+            const revData = [
+              { label: 'Goodies',    pct: 58, amt: '1 879 MAD', color: 'var(--olive)' },
+              { label: 'Pâtisserie', pct: 28, amt: '907 MAD',   color: 'var(--sand)' },
+              { label: 'Terroir',    pct: 14, amt: '454 MAD',   color: '#A8C2A0' },
+            ];
+            const svgW = 220, svgH = 90, barH = 20, gap = 14, maxPct = 100;
+            return (
+              <svg width={svgW} height={svgH} style={{ display: 'block', overflow: 'visible' }}>
+                {revData.map((d, i) => {
+                  const barW = Math.round((d.pct / maxPct) * (svgW - 60));
+                  const y = i * (barH + gap);
+                  return (
+                    <g key={d.label}>
+                      <text x={0} y={y + 13} fontSize="10" fill="var(--ink-soft)">{d.label}</text>
+                      <rect x={52} y={y} width={barW} height={barH} rx="3" fill={d.color} fillOpacity="0.85" />
+                      <text x={52 + barW + 5} y={y + 13} fontSize="9.5" fill="var(--ink-mute)">{d.amt}</text>
+                    </g>
+                  );
+                })}
+              </svg>
+            );
+          })()}
           <div style={{ borderTop: '1px solid var(--line-soft)', paddingTop: 10, marginTop: 4 }}>
             <div style={{ fontSize: 10.5, color: 'var(--ink-mute)' }}>Total boutique · saison</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)', marginTop: 2 }}>3 240 MAD</div>
