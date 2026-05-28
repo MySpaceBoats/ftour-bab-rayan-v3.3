@@ -271,6 +271,43 @@
 [data-theme="admin-v2"] ::-webkit-scrollbar-track { background: var(--surface-alt); }
 [data-theme="admin-v2"] ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
 
+/* ── Non-redesigned pages rendered inside AdminFrame ─────────────────────
+   These pages were built as standalone full-page layouts. Inside the new
+   shell their min-h-screen, sticky headers, and background classes fight
+   AdminFrame's constrained scroll container. The rules below neutralise
+   those conflicts without touching the pages themselves.
+   ──────────────────────────────────────────────────────────────────────── */
+
+/* 1. Kill min-h-screen so content doesn't overflow the scrollable <main> */
+[data-theme="admin-v2"] main .min-h-screen { min-height: unset; }
+
+/* 2. Hide the legacy sticky page-header (the old sidebar-layout topbar with
+      back button + page title). AdminFrame's own topbar already shows this. */
+[data-theme="admin-v2"] main header.sticky {
+  display: none;
+}
+
+/* 3. Kill the muted/grey background that conflicts with admin-v2's warm canvas */
+[data-theme="admin-v2"] main .bg-muted\/20,
+[data-theme="admin-v2"] main .bg-muted\/30,
+[data-theme="admin-v2"] main .bg-muted\/40,
+[data-theme="admin-v2"] main .bg-background {
+  background-color: transparent !important;
+}
+
+/* 4. Hide redundant "← Retour" back-nav rows — sidebar handles navigation */
+[data-theme="admin-v2"] main > div > div:first-child:has(> a > svg),
+[data-theme="admin-v2"] main > div > div:first-child:has(> button > svg.lucide-arrow-left) {
+  display: none;
+}
+
+/* 5. RequireRole / inline access-denied full-screen gates: shrink to content */
+[data-theme="admin-v2"] main > .min-h-screen,
+[data-theme="admin-v2"] main > div > .min-h-screen {
+  min-height: unset;
+  background: transparent;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

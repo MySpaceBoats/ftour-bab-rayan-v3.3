@@ -4,6 +4,8 @@ import AdminSidebar from './AdminSidebar';
 import AdminTopbar from './AdminTopbar';
 import AdminCommandPalette from './AdminCommandPalette';
 import { ROUTE_TO_NAV_ID, ROUTE_TO_TITLE } from './adminRouteMap';
+import { useAuth } from '@/_core/hooks/useAuth';
+import { getLoginUrl } from '@/const';
 
 export type AdminPageConfig = {
   title?: string;
@@ -54,6 +56,36 @@ export default function AdminFrame({
   const [location] = useLocation();
   const [cmdOpen, setCmdOpen] = useState(false);
   const [pageConfig, setPageConfig] = useState<AdminPageConfig>({});
+  const { user, loading } = useAuth();
+
+  // All hooks must be called before any early return (Rules of Hooks)
+  // Global ⌘K shortcut — only active when authenticated
+  useEffect(() => {
+    if (!user) return;
+    function handler(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCmdOpen(prev => !prev);
+      }
+    }
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [user]);
+
+  // Auth guard — mirrors DashboardLayout behaviour
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: '#F7F4EB' }}>
+        <div style={{ width: 32, height: 32, border: '2px solid #5E5B34', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  if (!user) {
+    window.location.href = getLoginUrl();
+    return null;
+  }
 
   // Derive from URL
   const normalizedLocation = location.replace(/^\/admin3/, '/admin');
@@ -64,18 +96,6 @@ export default function AdminFrame({
   const title = titleProp ?? pageConfig.title ?? derivedTitle;
   const crumb = crumbProp ?? pageConfig.crumb;
   const actions = actionsProp ?? pageConfig.actions;
-
-  // Global ⌘K shortcut
-  useEffect(() => {
-    function handler(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setCmdOpen(prev => !prev);
-      }
-    }
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, []);
 
   return (
     <AdminShellContext.Provider value={{ setPageConfig }}>
