@@ -1495,9 +1495,9 @@ export default function AdminBenevoles() {
               </p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
-                {recentScans.map((scan, i) => (
+                {recentScans.map((scan) => (
                   <div
-                    key={i}
+                    key={scan.id}
                     style={{
                       display: "flex",
                       justifyContent: "space-between",
@@ -2198,7 +2198,7 @@ export default function AdminBenevoles() {
                 <tbody>
                   {importResults.map((r, i) => (
                     <tr
-                      key={i}
+                      key={r.email}
                       style={{
                         borderBottom:
                           i < importResults.length - 1

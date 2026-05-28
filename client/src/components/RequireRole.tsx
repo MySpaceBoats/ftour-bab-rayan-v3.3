@@ -1,9 +1,7 @@
-import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { getLoginUrl } from "@/const";
 import { Users, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { getRolesForRoute } from "@/shared/rbac/permissions";
@@ -30,7 +28,7 @@ export default function RequireRole({
   redirectTo = "/admin",
 }: RequireRoleProps) {
   const { user, isAuthenticated, loading } = useAuth();
-  const [location, navigate] = useLocation();
+  const [location] = useLocation();
   const isPublicAdminAccess = location.startsWith("/admin3");
 
   // Résoudre les rôles : RBAC centralisé (route) > allowedRoles explicite
@@ -38,15 +36,11 @@ export default function RequireRole({
     ? getRolesForRoute(route)
     : (allowedRoles ?? []);
 
-  useEffect(() => {
-    if (!isPublicAdminAccess && !loading && !isAuthenticated) {
-      window.location.href = getLoginUrl();
-    }
-  }, [loading, isAuthenticated, isPublicAdminAccess]);
+  // Auth redirect is handled by AdminFrame — do not redirect here to avoid race condition
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="flex items-center justify-center p-8">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -54,7 +48,7 @@ export default function RequireRole({
 
   if (!isPublicAdminAccess && (!isAuthenticated || !user?.role || !resolvedRoles.includes(user.role))) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="flex items-center justify-center p-8">
         <Card className="max-w-md w-full">
           <CardContent className="p-8 text-center space-y-4">
             <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">

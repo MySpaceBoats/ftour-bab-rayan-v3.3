@@ -304,7 +304,7 @@ export default function AdminDashboard() {
   const totalReservations = adminDashboard?.stats?.reservations ?? 0;
   const totalPayments = adminDashboard?.stats?.payments ?? 0;
 
-  const firstName = user?.firstName || user?.email?.split('@')[0] || 'Admin';
+  const firstName = user?.name || user?.email?.split('@')[0] || 'Admin';
 
   // Static placeholder top volunteers (to be replaced with real query when available)
   const topVolunteers = [
