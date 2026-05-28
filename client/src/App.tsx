@@ -237,9 +237,9 @@ function LocalizedRoutes() {
           ADMIN ROUTES — wrapped by AdminFrame shell
           Both /admin and /admin3 handled inside AdminRoutes
           ================================================ */}
-      <Route path="/admin/:path*" component={AdminRoutes} />
+      <Route path="/admin/*" component={AdminRoutes} />
       <Route path="/admin" component={AdminRoutes} />
-      <Route path="/admin3/:path*" component={AdminRoutes} />
+      <Route path="/admin3/*" component={AdminRoutes} />
       <Route path="/admin3" component={AdminRoutes} />
 
       {/* ================================================
