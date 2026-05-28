@@ -9,7 +9,7 @@ import Sparkline from '@/components/admin/Sparkline';
 import {
   Moon, Calendar, Users, ShoppingBag, Heart, QrCode, CreditCard,
   AlertTriangle, CheckCircle, ChevronRight, RefreshCw, Package,
-  Printer, Mail, TrendingUp, ScanLine, UserPlus, Bell,
+  Printer, TrendingUp, ScanLine, UserPlus, Bell,
   Clock, Utensils, ArrowUpRight,
 } from 'lucide-react';
 
@@ -207,7 +207,7 @@ function EveningFlowChart({ totalReservations }: { totalReservations: number }) 
               )}
               <rect x={x} y={chartH - hRes} width={barW} height={Math.max(hRes, 2)} fill={barColor} rx="2" />
               {total > 0 && (
-                <text x={x + barW / 2} y={chartH - hTotal - 5} textAnchor="middle"
+                <text x={x + barW / 2} y={Math.max(chartH - hTotal - 5, 10)} textAnchor="middle"
                   fontSize="9" fill={fillPct > 0.85 ? 'var(--danger)' : 'var(--ink-mute)'}
                   fontWeight={fillPct > 0.85 ? '700' : '400'}>
                   {total}{fillPct > 0.85 ? '!' : ''}
@@ -341,14 +341,16 @@ export default function AdminDashboard() {
 
   // BFF REST
   const token = getStoredSession()?.accessToken;
-  const { data: adminDashboard } = useQuery({
+  const { data: adminDashboard, dataUpdatedAt } = useQuery({
     queryKey: ['admin-dashboard-bff'],
     queryFn: async () => {
       const res = await fetch('/api/admin-dashboard?page=1&pageSize=50', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) return null;
-      return res.json() as Promise<{ stats: { payments: number; notifications: number; reservations: number } }>;
+      const json = await res.json();
+      if (!json?.stats) return null;
+      return json as { stats: { payments: number; notifications: number; reservations: number } };
     },
     refetchInterval: 60_000,
   });
@@ -394,7 +396,7 @@ export default function AdminDashboard() {
   const totalDays         = days?.length ?? 0;
   const totalReservations = adminDashboard?.stats?.reservations ?? 0;
   const totalPayments     = adminDashboard?.stats?.payments ?? 0;
-  const totalCapacity     = restaurants?.reduce((s: number, r: any) => s + (r.capacity ?? 0), 0) || 640;
+  const totalCapacity     = restaurants?.reduce((s, r) => s + (r.capacity ?? 0), 0) || 640;
   const fillRate          = totalCapacity > 0 ? Math.round((totalReservations / totalCapacity) * 100) : 0;
   const absentVolunteers  = Math.max(0, totalVolunteers - presentVolunteers);
   const absenceRate       = totalVolunteers > 0 ? Math.round((absentVolunteers / totalVolunteers) * 100) : 0;
@@ -937,7 +939,7 @@ export default function AdminDashboard() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--ink-mute)' }}>
           <Clock size={11} />
-          Dernière mise à jour : {startTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+          Dernière mise à jour : {new Date(dataUpdatedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
           &nbsp;·&nbsp;Actualisation automatique toutes les 60 s
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
