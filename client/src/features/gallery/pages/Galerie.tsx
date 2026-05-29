@@ -4,14 +4,21 @@ import Footer from "@/components/Footer";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Download, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import PublicGalleryUpload from "@/features/gallery/components/PublicGalleryUpload";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const FIRST_EDITION_YEAR = 2015;
@@ -27,6 +34,7 @@ export default function Galerie() {
   const [page, setPage] = useState(1);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [photosList, setPhotosList] = useState<any[]>([]);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   const albums = trpc.public.galleryAlbums.useQuery();
 
@@ -122,7 +130,25 @@ export default function Galerie() {
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-1 container py-10 space-y-6">
-        <h1 className="text-3xl font-bold">Galerie</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Galerie</h1>
+          <Button onClick={() => setUploadOpen(true)} variant="outline">
+            <Upload className="h-4 w-4 mr-2" />
+            Partager mes photos
+          </Button>
+        </div>
+
+        <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Partagez vos photos du Ftour Bab Rayan</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground -mt-2">
+              Vos photos seront visibles dans la galerie après validation par notre équipe.
+            </p>
+            <PublicGalleryUpload onClose={() => setUploadOpen(false)} />
+          </DialogContent>
+        </Dialog>
 
         {/* Edition Tabs */}
         <div className="border-b overflow-x-auto">
