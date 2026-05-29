@@ -112,7 +112,7 @@ export default function Galerie() {
     if (!current?.image_original_url) return;
     const anchor = document.createElement("a");
     anchor.href = current.image_original_url;
-    anchor.download = `${current.slug ?? current.id ?? "photo"}.jpg`;
+    anchor.download = `${current.title ?? current.id ?? "photo"}.jpg`;
     anchor.target = "_blank";
     anchor.rel = "noopener noreferrer";
     anchor.click();
