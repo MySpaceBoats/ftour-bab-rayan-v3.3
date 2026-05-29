@@ -33,6 +33,14 @@ export default function AdminGalerie() {
     "all" | "draft" | "published" | "rejected"
   >("all");
   const [featured, setFeatured] = useState<"all" | "true" | "false">("all");
+  const [albumId, setAlbumId] = useState<string>("all");
+
+  const { data: albums } = trpc.gallery.listAlbums.useQuery();
+
+  const sortedAlbums = useMemo(() => {
+    const all = albums ?? [];
+    return [...all].sort((a: any, b: any) => (b.sort_order ?? 0) - (a.sort_order ?? 0));
+  }, [albums]);
 
   const filters = useMemo(
     () => ({
@@ -41,8 +49,9 @@ export default function AdminGalerie() {
       search: search || undefined,
       status: status === "all" ? undefined : status,
       featured: featured === "all" ? undefined : featured === "true",
+      albumId: albumId === "all" ? undefined : albumId,
     }),
-    [page, search, status, featured]
+    [page, search, status, featured, albumId]
   );
 
   const query = trpc.gallery.listPhotos.useQuery(filters);
@@ -104,28 +113,28 @@ export default function AdminGalerie() {
           <CardHeader>
             <CardTitle>Filtres</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-4">
+          <CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 className="pl-8"
                 placeholder="Recherche"
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={e => { setSearch(e.target.value); setPage(1); }}
               />
             </div>
-            <Select value={status} onValueChange={(v: any) => setStatus(v)}>
+            <Select value={status} onValueChange={(v: any) => { setStatus(v); setPage(1); }}>
               <SelectTrigger>
                 <SelectValue placeholder="Statut" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous statuts</SelectItem>
-                <SelectItem value="draft">Brouillon</SelectItem>
-                <SelectItem value="published">Publié</SelectItem>
-                <SelectItem value="rejected">Refusé</SelectItem>
+                <SelectItem value="draft">En attente</SelectItem>
+                <SelectItem value="published">Publiées</SelectItem>
+                <SelectItem value="rejected">Refusées</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={featured} onValueChange={(v: any) => setFeatured(v)}>
+            <Select value={featured} onValueChange={(v: any) => { setFeatured(v); setPage(1); }}>
               <SelectTrigger>
                 <SelectValue placeholder="Mise en avant" />
               </SelectTrigger>
@@ -133,6 +142,19 @@ export default function AdminGalerie() {
                 <SelectItem value="all">Tous</SelectItem>
                 <SelectItem value="true">Featured</SelectItem>
                 <SelectItem value="false">Non featured</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={albumId} onValueChange={(v: any) => { setAlbumId(v); setPage(1); }}>
+              <SelectTrigger>
+                <SelectValue placeholder="Album" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les albums</SelectItem>
+                {sortedAlbums.map((a: any) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </CardContent>

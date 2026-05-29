@@ -44,7 +44,7 @@ export default function AdminGalerieEdit() {
     const all = albums ?? [];
     const editions = all
       .filter((a: any) => YEAR_RE.test(String(a.name ?? "") + " " + String(a.slug ?? "")))
-      .sort((a: any, b: any) => (b.sortOrder ?? 0) - (a.sortOrder ?? 0));
+      .sort((a: any, b: any) => (b.sort_order ?? 0) - (a.sort_order ?? 0));
     const general = all.filter(
       (a: any) => !YEAR_RE.test(String(a.name ?? "") + " " + String(a.slug ?? ""))
     );

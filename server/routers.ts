@@ -230,17 +230,21 @@ const gallerySchema = z.object({
   status: z.enum(["draft", "published", "rejected"]).default("draft"),
 });
 
-const withResolvedGalleryUrls = async (photo: any) => ({
+// Sync – uses getPublicUrl (no API call needed for a public bucket).
+// Do NOT use resolveGalleryAssetUrlAsync here: it calls createSignedUrl which
+// makes one HTTP round-trip per URL, producing 90+ concurrent Supabase calls
+// for a typical 30-photo page load and causing severe latency / timeouts.
+const withResolvedGalleryUrls = (photo: any) => ({
   ...photo,
-  image_original_url: await galleryServices.resolveGalleryAssetUrlAsync(
+  image_original_url: galleryServices.resolveGalleryAssetUrl(
     photo.storage_path,
     photo.image_original_url
   ),
-  image_thumb_url: await galleryServices.resolveGalleryAssetUrlAsync(
+  image_thumb_url: galleryServices.resolveGalleryAssetUrl(
     photo.thumb_storage_path,
     photo.image_thumb_url
   ),
-  image_medium_url: await galleryServices.resolveGalleryAssetUrlAsync(
+  image_medium_url: galleryServices.resolveGalleryAssetUrl(
     photo.medium_storage_path,
     photo.image_medium_url
   ),
@@ -327,7 +331,7 @@ const galleryRouter = router({
         .range(start, end);
       if (error)
         throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-      const items = await Promise.all((data ?? []).map(withResolvedGalleryUrls));
+      const items = (data ?? []).map(withResolvedGalleryUrls);
       return {
         items,
         total: count ?? 0,
@@ -352,7 +356,7 @@ const galleryRouter = router({
         .single();
       if (error)
         throw new TRPCError({ code: "NOT_FOUND", message: error.message });
-      return await withResolvedGalleryUrls(data);
+      return withResolvedGalleryUrls(data);
     }),
 
   uploadPhotos: protectedProcedure
@@ -493,7 +497,7 @@ const galleryRouter = router({
           albumId: photo.albumId,
           sortOrder: photo.sortOrder,
           isFeatured: canManageGallery ? photo.isFeatured : false,
-          status: canManageGallery ? "published" : "draft",
+          status: canManageGallery ? (photo.status ?? "published") : "draft",
           validatedAt: canManageGallery ? new Date().toISOString() : undefined,
           validationEmail: canManageGallery
             ? undefined
@@ -3017,16 +3021,14 @@ const publicRouter = router({
       photosByAlbum.set(key, list);
     }
 
-    return await Promise.all((albums ?? []).map(async album => {
+    return (albums ?? []).map(album => {
       const albumPhotos = photosByAlbum.get(album.id) ?? [];
       const preferredCover = album.cover_photo_id
         ? albumPhotos.find(photo => photo.id === album.cover_photo_id)
         : null;
       const fallbackCover = albumPhotos[0] ?? null;
       const coverPhoto = preferredCover ?? fallbackCover;
-      const resolvedPhoto = coverPhoto
-        ? await withResolvedGalleryUrls(coverPhoto)
-        : null;
+      const resolvedPhoto = coverPhoto ? withResolvedGalleryUrls(coverPhoto) : null;
       const resolvedCover = resolvedPhoto
         ? resolvedPhoto.image_medium_url ||
           resolvedPhoto.image_thumb_url ||
@@ -3043,7 +3045,7 @@ const publicRouter = router({
         event_date:
           albumPhotos.find(photo => photo.event_date)?.event_date ?? null,
       };
-    }));
+    });
   }),
 
   galleryPhotos: publicProcedure
@@ -3107,7 +3109,7 @@ const publicRouter = router({
       const { data, error, count } = await query.range(start, end);
       if (error)
         throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-      const items = await Promise.all((data ?? []).map(withResolvedGalleryUrls));
+      const items = (data ?? []).map(withResolvedGalleryUrls);
       return { items, total: count ?? 0, page, pageSize };
     }),
 });
