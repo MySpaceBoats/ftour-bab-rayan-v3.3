@@ -26,6 +26,7 @@ import DevenirPartenaire from "@/features/public/pages/DevenirPartenaire";
 import FAQ from "@/features/public/pages/FAQ";
 import MentionsLegales from "@/features/public/pages/MentionsLegales";
 import RibDownload from "@/features/public/pages/RibDownload";
+import Temoignages from "@/features/public/pages/Temoignages";
 import Galerie from "@/features/gallery/pages/Galerie";
 import BenevoleGalerieUpload from "@/features/gallery/pages/BenevoleGalerieUpload";
 import GalerieValidationUpload from "@/features/gallery/pages/GalerieValidationUpload";
@@ -354,7 +355,7 @@ function LocalizedRoutes() {
       {/* Alias FR: Témoignage */}
       <Route path="/:lang/temoignage/nouveau" component={BlogNew} />
       <Route path="/:lang/temoignage/:slug" component={BlogPost} />
-      <Route path="/:lang/temoignage" component={BlogList} />
+      <Route path="/:lang/temoignage" component={Temoignages} />
 
       {/* Équipe Ftour – Trombinoscope */}
       <Route path="/:lang/equipe-ftour" component={EquipeFtour} />
