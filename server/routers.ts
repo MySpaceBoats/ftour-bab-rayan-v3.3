@@ -48,6 +48,7 @@ import { teamRouter } from "./team-router";
 import { eventPhotosRouter } from "./event-photos-router";
 import { blogRouter } from "./blog-router";
 import * as galleryServices from "./gallery-services";
+import { checkGalleryRateLimit } from "./gallery-rate-limiter";
 import * as volunteerProfileServices from "./volunteer-profile-services";
 import { randomBytes } from "crypto";
 import QRCode from "qrcode";
@@ -798,6 +799,130 @@ const galleryRouter = router({
           message: deleteError.message,
         });
       return { success: true };
+    }),
+
+  bulkAction: adminProcedure
+    .input(
+      z.object({
+        ids: z.array(z.string().uuid()).min(1).max(100),
+        action: z.enum(["publish", "reject", "delete"]),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const client = getSupabaseAdminClient();
+      if (!client)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Supabase non configuré" });
+
+      if (input.action === "delete") {
+        const { data: rows } = await client
+          .from("gallery_photos")
+          .select("storage_path,thumb_storage_path,medium_storage_path")
+          .in("id", input.ids);
+        for (const row of rows ?? []) {
+          await galleryServices.deleteGalleryAsset(row.storage_path);
+          await galleryServices.deleteGalleryAsset(row.thumb_storage_path);
+          await galleryServices.deleteGalleryAsset(row.medium_storage_path);
+        }
+        const { error } = await client.from("gallery_photos").delete().in("id", input.ids);
+        if (error) throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      } else {
+        const status = input.action === "publish" ? "published" : "rejected";
+        const { error } = await client
+          .from("gallery_photos")
+          .update({ status })
+          .in("id", input.ids);
+        if (error) throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      }
+      return { success: true, count: input.ids.length };
+    }),
+
+  // Public upload: no authentication required. Photos go to draft for admin moderation.
+  publicUpload: publicProcedure
+    .input(
+      z.object({
+        photos: z
+          .array(
+            z.object({
+              fileName: z.string().min(1).max(260),
+              fileType: z.string(),
+              fileData: z.string(),
+              albumId: z.string().uuid().optional(),
+              eventDate: z.string().optional(),
+              title: z.string().max(200).optional(),
+            })
+          )
+          .min(1)
+          .max(10),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const ip =
+        (ctx.req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() ??
+        ctx.req.socket?.remoteAddress ??
+        "unknown";
+
+      const rateCheck = checkGalleryRateLimit(ip, input.photos.length);
+      if (!rateCheck.allowed) {
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: `Trop de photos envoyées. Réessayez dans ${rateCheck.retryAfterSec}s.`,
+        });
+      }
+
+      const client = getSupabaseAdminClient();
+      if (!client)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Supabase non configuré" });
+
+      const results = [];
+      for (const photo of input.photos) {
+        if (!galleryServices.GALLERY_ALLOWED_MIME_TYPES.includes(photo.fileType as any)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Format non supporté. JPEG, PNG, WebP uniquement.",
+          });
+        }
+        const base64Data = photo.fileData.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, "");
+        const buffer = Buffer.from(base64Data, "base64");
+
+        // Validate magic bytes to prevent fake extensions
+        const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8;
+        const isPng = buffer[0] === 0x89 && buffer[1] === 0x50;
+        const isWebp = buffer.slice(8, 12).toString("ascii") === "WEBP";
+        if (!isJpeg && !isPng && !isWebp) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Contenu de fichier invalide." });
+        }
+
+        if (buffer.length > galleryServices.GALLERY_MAX_FILE_SIZE_BYTES) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Fichier trop volumineux (max 8MB)." });
+        }
+
+        const ext = photo.fileName.split(".").pop()?.toLowerCase()?.replace(/[^a-z0-9]/g, "") || "jpg";
+        const uid = `${Date.now()}-${randomBytes(4).toString("hex")}`;
+        const originalPath = `gallery/original/${uid}.${ext}`;
+        const thumbPath = `gallery/thumb/${uid}.${ext}`;
+
+        const originalUrl = await galleryServices.uploadGalleryAsset(originalPath, buffer, photo.fileType);
+        const thumbUrl = await galleryServices.uploadGalleryAsset(thumbPath, buffer, photo.fileType);
+
+        const created = await galleryServices.createGalleryPhoto({
+          title: photo.title,
+          eventDate: photo.eventDate,
+          albumId: photo.albumId,
+          sortOrder: 0,
+          isFeatured: false,
+          status: "draft",
+          imageOriginalUrl: originalUrl,
+          imageThumbUrl: thumbUrl,
+          storagePath: originalPath,
+          thumbStoragePath: thumbPath,
+          sizeBytes: buffer.length,
+          mimeType: photo.fileType,
+          uploadedBy: ip,
+        });
+        results.push(created);
+      }
+
+      return { count: results.length };
     }),
 });
 
