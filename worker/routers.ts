@@ -2098,7 +2098,7 @@ const GALLERY_ALLOWED_MIME_TYPES = [
 const GALLERY_MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024;
 const GALLERY_MAX_BATCH = 10;
 
-async function withGalleryDisplayUrls(supabase: any, photo: any) {
+function withGalleryDisplayUrls(supabase: any, photo: any) {
   if (!photo) return photo;
 
   const originalPath =
@@ -2108,38 +2108,23 @@ async function withGalleryDisplayUrls(supabase: any, photo: any) {
       ? photo.thumb_storage_path
       : null;
 
-  let imageOriginalUrl = photo.image_original_url ?? null;
-  let imageThumbUrl = photo.image_thumb_url ?? null;
+  const imageOriginalUrl = originalPath
+    ? supabase.storage.from("images").getPublicUrl(originalPath).data.publicUrl
+    : (photo.image_original_url ?? null);
 
-  if (originalPath) {
-    const signed = await supabase.storage
-      .from("images")
-      .createSignedUrl(originalPath, 60 * 60 * 24);
-    if (!signed.error && signed.data?.signedUrl) {
-      imageOriginalUrl = signed.data.signedUrl;
-    }
-  }
-
-  if (thumbPath) {
-    const signed = await supabase.storage
-      .from("images")
-      .createSignedUrl(thumbPath, 60 * 60 * 24);
-    if (!signed.error && signed.data?.signedUrl) {
-      imageThumbUrl = signed.data.signedUrl;
-    }
-  }
+  const imageThumbUrl = thumbPath
+    ? supabase.storage.from("images").getPublicUrl(thumbPath).data.publicUrl
+    : (photo.image_thumb_url ?? imageOriginalUrl ?? null);
 
   return {
     ...photo,
     image_original_url: imageOriginalUrl,
-    image_thumb_url: imageThumbUrl ?? imageOriginalUrl,
+    image_thumb_url: imageThumbUrl,
   };
 }
 
-async function withGalleryDisplayUrlsMany(supabase: any, photos: any[]) {
-  return Promise.all(
-    (photos ?? []).map(photo => withGalleryDisplayUrls(supabase, photo))
-  );
+function withGalleryDisplayUrlsMany(supabase: any, photos: any[]) {
+  return (photos ?? []).map(photo => withGalleryDisplayUrls(supabase, photo));
 }
 
 const galleryRouter = router({
@@ -2157,11 +2142,13 @@ const galleryRouter = router({
       name: a.name,
       slug: a.slug,
       description: a.description,
-      coverImageUrl: a.cover_image_url,
-      isActive: a.is_active,
-      sortOrder: a.sort_order,
-      createdAt: a.created_at,
-      updatedAt: a.updated_at,
+      cover_image_url: a.cover_image_url,
+      is_active: a.is_active,
+      sort_order: a.sort_order,
+      status: a.status,
+      photo_count: a.photo_count ?? 0,
+      created_at: a.created_at,
+      updated_at: a.updated_at,
     }));
   }),
 
@@ -2206,7 +2193,7 @@ const galleryRouter = router({
         .range(start, end);
       if (error)
         throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-      const items = await withGalleryDisplayUrlsMany(supabase, data || []);
+      const items = withGalleryDisplayUrlsMany(supabase, data || []);
       return { items, total: count || 0, page, pageSize };
     }),
 
@@ -2990,14 +2977,32 @@ const publicRouter = router({
       console.error("[Worker] Error fetching gallery albums:", error);
       return [];
     }
-    return data || [];
+    const albums = data || [];
+    if (albums.length === 0) return [];
+
+    const albumIds = albums.map((a: any) => a.id);
+    const { data: photos } = await supabase
+      .from("gallery_photos")
+      .select("album_id")
+      .eq("status", "published")
+      .in("album_id", albumIds);
+
+    const countByAlbum = new Map<string, number>();
+    for (const p of photos ?? []) {
+      if (p.album_id) countByAlbum.set(p.album_id, (countByAlbum.get(p.album_id) ?? 0) + 1);
+    }
+
+    return albums.map((a: any) => ({
+      ...a,
+      photo_count: countByAlbum.get(a.id) ?? 0,
+    }));
   }),
 
   galleryPhotos: publicProcedure
     .input(
       z
         .object({
-          album: z.string().optional(),
+          albumSlug: z.string().optional(),
           tag: z.string().optional(),
           page: z.number().int().min(1).default(1),
           pageSize: z.number().int().min(1).max(50).default(18),
@@ -3017,19 +3022,19 @@ const publicRouter = router({
         .select("*, gallery_albums(name, slug)", { count: "exact" })
         .eq("status", "published");
 
-      if (input?.album) {
-        if (input.album.includes("-")) {
+      if (input?.albumSlug) {
+        if (input.albumSlug.includes("-")) {
           const { data: album } = await supabase
             .from("gallery_albums")
             .select("id")
-            .eq("slug", input.album)
+            .eq("slug", input.albumSlug)
             .maybeSingle();
           if (!album?.id) {
             return { items: [], total: 0, page, pageSize };
           }
           query = query.eq("album_id", album.id);
         } else {
-          query = query.eq("album_id", input.album);
+          query = query.eq("album_id", input.albumSlug);
         }
       }
 
@@ -3054,7 +3059,7 @@ const publicRouter = router({
       const { data, error, count } = await query.range(start, end);
       if (error)
         throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-      const items = await withGalleryDisplayUrlsMany(supabase, data || []);
+      const items = withGalleryDisplayUrlsMany(supabase, data || []);
       return { items, total: count ?? 0, page, pageSize };
     }),
 });
