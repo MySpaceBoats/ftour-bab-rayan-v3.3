@@ -46,14 +46,14 @@ export default function Contact() {
     return (
       <div className="min-h-screen flex flex-col" dir={dir}>
         <Navbar />
-        <main className="flex-1 flex items-center justify-center py-20 bg-[#5E5B34]">
-          <Card className="max-w-md w-full mx-4 bg-[#4A4829] border-[#F2E9D3]/20">
+        <main className="flex-1 flex items-center justify-center py-20 bg-[#0F172A]">
+          <Card className="max-w-md w-full mx-4 bg-[#1E293B] border-[#F8FAFC]/20">
             <CardContent className="p-8 text-center space-y-4">
               <div className="w-16 h-16 mx-auto rounded-full bg-green-500/20 flex items-center justify-center">
                 <CheckCircle className="h-8 w-8 text-green-500" />
               </div>
-              <h2 className="text-2xl font-bold text-[#F2E9D3]">{t.contact.submitSuccess}</h2>
-              <Button onClick={() => setSubmitted(false)} variant="outline" className="border-[#F2E9D3] text-[#F2E9D3] hover:bg-[#F2E9D3] hover:text-[#4A4829]">
+              <h2 className="text-2xl font-bold text-[#F8FAFC]">{t.contact.submitSuccess}</h2>
+              <Button onClick={() => setSubmitted(false)} variant="outline" className="border-[#F8FAFC] text-[#F8FAFC] hover:bg-[#F8FAFC] hover:text-[#1E293B]">
                 {t.cta.back}
               </Button>
             </CardContent>
@@ -68,13 +68,13 @@ export default function Contact() {
     <div className="min-h-screen flex flex-col" dir={dir}>
       <Navbar />
       
-      <main className="flex-1 bg-[#5E5B34]">
+      <main className="flex-1 bg-[#0F172A]">
         {/* Hero */}
-        <section className="py-16 bg-[#4A4829]">
+        <section className="py-16 bg-[#1E293B]">
           <div className="container">
             <div className="max-w-3xl mx-auto text-center space-y-4">
-              <h1 className="text-4xl md:text-5xl font-bold text-[#F2E9D3]" style={{ fontFamily: 'Caveat, cursive' }}>{t.contact.title}</h1>
-              <p className="text-lg text-[#CDBB8A]" style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic' }}>
+              <h1 className="text-4xl md:text-5xl font-bold text-[#F8FAFC]" style={{ fontFamily: 'Syne, Inter, sans-serif' }}>{t.contact.title}</h1>
+              <p className="text-lg text-[#38BDF8]" style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic' }}>
                 {t.contact.subtitle}
               </p>
             </div>
@@ -87,53 +87,53 @@ export default function Contact() {
             <div className="grid lg:grid-cols-3 gap-12">
               {/* Contact Info */}
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold text-[#F2E9D3]">{t.contact.infoTitle}</h2>
+                <h2 className="text-2xl font-bold text-[#F8FAFC]">{t.contact.infoTitle}</h2>
                 
-                <Card className="bg-[#4A4829] border-[#F2E9D3]/20">
+                <Card className="bg-[#1E293B] border-[#F8FAFC]/20">
                   <CardContent className="p-6 space-y-6">
                     <div className="flex gap-4">
-                      <div className="w-10 h-10 rounded-full bg-[#5E5B34] flex items-center justify-center flex-shrink-0">
-                        <Mail className="h-5 w-5 text-[#F2E9D3]" />
+                      <div className="w-10 h-10 rounded-full bg-[#0F172A] flex items-center justify-center flex-shrink-0">
+                        <Mail className="h-5 w-5 text-[#F8FAFC]" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-[#F2E9D3]">{t.contact.emailLabel}</h3>
-                        <a href="mailto:contact@ftourbabrayan.ma" className="text-[#CDBB8A] hover:text-[#F2E9D3]">
+                        <h3 className="font-semibold text-[#F8FAFC]">{t.contact.emailLabel}</h3>
+                        <a href="mailto:contact@ftourbabrayan.ma" className="text-[#38BDF8] hover:text-[#F8FAFC]">
                           contact@ftourbabrayan.ma
                         </a>
                       </div>
                     </div>
 
                     <div className="flex gap-4">
-                      <div className="w-10 h-10 rounded-full bg-[#5E5B34] flex items-center justify-center flex-shrink-0">
-                        <Phone className="h-5 w-5 text-[#F2E9D3]" />
+                      <div className="w-10 h-10 rounded-full bg-[#0F172A] flex items-center justify-center flex-shrink-0">
+                        <Phone className="h-5 w-5 text-[#F8FAFC]" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-[#F2E9D3]">{t.contact.phoneLabel}</h3>
-                        <a href="tel:+212666690534" className="text-[#CDBB8A] hover:text-[#F2E9D3]">
+                        <h3 className="font-semibold text-[#F8FAFC]">{t.contact.phoneLabel}</h3>
+                        <a href="tel:+212666690534" className="text-[#38BDF8] hover:text-[#F8FAFC]">
                           {t.topMenu.phone}
                         </a>
                       </div>
                     </div>
 
                     <div className="flex gap-4">
-                      <div className="w-10 h-10 rounded-full bg-[#5E5B34] flex items-center justify-center flex-shrink-0">
-                        <MapPin className="h-5 w-5 text-[#F2E9D3]" />
+                      <div className="w-10 h-10 rounded-full bg-[#0F172A] flex items-center justify-center flex-shrink-0">
+                        <MapPin className="h-5 w-5 text-[#F8FAFC]" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-[#F2E9D3]">{t.contact.address}</h3>
-                        <p className="text-[#CDBB8A]">
+                        <h3 className="font-semibold text-[#F8FAFC]">{t.contact.address}</h3>
+                        <p className="text-[#38BDF8]">
                           {t.contact.addressValue}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex gap-4">
-                      <div className="w-10 h-10 rounded-full bg-[#5E5B34] flex items-center justify-center flex-shrink-0">
-                        <Clock className="h-5 w-5 text-[#F2E9D3]" />
+                      <div className="w-10 h-10 rounded-full bg-[#0F172A] flex items-center justify-center flex-shrink-0">
+                        <Clock className="h-5 w-5 text-[#F8FAFC]" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-[#F2E9D3]">{t.contact.hoursLabel}</h3>
-                        <p className="text-[#CDBB8A]">
+                        <h3 className="font-semibold text-[#F8FAFC]">{t.contact.hoursLabel}</h3>
+                        <p className="text-[#38BDF8]">
                           {t.contact.hoursValue}
                         </p>
                       </div>
@@ -141,13 +141,13 @@ export default function Contact() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-[#4A4829]/50 border-[#F2E9D3]/20">
+                <Card className="bg-[#1E293B]/50 border-[#F8FAFC]/20">
                   <CardContent className="p-6">
                     <div className="flex gap-3">
-                      <MessageSquare className="h-5 w-5 text-[#F2E9D3] flex-shrink-0 mt-0.5" />
+                      <MessageSquare className="h-5 w-5 text-[#F8FAFC] flex-shrink-0 mt-0.5" />
                       <div>
-                        <h3 className="font-semibold mb-1 text-[#F2E9D3]">{t.contact.quickResponse}</h3>
-                        <p className="text-sm text-[#CDBB8A]">
+                        <h3 className="font-semibold mb-1 text-[#F8FAFC]">{t.contact.quickResponse}</h3>
+                        <p className="text-sm text-[#38BDF8]">
                           {t.contact.quickResponseText}
                         </p>
                       </div>
@@ -158,26 +158,26 @@ export default function Contact() {
 
               {/* Contact Form */}
               <div className="lg:col-span-2">
-                <Card className="bg-[#4A4829] border-[#F2E9D3]/20">
+                <Card className="bg-[#1E293B] border-[#F8FAFC]/20">
                   <CardHeader>
-                    <CardTitle className="text-[#F2E9D3]">{t.contact.formTitle}</CardTitle>
+                    <CardTitle className="text-[#F8FAFC]">{t.contact.formTitle}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-6">
                       <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <Label htmlFor="name" className="text-[#F2E9D3]">{t.contact.name} *</Label>
+                          <Label htmlFor="name" className="text-[#F8FAFC]">{t.contact.name} *</Label>
                           <Input
                             id="name"
                             placeholder={t.contact.name}
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             required
-                            className="bg-[#5E5B34] border-[#F2E9D3]/30 text-[#F2E9D3] placeholder:text-[#CDBB8A]/60"
+                            className="bg-[#0F172A] border-[#F8FAFC]/30 text-[#F8FAFC] placeholder:text-[#38BDF8]/60"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="email" className="text-[#F2E9D3]">{t.contact.email} *</Label>
+                          <Label htmlFor="email" className="text-[#F8FAFC]">{t.contact.email} *</Label>
                           <Input
                             id="email"
                             type="email"
@@ -185,45 +185,45 @@ export default function Contact() {
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             required
-                            className="bg-[#5E5B34] border-[#F2E9D3]/30 text-[#F2E9D3] placeholder:text-[#CDBB8A]/60"
+                            className="bg-[#0F172A] border-[#F8FAFC]/30 text-[#F8FAFC] placeholder:text-[#38BDF8]/60"
                           />
                         </div>
                       </div>
 
                       <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <Label htmlFor="phone" className="text-[#F2E9D3]">{t.contact.phone}</Label>
+                          <Label htmlFor="phone" className="text-[#F8FAFC]">{t.contact.phone}</Label>
                           <Input
                             id="phone"
                             type="tel"
                             placeholder="+212 6 00 00 00 00"
                             value={formData.phone}
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            className="bg-[#5E5B34] border-[#F2E9D3]/30 text-[#F2E9D3] placeholder:text-[#CDBB8A]/60"
+                            className="bg-[#0F172A] border-[#F8FAFC]/30 text-[#F8FAFC] placeholder:text-[#38BDF8]/60"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="subject" className="text-[#F2E9D3]">{t.contact.subject} *</Label>
+                          <Label htmlFor="subject" className="text-[#F8FAFC]">{t.contact.subject} *</Label>
                           <Select
                             value={formData.subject}
                             onValueChange={(value) => setFormData({ ...formData, subject: value })}
                           >
-                            <SelectTrigger className="bg-[#5E5B34] border-[#F2E9D3]/30 text-[#F2E9D3]">
+                            <SelectTrigger className="bg-[#0F172A] border-[#F8FAFC]/30 text-[#F8FAFC]">
                               <SelectValue placeholder={t.contact.subject} />
                             </SelectTrigger>
-                            <SelectContent className="bg-[#4A4829] border-[#F2E9D3]/20">
-                              <SelectItem value="general" className="text-[#F2E9D3] hover:bg-[#5E5B34]">{t.contact.subjectGeneral}</SelectItem>
-                              <SelectItem value="benevole" className="text-[#F2E9D3] hover:bg-[#5E5B34]">{t.contact.subjectVolunteer}</SelectItem>
-                              <SelectItem value="partenariat" className="text-[#F2E9D3] hover:bg-[#5E5B34]">{t.contact.subjectPartnership}</SelectItem>
-                              <SelectItem value="don" className="text-[#F2E9D3] hover:bg-[#5E5B34]">{t.contact.subjectDonation}</SelectItem>
-                              <SelectItem value="autre" className="text-[#F2E9D3] hover:bg-[#5E5B34]">{t.contact.subjectOther}</SelectItem>
+                            <SelectContent className="bg-[#1E293B] border-[#F8FAFC]/20">
+                              <SelectItem value="general" className="text-[#F8FAFC] hover:bg-[#0F172A]">{t.contact.subjectGeneral}</SelectItem>
+                              <SelectItem value="benevole" className="text-[#F8FAFC] hover:bg-[#0F172A]">{t.contact.subjectVolunteer}</SelectItem>
+                              <SelectItem value="partenariat" className="text-[#F8FAFC] hover:bg-[#0F172A]">{t.contact.subjectPartnership}</SelectItem>
+                              <SelectItem value="don" className="text-[#F8FAFC] hover:bg-[#0F172A]">{t.contact.subjectDonation}</SelectItem>
+                              <SelectItem value="autre" className="text-[#F8FAFC] hover:bg-[#0F172A]">{t.contact.subjectOther}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="message" className="text-[#F2E9D3]">{t.contact.message} *</Label>
+                        <Label htmlFor="message" className="text-[#F8FAFC]">{t.contact.message} *</Label>
                         <Textarea
                           id="message"
                           placeholder={t.contact.message}
@@ -231,14 +231,14 @@ export default function Contact() {
                           value={formData.message}
                           onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                           required
-                          className="bg-[#5E5B34] border-[#F2E9D3]/30 text-[#F2E9D3] placeholder:text-[#CDBB8A]/60 resize-none"
+                          className="bg-[#0F172A] border-[#F8FAFC]/30 text-[#F8FAFC] placeholder:text-[#38BDF8]/60 resize-none"
                         />
                       </div>
 
                       <Button 
                         type="submit" 
                         size="lg" 
-                        className="w-full bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3] font-semibold"
+                        className="w-full bg-[#F8FAFC] text-[#1E293B] hover:bg-[#CBD5E1] font-semibold"
                         disabled={submitMutation.isPending}
                       >
                         {submitMutation.isPending ? (
@@ -264,7 +264,7 @@ export default function Contact() {
         {/* Google Maps */}
         <section className="py-12">
           <div className="container">
-            <Card className="bg-[#4A4829] border-[#F2E9D3]/20 overflow-hidden">
+            <Card className="bg-[#1E293B] border-[#F8FAFC]/20 overflow-hidden">
               <CardContent className="p-0">
                 <iframe
                   src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3323.965397406019!2d-7.630356723855206!3d33.58024767333852!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xda7d2be82cac4e5%3A0x4c7187e94a633b19!2sAssociation%20Bab%20Rayan!5e0!3m2!1sfr!2sma!4v1771423733450!5m2!1sfr!2sma"

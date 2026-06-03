@@ -63,13 +63,13 @@ export default function ProductImageCarousel({
   if (allImages.length === 0) {
     return (
       <div className={`w-full h-full flex items-center justify-center ${className}`}>
-        <Package className="h-16 w-16 text-[#F2E9D3]/30" />
+        <Package className="h-16 w-16 text-[#F8FAFC]/30" />
       </div>
     );
   }
 
   const imgClass = fitMode === "contain"
-    ? "w-full h-full object-contain bg-[#3A3820]"
+    ? "w-full h-full object-contain bg-[#070E1A]"
     : "w-full h-full object-cover group-hover:scale-105 transition-transform duration-300";
 
   if (!hasMultiple) {

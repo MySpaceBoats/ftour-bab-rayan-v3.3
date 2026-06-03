@@ -127,16 +127,56 @@ export default function Galerie() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ background: "#0F172A" }}>
       <Navbar />
-      <main className="flex-1 container py-10 space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Galerie</h1>
-          <Button onClick={() => setUploadOpen(true)} variant="outline">
-            <Upload className="h-4 w-4 mr-2" />
-            Partager mes photos
-          </Button>
+
+      {/* Hero galerie */}
+      <div
+        className="py-16 text-center relative overflow-hidden"
+        style={{ background: "linear-gradient(180deg, #1E3A8A 0%, #0F172A 100%)" }}
+      >
+        <div
+          className="absolute inset-0 opacity-[0.04] pointer-events-none"
+          style={{
+            backgroundImage: "linear-gradient(rgba(248,250,252,1) 1px, transparent 1px), linear-gradient(90deg, rgba(248,250,252,1) 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
+        <div className="container relative z-10 space-y-4">
+          <div
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold text-blue-300 uppercase tracking-widest mb-2"
+            style={{ background: "rgba(37,99,235,0.15)", border: "1px solid rgba(37,99,235,0.3)" }}
+          >
+            Mémoire photographique
+          </div>
+          <h1
+            className="text-4xl md:text-5xl font-bold text-white"
+            style={{ fontFamily: "Syne, Inter, sans-serif" }}
+          >
+            Galerie
+          </h1>
+          <p className="text-slate-300 max-w-xl mx-auto">
+            Revivez les moments forts de chaque édition à travers les photos de nos bénévoles et équipes.
+          </p>
+          <div className="flex justify-center pt-2">
+            <button
+              onClick={() => setUploadOpen(true)}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
+              style={{
+                background: "rgba(37,99,235,0.2)",
+                border: "1px solid rgba(37,99,235,0.4)",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(37,99,235,0.35)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(37,99,235,0.2)"; }}
+            >
+              <Upload className="h-4 w-4" />
+              Partager mes photos
+            </button>
+          </div>
         </div>
+      </div>
+
+      <main className="flex-1 container py-10 space-y-6">
 
         <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
           <DialogContent className="max-w-2xl">
@@ -244,13 +284,15 @@ export default function Galerie() {
               </p>
             ) : (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                <div className="columns-2 md:columns-3 lg:columns-4 gap-3 space-y-3">
                   {list.map((photo: any, idx: number) => (
                     <button
                       key={photo.id}
                       onClick={() => setLightboxIndex(idx)}
-                      className="overflow-hidden rounded-xl bg-muted"
+                      className="overflow-hidden rounded-xl w-full block mb-3 group relative"
+                      style={{ background: "#1E293B" }}
                     >
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200 rounded-xl z-10" />
                       <img
                         src={
                           photo.image_thumb_url ||
@@ -259,7 +301,7 @@ export default function Galerie() {
                         }
                         alt={`${photo.title || "Photo"} ${photo.description || ""}`.trim()}
                         loading="lazy"
-                        className="h-44 md:h-56 w-full object-cover transition-transform hover:scale-105"
+                        className="w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                         onError={e => {
                           const img = e.currentTarget;
                           const medium = photo.image_medium_url ?? undefined;

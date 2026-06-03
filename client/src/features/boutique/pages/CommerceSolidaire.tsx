@@ -23,7 +23,7 @@ export default function CommerceSolidaire() {
       key: "goodies",
       href: `/${lang}/goodies`,
       icon: ShoppingBag,
-      color: "#CDBB8A",
+      color: "#38BDF8",
       title: t.boutique.goodiesTitle,
       description: t.boutique.goodiesDesc,
       cta: t.boutique.goodiesCta,
@@ -49,35 +49,35 @@ export default function CommerceSolidaire() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#5E5B34]" dir={dir}>
+    <div className="min-h-screen flex flex-col bg-[#0F172A]" dir={dir}>
       <Navbar />
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="py-20 bg-[#4A4829]">
+        <section className="py-20 bg-[#1E293B]">
           <div className="container text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#F2E9D3]/10 text-[#CDBB8A] text-sm font-medium mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#F8FAFC]/10 text-[#38BDF8] text-sm font-medium mb-6">
               <Heart className="h-4 w-4" />
               {t.boutique.badge}
             </div>
             <h1
-              className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#F2E9D3] mb-6"
-              style={{ fontFamily: "Caveat, cursive" }}
+              className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#F8FAFC] mb-6"
+              style={{ fontFamily: 'Syne, Inter, sans-serif' }}
             >
               Commerce Solidaire
             </h1>
-            <p className="text-lg md:text-xl text-[#E6DCC3] max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg md:text-xl text-[#CBD5E1] max-w-3xl mx-auto leading-relaxed">
               {t.boutique.subtitle}
             </p>
           </div>
         </section>
 
         {/* Boutique Solidaire section */}
-        <section className="py-16 bg-[#5E5B34]">
+        <section className="py-16 bg-[#0F172A]">
           <div className="container">
             <h2
-              className="text-2xl md:text-3xl font-bold text-[#F2E9D3] mb-10 text-center"
-              style={{ fontFamily: "Caveat, cursive" }}
+              className="text-2xl md:text-3xl font-bold text-[#F8FAFC] mb-10 text-center"
+              style={{ fontFamily: 'Syne, Inter, sans-serif' }}
             >
               {t.boutique.title}
             </h2>
@@ -87,7 +87,7 @@ export default function CommerceSolidaire() {
                 return (
                   <div
                     key={cat.key}
-                    className="bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#F2E9D3]/30 transition-all"
+                    className="bg-[#1E293B] rounded-lg overflow-hidden border border-[#F8FAFC]/10 group hover:border-[#F8FAFC]/30 transition-all"
                   >
                     <div className="h-1" style={{ backgroundColor: cat.color }} />
                     <div className="p-6 space-y-4">
@@ -97,12 +97,12 @@ export default function CommerceSolidaire() {
                       >
                         <Icon className="h-8 w-8" style={{ color: cat.color }} />
                       </div>
-                      <h3 className="text-lg font-bold text-[#F2E9D3]">{cat.title}</h3>
-                      <p className="text-[#E6DCC3] text-sm">{cat.description}</p>
+                      <h3 className="text-lg font-bold text-[#F8FAFC]">{cat.title}</h3>
+                      <p className="text-[#CBD5E1] text-sm">{cat.description}</p>
                       <Link href={cat.href}>
                         <Button
                           variant="outline"
-                          className="w-full mt-2 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
+                          className="w-full mt-2 border-[#F8FAFC]/30 text-[#F8FAFC] bg-transparent hover:bg-[#F8FAFC] hover:text-[#1E293B]"
                         >
                           {cat.cta}
                           <ArrowRight className="h-4 w-4 ml-2" />
@@ -118,28 +118,28 @@ export default function CommerceSolidaire() {
 
         {/* Divider */}
         <div className="container">
-          <div className="border-t border-[#F2E9D3]/10" />
+          <div className="border-t border-[#F8FAFC]/10" />
         </div>
 
         {/* Asso' Resto Solidaire section */}
-        <section className="py-16 bg-[#5E5B34]">
+        <section className="py-16 bg-[#0F172A]">
           <div className="container max-w-2xl">
             <div className="flex items-center gap-3 mb-8 justify-center">
-              <UtensilsCrossed className="h-6 w-6 text-[#CDBB8A]" />
+              <UtensilsCrossed className="h-6 w-6 text-[#38BDF8]" />
               <h2
-                className="text-2xl md:text-3xl font-bold text-[#F2E9D3]"
-                style={{ fontFamily: "Caveat, cursive" }}
+                className="text-2xl md:text-3xl font-bold text-[#F8FAFC]"
+                style={{ fontFamily: 'Syne, Inter, sans-serif' }}
               >
                 {t.nav.restaurant}
               </h2>
             </div>
 
-            <Card className="bg-[#4A4829] border border-[#F2E9D3]/10">
+            <Card className="bg-[#1E293B] border border-[#F8FAFC]/10">
               <CardContent className="pt-6 space-y-4">
-                <p className="text-[#E6DCC3]">
+                <p className="text-[#CBD5E1]">
                   {t.restaurant.tableJardin.description}
                 </p>
-                <p className="text-sm text-[#CDBB8A]">
+                <p className="text-sm text-[#38BDF8]">
                   {t.restaurant.subtitle}
                 </p>
                 <Button
@@ -153,7 +153,7 @@ export default function CommerceSolidaire() {
                   href="https://latabledujardin.ma/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full mt-2 py-2.5 px-4 rounded-md border border-[#F2E9D3]/30 text-[#F2E9D3] hover:bg-[#F2E9D3]/10 transition-colors text-sm font-medium"
+                  className="flex items-center justify-center gap-2 w-full mt-2 py-2.5 px-4 rounded-md border border-[#F8FAFC]/30 text-[#F8FAFC] hover:bg-[#F8FAFC]/10 transition-colors text-sm font-medium"
                 >
                   {t.restaurant.tableJardin.cta}
                   <ExternalLink className="h-4 w-4" />
@@ -164,9 +164,9 @@ export default function CommerceSolidaire() {
         </section>
 
         {/* Info Banner */}
-        <section className="py-12 bg-[#4A4829]">
+        <section className="py-12 bg-[#1E293B]">
           <div className="container text-center">
-            <p className="text-[#E6DCC3] max-w-2xl mx-auto">
+            <p className="text-[#CBD5E1] max-w-2xl mx-auto">
               {t.boutique.infoText}
             </p>
           </div>
