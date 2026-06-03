@@ -420,8 +420,27 @@
   }
 
   /* Legacy button aliases */
-  .btn-ftour { @apply btn-e13-outline; }
-  .btn-ftour-filled { @apply btn-e13; }
+  .btn-ftour {
+    @apply px-6 py-3 rounded-lg font-semibold transition-all duration-200;
+    background: transparent;
+    color: #F8FAFC;
+    border: 2px solid rgba(248, 250, 252, 0.4);
+  }
+  .btn-ftour:hover {
+    background: rgba(248, 250, 252, 0.08);
+    border-color: rgba(248, 250, 252, 0.8);
+  }
+  .btn-ftour-filled {
+    @apply px-6 py-3 rounded-lg font-semibold transition-all duration-200;
+    background: var(--electric-blue);
+    color: #FFFFFF;
+    border: 2px solid var(--electric-blue);
+  }
+  .btn-ftour-filled:hover {
+    background: var(--electric-blue-dark);
+    border-color: var(--electric-blue-dark);
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.4);
+  }
 
   /* Cartes — Édition 13 */
   .card-e13 {
@@ -436,7 +455,16 @@
   }
 
   /* Legacy */
-  .card-ftour { @apply card-e13; }
+  .card-ftour {
+    background-color: var(--navy);
+    border: 1px solid rgba(248, 250, 252, 0.08);
+    border-radius: 0.75rem;
+    transition: all 0.25s ease;
+  }
+  .card-ftour:hover {
+    border-color: rgba(37, 99, 235, 0.4);
+    box-shadow: 0 8px 32px rgba(37, 99, 235, 0.12);
+  }
 
   /* Glassmorphism subtil */
   .glass {

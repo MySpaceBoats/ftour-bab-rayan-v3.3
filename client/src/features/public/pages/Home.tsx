@@ -24,7 +24,6 @@ import RamadanImpactLive from "@/components/RamadanImpactLive";
 
 export default function Home() {
   const { t, dir, lang } = useI18n();
-  const { data: stats } = trpc.public.stats.useQuery();
   const { data: testimonials } = trpc.public.testimonials.useQuery();
   const { data: partners } = trpc.public.partners.useQuery();
 
