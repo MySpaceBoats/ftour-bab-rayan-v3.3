@@ -179,7 +179,7 @@ export default function Goodies() {
 
   if (orderSuccess) {
     return (
-      <div className="min-h-screen flex flex-col bg-[#5E5B34]" dir={dir}>
+      <div className="min-h-screen flex flex-col bg-[#0F172A]" dir={dir}>
         <Navbar />
         <main className="flex-1">
           <GoodiesConfirmation
@@ -194,25 +194,25 @@ export default function Goodies() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#5E5B34]" dir={dir}>
+    <div className="min-h-screen flex flex-col bg-[#0F172A]" dir={dir}>
       <Navbar />
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="py-16 bg-[#4A4829]">
+        <section className="py-16 bg-[#1E293B]">
           <div className="container">
             <div className="max-w-3xl mx-auto text-center space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F2E9D3]/10 text-[#F2E9D3] text-sm font-medium">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F8FAFC]/10 text-[#F8FAFC] text-sm font-medium">
                 <ShoppingBag className="h-4 w-4" />
                 {t.goodies.solidarityShop}
               </div>
               <h1
-                className="text-4xl md:text-5xl font-bold text-[#F2E9D3]"
-                style={{ fontFamily: "Caveat, cursive" }}
+                className="text-4xl md:text-5xl font-bold text-[#F8FAFC]"
+                style={{ fontFamily: 'Plus Jakarta Sans, Inter, sans-serif' }}
               >
                 {t.goodies.title}
               </h1>
-              <p className="text-lg text-[#E6DCC3]">{t.goodies.subtitle}</p>
+              <p className="text-lg text-[#CBD5E1]">{t.goodies.subtitle}</p>
             </div>
           </div>
         </section>
@@ -223,11 +223,11 @@ export default function Goodies() {
             {isLoading ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {[...Array(8)].map((_, i) => (
-                  <Card key={i} className="animate-pulse bg-[#4A4829]">
-                    <div className="aspect-square bg-[#5E5B34]" />
+                  <Card key={i} className="animate-pulse bg-[#1E293B]">
+                    <div className="aspect-square bg-[#0F172A]" />
                     <CardContent className="p-4 space-y-3">
-                      <div className="h-5 bg-[#5E5B34] rounded w-3/4" />
-                      <div className="h-4 bg-[#5E5B34] rounded w-1/2" />
+                      <div className="h-5 bg-[#0F172A] rounded w-3/4" />
+                      <div className="h-4 bg-[#0F172A] rounded w-1/2" />
                     </CardContent>
                   </Card>
                 ))}
@@ -235,16 +235,16 @@ export default function Goodies() {
             ) : isError ? (
               <div className="text-center py-16">
                 <AlertTriangle className="h-16 w-16 mx-auto text-red-400/60 mb-4" />
-                <h3 className="text-xl font-semibold text-[#F2E9D3] mb-2">
+                <h3 className="text-xl font-semibold text-[#F8FAFC] mb-2">
                   {t.goodies.loadError || "Erreur de chargement"}
                 </h3>
-                <p className="text-[#E6DCC3] mb-4">
+                <p className="text-[#CBD5E1] mb-4">
                   {error?.message || "Impossible de charger les produits"}
                 </p>
                 <Button
                   onClick={() => refetch()}
                   variant="outline"
-                  className="border-[#F2E9D3]/20 text-[#F2E9D3] hover:bg-[#F2E9D3]/10"
+                  className="border-[#F8FAFC]/20 text-[#F8FAFC] hover:bg-[#F8FAFC]/10"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   {t.goodies.retry || "Réessayer"}
@@ -259,10 +259,10 @@ export default function Goodies() {
                   return (
                     <Card
                       key={goodie.id}
-                      className="overflow-hidden group bg-[#4A4829] border-[#F2E9D3]/10 hover:border-[#F2E9D3]/30 transition-all"
+                      className="overflow-hidden group bg-[#1E293B] border-[#F8FAFC]/10 hover:border-[#F8FAFC]/30 transition-all"
                     >
                       {/* Image / Carousel */}
-                      <div className="aspect-square bg-[#5E5B34] relative overflow-hidden">
+                      <div className="aspect-square bg-[#0F172A] relative overflow-hidden">
                         <ProductImageCarousel
                           image={(goodie as any).image}
                           images={(goodie as any).images}
@@ -274,18 +274,18 @@ export default function Goodies() {
                       {/* Content */}
                       <CardContent className="p-4 space-y-3">
                         <div>
-                          <h3 className="font-semibold text-lg line-clamp-1 text-[#F2E9D3]">
+                          <h3 className="font-semibold text-lg line-clamp-1 text-[#F8FAFC]">
                             {goodie.name}
                           </h3>
                           {goodie.description && (
-                            <p className="text-sm text-[#E6DCC3] line-clamp-2 mt-1">
+                            <p className="text-sm text-[#CBD5E1] line-clamp-2 mt-1">
                               {goodie.description}
                             </p>
                           )}
                         </div>
 
                         <div className="flex items-center justify-between">
-                          <span className="text-xl font-bold text-[#CDBB8A]">
+                          <span className="text-xl font-bold text-[#38BDF8]">
                             {Number(goodie.price).toFixed(0)} DH
                           </span>
                           <span
@@ -297,7 +297,7 @@ export default function Goodies() {
                           </span>
                           <Button
                             size="sm"
-                            className="bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]"
+                            className="bg-[#F8FAFC] text-[#1E293B] hover:bg-[#CBD5E1]"
                             disabled={isOutOfStock}
                             onClick={() => {
                               addToCart(goodie);
@@ -316,11 +316,11 @@ export default function Goodies() {
               </div>
             ) : (
               <div className="text-center py-16">
-                <ShoppingBag className="h-16 w-16 mx-auto text-[#F2E9D3]/30 mb-4" />
-                <h3 className="text-xl font-semibold text-[#F2E9D3] mb-2">
+                <ShoppingBag className="h-16 w-16 mx-auto text-[#F8FAFC]/30 mb-4" />
+                <h3 className="text-xl font-semibold text-[#F8FAFC] mb-2">
                   {t.goodies.noProducts}
                 </h3>
-                <p className="text-[#E6DCC3]">{t.goodies.comingSoon}</p>
+                <p className="text-[#CBD5E1]">{t.goodies.comingSoon}</p>
               </div>
             )}
           </div>
@@ -331,10 +331,10 @@ export default function Goodies() {
       {cart.length > 0 && (
         <button
           onClick={() => setIsCartOpen(true)}
-          className="fixed bottom-6 right-6 bg-[#F2E9D3] text-[#4A4829] p-4 rounded-full shadow-lg hover:bg-[#E6DCC3] transition-colors z-50"
+          className="fixed bottom-6 right-6 bg-[#F8FAFC] text-[#1E293B] p-4 rounded-full shadow-lg hover:bg-[#CBD5E1] transition-colors z-50"
         >
           <ShoppingCart className="h-6 w-6" />
-          <span className="absolute -top-2 -right-2 bg-[#4A4829] text-[#F2E9D3] text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
+          <span className="absolute -top-2 -right-2 bg-[#1E293B] text-[#F8FAFC] text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
             {cartCount}
           </span>
         </button>
@@ -345,12 +345,12 @@ export default function Goodies() {
         open={selectedGoodie !== null}
         onOpenChange={() => setSelectedGoodie(null)}
       >
-        <DialogContent className="bg-[#4A4829] border-[#F2E9D3]/20">
+        <DialogContent className="bg-[#1E293B] border-[#F8FAFC]/20">
           <DialogHeader>
-            <DialogTitle className="text-[#F2E9D3]">
+            <DialogTitle className="text-[#F8FAFC]">
               {t.goodies.selectVariant}
             </DialogTitle>
-            <DialogDescription className="text-[#E6DCC3]">
+            <DialogDescription className="text-[#CBD5E1]">
               {t.goodies.chooseOptions}
             </DialogDescription>
           </DialogHeader>
@@ -360,10 +360,10 @@ export default function Goodies() {
                 value={selectedVariant}
                 onValueChange={setSelectedVariant}
               >
-                <SelectTrigger className="bg-[#5E5B34] border-[#F2E9D3]/20 text-[#F2E9D3]">
+                <SelectTrigger className="bg-[#0F172A] border-[#F8FAFC]/20 text-[#F8FAFC]">
                   <SelectValue placeholder={t.goodies.selectOption} />
                 </SelectTrigger>
-                <SelectContent className="bg-[#4A4829] border-[#F2E9D3]/20">
+                <SelectContent className="bg-[#1E293B] border-[#F8FAFC]/20">
                   {(currentGoodie as any).variants?.map(
                     (variant: {
                       id: number;
@@ -374,7 +374,7 @@ export default function Goodies() {
                       <SelectItem
                         key={variant.id}
                         value={variant.id.toString()}
-                        className="text-[#F2E9D3]"
+                        className="text-[#F8FAFC]"
                       >
                         {`${variant.size || ""} ${variant.color || ""}`.trim()}
                         {variant.priceModifier &&
@@ -388,7 +388,7 @@ export default function Goodies() {
               <Button
                 onClick={() => addToCart(currentGoodie)}
                 disabled={!selectedVariant}
-                className="w-full bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]"
+                className="w-full bg-[#F8FAFC] text-[#1E293B] hover:bg-[#CBD5E1]"
               >
                 {t.goodies.addToCart}
               </Button>
@@ -399,12 +399,12 @@ export default function Goodies() {
 
       {/* Cart Dialog */}
       <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
-        <DialogContent className="bg-[#4A4829] border-[#F2E9D3]/20 max-w-md">
+        <DialogContent className="bg-[#1E293B] border-[#F8FAFC]/20 max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-[#F2E9D3]">
+            <DialogTitle className="text-[#F8FAFC]">
               {t.goodies.yourCart}
             </DialogTitle>
-            <DialogDescription className="text-[#E6DCC3]">
+            <DialogDescription className="text-[#CBD5E1]">
               {cartCount} {t.goodies.articles}
             </DialogDescription>
           </DialogHeader>
@@ -412,7 +412,7 @@ export default function Goodies() {
             {cart.map((item, index) => (
               <div
                 key={index}
-                className="flex items-center gap-3 p-3 bg-[#5E5B34] rounded-lg"
+                className="flex items-center gap-3 p-3 bg-[#0F172A] rounded-lg"
               >
                 {item.imageUrl && (
                   <img
@@ -422,13 +422,13 @@ export default function Goodies() {
                   />
                 )}
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-[#F2E9D3] truncate">
+                  <h4 className="font-medium text-[#F8FAFC] truncate">
                     {item.name}
                   </h4>
                   {item.variant && (
-                    <p className="text-sm text-[#E6DCC3]">{item.variant}</p>
+                    <p className="text-sm text-[#CBD5E1]">{item.variant}</p>
                   )}
-                  <p className="text-[#CDBB8A] font-semibold">
+                  <p className="text-[#38BDF8] font-semibold">
                     {item.price} DH
                   </p>
                 </div>
@@ -436,18 +436,18 @@ export default function Goodies() {
                   <Button
                     size="icon"
                     variant="outline"
-                    className="h-8 w-8 border-[#F2E9D3]/20 text-[#F2E9D3]"
+                    className="h-8 w-8 border-[#F8FAFC]/20 text-[#F8FAFC]"
                     onClick={() => updateQuantity(index, -1)}
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
-                  <span className="w-8 text-center text-[#F2E9D3]">
+                  <span className="w-8 text-center text-[#F8FAFC]">
                     {item.quantity}
                   </span>
                   <Button
                     size="icon"
                     variant="outline"
-                    className="h-8 w-8 border-[#F2E9D3]/20 text-[#F2E9D3]"
+                    className="h-8 w-8 border-[#F8FAFC]/20 text-[#F8FAFC]"
                     onClick={() => updateQuantity(index, 1)}
                   >
                     <Plus className="h-4 w-4" />
@@ -464,8 +464,8 @@ export default function Goodies() {
               </div>
             ))}
           </div>
-          <div className="border-t border-[#F2E9D3]/20 pt-4 space-y-4">
-            <div className="flex justify-between text-lg font-bold text-[#F2E9D3]">
+          <div className="border-t border-[#F8FAFC]/20 pt-4 space-y-4">
+            <div className="flex justify-between text-lg font-bold text-[#F8FAFC]">
               <span>{t.goodies.total}</span>
               <span>{cartTotal} DH</span>
             </div>
@@ -474,7 +474,7 @@ export default function Goodies() {
                 setIsCartOpen(false);
                 setIsCheckoutOpen(true);
               }}
-              className="w-full bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]"
+              className="w-full bg-[#F8FAFC] text-[#1E293B] hover:bg-[#CBD5E1]"
             >
               {t.goodies.reserve}
             </Button>
@@ -484,18 +484,18 @@ export default function Goodies() {
 
       {/* Checkout Dialog */}
       <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
-        <DialogContent className="bg-[#4A4829] border-[#F2E9D3]/20 max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-[#1E293B] border-[#F8FAFC]/20 max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-[#F2E9D3]">
+            <DialogTitle className="text-[#F8FAFC]">
               {t.goodies.finalizeReservation}
             </DialogTitle>
-            <DialogDescription className="text-[#E6DCC3]">
+            <DialogDescription className="text-[#CBD5E1]">
               {t.goodies.fillInfo}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCheckout} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-[#F2E9D3]">
+              <Label htmlFor="name" className="text-[#F8FAFC]">
                 {t.goodies.fullName}
               </Label>
               <Input
@@ -508,11 +508,11 @@ export default function Goodies() {
                   }))
                 }
                 required
-                className="bg-[#5E5B34] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                className="bg-[#0F172A] border-[#F8FAFC]/20 text-[#F8FAFC]"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-[#F2E9D3]">
+              <Label htmlFor="email" className="text-[#F8FAFC]">
                 {t.goodies.email}
               </Label>
               <Input
@@ -526,11 +526,11 @@ export default function Goodies() {
                   }))
                 }
                 required
-                className="bg-[#5E5B34] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                className="bg-[#0F172A] border-[#F8FAFC]/20 text-[#F8FAFC]"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone" className="text-[#F2E9D3]">
+              <Label htmlFor="phone" className="text-[#F8FAFC]">
                 {t.goodies.phone}
               </Label>
               <Input
@@ -544,13 +544,13 @@ export default function Goodies() {
                   }))
                 }
                 required
-                className="bg-[#5E5B34] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                className="bg-[#0F172A] border-[#F8FAFC]/20 text-[#F8FAFC]"
               />
             </div>
 
             {/* Delivery Mode Selection */}
-            <div className="space-y-2 border-t border-[#F2E9D3]/20 pt-4">
-              <Label className="text-[#F2E9D3]">{t.goodies.deliveryMode}</Label>
+            <div className="space-y-2 border-t border-[#F8FAFC]/20 pt-4">
+              <Label className="text-[#F8FAFC]">{t.goodies.deliveryMode}</Label>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <input
@@ -569,7 +569,7 @@ export default function Goodies() {
                   />
                   <Label
                     htmlFor="pickup"
-                    className="text-[#E6DCC3] cursor-pointer"
+                    className="text-[#CBD5E1] cursor-pointer"
                   >
                     {t.goodies.pickupAtLocation}
                   </Label>
@@ -591,7 +591,7 @@ export default function Goodies() {
                   />
                   <Label
                     htmlFor="delivery"
-                    className="text-[#E6DCC3] cursor-pointer"
+                    className="text-[#CBD5E1] cursor-pointer"
                   >
                     {t.goodies.homeDelivery}
                   </Label>
@@ -600,13 +600,13 @@ export default function Goodies() {
             </div>
             {/* Delivery Address Form - Only shown if home delivery is selected */}
             {checkoutForm.deliveryMode === "home_delivery" && (
-              <div className="space-y-3 bg-[#5E5B34] rounded-lg p-4 border border-[#F2E9D3]/10">
-                <h4 className="font-semibold text-[#F2E9D3]">
+              <div className="space-y-3 bg-[#0F172A] rounded-lg p-4 border border-[#F8FAFC]/10">
+                <h4 className="font-semibold text-[#F8FAFC]">
                   {t.goodies.deliveryAddress}
                 </h4>
 
                 <div className="space-y-2">
-                  <Label htmlFor="address" className="text-[#F2E9D3] text-sm">
+                  <Label htmlFor="address" className="text-[#F8FAFC] text-sm">
                     {t.goodies.fullAddress}
                   </Label>
                   <Input
@@ -619,13 +619,13 @@ export default function Goodies() {
                       }))
                     }
                     required
-                    className="bg-[#4A4829] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                    className="bg-[#1E293B] border-[#F8FAFC]/20 text-[#F8FAFC]"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-2">
-                    <Label htmlFor="city" className="text-[#F2E9D3] text-sm">
+                    <Label htmlFor="city" className="text-[#F8FAFC] text-sm">
                       {t.goodies.city}
                     </Label>
                     <Input
@@ -638,13 +638,13 @@ export default function Goodies() {
                         }))
                       }
                       required
-                      className="bg-[#4A4829] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                      className="bg-[#1E293B] border-[#F8FAFC]/20 text-[#F8FAFC]"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label
                       htmlFor="neighborhood"
-                      className="text-[#F2E9D3] text-sm"
+                      className="text-[#F8FAFC] text-sm"
                     >
                       {t.goodies.neighborhood}
                     </Label>
@@ -658,14 +658,14 @@ export default function Goodies() {
                         }))
                       }
                       required
-                      className="bg-[#4A4829] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                      className="bg-[#1E293B] border-[#F8FAFC]/20 text-[#F8FAFC]"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-2">
-                    <Label htmlFor="postal" className="text-[#F2E9D3] text-sm">
+                    <Label htmlFor="postal" className="text-[#F8FAFC] text-sm">
                       {t.goodies.postalCode}
                     </Label>
                     <Input
@@ -677,13 +677,13 @@ export default function Goodies() {
                           deliveryPostalCode: e.target.value,
                         }))
                       }
-                      className="bg-[#4A4829] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                      className="bg-[#1E293B] border-[#F8FAFC]/20 text-[#F8FAFC]"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label
                       htmlFor="deliveryPhone"
-                      className="text-[#F2E9D3] text-sm"
+                      className="text-[#F8FAFC] text-sm"
                     >
                       {t.goodies.contactPhone}
                     </Label>
@@ -698,7 +698,7 @@ export default function Goodies() {
                         }))
                       }
                       required
-                      className="bg-[#4A4829] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                      className="bg-[#1E293B] border-[#F8FAFC]/20 text-[#F8FAFC]"
                     />
                   </div>
                 </div>
@@ -706,7 +706,7 @@ export default function Goodies() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="instructions"
-                    className="text-[#F2E9D3] text-sm"
+                    className="text-[#F8FAFC] text-sm"
                   >
                     {t.goodies.deliveryInstructions}
                   </Label>
@@ -719,7 +719,7 @@ export default function Goodies() {
                         deliveryInstructions: e.target.value,
                       }))
                     }
-                    className="w-full bg-[#4A4829] border border-[#F2E9D3]/20 text-[#F2E9D3] rounded px-3 py-2 text-sm min-h-[60px]"
+                    className="w-full bg-[#1E293B] border border-[#F8FAFC]/20 text-[#F8FAFC] rounded px-3 py-2 text-sm min-h-[60px]"
                     placeholder={t.goodies.deliveryInstructions}
                   />
                 </div>
@@ -737,22 +737,22 @@ export default function Goodies() {
             />
 
             {/* Price Summary */}
-            <div className="bg-[#5E5B34] rounded-lg p-4 space-y-2">
-              <div className="flex justify-between text-sm text-[#E6DCC3]">
+            <div className="bg-[#0F172A] rounded-lg p-4 space-y-2">
+              <div className="flex justify-between text-sm text-[#CBD5E1]">
                 <span>{t.goodies.subtotal}</span>
                 <span>{cartTotal} DH</span>
               </div>
               {checkoutForm.deliveryMode === "home_delivery" && (
-                <div className="flex justify-between text-sm text-[#E6DCC3]">
+                <div className="flex justify-between text-sm text-[#CBD5E1]">
                   <span>{t.goodies.deliveryFee}</span>
                   <span>{deliveryFee} DH</span>
                 </div>
               )}
-              <div className="flex justify-between text-lg font-bold text-[#F2E9D3] border-t border-[#F2E9D3]/20 pt-2">
+              <div className="flex justify-between text-lg font-bold text-[#F8FAFC] border-t border-[#F8FAFC]/20 pt-2">
                 <span>{t.goodies.total}</span>
                 <span>{cartTotalWithDelivery} DH</span>
               </div>
-              <p className="text-sm text-[#E6DCC3] mt-2">
+              <p className="text-sm text-[#CBD5E1] mt-2">
                 {checkoutForm.deliveryMode === "pickup"
                   ? t.goodies.paymentOnPlacePickup
                   : t.goodies.paymentOnDelivery}
@@ -761,7 +761,7 @@ export default function Goodies() {
             <Button
               type="submit"
               disabled={createOrderMutation.isPending}
-              className="w-full bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]"
+              className="w-full bg-[#F8FAFC] text-[#1E293B] hover:bg-[#CBD5E1]"
             >
               {createOrderMutation.isPending ? (
                 <>

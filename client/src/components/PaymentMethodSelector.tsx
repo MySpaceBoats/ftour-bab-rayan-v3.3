@@ -42,7 +42,7 @@ export default function PaymentMethodSelector({
 
   return (
     <div className="space-y-3" dir={dir}>
-      <label className="text-sm font-semibold text-[#F2E9D3]">
+      <label className="text-sm font-semibold text-[#F8FAFC]">
         {t.checkout?.paymentMethod || 'Payment Method'}
       </label>
       
@@ -56,8 +56,8 @@ export default function PaymentMethodSelector({
               key={method}
               className={`cursor-pointer transition-all ${
                 isSelected
-                  ? 'bg-[#F2E9D3] border-[#F2E9D3]'
-                  : 'bg-[#4A4829] border-[#F2E9D3]/20 hover:border-[#F2E9D3]/40'
+                  ? 'bg-[#F8FAFC] border-[#F8FAFC]'
+                  : 'bg-[#1E293B] border-[#F8FAFC]/20 hover:border-[#F8FAFC]/40'
               }`}
               onClick={() => onChange(method)}
             >
@@ -73,12 +73,12 @@ export default function PaymentMethodSelector({
                   />
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <div className={isSelected ? 'text-[#4A4829]' : 'text-[#F2E9D3]'}>
+                      <div className={isSelected ? 'text-[#1E293B]' : 'text-[#F8FAFC]'}>
                         {methodInfo.icon}
                       </div>
                       <label
                         className={`font-semibold cursor-pointer ${
-                          isSelected ? 'text-[#4A4829]' : 'text-[#F2E9D3]'
+                          isSelected ? 'text-[#1E293B]' : 'text-[#F8FAFC]'
                         }`}
                       >
                         {methodInfo.label}
@@ -87,7 +87,7 @@ export default function PaymentMethodSelector({
                     {showDescriptions && (
                       <p
                         className={`text-xs ${
-                          isSelected ? 'text-[#4A4829]/70' : 'text-[#E6DCC3]'
+                          isSelected ? 'text-[#1E293B]/70' : 'text-[#CBD5E1]'
                         }`}
                       >
                         {methodInfo.description}

@@ -134,35 +134,35 @@ export default function DevenirPartenaire() {
     <div className="min-h-screen flex flex-col" dir={dir}>
       <Navbar />
 
-      <main className="flex-1 bg-[#5E5B34]">
-        <section className="py-16 bg-[#4A4829]">
+      <main className="flex-1 bg-[#0F172A]">
+        <section className="py-16 bg-[#1E293B]">
           <div className="container text-center space-y-4">
-            <h1 className="text-4xl md:text-5xl font-bold text-[#F2E9D3]">{content.title}</h1>
-            <p className="max-w-3xl mx-auto text-lg text-[#CDBB8A]">{content.description}</p>
+            <h1 className="text-4xl md:text-5xl font-bold text-[#F8FAFC]">{content.title}</h1>
+            <p className="max-w-3xl mx-auto text-lg text-[#38BDF8]">{content.description}</p>
           </div>
         </section>
 
         <section className="py-14">
           <div className="container">
-            <h2 className="text-2xl font-bold text-[#F2E9D3] mb-6">Pourquoi devenir partenaire ?</h2>
+            <h2 className="text-2xl font-bold text-[#F8FAFC] mb-6">Pourquoi devenir partenaire ?</h2>
             <div className="grid md:grid-cols-3 gap-4">
-              <Card className="bg-[#4A4829] border-[#F2E9D3]/20">
+              <Card className="bg-[#1E293B] border-[#F8FAFC]/20">
                 <CardHeader>
-                  <CardTitle className="text-[#F2E9D3] flex items-center gap-2"><Sparkles className="h-5 w-5" /> Impact social</CardTitle>
+                  <CardTitle className="text-[#F8FAFC] flex items-center gap-2"><Sparkles className="h-5 w-5" /> Impact social</CardTitle>
                 </CardHeader>
-                <CardContent className="text-[#CDBB8A]">Contribuez directement à financer des repas et des actions concrètes pour les enfants de Bab Rayan.</CardContent>
+                <CardContent className="text-[#38BDF8]">Contribuez directement à financer des repas et des actions concrètes pour les enfants de Bab Rayan.</CardContent>
               </Card>
-              <Card className="bg-[#4A4829] border-[#F2E9D3]/20">
+              <Card className="bg-[#1E293B] border-[#F8FAFC]/20">
                 <CardHeader>
-                  <CardTitle className="text-[#F2E9D3] flex items-center gap-2"><Megaphone className="h-5 w-5" /> Visibilité</CardTitle>
+                  <CardTitle className="text-[#F8FAFC] flex items-center gap-2"><Megaphone className="h-5 w-5" /> Visibilité</CardTitle>
                 </CardHeader>
-                <CardContent className="text-[#CDBB8A]">Associez votre marque à une initiative reconnue et valorisez vos engagements RSE auprès de vos publics.</CardContent>
+                <CardContent className="text-[#38BDF8]">Associez votre marque à une initiative reconnue et valorisez vos engagements RSE auprès de vos publics.</CardContent>
               </Card>
-              <Card className="bg-[#4A4829] border-[#F2E9D3]/20">
+              <Card className="bg-[#1E293B] border-[#F8FAFC]/20">
                 <CardHeader>
-                  <CardTitle className="text-[#F2E9D3] flex items-center gap-2"><ShieldCheck className="h-5 w-5" /> Transparence</CardTitle>
+                  <CardTitle className="text-[#F8FAFC] flex items-center gap-2"><ShieldCheck className="h-5 w-5" /> Transparence</CardTitle>
                 </CardHeader>
-                <CardContent className="text-[#CDBB8A]">Bénéficiez d'un cadre clair, d'un suivi des actions et d'une relation de partenariat pérenne.</CardContent>
+                <CardContent className="text-[#38BDF8]">Bénéficiez d'un cadre clair, d'un suivi des actions et d'une relation de partenariat pérenne.</CardContent>
               </Card>
             </div>
           </div>
@@ -170,44 +170,44 @@ export default function DevenirPartenaire() {
 
         <section className="py-10">
           <div className="container grid lg:grid-cols-3 gap-8 items-start">
-            <Card className="lg:col-span-2 bg-[#4A4829] border-[#F2E9D3]/20">
+            <Card className="lg:col-span-2 bg-[#1E293B] border-[#F8FAFC]/20">
               <CardHeader>
-                <CardTitle className="text-[#F2E9D3]">Formulaire de contact partenaire</CardTitle>
+                <CardTitle className="text-[#F8FAFC]">Formulaire de contact partenaire</CardTitle>
               </CardHeader>
               <CardContent>
                 <form className="space-y-5" onSubmit={handleSubmit}>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="companyName" className="text-[#F2E9D3]">Nom entreprise *</Label>
-                      <Input id="companyName" required value={formData.companyName} onChange={e => setFormData({ ...formData, companyName: e.target.value })} className="bg-[#5E5B34] border-[#F2E9D3]/30 text-[#F2E9D3]" />
+                      <Label htmlFor="companyName" className="text-[#F8FAFC]">Nom entreprise *</Label>
+                      <Input id="companyName" required value={formData.companyName} onChange={e => setFormData({ ...formData, companyName: e.target.value })} className="bg-[#0F172A] border-[#F8FAFC]/30 text-[#F8FAFC]" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="contactName" className="text-[#F2E9D3]">Nom & prénom *</Label>
-                      <Input id="contactName" required value={formData.contactName} onChange={e => setFormData({ ...formData, contactName: e.target.value })} className="bg-[#5E5B34] border-[#F2E9D3]/30 text-[#F2E9D3]" />
+                      <Label htmlFor="contactName" className="text-[#F8FAFC]">Nom & prénom *</Label>
+                      <Input id="contactName" required value={formData.contactName} onChange={e => setFormData({ ...formData, contactName: e.target.value })} className="bg-[#0F172A] border-[#F8FAFC]/30 text-[#F8FAFC]" />
                     </div>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="email" className="text-[#F2E9D3]">Email *</Label>
-                      <Input id="email" type="email" required value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="bg-[#5E5B34] border-[#F2E9D3]/30 text-[#F2E9D3]" />
+                      <Label htmlFor="email" className="text-[#F8FAFC]">Email *</Label>
+                      <Input id="email" type="email" required value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="bg-[#0F172A] border-[#F8FAFC]/30 text-[#F8FAFC]" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="phone" className="text-[#F2E9D3]">Téléphone</Label>
-                      <Input id="phone" type="tel" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="bg-[#5E5B34] border-[#F2E9D3]/30 text-[#F2E9D3]" />
+                      <Label htmlFor="phone" className="text-[#F8FAFC]">Téléphone</Label>
+                      <Input id="phone" type="tel" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="bg-[#0F172A] border-[#F8FAFC]/30 text-[#F8FAFC]" />
                     </div>
                   </div>
 
                   <div className="grid md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="city" className="text-[#F2E9D3]">Ville</Label>
-                      <Input id="city" value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} className="bg-[#5E5B34] border-[#F2E9D3]/30 text-[#F2E9D3]" />
+                      <Label htmlFor="city" className="text-[#F8FAFC]">Ville</Label>
+                      <Input id="city" value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} className="bg-[#0F172A] border-[#F8FAFC]/30 text-[#F8FAFC]" />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[#F2E9D3]">Type de partenariat</Label>
+                      <Label className="text-[#F8FAFC]">Type de partenariat</Label>
                       <Select value={formData.partnershipType} onValueChange={value => setFormData({ ...formData, partnershipType: value })}>
-                        <SelectTrigger className="bg-[#5E5B34] border-[#F2E9D3]/30 text-[#F2E9D3]"><SelectValue placeholder="Sélectionner" /></SelectTrigger>
-                        <SelectContent className="bg-[#4A4829] border-[#F2E9D3]/20">
+                        <SelectTrigger className="bg-[#0F172A] border-[#F8FAFC]/30 text-[#F8FAFC]"><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                        <SelectContent className="bg-[#1E293B] border-[#F8FAFC]/20">
                           <SelectItem value="financier">Financier</SelectItem>
                           <SelectItem value="nature">En nature</SelectItem>
                           <SelectItem value="media">Média & communication</SelectItem>
@@ -216,10 +216,10 @@ export default function DevenirPartenaire() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[#F2E9D3]">Budget estimé</Label>
+                      <Label className="text-[#F8FAFC]">Budget estimé</Label>
                       <Select value={formData.budgetRange} onValueChange={value => setFormData({ ...formData, budgetRange: value })}>
-                        <SelectTrigger className="bg-[#5E5B34] border-[#F2E9D3]/30 text-[#F2E9D3]"><SelectValue placeholder="Sélectionner" /></SelectTrigger>
-                        <SelectContent className="bg-[#4A4829] border-[#F2E9D3]/20">
+                        <SelectTrigger className="bg-[#0F172A] border-[#F8FAFC]/30 text-[#F8FAFC]"><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                        <SelectContent className="bg-[#1E293B] border-[#F8FAFC]/20">
                           <SelectItem value="<10000">Moins de 10 000 DH</SelectItem>
                           <SelectItem value="10000-50000">10 000 - 50 000 DH</SelectItem>
                           <SelectItem value="50000-100000">50 000 - 100 000 DH</SelectItem>
@@ -230,8 +230,8 @@ export default function DevenirPartenaire() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="message" className="text-[#F2E9D3]">Message</Label>
-                    <Textarea id="message" rows={5} value={formData.message} onChange={e => setFormData({ ...formData, message: e.target.value })} className="bg-[#5E5B34] border-[#F2E9D3]/30 text-[#F2E9D3] resize-none" />
+                    <Label htmlFor="message" className="text-[#F8FAFC]">Message</Label>
+                    <Textarea id="message" rows={5} value={formData.message} onChange={e => setFormData({ ...formData, message: e.target.value })} className="bg-[#0F172A] border-[#F8FAFC]/30 text-[#F8FAFC] resize-none" />
                   </div>
 
                   <div className="flex items-start gap-2">
@@ -239,9 +239,9 @@ export default function DevenirPartenaire() {
                       id="consent"
                       checked={formData.consent}
                       onCheckedChange={checked => setFormData({ ...formData, consent: Boolean(checked) })}
-                      className="mt-1 border-[#F2E9D3] data-[state=checked]:bg-[#F2E9D3] data-[state=checked]:text-[#4A4829]"
+                      className="mt-1 border-[#F8FAFC] data-[state=checked]:bg-[#F8FAFC] data-[state=checked]:text-[#1E293B]"
                     />
-                    <Label htmlFor="consent" className="text-sm text-[#CDBB8A]">
+                    <Label htmlFor="consent" className="text-sm text-[#38BDF8]">
                       J'accepte que mes informations soient utilisées pour être recontacté(e) au sujet d'un partenariat.
                     </Label>
                   </div>
@@ -249,7 +249,7 @@ export default function DevenirPartenaire() {
                   <Button
                     type="submit"
                     size="lg"
-                    className="w-full bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3] font-semibold"
+                    className="w-full bg-[#F8FAFC] text-[#1E293B] hover:bg-[#CBD5E1] font-semibold"
                     disabled={partnerLeadMutation.isPending}
                   >
                     {partnerLeadMutation.isPending ? (
@@ -268,25 +268,25 @@ export default function DevenirPartenaire() {
               </CardContent>
             </Card>
 
-            <Card className="bg-[#4A4829] border-[#F2E9D3]/20">
+            <Card className="bg-[#1E293B] border-[#F8FAFC]/20">
               <CardHeader>
-                <CardTitle className="text-[#F2E9D3]">FAQ Partenariats</CardTitle>
+                <CardTitle className="text-[#F8FAFC]">FAQ Partenariats</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4 text-[#CDBB8A]">
+              <CardContent className="space-y-4 text-[#38BDF8]">
                 <div>
-                  <h3 className="font-semibold text-[#F2E9D3]">Quels types de partenariats proposez-vous ?</h3>
+                  <h3 className="font-semibold text-[#F8FAFC]">Quels types de partenariats proposez-vous ?</h3>
                   <p>Financier, en nature, communication, mécénat de compétences.</p>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-[#F2E9D3]">Quand serez-vous recontacté ?</h3>
+                  <h3 className="font-semibold text-[#F8FAFC]">Quand serez-vous recontacté ?</h3>
                   <p>Notre équipe revient vers vous sous 48h ouvrées en moyenne.</p>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-[#F2E9D3]">Puis-je adapter mon budget ?</h3>
+                  <h3 className="font-semibold text-[#F8FAFC]">Puis-je adapter mon budget ?</h3>
                   <p>Oui, nous co-construisons des formats adaptés à vos objectifs.</p>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-[#F2E9D3]">Comment suivez-vous l'impact ?</h3>
+                  <h3 className="font-semibold text-[#F8FAFC]">Comment suivez-vous l'impact ?</h3>
                   <p>Nous partageons des bilans et éléments de reporting selon le partenariat.</p>
                 </div>
               </CardContent>
@@ -307,12 +307,12 @@ export default function DevenirPartenaire() {
           </section>
         )}
 
-        <section className="py-12 bg-[#4A4829]">
+        <section className="py-12 bg-[#1E293B]">
           <div className="container text-center space-y-4">
-            <h2 className="text-2xl font-bold text-[#F2E9D3]">Besoin d'échanger rapidement ?</h2>
-            <p className="text-[#CDBB8A]">Contactez-nous directement à <a className="underline" href="mailto:contact@ftourbabrayan.ma">contact@ftourbabrayan.ma</a> ou au <a className="underline" href="tel:+212666690534">{t.topMenu.phone}</a>.</p>
+            <h2 className="text-2xl font-bold text-[#F8FAFC]">Besoin d'échanger rapidement ?</h2>
+            <p className="text-[#38BDF8]">Contactez-nous directement à <a className="underline" href="mailto:contact@ftourbabrayan.ma">contact@ftourbabrayan.ma</a> ou au <a className="underline" href="tel:+212666690534">{t.topMenu.phone}</a>.</p>
             <Link href={`/${lang}/contact`}>
-              <Button className="bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]" aria-label="Nous contacter">
+              <Button className="bg-[#F8FAFC] text-[#1E293B] hover:bg-[#CBD5E1]" aria-label="Nous contacter">
                 Nous contacter
               </Button>
             </Link>

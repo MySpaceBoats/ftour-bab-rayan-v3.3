@@ -40,131 +40,147 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  
-  /* Ftour Bab Rayan - Custom Colors */
-  --color-olive: var(--bg-olive);
-  --color-olive-dark: var(--bg-olive-dark);
-  --color-olive-soft: var(--bg-olive-soft);
-  --color-cream: var(--ink-cream);
-  --color-cream-soft: var(--ink-cream-soft);
-  --color-sand: var(--accent-sand);
+
+  /* Ftour Bab Rayan — Édition 13 — Design Tokens */
+  --color-electric: var(--electric-blue);
+  --color-electric-dark: var(--electric-blue-dark);
+  --color-electric-deep: var(--electric-blue-deep);
+  --color-sky: var(--sky-blue);
+  --color-midnight: var(--midnight);
+  --color-navy: var(--navy);
+  --color-slate-dark: var(--slate-dark);
+  --color-off-white: var(--off-white);
+  --color-white-soft: var(--white-soft);
+  --color-amber-accent: var(--amber-accent);
+  --color-success: var(--success-green);
+  /* Legacy aliases for backward compat */
+  --color-olive: var(--electric-blue-deep);
+  --color-olive-dark: var(--midnight);
+  --color-olive-soft: var(--electric-blue);
+  --color-cream: var(--off-white);
+  --color-cream-soft: var(--white-soft);
+  --color-sand: var(--sky-blue);
 }
 
 /* ============================================
-   Ftour Bab Rayan - 12e édition
-   Palette: Olive mat + Crème/Ivoire
-   Esprit: Humanitaire, sobre, chaleureux, artisanal
+   Ftour Bab Rayan — 13e Édition
+   Palette: Bleu électrique + Blanc cassé
+   Esprit: Premium, moderne, confiance, impact
    ============================================ */
 
-/* Google Fonts are loaded from client/index.html to keep @import ordering valid for Tailwind build. */
-
 :root {
-  --radius: 0.5rem;
-  
+  --radius: 0.625rem;
+
   /* ============================================
-     PALETTE FTOUR BAB RAYAN
+     PALETTE PRINCIPALE — ÉDITION 13
      ============================================ */
-  
-  /* Fonds olive */
-  --bg-olive: #5E5B34;
-  --bg-olive-dark: #4A4829;
-  --bg-olive-soft: #6F6C3F;
-  
-  /* Textes crème/ivoire */
-  --ink-cream: #F2E9D3;
-  --ink-cream-soft: #E6DCC3;
-  
-  /* Accent sable */
-  --accent-sand: #CDBB8A;
-  
+
+  /* Bleu électrique */
+  --electric-blue: #2563EB;
+  --electric-blue-dark: #1D4ED8;
+  --electric-blue-deep: #1E3A8A;
+
+  /* Bleu ciel */
+  --sky-blue: #38BDF8;
+
+  /* Nuit */
+  --midnight: #0F172A;
+  --navy: #1E293B;
+  --slate-dark: #334155;
+
+  /* Neutres */
+  --off-white: #F8FAFC;
+  --white-soft: #E2E8F0;
+
+  /* Accents */
+  --amber-accent: #F59E0B;
+  --success-green: #10B981;
+
   /* ============================================
-     MAPPING VERS VARIABLES SHADCN/UI
+     MAPPING SHADCN/UI — THÈME PUBLIC BLEU
      ============================================ */
-  
-  /* Background et foreground - Olive comme fond principal */
-  --background: #5E5B34;
-  --foreground: #F2E9D3;
-  
-  /* Primary - Crème sur olive */
-  --primary: #F2E9D3;
-  --primary-foreground: #4A4829;
-  
-  /* Secondary - Sable */
-  --secondary: #CDBB8A;
-  --secondary-foreground: #4A4829;
-  
-  /* Cartes et surfaces */
-  --card: #4A4829;
-  --card-foreground: #F2E9D3;
-  
-  /* Popover */
-  --popover: #4A4829;
-  --popover-foreground: #F2E9D3;
-  
-  /* Muted */
-  --muted: #6F6C3F;
-  --muted-foreground: #E6DCC3;
-  
-  /* Accent */
-  --accent: #6F6C3F;
-  --accent-foreground: #F2E9D3;
-  
-  /* Destructive */
-  --destructive: #A85454;
-  --destructive-foreground: #F2E9D3;
-  
-  /* Bordures et inputs */
-  --border: rgba(242, 233, 211, 0.2);
-  --input: rgba(242, 233, 211, 0.15);
-  --ring: #CDBB8A;
-  
-  /* Chart colors - Variations olive/crème */
-  --chart-1: #F2E9D3;
-  --chart-2: #CDBB8A;
-  --chart-3: #6F6C3F;
-  --chart-4: #E6DCC3;
-  --chart-5: #8A8555;
-  
-  /* Sidebar */
-  --sidebar: #4A4829;
-  --sidebar-foreground: #F2E9D3;
-  --sidebar-primary: #F2E9D3;
-  --sidebar-primary-foreground: #4A4829;
-  --sidebar-accent: #6F6C3F;
-  --sidebar-accent-foreground: #F2E9D3;
-  --sidebar-border: rgba(242, 233, 211, 0.15);
-  --sidebar-ring: #CDBB8A;
+
+  --background: #0F172A;
+  --foreground: #F8FAFC;
+
+  --primary: #2563EB;
+  --primary-foreground: #FFFFFF;
+
+  --secondary: #1E293B;
+  --secondary-foreground: #F8FAFC;
+
+  --card: #1E293B;
+  --card-foreground: #F8FAFC;
+
+  --popover: #1E293B;
+  --popover-foreground: #F8FAFC;
+
+  --muted: #334155;
+  --muted-foreground: #94A3B8;
+
+  --accent: #1E3A8A;
+  --accent-foreground: #F8FAFC;
+
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  --border: rgba(248, 250, 252, 0.1);
+  --input: rgba(248, 250, 252, 0.08);
+  --ring: #2563EB;
+
+  --chart-1: #3B82F6;
+  --chart-2: #38BDF8;
+  --chart-3: #1E3A8A;
+  --chart-4: #F59E0B;
+  --chart-5: #10B981;
+
+  --sidebar: #1E293B;
+  --sidebar-foreground: #F8FAFC;
+  --sidebar-primary: #2563EB;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #1E3A8A;
+  --sidebar-accent-foreground: #F8FAFC;
+  --sidebar-border: rgba(248, 250, 252, 0.1);
+  --sidebar-ring: #2563EB;
+
+  /* Legacy olive aliases for components not yet refactored */
+  --bg-olive: #1E3A8A;
+  --bg-olive-dark: #0F172A;
+  --bg-olive-soft: #2563EB;
+  --ink-cream: #F8FAFC;
+  --ink-cream-soft: #CBD5E1;
+  --accent-sand: #38BDF8;
 }
 
-/* Mode clair pour les pages admin/formulaires */
+/* Mode clair admin/forms */
 .light, [data-theme="light"] {
-  --background: #F2E9D3;
-  --foreground: #4A4829;
-  
+  --background: #F8FAFC;
+  --foreground: #0F172A;
+
   --card: #FFFFFF;
-  --card-foreground: #4A4829;
-  
+  --card-foreground: #0F172A;
+
   --popover: #FFFFFF;
-  --popover-foreground: #4A4829;
-  
-  --primary: #5E5B34;
-  --primary-foreground: #F2E9D3;
-  
-  --secondary: #E6DCC3;
-  --secondary-foreground: #4A4829;
-  
-  --muted: #E6DCC3;
-  --muted-foreground: #6F6C3F;
-  
-  --accent: #CDBB8A;
-  --accent-foreground: #4A4829;
-  
-  --border: rgba(74, 72, 41, 0.2);
-  --input: rgba(74, 72, 41, 0.1);
-  --ring: #5E5B34;
-  
-  --sidebar: #4A4829;
-  --sidebar-foreground: #F2E9D3;
+  --popover-foreground: #0F172A;
+
+  --primary: #2563EB;
+  --primary-foreground: #FFFFFF;
+
+  --secondary: #E2E8F0;
+  --secondary-foreground: #0F172A;
+
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+
+  --accent: #DBEAFE;
+  --accent-foreground: #1E3A8A;
+
+  --border: rgba(15, 23, 42, 0.12);
+  --input: rgba(15, 23, 42, 0.08);
+  --ring: #2563EB;
+
+  --sidebar: #1E293B;
+  --sidebar-foreground: #F8FAFC;
 }
 
 /* =============================================================
@@ -271,71 +287,54 @@
 [data-theme="admin-v2"] ::-webkit-scrollbar-track { background: var(--surface-alt); }
 [data-theme="admin-v2"] ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
 
-/* ── Non-redesigned pages rendered inside AdminFrame ─────────────────────
-   These pages were built as standalone full-page layouts. Inside the new
-   shell their min-h-screen, sticky headers, and background classes fight
-   AdminFrame's constrained scroll container. The rules below neutralise
-   those conflicts without touching the pages themselves.
-   ──────────────────────────────────────────────────────────────────────── */
-
-/* 1. Kill min-h-screen so content doesn't overflow the scrollable <main> */
+/* ── Non-redesigned pages rendered inside AdminFrame ───────────────── */
 [data-theme="admin-v2"] main .min-h-screen { min-height: unset; }
-
-/* 2. Hide the legacy sticky page-header (the old sidebar-layout topbar with
-      back button + page title). AdminFrame's own topbar already shows this. */
-[data-theme="admin-v2"] main header.sticky {
-  display: none;
-}
-
-/* 3. Kill the muted/grey background that conflicts with admin-v2's warm canvas */
+[data-theme="admin-v2"] main header.sticky { display: none; }
 [data-theme="admin-v2"] main .bg-muted\/20,
 [data-theme="admin-v2"] main .bg-muted\/30,
 [data-theme="admin-v2"] main .bg-muted\/40,
-[data-theme="admin-v2"] main .bg-background {
-  background-color: transparent !important;
-}
-
-/* 4. Hide redundant "← Retour" back-nav rows — sidebar handles navigation */
+[data-theme="admin-v2"] main .bg-background { background-color: transparent !important; }
 [data-theme="admin-v2"] main > div > div:first-child:has(> a > svg),
-[data-theme="admin-v2"] main > div > div:first-child:has(> button > svg.lucide-arrow-left) {
-  display: none;
-}
-
-/* 5. RequireRole / inline access-denied full-screen gates: shrink to content */
+[data-theme="admin-v2"] main > div > div:first-child:has(> button > svg.lucide-arrow-left) { display: none; }
 [data-theme="admin-v2"] main > .min-h-screen,
-[data-theme="admin-v2"] main > div > .min-h-screen {
-  min-height: unset;
-  background: transparent;
-}
+[data-theme="admin-v2"] main > div > .min-h-screen { min-height: unset; background: transparent; }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  
+
   body {
     @apply bg-background text-foreground;
     font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
-  
-  /* Typographie manuscrite pour les titres */
-  h1, .font-handwritten {
-    font-family: "Caveat", cursive;
+
+  /* Classe utilitaire display — titres, heroes, sections */
+  .font-display {
+    font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "cv02", "cv03";
   }
-  
+
+  /* Typographie serif élégante — badge édition */
+  .font-edition {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-style: italic;
+  }
+
   /* Typographie arabe calligraphique */
   .font-arabic {
     font-family: "Aref Ruqaa", serif;
   }
-  
-  /* Typographie serif élégante pour "12e édition" */
-  .font-edition {
-    font-family: "Cormorant Garamond", serif;
-    font-style: italic;
+
+  /* Legacy — compatibilité pages non-refactorisées */
+  .font-handwritten {
+    font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700;
   }
-  
+
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
   [type="button"]:not(:disabled),
@@ -347,26 +346,15 @@
   input[type="radio"]:not(:disabled) {
     @apply cursor-pointer;
   }
-  
-  /* Scrollbar styling - Olive theme */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  ::-webkit-scrollbar-track {
-    background: var(--bg-olive-dark);
-  }
-  ::-webkit-scrollbar-thumb {
-    background: var(--ink-cream-soft);
-    border-radius: 4px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--ink-cream);
-  }
+
+  /* Scrollbar — thème bleu */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #0F172A; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #2563EB; }
 }
 
 @layer components {
-  /* Container */
   .container {
     width: 100%;
     margin-left: auto;
@@ -375,169 +363,241 @@
     padding-right: 1rem;
   }
 
-  .flex {
-    min-height: 0;
-    min-width: 0;
-  }
+  .flex { min-height: 0; min-width: 0; }
 
   @media (min-width: 640px) {
-    .container {
-      padding-left: 1.5rem;
-      padding-right: 1.5rem;
-    }
+    .container { padding-left: 1.5rem; padding-right: 1.5rem; }
+  }
+  @media (min-width: 1024px) {
+    .container { padding-left: 2rem; padding-right: 2rem; max-width: 1280px; }
   }
 
-  @media (min-width: 1024px) {
-    .container {
-      padding-left: 2rem;
-      padding-right: 2rem;
-      max-width: 1280px;
-    }
-  }
-  
   /* ============================================
-     COMPOSANTS FTOUR BAB RAYAN
+     COMPOSANTS — ÉDITION 13
      ============================================ */
-  
-  /* Fond olive principal */
-  .bg-olive {
-    background-color: var(--bg-olive);
+
+  /* Surfaces */
+  .bg-midnight { background-color: var(--midnight); }
+  .bg-navy     { background-color: var(--navy); }
+  .bg-slate-dark { background-color: var(--slate-dark); }
+  .bg-electric { background-color: var(--electric-blue); }
+  .bg-electric-dark { background-color: var(--electric-blue-dark); }
+  .bg-electric-deep { background-color: var(--electric-blue-deep); }
+  .bg-off-white { background-color: var(--off-white); }
+
+  /* Textes */
+  .text-off-white { color: var(--off-white); }
+  .text-white-soft { color: var(--white-soft); }
+  .text-sky { color: var(--sky-blue); }
+  .text-electric { color: var(--electric-blue); }
+  .text-amber { color: var(--amber-accent); }
+
+  /* Legacy color aliases */
+  .bg-olive      { background-color: var(--electric-blue-deep); }
+  .bg-olive-dark { background-color: var(--midnight); }
+  .bg-olive-soft { background-color: var(--electric-blue); }
+  .text-cream    { color: var(--off-white); }
+  .text-cream-soft { color: var(--white-soft); }
+  .text-sand     { color: var(--sky-blue); }
+  .bg-sand       { background-color: var(--sky-blue); }
+  .border-cream  { border-color: var(--off-white); }
+  .border-cream-soft { border-color: rgba(248, 250, 252, 0.25); }
+
+  /* Boutons — Édition 13 */
+  .btn-e13 {
+    @apply px-6 py-3 rounded-lg font-semibold transition-all duration-200;
+    background: var(--electric-blue);
+    color: #FFFFFF;
+    border: 2px solid var(--electric-blue);
   }
-  
-  .bg-olive-dark {
-    background-color: var(--bg-olive-dark);
+  .btn-e13:hover {
+    background: var(--electric-blue-dark);
+    border-color: var(--electric-blue-dark);
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.4);
   }
-  
-  .bg-olive-soft {
-    background-color: var(--bg-olive-soft);
+
+  .btn-e13-outline {
+    @apply px-6 py-3 rounded-lg font-semibold transition-all duration-200;
+    background: transparent;
+    color: #F8FAFC;
+    border: 2px solid rgba(248, 250, 252, 0.4);
   }
-  
-  /* Texte crème */
-  .text-cream {
-    color: var(--ink-cream);
+  .btn-e13-outline:hover {
+    background: rgba(248, 250, 252, 0.08);
+    border-color: rgba(248, 250, 252, 0.8);
   }
-  
-  .text-cream-soft {
-    color: var(--ink-cream-soft);
-  }
-  
-  /* Accent sable */
-  .text-sand {
-    color: var(--accent-sand);
-  }
-  
-  .bg-sand {
-    background-color: var(--accent-sand);
-  }
-  
-  /* Bordures crème */
-  .border-cream {
-    border-color: var(--ink-cream);
-  }
-  
-  .border-cream-soft {
-    border-color: rgba(242, 233, 211, 0.3);
-  }
-  
-  /* Boutons style Ftour */
+
+  /* Legacy button aliases */
   .btn-ftour {
-    @apply px-6 py-3 rounded-md font-medium transition-all duration-200;
-    background-color: transparent;
-    color: var(--ink-cream);
-    border: 2px solid var(--ink-cream);
+    @apply px-6 py-3 rounded-lg font-semibold transition-all duration-200;
+    background: transparent;
+    color: #F8FAFC;
+    border: 2px solid rgba(248, 250, 252, 0.4);
   }
-  
   .btn-ftour:hover {
-    background-color: var(--ink-cream);
-    color: var(--bg-olive-dark);
+    background: rgba(248, 250, 252, 0.08);
+    border-color: rgba(248, 250, 252, 0.8);
   }
-  
   .btn-ftour-filled {
-    @apply px-6 py-3 rounded-md font-medium transition-all duration-200;
-    background-color: var(--ink-cream);
-    color: var(--bg-olive-dark);
-    border: 2px solid var(--ink-cream);
+    @apply px-6 py-3 rounded-lg font-semibold transition-all duration-200;
+    background: var(--electric-blue);
+    color: #FFFFFF;
+    border: 2px solid var(--electric-blue);
   }
-  
   .btn-ftour-filled:hover {
-    background-color: var(--ink-cream-soft);
+    background: var(--electric-blue-dark);
+    border-color: var(--electric-blue-dark);
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.4);
   }
-  
-  /* Cartes style Ftour */
+
+  /* Cartes — Édition 13 */
+  .card-e13 {
+    background-color: var(--navy);
+    border: 1px solid rgba(248, 250, 252, 0.08);
+    border-radius: 0.75rem;
+    transition: all 0.25s ease;
+  }
+  .card-e13:hover {
+    border-color: rgba(37, 99, 235, 0.4);
+    box-shadow: 0 8px 32px rgba(37, 99, 235, 0.12);
+  }
+
+  /* Legacy */
   .card-ftour {
-    background-color: var(--bg-olive-dark);
-    border: 1px solid rgba(242, 233, 211, 0.15);
-    border-radius: 0.5rem;
+    background-color: var(--navy);
+    border: 1px solid rgba(248, 250, 252, 0.08);
+    border-radius: 0.75rem;
+    transition: all 0.25s ease;
   }
-  
-  /* Séparateurs crème */
+  .card-ftour:hover {
+    border-color: rgba(37, 99, 235, 0.4);
+    box-shadow: 0 8px 32px rgba(37, 99, 235, 0.12);
+  }
+
+  /* Glassmorphism subtil */
+  .glass {
+    background: rgba(30, 41, 59, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(248, 250, 252, 0.08);
+  }
+
+  /* Séparateurs */
+  .separator-blue {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.5), transparent);
+  }
   .separator-cream {
     height: 1px;
-    background: linear-gradient(90deg, transparent, var(--ink-cream-soft), transparent);
+    background: linear-gradient(90deg, transparent, rgba(248, 250, 252, 0.15), transparent);
   }
-  
-  /* Gradient backgrounds */
-  .gradient-olive {
-    background: linear-gradient(180deg, var(--bg-olive) 0%, var(--bg-olive-dark) 100%);
+
+  /* Gradients de fond */
+  .gradient-midnight {
+    background: linear-gradient(180deg, var(--midnight) 0%, var(--navy) 100%);
   }
-  
   .gradient-hero {
-    background: linear-gradient(180deg, var(--bg-olive-dark) 0%, var(--bg-olive) 50%, var(--bg-olive-soft) 100%);
+    background: linear-gradient(135deg, var(--midnight) 0%, var(--electric-blue-deep) 50%, var(--navy) 100%);
   }
-  
+  .gradient-electric {
+    background: linear-gradient(135deg, var(--electric-blue-deep) 0%, var(--electric-blue) 100%);
+  }
+  .gradient-hero-light {
+    background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 50%, #EFF6FF 100%);
+  }
+
   /* Text gradients */
-  .text-gradient-cream {
-    background: linear-gradient(135deg, var(--ink-cream) 0%, var(--accent-sand) 100%);
+  .text-gradient-blue {
+    background: linear-gradient(135deg, #60A5FA 0%, #38BDF8 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-  
+  .text-gradient-cream {
+    background: linear-gradient(135deg, var(--off-white) 0%, var(--sky-blue) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
   /* Card hover effects */
   .card-hover {
     @apply transition-all duration-300;
   }
   .card-hover:hover {
-    @apply shadow-lg -translate-y-1;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 16px 48px rgba(37, 99, 235, 0.2);
   }
-  
-  /* Pattern overlay - Motif subtil */
+
+  /* Accent line */
+  .accent-line {
+    width: 48px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--electric-blue), var(--sky-blue));
+    border-radius: 2px;
+  }
+
+  /* Badge électrique */
+  .badge-electric {
+    @apply inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold;
+    background: rgba(37, 99, 235, 0.15);
+    border: 1px solid rgba(37, 99, 235, 0.3);
+    color: #60A5FA;
+    backdrop-filter: blur(4px);
+  }
+
+  /* Orbe décoratif */
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    opacity: 0.15;
+  }
+
+  /* Pattern overlay */
   .pattern-overlay {
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23F2E9D3' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%232563EB' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
   }
-  
-  /* Style pour les icônes en trait */
-  .icon-stroke {
-    stroke: var(--ink-cream);
-    stroke-width: 1.5;
-    fill: none;
-  }
+
+  /* Icônes */
+  .icon-stroke { stroke: var(--off-white); stroke-width: 1.5; fill: none; }
 }
 
 @layer utilities {
-  /* Garantit une lisibilité élevée du contenu riche du blog */
+  /* Blog lisibilité */
   .blog-content-readable,
-  .blog-content-readable * {
-    color: #111827 !important;
-  }
+  .blog-content-readable * { color: #111827 !important; }
 
-  /* Animation utilities */
+  /* Animations */
   .animate-float {
     animation: float 6s ease-in-out infinite;
   }
-  
   @keyframes float {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-10px); }
   }
-  
+
   .animate-pulse-slow {
     animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
-  
-  /* Hover subtil pour les liens */
-  .hover-cream:hover {
-    color: var(--accent-sand);
+
+  .animate-glow {
+    animation: glow 3s ease-in-out infinite;
   }
+  @keyframes glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(37, 99, 235, 0.3); }
+    50%       { box-shadow: 0 0 40px rgba(37, 99, 235, 0.6); }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out both;
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .hover-sky:hover { color: var(--sky-blue); }
+  .hover-electric:hover { color: var(--electric-blue); }
 }

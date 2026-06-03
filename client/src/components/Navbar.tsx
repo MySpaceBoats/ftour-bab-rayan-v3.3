@@ -26,6 +26,7 @@ import {
   ShoppingCart,
   UserCircle2,
   Star,
+  X,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -53,7 +54,6 @@ export default function Navbar() {
       "admin_messages",
     ].includes(user.role);
 
-  // Fonction pour générer les URLs localisées
   const localizedHref = (path: string) => {
     if (path === "/") return `/${lang}`;
     return `/${lang}${path}`;
@@ -61,23 +61,17 @@ export default function Navbar() {
 
   const trackNavCtaClick = (label: string) => {
     if (typeof window === "undefined") return;
-    const gtag = (window as Window & { gtag?: (...args: unknown[]) => void })
-      .gtag;
+    const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;
     if (typeof gtag === "function") {
       gtag("event", "nav_cta_click", { label });
     }
   };
 
-  // Nouveau menu principal selon le cahier des charges
   const mainLinks = [
     { href: localizedHref("/"), label: t.nav.home, icon: Home },
     { href: localizedHref("/evenement"), label: t.nav.event, icon: Info },
     { href: localizedHref("/benevole"), label: t.nav.volunteer, icon: Users },
-    {
-      href: localizedHref("/commerce-solidaire"),
-      label: t.nav.commerceSolidaire,
-      icon: ShoppingBag,
-    },
+    { href: localizedHref("/commerce-solidaire"), label: t.nav.commerceSolidaire, icon: ShoppingBag },
     { href: localizedHref("/dons"), label: "Donation", icon: Heart },
     { href: localizedHref("/equipe-ftour"), label: t.nav.team, icon: Star },
   ];
@@ -89,10 +83,12 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full">
-      {/* Top Menu (niveau 0) - Menu utilitaire */}
-      <div className="bg-[#3A3820] border-b border-[#F2E9D3]/10">
-        <div className="container flex h-9 items-center justify-end gap-4 text-sm">
-          {/* Cart Icon - Boutique solidaire */}
+      {/* Barre utilitaire supérieure */}
+      <div
+        style={{ background: "#070E1A", borderBottom: "1px solid rgba(248,250,252,0.06)" }}
+      >
+        <div className="container flex h-9 items-center justify-end gap-5 text-sm">
+          {/* Cart */}
           <button
             onClick={() => {
               if (cartCount > 0) {
@@ -102,39 +98,36 @@ export default function Navbar() {
                 setLocation(localizedHref("/boutique"));
               }
             }}
-            className="relative flex items-center gap-1 text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors"
+            className="relative flex items-center gap-1.5 text-slate-400 hover:text-sky-400 transition-colors duration-150"
             title={t.nav.boutique}
           >
             <ShoppingCart className="h-4 w-4" />
             {cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-[#F2E9D3] text-[#4A4829] text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+              <span className="absolute -top-2 -right-2.5 bg-blue-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                 {cartCount}
               </span>
             )}
           </button>
 
-          {/* Espace bénévole - visible uniquement pour les bénévoles connectés */}
+          {/* Espace bénévole */}
           {isAuthenticated && !isAdmin && (
             <Link
               href={localizedHref("/profil-benevole")}
-              className="flex items-center gap-1 text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors"
-              title="Espace bénévole"
+              className="flex items-center gap-1.5 text-slate-400 hover:text-sky-400 transition-colors"
             >
               <UserCircle2 className="h-4 w-4" />
-              <span className="text-xs font-medium hidden sm:inline">
-                Espace bénévole
-              </span>
+              <span className="text-xs font-medium hidden sm:inline">Espace bénévole</span>
             </Link>
           )}
 
-          {/* Admin Link - visible uniquement pour les admins connectés */}
+          {/* Admin */}
           {isAuthenticated && isAdmin && (
             <Link
               href="/admin"
-              className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors font-semibold"
+              className="flex items-center gap-1 text-slate-400 hover:text-sky-400 transition-colors font-medium"
             >
-              <LayoutDashboard className="h-3 w-3 inline mr-1" />
-              {t.nav.administration}
+              <LayoutDashboard className="h-3.5 w-3.5" />
+              <span className="text-xs hidden sm:inline">{t.nav.administration}</span>
             </Link>
           )}
 
@@ -142,23 +135,22 @@ export default function Navbar() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="flex items-center text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors"
+                className="flex items-center text-slate-400 hover:text-sky-400 transition-colors"
                 aria-label={t.topMenu.language}
-                title={t.topMenu.language}
               >
                 <Globe className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align={dir === "rtl" ? "start" : "end"}
-              className="bg-[#4A4829] border-[#F2E9D3]/20"
+              style={{ background: "#1E293B", border: "1px solid rgba(248,250,252,0.08)" }}
             >
               {languages.map(language => (
                 <DropdownMenuItem
                   key={language.code}
                   onClick={() => setLang(language.code)}
-                  className={`text-[#F2E9D3] hover:bg-[#5E5B34] cursor-pointer ${
-                    lang === language.code ? "bg-[#5E5B34]" : ""
+                  className={`text-slate-200 hover:bg-blue-600/20 cursor-pointer ${
+                    lang === language.code ? "text-sky-400 bg-blue-600/10" : ""
                   }`}
                 >
                   {language.nativeName}
@@ -167,10 +159,10 @@ export default function Navbar() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Admin Link - icône cadenas avec tooltip "Privé" */}
+          {/* Connexion privée */}
           <Link
             href={localizedHref("/connexion")}
-            className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors"
+            className="text-slate-400 hover:text-sky-400 transition-colors"
             title="Privé"
           >
             <Lock className="h-4 w-4" />
@@ -178,115 +170,179 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Menu Principal (niveau 1) */}
-      <div className="bg-[#4A4829] border-b border-[#F2E9D3]/20">
+      {/* Barre de navigation principale */}
+      <div
+        style={{
+          background: "rgba(15, 23, 42, 0.96)",
+          borderBottom: "1px solid rgba(248,250,252,0.08)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+        }}
+      >
         <div className="container flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link href={localizedHref("/")} className="flex items-center gap-3">
-            <div className="flex flex-col">
+          <Link href={localizedHref("/")} className="flex items-center gap-3 group">
+            {/* Icône géométrique */}
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-lg flex-shrink-0 transition-all duration-200 group-hover:scale-105"
+              style={{
+                background: "linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)",
+                boxShadow: "0 0 16px rgba(37,99,235,0.3)",
+              }}
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
+                <path
+                  d="M12 3C8.5 3 6 5.5 6 8.5 6 14 12 20 12 20s6-6 6-11.5C18 5.5 15.5 3 12 3z"
+                  fill="white"
+                  opacity="0.9"
+                />
+                <path
+                  d="M9 9h6M10 12h4M11 15h2"
+                  stroke="rgba(15,23,42,0.7)"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+            <div className="flex flex-col leading-tight">
               <span
-                className="text-lg font-bold leading-none text-[#F2E9D3]"
-                style={{ fontFamily: "Caveat, cursive" }}
+                className="text-base font-bold tracking-tight text-white"
+                style={{ fontFamily: "Plus Jakarta Sans, Inter, sans-serif", fontWeight: 700 }}
               >
-                {t.home.heroTitle}
+                Ftour Bab Rayan
               </span>
               <span
-                className="text-xs text-[#CDBB8A]"
-                style={{
-                  fontFamily: "Cormorant Garamond, serif",
-                  fontStyle: "italic",
-                }}
+                className="text-[10px] text-sky-400 tracking-widest uppercase"
+                style={{ fontFamily: "Cormorant Garamond, serif", fontStyle: "italic", letterSpacing: "0.12em" }}
               >
-                {t.home.heroSubtitle}
+                13e Édition
               </span>
             </div>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-1">
-            {mainLinks.map(link => (
-              <Link key={link.href} href={link.href}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={`text-sm text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#5E5B34] ${
-                    location === link.href ? "bg-[#5E5B34] text-[#CDBB8A]" : ""
-                  }`}
-                >
-                  {link.label}
-                </Button>
-              </Link>
-            ))}
+          {/* Navigation desktop */}
+          <nav className="hidden lg:flex items-center gap-0.5">
+            {mainLinks.map(link => {
+              const isActive = location === link.href;
+              return (
+                <Link key={link.href} href={link.href}>
+                  <button
+                    className={`relative px-3.5 py-2 text-sm font-medium rounded-md transition-all duration-150 ${
+                      isActive
+                        ? "text-white bg-blue-600/20"
+                        : "text-slate-300 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    {isActive && (
+                      <span
+                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full"
+                        style={{ background: "#38BDF8" }}
+                      />
+                    )}
+                    {link.label}
+                  </button>
+                </Link>
+              );
+            })}
           </nav>
 
-          {/* Desktop CTA Buttons */}
+          {/* CTA desktop */}
           <div className="hidden lg:flex items-center gap-2">
             {isAuthenticated && (
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
                 onClick={handleLogout}
-                className="text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#5E5B34]"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm text-slate-400 hover:text-white transition-colors rounded-md hover:bg-white/5"
               >
-                <LogOut className="h-4 w-4 mr-2" />
+                <LogOut className="h-4 w-4" />
                 {t.auth.logout}
-              </Button>
+              </button>
             )}
-            {/* CTA Secondaire : Faire un don */}
             <Link href={localizedHref("/dons")}>
-              <Button
-                size="sm"
-                variant="outline"
+              <button
                 onClick={() => trackNavCtaClick("faire_un_don")}
-                className="border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829] font-semibold"
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg border border-white/20 hover:bg-white/8 hover:border-white/40 transition-all duration-150"
               >
-                <Heart className="h-4 w-4 mr-2" />
+                <Heart className="h-4 w-4 text-rose-400" />
                 {t.cta.donate}
-              </Button>
+              </button>
             </Link>
             <Link href={localizedHref("/devenir-partenaire")}>
-              <Button
-                size="sm"
-                variant="outline"
+              <button
                 onClick={() => trackNavCtaClick("devenir_partenaire")}
-                className="border-[#CDBB8A] text-[#CDBB8A] bg-transparent hover:bg-[#CDBB8A] hover:text-[#4A4829] font-semibold"
-                aria-label={t.cta.partner}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg transition-all duration-150"
+                style={{
+                  background: "linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%)",
+                  boxShadow: "0 2px 12px rgba(37,99,235,0.35)",
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(37,99,235,0.55)";
+                  (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 12px rgba(37,99,235,0.35)";
+                  (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+                }}
               >
-                <Handshake className="h-4 w-4 mr-2" />
+                <Handshake className="h-4 w-4" />
                 {t.cta.partner}
-              </Button>
+              </button>
             </Link>
           </div>
 
-          {/* Mobile Menu */}
+          {/* Mobile burger */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild className="lg:hidden">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-[#F2E9D3] hover:bg-[#5E5B34]"
+              <button
+                className="flex items-center justify-center w-10 h-10 rounded-lg text-slate-300 hover:text-white hover:bg-white/8 transition-all"
               >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Menu</span>
-              </Button>
+              </button>
             </SheetTrigger>
             <SheetContent
               side={dir === "rtl" ? "left" : "right"}
-              className="w-[300px] sm:w-[350px] bg-[#4A4829] border-l border-[#F2E9D3]/20"
+              className="w-[300px] sm:w-[340px] p-0"
+              style={{ background: "#0F172A", border: "none" }}
             >
-              <div className="flex flex-col gap-6 mt-6">
-                {/* Language Selector Mobile */}
-                <div className="flex items-center gap-2 pb-4 border-b border-[#F2E9D3]/20">
-                  <Globe className="h-4 w-4 text-[#CDBB8A]" />
-                  <div className="flex gap-2">
+              {/* Header mobile menu */}
+              <div
+                className="flex items-center justify-between px-6 py-5"
+                style={{ borderBottom: "1px solid rgba(248,250,252,0.08)" }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="flex h-8 w-8 items-center justify-center rounded-lg"
+                    style={{ background: "linear-gradient(135deg, #1E3A8A, #2563EB)" }}
+                  >
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
+                      <path d="M12 3C8.5 3 6 5.5 6 8.5 6 14 12 20 12 20s6-6 6-11.5C18 5.5 15.5 3 12 3z" fill="white" opacity="0.9" />
+                    </svg>
+                  </div>
+                  <span className="text-sm font-bold text-white" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+                    Ftour Bab Rayan
+                  </span>
+                </div>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="text-slate-400 hover:text-white transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-5 px-4 py-6">
+                {/* Sélecteur de langue mobile */}
+                <div className="flex items-center gap-3">
+                  <Globe className="h-4 w-4 text-slate-500" />
+                  <div className="flex gap-1.5">
                     {languages.map(language => (
                       <button
                         key={language.code}
                         onClick={() => setLang(language.code)}
-                        className={`px-2 py-1 rounded text-sm ${
+                        className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
                           lang === language.code
-                            ? "bg-[#5E5B34] text-[#F2E9D3]"
-                            : "text-[#CDBB8A] hover:text-[#F2E9D3]"
+                            ? "bg-blue-600 text-white"
+                            : "text-slate-400 hover:text-white hover:bg-white/8"
                         }`}
                       >
                         {language.nativeName}
@@ -295,96 +351,72 @@ export default function Navbar() {
                   </div>
                 </div>
 
-                {/* Main Links */}
-                <nav className="flex flex-col gap-1">
+                {/* Liens principaux */}
+                <nav className="flex flex-col gap-0.5">
                   {mainLinks.map(link => {
                     const Icon = link.icon;
+                    const isActive = location === link.href;
                     return (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        onClick={() => setIsOpen(false)}
-                      >
-                        <Button
-                          variant="ghost"
-                          className={`w-full justify-start text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#5E5B34] ${
-                            location === link.href
-                              ? "bg-[#5E5B34] text-[#CDBB8A]"
-                              : ""
+                      <Link key={link.href} href={link.href} onClick={() => setIsOpen(false)}>
+                        <div
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                            isActive
+                              ? "bg-blue-600/20 text-white border border-blue-600/20"
+                              : "text-slate-300 hover:text-white hover:bg-white/5"
                           }`}
                         >
-                          <Icon className="h-4 w-4 mr-3" />
+                          <Icon className={`h-4 w-4 ${isActive ? "text-sky-400" : "text-slate-500"}`} />
                           {link.label}
-                        </Button>
+                        </div>
                       </Link>
                     );
                   })}
                 </nav>
 
-                <div className="border-t border-[#F2E9D3]/20" />
+                <div style={{ height: 1, background: "rgba(248,250,252,0.08)" }} />
 
-                {/* Auth & CTA Actions */}
-                <div className="flex flex-col gap-2">
-                  {isAuthenticated ? (
+                {/* Actions auth & CTA */}
+                <div className="flex flex-col gap-2.5">
+                  {isAuthenticated && (
                     <>
                       {isAdmin && (
                         <Link href="/admin" onClick={() => setIsOpen(false)}>
-                          <Button
-                            variant="outline"
-                            className="w-full border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
-                          >
-                            <LayoutDashboard className="h-4 w-4 mr-2" />
+                          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-all">
+                            <LayoutDashboard className="h-4 w-4 text-slate-500" />
                             {t.nav.administration}
-                          </Button>
+                          </div>
                         </Link>
                       )}
-                      <Button
-                        variant="ghost"
-                        className="w-full text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#5E5B34]"
+                      <button
                         onClick={handleLogout}
+                        className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all w-full text-left"
                       >
-                        <LogOut className="h-4 w-4 mr-2" />
+                        <LogOut className="h-4 w-4" />
                         {t.auth.logout}
-                      </Button>
+                      </button>
                     </>
-                  ) : null}
+                  )}
 
-                  {/* CTA Buttons Mobile */}
-                  <Link
-                    href={localizedHref("/benevole")}
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <Button className="w-full bg-red-600 text-white hover:bg-red-700 border-2 border-red-600 font-semibold">
-                      <Users className="h-4 w-4 mr-2" />
+                  <Link href={localizedHref("/benevole")} onClick={() => setIsOpen(false)}>
+                    <div
+                      className="flex items-center justify-center gap-2 w-full py-3 rounded-lg text-sm font-semibold text-white transition-all"
+                      style={{ background: "linear-gradient(135deg, #1D4ED8, #2563EB)", boxShadow: "0 2px 12px rgba(37,99,235,0.4)" }}
+                    >
+                      <Users className="h-4 w-4" />
                       {t.cta.volunteer}
-                    </Button>
+                    </div>
                   </Link>
-                  <Link
-                    href={localizedHref("/dons")}
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <Button
-                      variant="outline"
-                      onClick={() => trackNavCtaClick("faire_un_don")}
-                      className="w-full border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829] font-semibold"
-                    >
-                      <Heart className="h-4 w-4 mr-2" />
+                  <Link href={localizedHref("/dons")} onClick={() => setIsOpen(false)}>
+                    <div className="flex items-center justify-center gap-2 w-full py-3 rounded-lg text-sm font-semibold text-white border border-white/15 hover:bg-white/5 transition-all">
+                      <Heart className="h-4 w-4 text-rose-400" />
                       {t.cta.donate}
-                    </Button>
+                    </div>
                   </Link>
-                  <Link
-                    href={localizedHref("/devenir-partenaire")}
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <Button
-                      variant="outline"
-                      onClick={() => trackNavCtaClick("devenir_partenaire")}
-                      className="w-full border-[#CDBB8A] text-[#CDBB8A] bg-transparent hover:bg-[#CDBB8A] hover:text-[#4A4829] font-semibold"
-                      aria-label={t.cta.partner}
-                    >
-                      <Handshake className="h-4 w-4 mr-2" />
+                  <Link href={localizedHref("/devenir-partenaire")} onClick={() => setIsOpen(false)}>
+                    <div className="flex items-center justify-center gap-2 w-full py-3 rounded-lg text-sm font-semibold text-sky-400 border border-sky-400/25 hover:bg-sky-400/5 transition-all">
+                      <Handshake className="h-4 w-4" />
                       {t.cta.partner}
-                    </Button>
+                    </div>
                   </Link>
                 </div>
               </div>
