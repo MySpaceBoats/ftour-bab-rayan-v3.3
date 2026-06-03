@@ -97,7 +97,7 @@ export default function Home() {
               {/* Titre principal */}
               <h1
                 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-white leading-[0.95] tracking-tight"
-                style={{ fontFamily: "Syne, Inter, sans-serif", fontWeight: 800 }}
+                style={{ fontFamily: "Plus Jakarta Sans, Inter, sans-serif", fontWeight: 800 }}
               >
                 {t.home.heroTitle}
               </h1>
@@ -220,7 +220,7 @@ export default function Home() {
                   </div>
                   <div
                     className="text-3xl md:text-4xl font-black text-white mb-1 leading-none"
-                    style={{ fontFamily: "Syne, Inter, sans-serif", fontWeight: 800 }}
+                    style={{ fontFamily: "Plus Jakarta Sans, Inter, sans-serif", fontWeight: 800 }}
                   >
                     {n}
                   </div>
@@ -248,7 +248,7 @@ export default function Home() {
 
                 <h2
                   className="text-4xl md:text-5xl text-white leading-tight"
-                  style={{ fontFamily: "Syne, Inter, sans-serif", fontWeight: 700 }}
+                  style={{ fontFamily: "Plus Jakarta Sans, Inter, sans-serif", fontWeight: 700 }}
                 >
                   {t.home.ftourTitle}
                 </h2>
@@ -373,7 +373,7 @@ export default function Home() {
               </div>
               <h2
                 className="text-4xl md:text-5xl text-white"
-                style={{ fontFamily: "Syne, Inter, sans-serif", fontWeight: 700 }}
+                style={{ fontFamily: "Plus Jakarta Sans, Inter, sans-serif", fontWeight: 700 }}
               >
                 {t.home.missionsSubtitle}
               </h2>
@@ -437,7 +437,7 @@ export default function Home() {
                     </div>
                     <h3
                       className="text-xl font-bold text-white"
-                      style={{ fontFamily: "Syne, Inter, sans-serif" }}
+                      style={{ fontFamily: "Plus Jakarta Sans, Inter, sans-serif" }}
                     >
                       {title}
                     </h3>
@@ -469,7 +469,7 @@ export default function Home() {
             <div className="text-center mb-16 space-y-4">
               <h2
                 className="text-4xl md:text-5xl text-white"
-                style={{ fontFamily: "Syne, Inter, sans-serif", fontWeight: 700 }}
+                style={{ fontFamily: "Plus Jakarta Sans, Inter, sans-serif", fontWeight: 700 }}
               >
                 {t.home.howToParticipate}
               </h2>
@@ -506,7 +506,7 @@ export default function Home() {
                     <Users className="h-7 w-7 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white mb-2" style={{ fontFamily: "Syne, sans-serif" }}>
+                    <h3 className="text-xl font-bold text-white mb-2" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                       {t.home.volunteerCardTitle}
                     </h3>
                     <p className="text-sm text-blue-100/60 leading-relaxed">{t.home.volunteerCardDesc}</p>
@@ -552,7 +552,7 @@ export default function Home() {
                     <ShoppingBag className="h-7 w-7 text-sky-400" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white mb-2" style={{ fontFamily: "Syne, sans-serif" }}>
+                    <h3 className="text-xl font-bold text-white mb-2" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                       {t.home.boutiqueTitle}
                     </h3>
                     <p className="text-sm text-blue-100/60 leading-relaxed">{t.home.boutiqueDesc}</p>
@@ -598,7 +598,7 @@ export default function Home() {
                     <Heart className="h-7 w-7 text-rose-400" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white mb-2" style={{ fontFamily: "Syne, sans-serif" }}>
+                    <h3 className="text-xl font-bold text-white mb-2" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                       {t.home.donationCardTitle}
                     </h3>
                     <p className="text-sm text-blue-100/60 leading-relaxed">{t.home.donationCardDesc}</p>
@@ -637,7 +637,7 @@ export default function Home() {
                 </div>
                 <h2
                   className="text-4xl md:text-5xl text-white"
-                  style={{ fontFamily: "Syne, Inter, sans-serif", fontWeight: 700 }}
+                  style={{ fontFamily: "Plus Jakarta Sans, Inter, sans-serif", fontWeight: 700 }}
                 >
                   {t.home.testimonialsSubtitle}
                 </h2>
@@ -773,7 +773,7 @@ export default function Home() {
 
             <h2
               className="text-4xl md:text-6xl font-black text-white max-w-3xl mx-auto leading-tight"
-              style={{ fontFamily: "Syne, Inter, sans-serif" }}
+              style={{ fontFamily: "Plus Jakarta Sans, Inter, sans-serif" }}
             >
               Prêt à rejoindre l'aventure ?
             </h2>

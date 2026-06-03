@@ -53,7 +53,7 @@ export default function BoutiqueSolidaire() {
             </div>
             <h1
               className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#F8FAFC] mb-6"
-              style={{ fontFamily: 'Syne, Inter, sans-serif' }}
+              style={{ fontFamily: 'Plus Jakarta Sans, Inter, sans-serif' }}
             >
               {t.boutique.title}
             </h1>

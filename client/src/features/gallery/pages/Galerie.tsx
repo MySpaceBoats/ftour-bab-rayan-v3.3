@@ -151,7 +151,7 @@ export default function Galerie() {
           </div>
           <h1
             className="text-4xl md:text-5xl font-bold text-white"
-            style={{ fontFamily: "Syne, Inter, sans-serif" }}
+            style={{ fontFamily: "Plus Jakarta Sans, Inter, sans-serif" }}
           >
             Galerie
           </h1>

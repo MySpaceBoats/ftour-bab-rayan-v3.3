@@ -33,7 +33,7 @@ export default function Footer() {
               <div className="flex flex-col leading-tight">
                 <span
                   className="text-base font-bold text-white"
-                  style={{ fontFamily: "Syne, Inter, sans-serif" }}
+                  style={{ fontFamily: "Plus Jakarta Sans, Inter, sans-serif" }}
                 >
                   Ftour Bab Rayan
                 </span>

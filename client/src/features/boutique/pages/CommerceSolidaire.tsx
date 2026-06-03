@@ -62,7 +62,7 @@ export default function CommerceSolidaire() {
             </div>
             <h1
               className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#F8FAFC] mb-6"
-              style={{ fontFamily: 'Syne, Inter, sans-serif' }}
+              style={{ fontFamily: 'Plus Jakarta Sans, Inter, sans-serif' }}
             >
               Commerce Solidaire
             </h1>
@@ -77,7 +77,7 @@ export default function CommerceSolidaire() {
           <div className="container">
             <h2
               className="text-2xl md:text-3xl font-bold text-[#F8FAFC] mb-10 text-center"
-              style={{ fontFamily: 'Syne, Inter, sans-serif' }}
+              style={{ fontFamily: 'Plus Jakarta Sans, Inter, sans-serif' }}
             >
               {t.boutique.title}
             </h2>
@@ -128,7 +128,7 @@ export default function CommerceSolidaire() {
               <UtensilsCrossed className="h-6 w-6 text-[#38BDF8]" />
               <h2
                 className="text-2xl md:text-3xl font-bold text-[#F8FAFC]"
-                style={{ fontFamily: 'Syne, Inter, sans-serif' }}
+                style={{ fontFamily: 'Plus Jakarta Sans, Inter, sans-serif' }}
               >
                 {t.nav.restaurant}
               </h2>

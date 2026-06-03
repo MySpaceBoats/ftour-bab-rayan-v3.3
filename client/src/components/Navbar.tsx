@@ -207,7 +207,7 @@ export default function Navbar() {
             <div className="flex flex-col leading-tight">
               <span
                 className="text-base font-bold tracking-tight text-white"
-                style={{ fontFamily: "Syne, Inter, sans-serif", fontWeight: 700 }}
+                style={{ fontFamily: "Plus Jakarta Sans, Inter, sans-serif", fontWeight: 700 }}
               >
                 Ftour Bab Rayan
               </span>
@@ -318,7 +318,7 @@ export default function Navbar() {
                       <path d="M12 3C8.5 3 6 5.5 6 8.5 6 14 12 20 12 20s6-6 6-11.5C18 5.5 15.5 3 12 3z" fill="white" opacity="0.9" />
                     </svg>
                   </div>
-                  <span className="text-sm font-bold text-white" style={{ fontFamily: "Syne, sans-serif" }}>
+                  <span className="text-sm font-bold text-white" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                     Ftour Bab Rayan
                   </span>
                 </div>

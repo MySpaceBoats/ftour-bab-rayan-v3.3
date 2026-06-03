@@ -73,7 +73,7 @@ export default function Contact() {
         <section className="py-16 bg-[#1E293B]">
           <div className="container">
             <div className="max-w-3xl mx-auto text-center space-y-4">
-              <h1 className="text-4xl md:text-5xl font-bold text-[#F8FAFC]" style={{ fontFamily: 'Syne, Inter, sans-serif' }}>{t.contact.title}</h1>
+              <h1 className="text-4xl md:text-5xl font-bold text-[#F8FAFC]" style={{ fontFamily: 'Plus Jakarta Sans, Inter, sans-serif' }}>{t.contact.title}</h1>
               <p className="text-lg text-[#38BDF8]" style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic' }}>
                 {t.contact.subtitle}
               </p>

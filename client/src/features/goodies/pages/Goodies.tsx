@@ -208,7 +208,7 @@ export default function Goodies() {
               </div>
               <h1
                 className="text-4xl md:text-5xl font-bold text-[#F8FAFC]"
-                style={{ fontFamily: 'Syne, Inter, sans-serif' }}
+                style={{ fontFamily: 'Plus Jakarta Sans, Inter, sans-serif' }}
               >
                 {t.goodies.title}
               </h1>
