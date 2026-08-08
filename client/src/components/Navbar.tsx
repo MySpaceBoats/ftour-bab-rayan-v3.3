@@ -26,6 +26,7 @@ import {
   ShoppingCart,
   UserCircle2,
   Star,
+  FlaskConical,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -80,6 +81,7 @@ export default function Navbar() {
     },
     { href: localizedHref("/dons"), label: "Donation", icon: Heart },
     { href: localizedHref("/equipe-ftour"), label: t.nav.team, icon: Star },
+    { href: localizedHref("/test-tt"), label: "test tt", icon: FlaskConical },
   ];
 
   const handleLogout = async () => {
