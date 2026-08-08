@@ -1,6 +1,7 @@
 # Requirements: Ftour Bab Rayan — Audit Milestone
 
 **Defined:** 2026-08-08
+**Roadmap:** Created 2026-08-08 (5 phases)
 **Core Value:** All existing modules (client, server API, worker edge, shared/infra) work reliably — green test suite, clean typecheck, working build, real bugs fixed.
 
 ## v1 Requirements
@@ -69,7 +70,7 @@ Deferred to future work (not part of this audit milestone unless requested).
 | QA-03 | Phase 1 | Pending |
 | QA-04 | Phase 1 | Pending |
 | GATE-01 | Phase 1 | Pending |
-| GATE-02 | Phase 1 | Pending |
+| GATE-02 | Phase 3 | Pending |
 | GATE-03 | Phase 2 | Pending |
 | BUG-01 | Phase 2 | Pending |
 | BUG-02 | Phase 2 | Pending |
