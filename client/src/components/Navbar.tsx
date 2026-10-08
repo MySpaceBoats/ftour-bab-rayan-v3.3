@@ -26,7 +26,6 @@ import {
   ShoppingCart,
   UserCircle2,
   Star,
-  FlaskConical,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -73,15 +72,12 @@ export default function Navbar() {
   const mainLinks = [
     { href: localizedHref("/"), label: t.nav.home, icon: Home },
     { href: localizedHref("/evenement"), label: t.nav.event, icon: Info },
-    { href: localizedHref("/benevole"), label: t.nav.volunteer, icon: Users },
     {
       href: localizedHref("/commerce-solidaire"),
       label: t.nav.commerceSolidaire,
       icon: ShoppingBag,
     },
-    { href: localizedHref("/dons"), label: "Donation", icon: Heart },
     { href: localizedHref("/equipe-ftour"), label: t.nav.team, icon: Star },
-    { href: localizedHref("/test-tt"), label: "test tt", icon: FlaskConical },
   ];
 
   const handleLogout = async () => {
@@ -234,6 +230,16 @@ export default function Navbar() {
                 {t.auth.logout}
               </Button>
             )}
+            <Link href={localizedHref("/benevole")}>
+              <Button
+                size="sm"
+                onClick={() => trackNavCtaClick("devenir_benevole")}
+                className="bg-red-600 text-white hover:bg-red-700 border-2 border-red-600 font-semibold"
+              >
+                <Users className="h-4 w-4 mr-2" />
+                {t.cta.volunteer}
+              </Button>
+            </Link>
             {/* CTA Secondaire : Faire un don */}
             <Link href={localizedHref("/dons")}>
               <Button
