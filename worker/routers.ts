@@ -7,6 +7,7 @@ import { z } from "zod";
 import superjson from "superjson";
 import type { WorkerContext, WorkerUser } from "./context";
 import { createSupabaseAdmin } from "./supabase";
+import * as galleryDb from "./gallery-d1";
 import { sendEmail, generateGalleryUploadValidationEmail } from "./email";
 import * as XLSX from "xlsx";
 import {
@@ -2066,7 +2067,7 @@ const scannerRouter = router({
 });
 
 // ============================================
-// GALLERY ROUTER
+// GALLERY ROUTER (Cloudflare D1 + R2)
 // ============================================
 
 function normalizeGalleryEventDate(eventDate?: string): string | null {
@@ -2089,76 +2090,36 @@ const gallerySchema = z.object({
   status: z.enum(["draft", "published", "rejected"]).default("draft"),
 });
 
-const GALLERY_ALLOWED_MIME_TYPES = [
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "image/webp",
-] as const;
+const GALLERY_ALLOWED_MIME_TYPES: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
 const GALLERY_MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024;
 const GALLERY_MAX_BATCH = 10;
 
-async function withGalleryDisplayUrls(supabase: any, photo: any) {
-  if (!photo) return photo;
+const galleryOrigin = (ctx: WorkerContext) => new URL(ctx.req.url).origin;
 
-  const originalPath =
-    typeof photo.storage_path === "string" ? photo.storage_path : null;
-  const thumbPath =
-    typeof photo.thumb_storage_path === "string"
-      ? photo.thumb_storage_path
-      : null;
-
-  let imageOriginalUrl = photo.image_original_url ?? null;
-  let imageThumbUrl = photo.image_thumb_url ?? null;
-
-  if (originalPath) {
-    const signed = await supabase.storage
-      .from("images")
-      .createSignedUrl(originalPath, 60 * 60 * 24);
-    if (!signed.error && signed.data?.signedUrl) {
-      imageOriginalUrl = signed.data.signedUrl;
-    }
-  }
-
-  if (thumbPath) {
-    const signed = await supabase.storage
-      .from("images")
-      .createSignedUrl(thumbPath, 60 * 60 * 24);
-    if (!signed.error && signed.data?.signedUrl) {
-      imageThumbUrl = signed.data.signedUrl;
-    }
-  }
-
-  return {
-    ...photo,
-    image_original_url: imageOriginalUrl,
-    image_thumb_url: imageThumbUrl ?? imageOriginalUrl,
-  };
-}
-
-async function withGalleryDisplayUrlsMany(supabase: any, photos: any[]) {
-  return Promise.all(
-    (photos ?? []).map(photo => withGalleryDisplayUrls(supabase, photo))
-  );
+function galleryMedia(ctx: WorkerContext) {
+  if (!ctx.env.GALLERY_MEDIA)
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "R2 binding GALLERY_MEDIA is not configured",
+    });
+  return ctx.env.GALLERY_MEDIA;
 }
 
 const galleryRouter = router({
   listAlbums: adminProcedure.query(async ({ ctx }) => {
-    const supabase = createSupabaseAdmin(ctx.env);
-    const { data, error } = await supabase
-      .from("gallery_albums")
-      .select("*")
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: false });
-    if (error)
-      throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-    return (data || []).map((a: any) => ({
+    const albums = await galleryDb.listAlbums(galleryDb.db(ctx.env));
+    return albums.map((a: any) => ({
       id: a.id,
       name: a.name,
       slug: a.slug,
-      description: a.description,
-      coverImageUrl: a.cover_image_url,
-      isActive: a.is_active,
+      coverPhotoId: a.cover_photo_id,
+      status: a.status,
+      isActive: a.status === "published",
       sortOrder: a.sort_order,
       createdAt: a.created_at,
       updatedAt: a.updated_at,
@@ -2180,48 +2141,35 @@ const galleryRouter = router({
         .optional()
     )
     .query(async ({ input, ctx }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
       const page = input?.page ?? 1;
       const pageSize = input?.pageSize ?? 12;
-      const start = (page - 1) * pageSize;
-      const end = start + pageSize - 1;
-
-      let query = supabase
-        .from("gallery_photos")
-        .select("*, gallery_albums(name, slug)", { count: "exact" });
-      if (input?.search) {
-        query = query.or(
-          `title.ilike.%${input.search}%,description.ilike.%${input.search}%`
-        );
-      }
-      if (input?.albumId) query = query.eq("album_id", input.albumId);
-      if (input?.tag) query = query.contains("tags", [input.tag]);
-      if (typeof input?.featured === "boolean")
-        query = query.eq("is_featured", input.featured);
-      if (input?.status) query = query.eq("status", input.status);
-
-      const { data, error, count } = await query
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: false })
-        .range(start, end);
-      if (error)
-        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-      const items = await withGalleryDisplayUrlsMany(supabase, data || []);
-      return { items, total: count || 0, page, pageSize };
+      const { items, total } = await galleryDb.listPhotos(
+        galleryDb.db(ctx.env),
+        {
+          page,
+          pageSize,
+          search: input?.search,
+          album: input?.albumId,
+          tag: input?.tag,
+          featured: input?.featured,
+          status: input?.status,
+          sort: "admin",
+        },
+        galleryOrigin(ctx)
+      );
+      return { items, total, page, pageSize };
     }),
 
   getPhoto: adminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
-      const { data, error } = await supabase
-        .from("gallery_photos")
-        .select("*")
-        .eq("id", input.id)
-        .single();
-      if (error)
-        throw new TRPCError({ code: "NOT_FOUND", message: error.message });
-      return withGalleryDisplayUrls(supabase, data);
+      const photo = await galleryDb.getPhoto(
+        galleryDb.db(ctx.env),
+        input.id,
+        galleryOrigin(ctx)
+      );
+      if (!photo) throw new TRPCError({ code: "NOT_FOUND", message: "Photo introuvable" });
+      return photo;
     }),
 
   uploadPhotos: protectedProcedure
@@ -2243,7 +2191,9 @@ const galleryRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
+      const d1 = galleryDb.db(ctx.env);
+      const bucket = galleryMedia(ctx);
+      const origin = galleryOrigin(ctx);
 
       const canManageGallery = Boolean(
         ctx.user &&
@@ -2260,34 +2210,15 @@ const galleryRouter = router({
           ].includes(ctx.user.role)
       );
 
-      const albumIds = Array.from(
-        new Set(input.photos.map(p => p.albumId).filter(Boolean))
-      ) as string[];
-      const albumNameById = new Map<string, string>();
-      if (albumIds.length > 0) {
-        const { data: albumRows } = await supabase
-          .from("gallery_albums")
-          .select("id,name")
-          .in("id", albumIds);
-        for (const row of albumRows ?? []) {
-          if (row?.id && row?.name) albumNameById.set(row.id, row.name);
-        }
-      }
-
-      const results = [];
-      // Non-admin volunteers must validate uploads via email
-      const batchValidationToken = canManageGallery
-        ? null
-        : crypto.randomUUID();
-
-      for (const photo of input.photos) {
-        if (!GALLERY_ALLOWED_MIME_TYPES.includes(photo.fileType as any)) {
+      // Validate everything before writing anything.
+      const decoded = input.photos.map(photo => {
+        const ext = GALLERY_ALLOWED_MIME_TYPES[photo.fileType];
+        if (!ext) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Format non supporté. PNG, JPEG, WebP uniquement.",
           });
         }
-
         const base64Data = photo.fileData.replace(
           /^data:image\/[a-zA-Z0-9.+-]+;base64,/,
           ""
@@ -2299,89 +2230,68 @@ const galleryRouter = router({
             message: "Fichier trop volumineux (max 8MB).",
           });
         }
+        return { photo, ext, buffer };
+      });
 
-        const ext = photo.fileName.split(".").pop() || "jpg";
-        const uid = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        const originalPath = `gallery/original/${uid}.${ext}`;
-        const thumbPath = `gallery/thumb/${uid}.${ext}`;
+      const albumIds = Array.from(
+        new Set(input.photos.map(p => p.albumId).filter(Boolean))
+      ) as string[];
+      const albumNameById = await galleryDb.albumNames(d1, albumIds);
 
-        const originalUpload = await supabase.storage
-          .from("images")
-          .upload(originalPath, buffer, {
-            contentType: photo.fileType,
-            upsert: false,
-          });
-        if (originalUpload.error) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: originalUpload.error.message,
-          });
-        }
+      // Non-admin volunteers must validate uploads via email
+      const batchValidationToken = canManageGallery
+        ? null
+        : crypto.randomUUID();
 
-        const thumbUpload = await supabase.storage
-          .from("images")
-          .upload(thumbPath, buffer, {
-            contentType: photo.fileType,
-            upsert: false,
-          });
-        if (thumbUpload.error) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: thumbUpload.error.message,
-          });
-        }
-
-        const originalUrl = supabase.storage
-          .from("images")
-          .getPublicUrl(originalPath).data.publicUrl;
-        const thumbUrl = supabase.storage.from("images").getPublicUrl(thumbPath)
-          .data.publicUrl;
+      let count = 0;
+      for (const { photo, ext, buffer } of decoded) {
+        const key = `gallery/original/${crypto.randomUUID()}.${ext}`;
+        await bucket.put(key, buffer, {
+          httpMetadata: { contentType: photo.fileType },
+        });
 
         const defaultAlbumTag = photo.albumId
           ? albumNameById.get(photo.albumId)
           : undefined;
-        const mergedTags = Array.from(
-          new Set([
-            ...(photo.tags ?? []),
-            ...(defaultAlbumTag ? [defaultAlbumTag] : []),
-          ])
-        );
-
-        const { data, error } = await supabase
-          .from("gallery_photos")
-          .insert({
-            title: photo.title,
-            description: photo.description,
-            event_date: normalizeGalleryEventDate(photo.eventDate),
-            tags: mergedTags,
-            album_id: photo.albumId,
-            sort_order: photo.sortOrder,
-            is_featured: canManageGallery ? photo.isFeatured : false,
-            status: canManageGallery ? "published" : "draft",
-            image_original_url: originalUrl,
-            image_thumb_url: thumbUrl,
-            storage_path: originalPath,
-            thumb_storage_path: thumbPath,
-            width: photo.width,
-            height: photo.height,
-            size_bytes: buffer.length,
-            mime_type: photo.fileType,
-            uploaded_by: ctx.user?.email,
-            validation_email: canManageGallery
-              ? null
-              : (ctx.user?.email ?? null),
-            validation_token: batchValidationToken,
-            validation_sent_at: batchValidationToken
-              ? new Date().toISOString()
-              : null,
-            validated_at: canManageGallery ? new Date().toISOString() : null,
-          })
-          .select("*")
-          .single();
-
-        if (error)
-          throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-        results.push(data);
+        try {
+          await galleryDb.insertPhoto(
+            d1,
+            {
+              title: photo.title,
+              description: photo.description,
+              eventDate: normalizeGalleryEventDate(photo.eventDate),
+              tags: Array.from(
+                new Set([
+                  ...(photo.tags ?? []),
+                  ...(defaultAlbumTag ? [defaultAlbumTag] : []),
+                ])
+              ),
+              albumId: photo.albumId,
+              sortOrder: photo.sortOrder,
+              isFeatured: canManageGallery ? photo.isFeatured : false,
+              status: canManageGallery ? "published" : "draft",
+              storagePath: key,
+              width: photo.width,
+              height: photo.height,
+              sizeBytes: buffer.length,
+              mimeType: photo.fileType,
+              uploadedBy: ctx.user?.email,
+              validationEmail: canManageGallery
+                ? null
+                : (ctx.user?.email ?? null),
+              validationToken: batchValidationToken,
+              validated: canManageGallery,
+            },
+            origin
+          );
+        } catch (e) {
+          await bucket.delete(key); // no orphan object if the row failed
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: e instanceof Error ? e.message : "Insertion impossible",
+          });
+        }
+        count++;
       }
 
       // Send validation email for non-admin volunteers
@@ -2399,57 +2309,31 @@ const galleryRouter = router({
           subject: emailPayload.subject,
           html: emailPayload.html,
         });
-        return { needsValidation: true, count: results.length };
+        return { needsValidation: true, count };
       }
 
-      return { needsValidation: false, count: results.length };
+      return { needsValidation: false, count };
     }),
 
   validateUploadByEmail: publicProcedure
     .input(z.object({ token: z.string().min(20) }))
     .mutation(async ({ input, ctx }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
+      const d1 = galleryDb.db(ctx.env);
+      const rows = await galleryDb.photosByToken(d1, input.token);
 
-      const { data: rows, error: fetchError } = await supabase
-        .from("gallery_photos")
-        .select("id,status")
-        .eq("validation_token", input.token);
-
-      if (fetchError)
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: fetchError.message,
-        });
-
-      if (!rows || rows.length === 0)
+      if (rows.length === 0)
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Lien de validation invalide ou expiré",
         });
 
-      const alreadyValidated = rows.every((r: any) => r.status === "published");
-      if (alreadyValidated)
+      const idsToPublish = rows
+        .filter(r => r.status !== "published")
+        .map(r => r.id);
+      if (idsToPublish.length === 0)
         return { success: true, alreadyValidated: true, updatedCount: 0 };
 
-      const idsToPublish = rows
-        .filter((r: any) => r.status !== "published")
-        .map((r: any) => r.id);
-
-      const { error: updateError } = await supabase
-        .from("gallery_photos")
-        .update({
-          status: "published",
-          validated_at: new Date().toISOString(),
-          validation_token: null,
-        })
-        .in("id", idsToPublish);
-
-      if (updateError)
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: updateError.message,
-        });
-
+      await galleryDb.publishValidated(d1, idsToPublish);
       return {
         success: true,
         alreadyValidated: false,
@@ -2460,35 +2344,23 @@ const galleryRouter = router({
   resendValidationEmail: publicProcedure
     .input(z.object({ email: z.string().email() }))
     .mutation(async ({ input, ctx }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
       const email = input.email.trim().toLowerCase();
-
-      const { data: rows, error } = await supabase
-        .from("gallery_photos")
-        .select("id,validation_token,validation_email")
-        .eq("validation_email", email)
-        .eq("status", "draft")
-        .not("validation_token", "is", null)
-        .limit(1);
-
-      if (error)
-        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-
-      if (!rows || rows.length === 0)
+      const token = await galleryDb.pendingTokenForEmail(
+        galleryDb.db(ctx.env),
+        email
+      );
+      if (!token)
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Aucune photo en attente de validation pour cet email.",
         });
 
-      const token = rows[0].validation_token;
       const baseUrl = (
         ctx.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma"
       ).replace(/\/$/, "");
-      const validationUrl = `${baseUrl}/galerie/validation/${token}`;
-
       const emailPayload = generateGalleryUploadValidationEmail({
         email,
-        validationUrl,
+        validationUrl: `${baseUrl}/galerie/validation/${token}`,
       });
       const emailResult = await sendEmail({
         to: email,
@@ -2516,58 +2388,34 @@ const galleryRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
-      const { data, error } = await supabase
-        .from("gallery_albums")
-        .insert({
-          name: input.name,
-          slug: input.slug,
-          sort_order: input.sortOrder,
-          status: input.status,
-        })
-        .select("*")
-        .single();
-      if (error)
-        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-      return data;
+      try {
+        return await galleryDb.createAlbum(galleryDb.db(ctx.env), input);
+      } catch (e) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: e instanceof Error ? e.message : "Création impossible",
+        });
+      }
     }),
 
   publish: adminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
-      const { error } = await supabase
-        .from("gallery_photos")
-        .update({ status: "published" })
-        .eq("id", input.id);
-      if (error)
-        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      await galleryDb.setStatus(galleryDb.db(ctx.env), input.id, "published");
       return { success: true };
     }),
 
   unpublish: adminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
-      const { error } = await supabase
-        .from("gallery_photos")
-        .update({ status: "draft" })
-        .eq("id", input.id);
-      if (error)
-        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      await galleryDb.setStatus(galleryDb.db(ctx.env), input.id, "draft");
       return { success: true };
     }),
 
   reject: adminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
-      const { error } = await supabase
-        .from("gallery_photos")
-        .update({ status: "rejected" })
-        .eq("id", input.id);
-      if (error)
-        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      await galleryDb.setStatus(galleryDb.db(ctx.env), input.id, "rejected");
       return { success: true };
     }),
 
@@ -2576,29 +2424,21 @@ const galleryRouter = router({
       z.object({ id: z.string().uuid(), ...gallerySchema.partial().shape })
     )
     .mutation(async ({ input, ctx }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
-      const { id, eventDate, albumId, sortOrder, isFeatured, ...rest } = input;
-      const { data, error } = await supabase
-        .from("gallery_photos")
-        .update({
-          title: rest.title,
-          description: rest.description,
-          event_date:
+      const { id, eventDate, ...rest } = input;
+      const photo = await galleryDb.updatePhoto(
+        galleryDb.db(ctx.env),
+        id,
+        {
+          ...rest,
+          eventDate:
             eventDate !== undefined
               ? normalizeGalleryEventDate(eventDate)
               : undefined,
-          tags: rest.tags,
-          album_id: albumId,
-          sort_order: sortOrder,
-          is_featured: isFeatured,
-          status: rest.status,
-        })
-        .eq("id", id)
-        .select("*")
-        .single();
-      if (error)
-        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-      return data;
+        },
+        galleryOrigin(ctx)
+      );
+      if (!photo) throw new TRPCError({ code: "NOT_FOUND", message: "Photo introuvable" });
+      return photo;
     }),
 
   reorderPhotos: adminProcedure
@@ -2610,48 +2450,16 @@ const galleryRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
-      for (const item of input.items) {
-        const { error } = await supabase
-          .from("gallery_photos")
-          .update({ sort_order: item.sortOrder })
-          .eq("id", item.id);
-        if (error)
-          throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-      }
+      await galleryDb.reorderPhotos(galleryDb.db(ctx.env), input.items);
       return { success: true };
     }),
 
   deletePhoto: adminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
-      const { data, error } = await supabase
-        .from("gallery_photos")
-        .select("storage_path,thumb_storage_path,medium_storage_path")
-        .eq("id", input.id)
-        .single();
-      if (error)
-        throw new TRPCError({ code: "NOT_FOUND", message: error.message });
-
-      const pathsToDelete = [
-        data.storage_path,
-        data.thumb_storage_path,
-        data.medium_storage_path,
-      ].filter(Boolean) as string[];
-      if (pathsToDelete.length > 0) {
-        await supabase.storage.from("images").remove(pathsToDelete);
-      }
-
-      const { error: deleteError } = await supabase
-        .from("gallery_photos")
-        .delete()
-        .eq("id", input.id);
-      if (deleteError)
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: deleteError.message,
-        });
+      const keys = await galleryDb.deletePhoto(galleryDb.db(ctx.env), input.id);
+      if (!keys) throw new TRPCError({ code: "NOT_FOUND", message: "Photo introuvable" });
+      if (keys.length > 0) await galleryMedia(ctx).delete(keys);
       return { success: true };
     }),
 });
@@ -2979,19 +2787,9 @@ const publicRouter = router({
     return data || [];
   }),
 
-  galleryAlbums: publicProcedure.query(async ({ ctx }) => {
-    const supabase = createSupabaseAdmin(ctx.env);
-    const { data, error } = await supabase
-      .from("gallery_albums")
-      .select("*")
-      .eq("status", "published")
-      .order("sort_order", { ascending: true });
-    if (error) {
-      console.error("[Worker] Error fetching gallery albums:", error);
-      return [];
-    }
-    return data || [];
-  }),
+  galleryAlbums: publicProcedure.query(async ({ ctx }) =>
+    galleryDb.listAlbums(galleryDb.db(ctx.env), { onlyPublished: true })
+  ),
 
   galleryPhotos: publicProcedure
     .input(
@@ -3006,56 +2804,21 @@ const publicRouter = router({
         .optional()
     )
     .query(async ({ input, ctx }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
       const page = input?.page ?? 1;
       const pageSize = input?.pageSize ?? 18;
-      const start = (page - 1) * pageSize;
-      const end = start + pageSize - 1;
-
-      let query = supabase
-        .from("gallery_photos")
-        .select("*, gallery_albums(name, slug)", { count: "exact" })
-        .eq("status", "published");
-
-      if (input?.album) {
-        if (input.album.includes("-")) {
-          const { data: album } = await supabase
-            .from("gallery_albums")
-            .select("id")
-            .eq("slug", input.album)
-            .maybeSingle();
-          if (!album?.id) {
-            return { items: [], total: 0, page, pageSize };
-          }
-          query = query.eq("album_id", album.id);
-        } else {
-          query = query.eq("album_id", input.album);
-        }
-      }
-
-      if (input?.tag) query = query.contains("tags", [input.tag]);
-
-      const sort = input?.sort ?? "recent";
-      if (sort === "featured") {
-        query = query
-          .order("is_featured", { ascending: false })
-          .order("event_date", { ascending: false, nullsFirst: false })
-          .order("created_at", { ascending: false });
-      } else if (sort === "oldest") {
-        query = query
-          .order("event_date", { ascending: true, nullsFirst: false })
-          .order("created_at", { ascending: true });
-      } else {
-        query = query
-          .order("event_date", { ascending: false, nullsFirst: false })
-          .order("created_at", { ascending: false });
-      }
-
-      const { data, error, count } = await query.range(start, end);
-      if (error)
-        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-      const items = await withGalleryDisplayUrlsMany(supabase, data || []);
-      return { items, total: count ?? 0, page, pageSize };
+      const { items, total } = await galleryDb.listPhotos(
+        galleryDb.db(ctx.env),
+        {
+          page,
+          pageSize,
+          album: input?.album,
+          tag: input?.tag,
+          status: "published",
+          sort: input?.sort ?? "recent",
+        },
+        galleryOrigin(ctx)
+      );
+      return { items, total, page, pageSize };
     }),
 });
 

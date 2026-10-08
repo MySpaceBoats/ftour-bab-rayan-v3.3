@@ -32,7 +32,13 @@ export interface Env {
   RESERVATION_PROOF_TOKEN_TTL_DAYS?: string;
   RESERVATION_PAYMENT_PROOF_BUCKET?: string;
   RESERVATION_ADMIN_DASHBOARD_URL?: string;
+  // Gallery: Cloudflare D1 (rows) + R2 (image bytes)
+  DB?: D1Like;
+  GALLERY_MEDIA?: R2Like;
 }
+
+import type { D1Like, R2Like } from './gallery-d1';
+import { MEDIA_PATH_PREFIX } from './gallery-d1';
 
 const MAX_PROOF_FILE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_PROOF_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
@@ -144,6 +150,24 @@ export default {
       return new Response(null, { headers: baseCorsHeaders });
     }
 
+
+    // Gallery images served from R2 (keys are unguessable UUIDs; only gallery/ prefix is exposed)
+    if (url.pathname.startsWith(MEDIA_PATH_PREFIX) && request.method === 'GET') {
+      const key = decodeURIComponent(url.pathname.slice(MEDIA_PATH_PREFIX.length));
+      if (!env.GALLERY_MEDIA || !key.startsWith('gallery/') || key.includes('..')) {
+        return new Response('Not found', { status: 404, headers: baseCorsHeaders });
+      }
+      const obj = await env.GALLERY_MEDIA.get(key);
+      if (!obj) return new Response('Not found', { status: 404, headers: baseCorsHeaders });
+      return new Response(obj.body, {
+        headers: {
+          ...baseCorsHeaders,
+          'Content-Type': obj.httpMetadata?.contentType ?? 'application/octet-stream',
+          'Cache-Control': 'public, max-age=31536000, immutable',
+          ETag: obj.httpEtag,
+        },
+      });
+    }
 
     if (url.pathname === '/api/reservations/proof/init' && request.method === 'POST') {
       const supabase = createSupabaseAdmin(env);

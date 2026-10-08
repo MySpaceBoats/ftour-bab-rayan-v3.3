@@ -15,3 +15,20 @@ invocation_logs = true
 [triggers]
 crons = ["5 23 * * *"]
 
+
+# ---- Staging: gallery on D1 + R2 (prod bindings to add once media is migrated) ----
+[env.staging]
+name = "ftour-bab-rayan-staging"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "ftour-bab-rayan-staging-db"
+database_id = "88a6071f-a573-4059-97b1-e8b78eced3cc"
+
+[[env.staging.r2_buckets]]
+binding = "GALLERY_MEDIA"
+bucket_name = "ftour-bab-rayan-staging-media"
+
+# staging shares the Supabase project: never run the Ramadan-days cron there
+[env.staging.triggers]
+crons = []
