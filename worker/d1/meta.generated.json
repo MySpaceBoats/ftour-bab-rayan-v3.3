@@ -1,0 +1,1453 @@
+{
+ "event_photos": {
+  "cols": {
+   "id": "int",
+   "image_url": "text",
+   "storage_path": "text",
+   "title": "text",
+   "is_active": "bool",
+   "display_order": "int",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "terroir_products": {
+  "cols": {
+   "id": "int",
+   "name": "text",
+   "description": "text",
+   "category": "text",
+   "image_url": "text",
+   "is_active": "bool",
+   "sort_order": "int",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "payments": {
+  "cols": {
+   "id": "int",
+   "payment_reference": "text",
+   "user_name": "text",
+   "email": "text",
+   "phone": "text",
+   "amount": "num",
+   "currency": "text",
+   "payment_method": "text",
+   "status": "text",
+   "description": "text",
+   "related_entity_type": "text",
+   "related_entity_id": "text",
+   "metadata": "json",
+   "validated_at": "text",
+   "validated_by": "int",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "pastry_orders": {
+  "cols": {
+   "id": "int",
+   "reference": "text",
+   "customer_name": "text",
+   "phone": "text",
+   "email": "text",
+   "items": "json",
+   "total_amount": "num",
+   "payment_method": "text",
+   "payment_status": "text",
+   "order_status": "text",
+   "qr_token": "text",
+   "scanned_at": "text",
+   "scanned_by": "int",
+   "notes": "text",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "feedback_forms": {
+  "cols": {
+   "id": "int",
+   "name": "text",
+   "title": "text",
+   "description": "text",
+   "target_type": "text",
+   "is_anonymous_allowed": "bool",
+   "active": "bool",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": false
+ },
+ "volunteer_participations": {
+  "cols": {
+   "id": "text",
+   "email": "text",
+   "phone": "text",
+   "event_id": "int",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": false
+ },
+ "shop_order_items": {
+  "cols": {
+   "id": "int",
+   "order_id": "int",
+   "product_id": "int",
+   "variant_id": "int",
+   "quantity": "int",
+   "unit_price": "num",
+   "total_price": "num",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "order_id",
+    "ref": "shop_orders",
+    "refCol": "id"
+   },
+   {
+    "col": "product_id",
+    "ref": "shop_products",
+    "refCol": "id"
+   },
+   {
+    "col": "variant_id",
+    "ref": "shop_product_variants",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {},
+  "hasUpdatedAt": false
+ },
+ "orders": {
+  "cols": {
+   "id": "int",
+   "order_reference": "text",
+   "customer_name": "text",
+   "customer_email": "text",
+   "customer_phone": "text",
+   "total_amount": "num",
+   "status": "text",
+   "pickup_date": "text",
+   "pickup_location": "text",
+   "notes": "text",
+   "processed_by": "int",
+   "created_at": "text",
+   "updated_at": "text",
+   "delivery_mode": "text",
+   "delivery_fee": "num",
+   "delivery_address": "text",
+   "delivery_phone": "text",
+   "delivery_instructions": "text",
+   "delivered_at": "text",
+   "payment_method": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "volunteer_profiles": {
+  "cols": {
+   "id": "text",
+   "first_name": "text",
+   "last_name": "text",
+   "phone": "text",
+   "email": "text",
+   "role": "text",
+   "points_total": "int",
+   "level": "int",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "restaurants": {
+  "cols": {
+   "id": "int",
+   "name": "text",
+   "address": "text",
+   "phone": "text",
+   "capacity": "int",
+   "active": "bool",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": false
+ },
+ "partners": {
+  "cols": {
+   "id": "int",
+   "name": "text",
+   "logo_url": "text",
+   "website_url": "text",
+   "description": "text",
+   "category": "text",
+   "is_active": "bool",
+   "sort_order": "int",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "goodies": {
+  "cols": {
+   "id": "int",
+   "name": "text",
+   "description": "text",
+   "price": "num",
+   "image_url": "text",
+   "category": "text",
+   "is_active": "bool",
+   "sort_order": "int",
+   "created_at": "text",
+   "updated_at": "text",
+   "stock": "int"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "goodie_variants": {
+  "cols": {
+   "id": "int",
+   "goodie_id": "int",
+   "size": "text",
+   "color": "text",
+   "stock": "int",
+   "price_modifier": "num",
+   "is_available": "bool",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "goodie_id",
+    "ref": "goodies",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {
+   "goodie_id": "goodies"
+  },
+  "hasUpdatedAt": false
+ },
+ "checkins": {
+  "cols": {
+   "id": "int",
+   "volunteer_id": "int",
+   "token": "text",
+   "scanned_at": "text",
+   "validated_by": "int",
+   "validation_mode": "text",
+   "ip_address": "text",
+   "user_agent": "text",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "volunteer_id",
+    "ref": "volunteers",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {
+   "volunteer_id": "volunteers"
+  },
+  "hasUpdatedAt": false
+ },
+ "reservation_payment_tokens": {
+  "cols": {
+   "id": "text",
+   "reservation_id": "int",
+   "token_hash": "text",
+   "expires_at": "text",
+   "used_at": "text",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "reservation_id",
+    "ref": "restaurant_reservations",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {
+   "reservation_id": "restaurant_reservations"
+  },
+  "hasUpdatedAt": false
+ },
+ "terroir_order_items": {
+  "cols": {
+   "id": "int",
+   "order_id": "int",
+   "product_id": "int",
+   "variant_id": "int",
+   "quantity": "int",
+   "unit_price": "num",
+   "total_price": "num",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "order_id",
+    "ref": "terroir_orders",
+    "refCol": "id"
+   },
+   {
+    "col": "product_id",
+    "ref": "terroir_products",
+    "refCol": "id"
+   },
+   {
+    "col": "variant_id",
+    "ref": "terroir_product_variants",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {
+   "order_id": "terroir_orders"
+  },
+  "hasUpdatedAt": false
+ },
+ "terroir_orders": {
+  "cols": {
+   "id": "int",
+   "order_reference": "text",
+   "customer_name": "text",
+   "customer_phone": "text",
+   "customer_email": "text",
+   "pickup_slot_id": "int",
+   "status": "text",
+   "payment_status": "text",
+   "total_amount": "num",
+   "payment_provider": "text",
+   "payment_reference": "text",
+   "deposit_deadline": "text",
+   "deposit_status": "text",
+   "qr_token": "text",
+   "qr_status": "text",
+   "processed_by": "int",
+   "processed_at": "text",
+   "notes": "text",
+   "created_at": "text",
+   "updated_at": "text",
+   "catalog_items": "json"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "pickup_slot_id",
+    "ref": "terroir_pickup_slots",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "ramadan_daily_stats": {
+  "cols": {
+   "id": "int",
+   "config_id": "int",
+   "ramadan_day": "int",
+   "gregorian_date": "text",
+   "beneficiaries_served": "int",
+   "meals_distributed": "int",
+   "volunteers_present": "int",
+   "notes": "text",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "config_id",
+    "ref": "ramadan_config",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {
+   "config_id": "ramadan_config"
+  },
+  "hasUpdatedAt": true
+ },
+ "feedback_campaign_recipients": {
+  "cols": {
+   "id": "int",
+   "campaign_id": "int",
+   "email": "text",
+   "token": "text",
+   "opened_at": "text",
+   "submitted_at": "text",
+   "expires_at": "text",
+   "user_id": "int",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "campaign_id",
+    "ref": "feedback_campaigns",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {
+   "campaign_id": "feedback_campaigns"
+  },
+  "hasUpdatedAt": false
+ },
+ "inventory_products": {
+  "cols": {
+   "id": "int",
+   "product_type": "text",
+   "source_product_id": "int",
+   "source_variant_id": "int",
+   "sku": "text",
+   "barcode": "text",
+   "name": "text",
+   "category": "text",
+   "unit": "text",
+   "is_active": "bool",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "shop_orders": {
+  "cols": {
+   "id": "int",
+   "order_reference": "text",
+   "customer_name": "text",
+   "customer_email": "text",
+   "customer_phone": "text",
+   "total_amount": "num",
+   "status": "text",
+   "pickup_date": "text",
+   "pickup_location": "text",
+   "qr_token": "text",
+   "qr_status": "text",
+   "notes": "text",
+   "processed_by": "int",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "shop_product_variants": {
+  "cols": {
+   "id": "int",
+   "product_id": "int",
+   "label": "text",
+   "size": "text",
+   "color": "text",
+   "stock": "int",
+   "price_modifier": "num",
+   "is_available": "bool",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "product_id",
+    "ref": "shop_products",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {},
+  "hasUpdatedAt": false
+ },
+ "volunteer_group_requests": {
+  "cols": {
+   "id": "int",
+   "group_name": "text",
+   "responsible_name": "text",
+   "responsible_email": "text",
+   "responsible_phone": "text",
+   "estimated_size": "int",
+   "day_id": "int",
+   "volunteer_slots": "json",
+   "file_name": "text",
+   "file_base64": "text",
+   "status": "text",
+   "rejection_reason": "text",
+   "reviewed_by": "int",
+   "reviewed_at": "text",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "day_id",
+    "ref": "ramadan_days",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {
+   "day_id": "ramadan_days"
+  },
+  "hasUpdatedAt": true
+ },
+ "volunteers": {
+  "cols": {
+   "id": "int",
+   "first_name": "text",
+   "last_name": "text",
+   "email": "text",
+   "phone": "text",
+   "city": "text",
+   "day_id": "int",
+   "qr_token": "text",
+   "qr_status": "text",
+   "status": "text",
+   "scanned_at": "text",
+   "scanned_by": "int",
+   "accepted_terms": "bool",
+   "email_sent": "bool",
+   "notes": "text",
+   "created_at": "text",
+   "updated_at": "text",
+   "volunteer_slots": "json",
+   "confirmed_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "day_id",
+    "ref": "ramadan_days",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {
+   "day_id": "ramadan_days"
+  },
+  "hasUpdatedAt": true
+ },
+ "pastries": {
+  "cols": {
+   "id": "int",
+   "name": "text",
+   "description": "text",
+   "price": "num",
+   "image_url": "text",
+   "category": "text",
+   "active": "bool",
+   "sort_order": "int",
+   "created_at": "text",
+   "updated_at": "text",
+   "stock": "int"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "reservation_payment_proofs": {
+  "cols": {
+   "id": "text",
+   "reservation_id": "int",
+   "storage_path": "text",
+   "uploaded_by_email": "text",
+   "uploaded_at": "text",
+   "status": "text",
+   "admin_note": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "reservation_id",
+    "ref": "restaurant_reservations",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {
+   "reservation_id": "restaurant_reservations"
+  },
+  "hasUpdatedAt": false
+ },
+ "inventory_locations": {
+  "cols": {
+   "id": "int",
+   "type": "text",
+   "code": "text",
+   "name": "text",
+   "event_id": "int",
+   "parent_location_id": "int",
+   "is_active": "bool",
+   "metadata": "json",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "event_id",
+    "ref": "inventory_events",
+    "refCol": "id"
+   },
+   {
+    "col": "parent_location_id",
+    "ref": "inventory_locations",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "reservation_checkins": {
+  "cols": {
+   "id": "int",
+   "reservation_id": "int",
+   "scanned_at": "text",
+   "validation_mode": "text",
+   "validated_by": "int",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "reservation_id",
+    "ref": "reservations",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {
+   "reservation_id": "restaurant_reservations"
+  },
+  "hasUpdatedAt": false
+ },
+ "inventory_movements": {
+  "cols": {
+   "id": "int",
+   "product_id": "int",
+   "quantity": "int",
+   "movement_type": "text",
+   "from_location_id": "int",
+   "to_location_id": "int",
+   "event_id": "int",
+   "pos_location_id": "int",
+   "sale_order_id": "text",
+   "sale_line_id": "text",
+   "reference_type": "text",
+   "reference_id": "text",
+   "reason": "text",
+   "note": "text",
+   "performed_by": "int",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "product_id",
+    "ref": "inventory_products",
+    "refCol": "id"
+   },
+   {
+    "col": "from_location_id",
+    "ref": "inventory_locations",
+    "refCol": "id"
+   },
+   {
+    "col": "to_location_id",
+    "ref": "inventory_locations",
+    "refCol": "id"
+   },
+   {
+    "col": "event_id",
+    "ref": "inventory_events",
+    "refCol": "id"
+   },
+   {
+    "col": "pos_location_id",
+    "ref": "inventory_locations",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {
+   "product_id": "inventory_products"
+  },
+  "hasUpdatedAt": false
+ },
+ "terroir_product_variants": {
+  "cols": {
+   "id": "int",
+   "product_id": "int",
+   "label": "text",
+   "sku": "text",
+   "price_unit": "num",
+   "stock_total": "int",
+   "stock_reserved": "int",
+   "is_active": "bool",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "product_id",
+    "ref": "terroir_products",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {
+   "product_id": "terroir_products"
+  },
+  "hasUpdatedAt": true
+ },
+ "terroir_pickup_slots": {
+  "cols": {
+   "id": "int",
+   "date": "text",
+   "start_time": "text",
+   "end_time": "text",
+   "max_orders": "int",
+   "is_closed": "bool",
+   "notes": "text",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "products": {
+  "cols": {
+   "id": "int",
+   "name": "text",
+   "description": "text",
+   "price": "num",
+   "stock": "int",
+   "image": "text",
+   "category": "text",
+   "tags": "json",
+   "status": "text",
+   "product_type": "text",
+   "is_best_seller": "bool",
+   "is_ramadan_edition": "bool",
+   "created_at": "text",
+   "updated_at": "text",
+   "images": "json"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "payment_logs": {
+  "cols": {
+   "id": "int",
+   "payment_id": "int",
+   "action": "text",
+   "old_status": "text",
+   "new_status": "text",
+   "notes": "text",
+   "performed_by": "int",
+   "ip_address": "text",
+   "user_agent": "text",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "payment_id",
+    "ref": "payments",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {},
+  "hasUpdatedAt": false
+ },
+ "reservation_events": {
+  "cols": {
+   "id": "text",
+   "reservation_id": "int",
+   "event_type": "text",
+   "payload": "json",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "reservation_id",
+    "ref": "restaurant_reservations",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {
+   "reservation_id": "restaurant_reservations"
+  },
+  "hasUpdatedAt": false
+ },
+ "payment_methods_config": {
+  "cols": {
+   "id": "int",
+   "method": "text",
+   "enabled": "bool",
+   "label": "text",
+   "instructions": "text",
+   "config": "json",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "inventory_stock_balances": {
+  "cols": {
+   "id": "int",
+   "product_id": "int",
+   "location_id": "int",
+   "quantity_on_hand": "int",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "product_id",
+    "ref": "inventory_products",
+    "refCol": "id"
+   },
+   {
+    "col": "location_id",
+    "ref": "inventory_locations",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {
+   "product_id": "inventory_products",
+   "location_id": "inventory_locations"
+  },
+  "hasUpdatedAt": true
+ },
+ "qr_tokens": {
+  "cols": {
+   "id": "int",
+   "token": "text",
+   "scope": "text",
+   "entity_id": "int",
+   "status": "text",
+   "max_uses": "int",
+   "uses_count": "int",
+   "created_at": "text",
+   "expires_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "feedback_questions": {
+  "cols": {
+   "id": "int",
+   "form_id": "int",
+   "label": "text",
+   "question": "text",
+   "type": "text",
+   "required": "bool",
+   "order_index": "int",
+   "options": "json"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "form_id",
+    "ref": "feedback_forms",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {
+   "form_id": "feedback_forms"
+  },
+  "hasUpdatedAt": false
+ },
+ "inventory_events": {
+  "cols": {
+   "id": "int",
+   "name": "text",
+   "description": "text",
+   "starts_at": "text",
+   "ends_at": "text",
+   "status": "text",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "restaurant_reservations": {
+  "cols": {
+   "id": "int",
+   "reference": "text",
+   "type": "text",
+   "seats_total": "int",
+   "date": "text",
+   "name": "text",
+   "phone": "text",
+   "email": "text",
+   "company_name": "text",
+   "group_name": "text",
+   "group_type": "text",
+   "status": "text",
+   "payment_status": "text",
+   "payment_amount": "num",
+   "payment_provider": "text",
+   "payment_reference": "text",
+   "qr_token": "text",
+   "qr_status": "text",
+   "expires_at": "text",
+   "processed_by": "int",
+   "processed_at": "text",
+   "notes": "text",
+   "created_at": "text",
+   "updated_at": "text",
+   "deposit_percentage": "int",
+   "display_choice": "text",
+   "mode_deposit": "text",
+   "date_av_reg": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "testimonials": {
+  "cols": {
+   "id": "int",
+   "name": "text",
+   "role": "text",
+   "content": "text",
+   "avatar_url": "text",
+   "rating": "int",
+   "is_active": "bool",
+   "sort_order": "int",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "order_items": {
+  "cols": {
+   "id": "int",
+   "order_id": "int",
+   "goodie_id": "int",
+   "variant_id": "int",
+   "quantity": "int",
+   "unit_price": "num",
+   "total_price": "num",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "order_id",
+    "ref": "orders",
+    "refCol": "id"
+   },
+   {
+    "col": "goodie_id",
+    "ref": "goodies",
+    "refCol": "id"
+   },
+   {
+    "col": "variant_id",
+    "ref": "goodie_variants",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {
+   "order_id": "orders"
+  },
+  "hasUpdatedAt": false
+ },
+ "reservations": {
+  "cols": {
+   "id": "int",
+   "restaurant_id": "int",
+   "date": "text",
+   "slot_id": "int",
+   "full_name": "text",
+   "phone": "text",
+   "email": "text",
+   "seats": "int",
+   "notes": "text",
+   "status": "text",
+   "reference_code": "text",
+   "qr_token": "text",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "restaurant_id",
+    "ref": "restaurants",
+    "refCol": "id"
+   },
+   {
+    "col": "slot_id",
+    "ref": "restaurant_slots",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {},
+  "hasUpdatedAt": false
+ },
+ "ramadan_config": {
+  "cols": {
+   "id": "int",
+   "hijri_year": "text",
+   "gregorian_start_date": "text",
+   "timezone": "text",
+   "is_active": "bool",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "qr_scans": {
+  "cols": {
+   "id": "int",
+   "token": "text",
+   "scope": "text",
+   "entity_id": "int",
+   "validation_action": "text",
+   "validated_by": "int",
+   "success": "bool",
+   "error_message": "text",
+   "scanned_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": false
+ },
+ "restaurant_slots": {
+  "cols": {
+   "id": "int",
+   "restaurant_id": "int",
+   "date": "text",
+   "start_time": "text",
+   "end_time": "text",
+   "capacity": "int",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "restaurant_id",
+    "ref": "restaurants",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {},
+  "hasUpdatedAt": false
+ },
+ "feedback_campaigns": {
+  "cols": {
+   "id": "int",
+   "name": "text",
+   "title": "text",
+   "subject": "text",
+   "email_subject": "text",
+   "email_content": "text",
+   "status": "text",
+   "form_id": "int",
+   "target_group": "text",
+   "sent_at": "text",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "form_id",
+    "ref": "feedback_forms",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {},
+  "hasUpdatedAt": false
+ },
+ "shop_products": {
+  "cols": {
+   "id": "int",
+   "name": "text",
+   "description": "text",
+   "category": "text",
+   "price": "num",
+   "image_url": "text",
+   "is_best_seller": "bool",
+   "is_new": "bool",
+   "is_ramadan_edition": "bool",
+   "total_stock": "int",
+   "is_active": "bool",
+   "sort_order": "int",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "ramadan_days": {
+  "cols": {
+   "id": "int",
+   "day_number": "int",
+   "date": "text",
+   "hijri_date": "text",
+   "capacity": "int",
+   "registered_count": "int",
+   "is_open": "bool",
+   "iftar_time": "text",
+   "location": "text",
+   "notes": "text",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "feedback_answers": {
+  "cols": {
+   "id": "int",
+   "response_id": "int",
+   "question_id": "int",
+   "value": "text",
+   "answer_text": "text",
+   "answer_rating": "int",
+   "answer_choice": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "response_id",
+    "ref": "feedback_responses",
+    "refCol": "id"
+   },
+   {
+    "col": "question_id",
+    "ref": "feedback_questions",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {
+   "response_id": "feedback_responses",
+   "question_id": "feedback_questions"
+  },
+  "hasUpdatedAt": false
+ },
+ "feedback_responses": {
+  "cols": {
+   "id": "int",
+   "form_id": "int",
+   "campaign_id": "int",
+   "recipient_id": "int",
+   "email": "text",
+   "feedback_type": "text",
+   "rating": "int",
+   "message": "text",
+   "source": "text",
+   "created_at": "text",
+   "user_id": "int",
+   "user_email": "text",
+   "user_name": "text",
+   "is_anonymous": "bool",
+   "moderation": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "form_id",
+    "ref": "feedback_forms",
+    "refCol": "id"
+   },
+   {
+    "col": "campaign_id",
+    "ref": "feedback_campaigns",
+    "refCol": "id"
+   },
+   {
+    "col": "recipient_id",
+    "ref": "feedback_campaign_recipients",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {},
+  "hasUpdatedAt": false
+ },
+ "volunteer_attendance_view": {
+  "cols": {
+   "id": "int",
+   "volunteer_id": "text",
+   "date": "text",
+   "slot": "text",
+   "status": "text",
+   "points_earned": "int",
+   "created_at": "text"
+  },
+  "pk": [
+   "volunteer_id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": false
+ },
+ "inventory_counts": {
+  "cols": {
+   "id": "int",
+   "location_id": "int",
+   "event_id": "int",
+   "status": "text",
+   "counted_by": "int",
+   "started_at": "text",
+   "completed_at": "text",
+   "notes": "text",
+   "created_at": "text",
+   "updated_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "location_id",
+    "ref": "inventory_locations",
+    "refCol": "id"
+   },
+   {
+    "col": "event_id",
+    "ref": "inventory_events",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {},
+  "hasUpdatedAt": true
+ },
+ "custom_qr_codes": {
+  "cols": {
+   "id": "int",
+   "label": "text",
+   "url": "text",
+   "created_by": "int",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": false
+ },
+ "audit_logs": {
+  "cols": {
+   "id": "text",
+   "user_id": "text",
+   "user_email": "text",
+   "user_role": "text",
+   "action": "text",
+   "entity_type": "text",
+   "entity_id": "text",
+   "description": "text",
+   "metadata": "json",
+   "ip_address": "text",
+   "user_agent": "text",
+   "route": "text",
+   "http_method": "text",
+   "response_status": "int",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [],
+  "cascade": {},
+  "hasUpdatedAt": false
+ },
+ "inventory_count_lines": {
+  "cols": {
+   "id": "int",
+   "count_id": "int",
+   "product_id": "int",
+   "expected_qty": "int",
+   "counted_qty": "int",
+   "variance_qty": "int",
+   "note": "text",
+   "created_at": "text"
+  },
+  "pk": [
+   "id"
+  ],
+  "fks": [
+   {
+    "col": "count_id",
+    "ref": "inventory_counts",
+    "refCol": "id"
+   },
+   {
+    "col": "product_id",
+    "ref": "inventory_products",
+    "refCol": "id"
+   }
+  ],
+  "cascade": {
+   "count_id": "inventory_counts"
+  },
+  "hasUpdatedAt": false
+ }
+}
