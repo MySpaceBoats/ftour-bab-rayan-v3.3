@@ -29,6 +29,8 @@ import RibDownload from "@/features/public/pages/RibDownload";
 import Temoignages from "@/features/public/pages/Temoignages";
 import Galerie from "@/features/gallery/pages/Galerie";
 import BenevoleGalerieUpload from "@/features/gallery/pages/BenevoleGalerieUpload";
+import HubPage from "@/features/hub/pages/HubPage";
+import HubProfilePage from "@/features/hub/pages/HubProfilePage";
 import GalerieValidationUpload from "@/features/gallery/pages/GalerieValidationUpload";
 
 // ============================================
@@ -331,6 +333,8 @@ function LocalizedRoutes() {
       <Route path="/:lang/programme" component={Programme} />
       <Route path="/:lang/benevole" component={Benevole} />
       <Route path="/:lang/benevole/photos" component={BenevoleGalerieUpload} />
+      <Route path="/:lang/benevole/espace/profil" component={HubProfilePage} />
+      <Route path="/:lang/benevole/espace" component={HubPage} />
       <Route path="/:lang/evenement" component={Evenement} />
       <Route path="/:lang/association" component={Association} />
       <Route path="/:lang/contact" component={Contact} />

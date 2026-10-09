@@ -1230,6 +1230,14 @@ export default function Benevole() {
                           ? "Upload photos"
                           : "Uploader des photos"}
                     </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full mt-2"
+                      onClick={() => navigate(`/${lang}/benevole/espace`)}
+                    >
+                      {lang === "ar" ? "فضاء المتطوعين" : lang === "en" ? "Volunteer space" : "Espace bénévole"}
+                    </Button>
                   </CardContent>
                 </Card>
 
