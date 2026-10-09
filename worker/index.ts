@@ -45,6 +45,7 @@ export interface Env {
 
 import type { D1Like, R2Like } from './gallery-d1';
 import { handleMediaRequest } from './media-r2';
+import { handleHubRequest } from './hub';
 
 const MAX_PROOF_FILE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_PROOF_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
@@ -160,6 +161,10 @@ export default {
     // Media served from R2 (public /media, signed /media-signed, signed uploads /media-upload)
     const media = await handleMediaRequest(request, env, baseCorsHeaders);
     if (media) return media;
+
+    // Volunteer hub REST API (/hub/*)
+    const hub = await handleHubRequest(request, env, baseCorsHeaders, { waitUntil: (p) => ctx.waitUntil(p) });
+    if (hub) return hub;
 
     if (url.pathname === '/api/reservations/proof/init' && request.method === 'POST') {
       const supabase = createSupabaseAdmin(env);
