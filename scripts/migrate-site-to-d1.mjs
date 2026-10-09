@@ -1,5 +1,5 @@
-// Copies ftour_team_members, contact_messages, partner_leads from Supabase into D1 (same ids). Idempotent.
-// Usage: SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… node scripts/migrate-site-to-d1.mjs <staging|prod> [--dry-run]
+// Copies Supabase tables into D1 (same ids). Idempotent. Presets: site (team, contact, partner leads), election.
+// Usage: SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… node scripts/migrate-site-to-d1.mjs <staging|prod> [site|election] [--dry-run]
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -11,11 +11,20 @@ const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY: KEY } = process.env;
 if (!db || !SUPABASE_URL || !KEY) { console.error("usage: SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… <staging|prod> [--dry-run]"); process.exit(1); }
 const dry = process.argv.includes("--dry-run");
 
-const TABLES = {
+const PRESETS = {
+  site: {
     ftour_team_members: ["id", "first_name", "last_name", "role", "citation", "photo_url", "display_order", "edition", "is_active", "created_at", "updated_at"],
     contact_messages: ["id", "name", "email", "phone", "subject", "message", "is_read", "created_at"],
     partner_leads: ["id", "created_at", "company_name", "contact_name", "email", "phone", "city", "partnership_type", "budget_range", "message", "source", "locale"],
+  },
+  election: { // parents first: manager_votes references manager_candidates
+    election_settings: ["id", "election_year", "is_open", "max_managers", "created_at"],
+    manager_candidates: ["id", "first_name", "last_name", "email", "phone", "photo_url", "motivation_text", "participation_count", "election_year", "status", "created_at"],
+    manager_votes: ["id", "voter_email", "candidate_id", "election_year", "created_at"],
+  },
 };
+const TABLES = PRESETS[process.argv[3] && !process.argv[3].startsWith("--") ? process.argv[3] : "site"];
+if (!TABLES) { console.error("unknown preset"); process.exit(1); }
 const q = v => v == null ? "NULL" : typeof v === "number" ? String(v) : typeof v === "boolean" ? (v ? "1" : "0") : `'${String(v).replace(/'/g, "''")}'`;
 
 const stmts = [];

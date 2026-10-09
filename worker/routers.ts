@@ -10,6 +10,7 @@ import { createSupabaseAdmin } from "./supabase";
 import * as galleryDb from "./gallery-d1";
 import * as blogDb from "./blog-d1";
 import * as siteDb from "./site-d1";
+import * as electionDb from "./election-d1";
 import { sendEmail, generateGalleryUploadValidationEmail } from "./email";
 import * as XLSX from "xlsx";
 import {
@@ -10102,113 +10103,29 @@ async function getElectionParticipationCount(
 }
 
 const electionRouter = router({
-  getSettings: publicProcedure.query(async ({ ctx }) => {
-    const admin = createSupabaseAdmin(ctx.env);
-    const year = ELECTION_CURRENT_YEAR;
-    const { data, error } = await admin
-      .from("election_settings")
-      .select("*")
-      .eq("election_year", year)
-      .maybeSingle();
-    if (error)
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: error.message,
-      });
-    if (!data) {
-      const { data: created, error: err2 } = await admin
-        .from("election_settings")
-        .insert({ election_year: year, is_open: false, max_managers: 10 })
-        .select()
-        .single();
-      if (err2)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: err2.message,
-        });
-      return created;
-    }
-    return data;
-  }),
+  getSettings: publicProcedure.query(({ ctx }) =>
+    electionDb.getSettings(galleryDb.db(ctx.env), ELECTION_CURRENT_YEAR)
+  ),
 
   listCandidates: publicProcedure
     .input(z.object({ year: z.number().optional() }).optional())
-    .query(async ({ ctx, input }) => {
-      const admin = createSupabaseAdmin(ctx.env);
-      const year = input?.year ?? ELECTION_CURRENT_YEAR;
-      const { data, error } = await admin
-        .from("manager_candidates")
-        .select("*")
-        .eq("election_year", year)
-        .eq("status", "approved")
-        .order("created_at", { ascending: true });
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
-      return data ?? [];
-    }),
+    .query(({ ctx, input }) =>
+      electionDb.listCandidates(
+        galleryDb.db(ctx.env),
+        input?.year ?? ELECTION_CURRENT_YEAR,
+        { status: "approved" }
+      )
+    ),
 
   getResults: publicProcedure
     .input(z.object({ year: z.number().optional() }).optional())
-    .query(async ({ ctx, input }) => {
-      const admin = createSupabaseAdmin(ctx.env);
-      const year = input?.year ?? ELECTION_CURRENT_YEAR;
-      const { data: candidates, error: candErr } = await admin
-        .from("manager_candidates")
-        .select("id, first_name, last_name, photo_url, participation_count")
-        .eq("election_year", year)
-        .eq("status", "approved");
-      if (candErr)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: candErr.message,
-        });
-      if (!candidates?.length) return [];
-      const { data: votes } = await admin
-        .from("manager_votes")
-        .select("candidate_id")
-        .eq("election_year", year);
-      const voteCounts: Record<string, number> = {};
-      for (const v of votes ?? []) {
-        voteCounts[v.candidate_id] = (voteCounts[v.candidate_id] ?? 0) + 1;
-      }
-      return candidates
-        .map((c: any) => ({ ...c, votes: voteCounts[c.id] ?? 0 }))
-        .sort((a: any, b: any) => b.votes - a.votes);
-    }),
+    .query(({ ctx, input }) =>
+      electionDb.results(galleryDb.db(ctx.env), input?.year ?? ELECTION_CURRENT_YEAR)
+    ),
 
-  getManagersHistory: publicProcedure.query(async ({ ctx }) => {
-    const admin = createSupabaseAdmin(ctx.env);
-    const { data: settings } = await admin
-      .from("election_settings")
-      .select("election_year, max_managers")
-      .order("election_year", { ascending: false });
-    const history: any[] = [];
-    for (const s of settings ?? []) {
-      const { data: candidates } = await admin
-        .from("manager_candidates")
-        .select("id, first_name, last_name, photo_url")
-        .eq("election_year", s.election_year)
-        .eq("status", "approved");
-      if (!candidates?.length) continue;
-      const { data: votes } = await admin
-        .from("manager_votes")
-        .select("candidate_id")
-        .eq("election_year", s.election_year);
-      const voteCounts: Record<string, number> = {};
-      for (const v of votes ?? []) {
-        voteCounts[v.candidate_id] = (voteCounts[v.candidate_id] ?? 0) + 1;
-      }
-      const ranked = candidates
-        .map((c: any) => ({ ...c, votes: voteCounts[c.id] ?? 0 }))
-        .sort((a: any, b: any) => b.votes - a.votes)
-        .slice(0, s.max_managers);
-      history.push({ year: s.election_year, managers: ranked });
-    }
-    return history;
-  }),
+  getManagersHistory: publicProcedure.query(({ ctx }) =>
+    electionDb.history(galleryDb.db(ctx.env))
+  ),
 
   checkMyEligibility: protectedProcedure.query(async ({ ctx }) => {
     const email = ctx.user.email;
@@ -10227,22 +10144,20 @@ const electionRouter = router({
   }),
 
   checkMyVote: protectedProcedure.query(async ({ ctx }) => {
-    const admin = createSupabaseAdmin(ctx.env);
     const email = ctx.user.email;
     if (!email) return { hasVoted: false, candidateId: null };
-    const { data } = await admin
-      .from("manager_votes")
-      .select("candidate_id")
-      .eq("voter_email", email.toLowerCase().trim())
-      .eq("election_year", ELECTION_CURRENT_YEAR)
-      .maybeSingle();
-    return { hasVoted: !!data, candidateId: data?.candidate_id ?? null };
+    const candidateId = await electionDb.getVote(
+      galleryDb.db(ctx.env),
+      email.toLowerCase().trim(),
+      ELECTION_CURRENT_YEAR
+    );
+    return { hasVoted: !!candidateId, candidateId };
   }),
 
   vote: protectedProcedure
     .input(z.object({ candidateId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const admin = createSupabaseAdmin(ctx.env);
+      const d = galleryDb.db(ctx.env);
       const email = ctx.user.email;
       if (!email)
         throw new TRPCError({
@@ -10250,12 +10165,7 @@ const electionRouter = router({
           message: "Email introuvable",
         });
       const year = ELECTION_CURRENT_YEAR;
-      const { data: settings } = await admin
-        .from("election_settings")
-        .select("is_open")
-        .eq("election_year", year)
-        .maybeSingle();
-      if (!settings?.is_open) {
+      if (!(await electionDb.isOpen(d, year))) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "L'élection n'est pas ouverte.",
@@ -10268,45 +10178,22 @@ const electionRouter = router({
           message: `Seuls les bénévoles ayant participé à au moins ${ELECTION_MIN_PARTICIPATIONS} actions Bab Rayan peuvent voter.`,
         });
       }
-      const { data: existing } = await admin
-        .from("manager_votes")
-        .select("id")
-        .eq("voter_email", email.toLowerCase().trim())
-        .eq("election_year", year)
-        .maybeSingle();
-      if (existing)
+      const outcome = await electionDb.castVote(
+        d,
+        email.toLowerCase().trim(),
+        input.candidateId,
+        year
+      );
+      if (outcome === "already_voted")
         throw new TRPCError({
           code: "CONFLICT",
           message: "Vous avez déjà voté.",
         });
-      const { data: candidate } = await admin
-        .from("manager_candidates")
-        .select("id")
-        .eq("id", input.candidateId)
-        .eq("election_year", year)
-        .eq("status", "approved")
-        .maybeSingle();
-      if (!candidate)
+      if (outcome === "no_candidate")
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Candidat introuvable.",
         });
-      const { error } = await admin.from("manager_votes").insert({
-        voter_email: email.toLowerCase().trim(),
-        candidate_id: input.candidateId,
-        election_year: year,
-      });
-      if (error) {
-        if (error.code === "23505")
-          throw new TRPCError({
-            code: "CONFLICT",
-            message: "Vous avez déjà voté.",
-          });
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
-      }
       return { success: true };
     }),
 
@@ -10322,7 +10209,7 @@ const electionRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const admin = createSupabaseAdmin(ctx.env);
+      const d = galleryDb.db(ctx.env);
       const userEmail = ctx.user.email ?? input.email;
       const year = ELECTION_CURRENT_YEAR;
       const count = await getElectionParticipationCount(userEmail, ctx.env);
@@ -10332,20 +10219,13 @@ const electionRouter = router({
           message: `Vous devez avoir participé à au moins ${ELECTION_MIN_PARTICIPATIONS} événements Bab Rayan pour vous présenter.`,
         });
       }
-      const { data: existing } = await admin
-        .from("manager_candidates")
-        .select("id")
-        .ilike("email", userEmail.trim())
-        .eq("election_year", year)
-        .maybeSingle();
-      if (existing)
+      if (await electionDb.hasCandidacy(d, userEmail, year))
         throw new TRPCError({
           code: "CONFLICT",
           message: "Vous avez déjà soumis une candidature pour cette année.",
         });
-      const { data, error } = await admin
-        .from("manager_candidates")
-        .insert({
+      try {
+        return await electionDb.createCandidate(d, {
           first_name: input.first_name,
           last_name: input.last_name,
           email: userEmail.toLowerCase().trim(),
@@ -10354,22 +10234,15 @@ const electionRouter = router({
           motivation_text: input.motivation_text ?? null,
           participation_count: count,
           election_year: year,
-          status: "pending",
-        })
-        .select()
-        .single();
-      if (error) {
-        if (error.code === "23505")
+        });
+      } catch (e) {
+        if (/UNIQUE/i.test(String((e as Error).message)))
           throw new TRPCError({
             code: "CONFLICT",
             message: "Candidature déjà soumise.",
           });
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
+        throw e;
       }
-      return data;
     }),
 
   getPhotoUploadUrl: protectedProcedure
@@ -10399,23 +10272,13 @@ const electionRouter = router({
         .object({ year: z.number().optional(), status: z.string().optional() })
         .optional()
     )
-    .query(async ({ ctx, input }) => {
-      const admin = createSupabaseAdmin(ctx.env);
-      const year = input?.year ?? ELECTION_CURRENT_YEAR;
-      let query = admin
-        .from("manager_candidates")
-        .select("*")
-        .eq("election_year", year)
-        .order("created_at", { ascending: false });
-      if (input?.status) query = query.eq("status", input.status);
-      const { data, error } = await query;
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
-      return data ?? [];
-    }),
+    .query(({ ctx, input }) =>
+      electionDb.listCandidates(
+        galleryDb.db(ctx.env),
+        input?.year ?? ELECTION_CURRENT_YEAR,
+        { status: input?.status, newestFirst: true }
+      )
+    ),
 
   admin_updateCandidateStatus: electionAdminProcedure
     .input(
@@ -10425,88 +10288,27 @@ const electionRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const admin = createSupabaseAdmin(ctx.env);
-      const { data, error } = await admin
-        .from("manager_candidates")
-        .update({ status: input.status })
-        .eq("id", input.candidateId)
-        .select()
-        .single();
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
+      const data = await electionDb.setCandidateStatus(
+        galleryDb.db(ctx.env),
+        input.candidateId,
+        input.status
+      );
+      if (!data)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Candidat introuvable." });
       return data;
     }),
 
   admin_getStats: electionAdminProcedure
     .input(z.object({ year: z.number().optional() }).optional())
-    .query(async ({ ctx, input }) => {
-      const admin = createSupabaseAdmin(ctx.env);
-      const year = input?.year ?? ELECTION_CURRENT_YEAR;
-      const [
-        { count: totalCandidates },
-        { count: approvedCandidates },
-        { count: pendingCandidates },
-        { count: totalVotes },
-      ] = await Promise.all([
-        admin
-          .from("manager_candidates")
-          .select("*", { count: "exact", head: true })
-          .eq("election_year", year),
-        admin
-          .from("manager_candidates")
-          .select("*", { count: "exact", head: true })
-          .eq("election_year", year)
-          .eq("status", "approved"),
-        admin
-          .from("manager_candidates")
-          .select("*", { count: "exact", head: true })
-          .eq("election_year", year)
-          .eq("status", "pending"),
-        admin
-          .from("manager_votes")
-          .select("*", { count: "exact", head: true })
-          .eq("election_year", year),
-      ]);
-      return {
-        totalCandidates: totalCandidates ?? 0,
-        approvedCandidates: approvedCandidates ?? 0,
-        pendingCandidates: pendingCandidates ?? 0,
-        totalVotes: totalVotes ?? 0,
-      };
-    }),
+    .query(({ ctx, input }) =>
+      electionDb.stats(galleryDb.db(ctx.env), input?.year ?? ELECTION_CURRENT_YEAR)
+    ),
 
   admin_getLiveRanking: electionAdminProcedure
     .input(z.object({ year: z.number().optional() }).optional())
-    .query(async ({ ctx, input }) => {
-      const admin = createSupabaseAdmin(ctx.env);
-      const year = input?.year ?? ELECTION_CURRENT_YEAR;
-      const { data: candidates, error } = await admin
-        .from("manager_candidates")
-        .select(
-          "id, first_name, last_name, photo_url, participation_count, status"
-        )
-        .eq("election_year", year)
-        .eq("status", "approved");
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
-      const { data: votes } = await admin
-        .from("manager_votes")
-        .select("candidate_id")
-        .eq("election_year", year);
-      const voteCounts: Record<string, number> = {};
-      for (const v of votes ?? []) {
-        voteCounts[v.candidate_id] = (voteCounts[v.candidate_id] ?? 0) + 1;
-      }
-      return (candidates ?? [])
-        .map((c: any) => ({ ...c, votes: voteCounts[c.id] ?? 0 }))
-        .sort((a: any, b: any) => b.votes - a.votes);
-    }),
+    .query(({ ctx, input }) =>
+      electionDb.results(galleryDb.db(ctx.env), input?.year ?? ELECTION_CURRENT_YEAR)
+    ),
 
   admin_updateSettings: electionAdminProcedure
     .input(
@@ -10516,60 +10318,24 @@ const electionRouter = router({
         max_managers: z.number().int().min(1).max(50).optional(),
       })
     )
-    .mutation(async ({ ctx, input }) => {
-      const admin = createSupabaseAdmin(ctx.env);
-      const year = input.year ?? ELECTION_CURRENT_YEAR;
-      const updates: Record<string, unknown> = {};
-      if (input.is_open !== undefined) updates.is_open = input.is_open;
-      if (input.max_managers !== undefined)
-        updates.max_managers = input.max_managers;
-      const { data, error } = await admin
-        .from("election_settings")
-        .upsert(
-          { election_year: year, ...updates },
-          { onConflict: "election_year" }
-        )
-        .select()
-        .single();
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
-      return data;
-    }),
+    .mutation(({ ctx, input }) =>
+      electionDb.upsertSettings(
+        galleryDb.db(ctx.env),
+        input.year ?? ELECTION_CURRENT_YEAR,
+        { is_open: input.is_open, max_managers: input.max_managers }
+      )
+    ),
 
   admin_listVotes: electionAdminProcedure
     .input(z.object({ year: z.number().optional() }).optional())
-    .query(async ({ ctx, input }) => {
-      const admin = createSupabaseAdmin(ctx.env);
-      const year = input?.year ?? ELECTION_CURRENT_YEAR;
-      const { data, error } = await admin
-        .from("manager_votes")
-        .select("id, voter_email, candidate_id, created_at")
-        .eq("election_year", year)
-        .order("created_at", { ascending: false });
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
-      return data ?? [];
-    }),
+    .query(({ ctx, input }) =>
+      electionDb.listVotes(galleryDb.db(ctx.env), input?.year ?? ELECTION_CURRENT_YEAR)
+    ),
 
   admin_deleteCandidate: electionAdminProcedure
     .input(z.object({ candidateId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const admin = createSupabaseAdmin(ctx.env);
-      const { error } = await admin
-        .from("manager_candidates")
-        .delete()
-        .eq("id", input.candidateId);
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
+      await electionDb.deleteCandidate(galleryDb.db(ctx.env), input.candidateId);
       return { success: true };
     }),
 });
