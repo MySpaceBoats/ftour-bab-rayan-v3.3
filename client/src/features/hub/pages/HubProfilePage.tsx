@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/i18n";
 import * as hub from "../api";
+import HubShell from "../components/HubShell";
+import Avatar from "../components/Avatar";
 
 export default function HubProfilePage() {
   const { lang } = useI18n();
@@ -41,23 +41,28 @@ export default function HubProfilePage() {
     try { await save(await hub.uploadImage(file)); } catch (e) { toast.error((e as Error).message); }
   };
 
+  if (!me) {
+    return <div className="flex min-h-screen items-center justify-center bg-slate-100 text-slate-500">Chargement…</div>;
+  }
+
   return (
-    <div className="min-h-screen bg-slate-200">
-      <Navbar />
-      <main className="container max-w-xl py-8 space-y-4">
-        <h1 className="text-2xl font-bold">Mon profil</h1>
-        {me && (
-          <div className="rounded-xl border border-slate-300 bg-white shadow-sm p-4 space-y-4">
-            {me.avatar && <img src={me.avatar} alt="" className="h-24 w-24 rounded-full object-cover" />}
-            <input type="file" accept="image/jpeg,image/png,image/webp" aria-label="Photo de profil" onChange={e => { const f = e.target.files?.[0]; e.target.value = ""; pickAvatar(f); }} />
-            <Input value={name} onChange={e => setName(e.target.value)} maxLength={40} aria-label="Nom affiché" />
-            <Textarea value={bio} onChange={e => setBio(e.target.value)} maxLength={300} rows={3} aria-label="Bio" placeholder="Quelques mots sur vous" />
-            <Button onClick={() => save()} disabled={busy || !name.trim()}>Enregistrer</Button>
+    <HubShell me={me}>
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="h-24 bg-gradient-to-r from-blue-800 to-blue-500" />
+        <div className="space-y-4 p-4">
+          <div className="-mt-14 flex items-end gap-4">
+            <div className="rounded-full ring-4 ring-white"><Avatar name={me.display_name} src={me.avatar} size={88} /></div>
+            <label className="cursor-pointer rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200">
+              Changer la photo
+              <input type="file" hidden accept="image/jpeg,image/png,image/webp" aria-label="Photo de profil" onChange={e => { const f = e.target.files?.[0]; e.target.value = ""; pickAvatar(f); }} />
+            </label>
           </div>
-        )}
-        <Link href={`/${lang}/benevole/espace`} className="underline text-sm">← Retour à l'espace</Link>
-      </main>
-      <Footer />
-    </div>
+          <Input value={name} onChange={e => setName(e.target.value)} maxLength={40} aria-label="Nom affiché" />
+          <Textarea value={bio} onChange={e => setBio(e.target.value)} maxLength={300} rows={3} aria-label="Bio" placeholder="Quelques mots sur vous" />
+          <Button className="bg-blue-700 hover:bg-blue-800" onClick={() => save()} disabled={busy || !name.trim()}>Enregistrer</Button>
+        </div>
+      </div>
+      <Link href={`/${lang}/benevole/espace`} className="inline-block text-sm text-blue-700 underline">← Retour au fil</Link>
+    </HubShell>
   );
 }
