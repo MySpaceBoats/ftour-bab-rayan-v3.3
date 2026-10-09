@@ -9,6 +9,7 @@ import type { WorkerContext, WorkerUser } from "./context";
 import { createSupabaseAdmin } from "./supabase";
 import * as galleryDb from "./gallery-d1";
 import * as blogDb from "./blog-d1";
+import * as siteDb from "./site-d1";
 import { sendEmail, generateGalleryUploadValidationEmail } from "./email";
 import * as XLSX from "xlsx";
 import {
@@ -5795,24 +5796,7 @@ const contactRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
-
-      const { data, error } = await supabase
-        .from("contact_messages")
-        .insert({
-          name: input.name,
-          email: input.email,
-          phone: input.phone,
-          subject: input.subject,
-          message: input.message,
-          is_read: false,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-      }
+      const data = await siteDb.insertContact(galleryDb.db(ctx.env), input);
 
       // Send confirmation email to user and notification to admin
       try {
@@ -5862,18 +5846,8 @@ const contactRouter = router({
     }),
 
   list: adminProcedure.query(async ({ ctx }) => {
-    const supabase = createSupabaseAdmin(ctx.env);
-
-    const { data, error } = await supabase
-      .from("contact_messages")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      return [];
-    }
-
-    return (data || []).map(m => ({
+    const rows = await siteDb.listContacts(galleryDb.db(ctx.env));
+    return rows.map((m: any) => ({
       id: m.id,
       name: m.name,
       email: m.email,
@@ -5888,17 +5862,7 @@ const contactRouter = router({
   markAsRead: adminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input, ctx }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
-
-      const { error } = await supabase
-        .from("contact_messages")
-        .update({ is_read: true })
-        .eq("id", input.id);
-
-      if (error) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-      }
-
+      await siteDb.markContactRead(galleryDb.db(ctx.env), input.id);
       return { success: true };
     }),
 });
@@ -8962,28 +8926,7 @@ const partnerLeadsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
-
-      const { data, error } = await supabase
-        .from("partner_leads")
-        .insert({
-          company_name: input.companyName,
-          contact_name: input.contactName,
-          email: input.email,
-          phone: input.phone,
-          city: input.city,
-          partnership_type: input.partnershipType,
-          budget_range: input.budgetRange,
-          message: input.message,
-          source: input.source ?? "website",
-          locale: input.locale,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-      }
+      const id = await siteDb.insertPartnerLead(galleryDb.db(ctx.env), input);
 
       try {
         const { sendEmail, generatePartnerLeadAdminNotificationEmail } =
@@ -9000,7 +8943,7 @@ const partnerLeadsRouter = router({
         console.error("[Worker] Error sending partner lead email:", emailError);
       }
 
-      return { success: true, id: data.id };
+      return { success: true, id };
     }),
 });
 
@@ -10704,37 +10647,20 @@ const teamRouter = router({
   listPublic: publicProcedure
     .input(z.object({ edition: z.number().int().min(1).default(12) }))
     .query(async ({ ctx, input }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
-      const { data, error } = await supabase
-        .from("ftour_team_members")
-        .select("*")
-        .eq("edition", input.edition)
-        .eq("is_active", true)
-        .order("display_order", { ascending: true });
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
-      return (data ?? []).map(mapTeamMember);
+      const data = await siteDb.listTeam(galleryDb.db(ctx.env), {
+        edition: input.edition,
+        onlyActive: true,
+      });
+      return data.map(mapTeamMember);
     }),
 
   list: teamAdminProcedure
     .input(z.object({ edition: z.number().int().min(1).optional() }))
     .query(async ({ ctx, input }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
-      let query = supabase
-        .from("ftour_team_members")
-        .select("*")
-        .order("display_order", { ascending: true });
-      if (input.edition) query = query.eq("edition", input.edition);
-      const { data, error } = await query;
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
-      return (data ?? []).map(mapTeamMember);
+      const data = await siteDb.listTeam(galleryDb.db(ctx.env), {
+        edition: input.edition,
+      });
+      return data.map(mapTeamMember);
     }),
 
   create: teamAdminProcedure
@@ -10773,26 +10699,15 @@ const teamRouter = router({
         photoUrl = urlData.publicUrl;
       }
 
-      const { data, error } = await supabase
-        .from("ftour_team_members")
-        .insert({
-          first_name: input.firstName,
-          last_name: input.lastName,
-          role: input.role ?? null,
-          citation: input.citation ?? null,
-          photo_url: photoUrl,
-          display_order: input.displayOrder,
-          edition: input.edition,
-          is_active: true,
-        })
-        .select()
-        .single();
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
-      return data;
+      return siteDb.createTeam(galleryDb.db(ctx.env), {
+        firstName: input.firstName,
+        lastName: input.lastName,
+        role: input.role ?? null,
+        citation: input.citation ?? null,
+        photoUrl,
+        displayOrder: input.displayOrder,
+        edition: input.edition,
+      });
     }),
 
   update: teamAdminProcedure
@@ -10844,47 +10759,23 @@ const teamRouter = router({
       if (rest.edition !== undefined) updates.edition = rest.edition;
       if (rest.isActive !== undefined) updates.is_active = rest.isActive;
 
-      const { data, error } = await supabase
-        .from("ftour_team_members")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
+      const data = await siteDb.updateTeam(galleryDb.db(ctx.env), id, updates);
+      if (!data)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Membre introuvable." });
       return data;
     }),
 
   delete: teamAdminProcedure
     .input(z.object({ id: z.number().int() }))
     .mutation(async ({ ctx, input }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
-      const { error } = await supabase
-        .from("ftour_team_members")
-        .delete()
-        .eq("id", input.id);
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
+      await siteDb.deleteTeam(galleryDb.db(ctx.env), input.id);
       return { success: true };
     }),
 
   reorder: teamAdminProcedure
     .input(z.object({ orderedIds: z.array(z.number().int()) }))
     .mutation(async ({ ctx, input }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
-      const updates = input.orderedIds.map((id, index) =>
-        supabase
-          .from("ftour_team_members")
-          .update({ display_order: index })
-          .eq("id", id)
-      );
-      await Promise.all(updates);
+      await siteDb.reorderTeam(galleryDb.db(ctx.env), input.orderedIds);
       return { success: true };
     }),
 });
