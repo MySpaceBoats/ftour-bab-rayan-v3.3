@@ -15,8 +15,17 @@ invocation_logs = true
 [triggers]
 crons = ["5 23 * * *"]
 
+# Gallery: D1 (rows) + R2 (images)
+[[d1_databases]]
+binding = "DB"
+database_name = "ftour-bab-rayan-prod-db"
+database_id = "46e15f77-73c9-415a-a50a-0067b54719eb"
 
-# ---- Staging: gallery on D1 + R2 (prod bindings to add once media is migrated) ----
+[[r2_buckets]]
+binding = "GALLERY_MEDIA"
+bucket_name = "ftour-bab-rayan-prod-media"
+
+# ---- Staging: gallery on D1 + R2 ----
 [env.staging]
 name = "ftour-bab-rayan-staging"
 
