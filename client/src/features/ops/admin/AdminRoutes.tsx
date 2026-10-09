@@ -4,6 +4,7 @@ import AdminFrame from './_shell/AdminFrame';
 // ── Ops Admin ────────────────────────────────────────────────
 import AdminDashboard from './AdminDashboard';
 import AdminBenevoles from './AdminBenevoles';
+import AdminHub from '@/features/hub/admin/AdminHub';
 import AdminGroupesBenevoles from './AdminGroupesBenevoles';
 import AdminJours from './AdminJours';
 import AdminScanProduct from './AdminScanProduct';
@@ -127,6 +128,8 @@ function AdminSwitch() {
       <Route path="/admin3/benevoles" component={AdminBenevoles} />
       <Route path="/admin/benevoles-groupes" component={AdminGroupesBenevoles} />
       <Route path="/admin3/benevoles-groupes" component={AdminGroupesBenevoles} />
+      <Route path="/admin/hub" component={AdminHub} />
+      <Route path="/admin3/hub" component={AdminHub} />
       <Route path="/admin/jours" component={AdminJours} />
       <Route path="/admin3/jours" component={AdminJours} />
       <Route path="/admin/ramadan-stats" component={AdminRamadanStats} />

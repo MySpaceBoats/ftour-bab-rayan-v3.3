@@ -122,6 +122,7 @@ export const ROUTE_ROLES: Record<string, readonly Role[]> = {
   '/admin/ops': [...ADMIN_BASE, ROLES.ADMIN_OPS],
   '/admin/jours': [...ADMIN_BASE, ROLES.ADMIN_OPS],
   '/admin/benevoles': [...ADMIN_BASE, ROLES.ADMIN_OPS],
+  '/admin/hub': [...ADMIN_BASE, ROLES.ADMIN_OPS],
   '/admin/scan': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.SCANNER],
   '/admin/scan-reservation': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.SCANNER],
   '/admin/scan-product': [...ADMIN_BASE, ROLES.ADMIN_OPS, ROLES.SCANNER],
