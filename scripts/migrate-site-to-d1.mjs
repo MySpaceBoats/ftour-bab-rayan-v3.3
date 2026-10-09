@@ -1,5 +1,5 @@
-// Copies Supabase tables into D1 (same ids). Idempotent. Presets: site (team, contact, partner leads), election.
-// Usage: SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… node scripts/migrate-site-to-d1.mjs <staging|prod> [site|election] [--dry-run]
+// Copies Supabase tables into D1 (same ids). Idempotent. Presets: site (team, contact, partner leads), election, donations.
+// Usage: SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… node scripts/migrate-site-to-d1.mjs <staging|prod> [site|election|donations] [--dry-run]
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -22,7 +22,11 @@ const PRESETS = {
     manager_candidates: ["id", "first_name", "last_name", "email", "phone", "photo_url", "motivation_text", "participation_count", "election_year", "status", "created_at"],
     manager_votes: ["id", "voter_email", "candidate_id", "election_year", "created_at"],
   },
+  donations: {
+    donations: ["id", "donation_reference", "donor_name", "donor_email", "donor_phone", "amount", "payment_method", "status", "message", "is_anonymous", "accepts_updates", "processed_by", "created_at", "updated_at"],
+  },
 };
+const D1_NAME = { donations: "donations_v2" }; // D1 table when it differs from the Supabase one
 const TABLES = PRESETS[process.argv[3] && !process.argv[3].startsWith("--") ? process.argv[3] : "site"];
 if (!TABLES) { console.error("unknown preset"); process.exit(1); }
 const q = v => v == null ? "NULL" : typeof v === "number" ? String(v) : typeof v === "boolean" ? (v ? "1" : "0") : `'${String(v).replace(/'/g, "''")}'`;
@@ -33,7 +37,7 @@ for (const [table, cols] of Object.entries(TABLES)) {
     if (!res.ok) throw new Error(`${table}: HTTP ${res.status}`);
     const rows = await res.json();
     console.log(`${table}: ${rows.length}`);
-    for (const r of rows) stmts.push(`INSERT OR REPLACE INTO ${table} (${cols.join(",")}) VALUES (${cols.map(c => q(r[c])).join(",")});`);
+    for (const r of rows) stmts.push(`INSERT OR REPLACE INTO ${D1_NAME[table] ?? table} (${cols.join(",")}) VALUES (${cols.map(c => q(r[c])).join(",")});`);
 }
 console.log(`${stmts.length} rows -> ${db}${dry ? " (dry run)" : ""}`);
 if (dry || !stmts.length) process.exit(0);

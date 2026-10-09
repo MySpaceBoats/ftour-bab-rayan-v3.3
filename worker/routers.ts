@@ -11,6 +11,7 @@ import * as galleryDb from "./gallery-d1";
 import * as blogDb from "./blog-d1";
 import * as siteDb from "./site-d1";
 import * as electionDb from "./election-d1";
+import * as donationsDb from "./donations-d1";
 import { sendEmail, generateGalleryUploadValidationEmail } from "./email";
 import * as XLSX from "xlsx";
 import {
@@ -1329,11 +1330,10 @@ const scannerRouter = router({
 
       // ---- DONATION ----
       if (qrType === "donation") {
-        const { data: donation } = await supabase
-          .from("donations")
-          .select("*")
-          .eq("donation_reference", token)
-          .single();
+        const donation = await donationsDb.byReference(
+          galleryDb.db(ctx.env),
+          token
+        );
         if (!donation) {
           return {
             type: "donation" as WorkerQrType,
@@ -1516,11 +1516,10 @@ const scannerRouter = router({
           };
         }
         // Try donation
-        const { data: donationRow } = await supabase
-          .from("donations")
-          .select("*")
-          .eq("donation_reference", token)
-          .single();
+        const donationRow = await donationsDb.byReference(
+          galleryDb.db(ctx.env),
+          token
+        );
         if (donationRow) {
           return {
             type: "donation" as WorkerQrType,
@@ -1939,13 +1938,10 @@ const scannerRouter = router({
 
       // ---- DONATION ----
       if (input.type === "donation") {
-        const { data: donation } = await supabase
-          .from("donations")
-          .select(
-            "status, donor_name, donor_email, donation_reference, amount, payment_method"
-          )
-          .eq("id", input.entityId)
-          .single();
+        const donation = await donationsDb.byId(
+          galleryDb.db(ctx.env),
+          input.entityId
+        );
         if (!donation)
           throw new TRPCError({
             code: "NOT_FOUND",
@@ -1956,10 +1952,11 @@ const scannerRouter = router({
             code: "BAD_REQUEST",
             message: "Don déjà marqué comme reçu",
           });
-        await supabase
-          .from("donations")
-          .update({ status: "received" })
-          .eq("id", input.entityId);
+        await donationsDb.setStatus(
+          galleryDb.db(ctx.env),
+          input.entityId,
+          "received"
+        );
 
         // Envoyer un email de confirmation de réception
         try {
@@ -2662,13 +2659,9 @@ const publicRouter = router({
       .select("*", { count: "exact", head: true });
 
     // Get donation total
-    const { data: donations } = await supabase
-      .from("donations")
-      .select("amount")
-      .eq("status", "received");
-
-    const totalDonations =
-      donations?.reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
+    const totalDonations = await donationsDb.receivedTotal(
+      galleryDb.db(ctx.env)
+    );
 
     return {
       totalVolunteers: volunteerCount || 0,
@@ -5297,25 +5290,25 @@ const donationsRouter = router({
       // Generate donation reference
       const donationRef = `DON-${Date.now().toString(36).toUpperCase()}`;
 
-      const { data, error } = await supabase
-        .from("donations")
-        .insert({
-          donation_reference: donationRef,
-          donor_name: input.donorName,
-          donor_email: input.donorEmail,
-          donor_phone: input.donorPhone,
+      let data: { id: number };
+      try {
+        data = await donationsDb.createDonation(galleryDb.db(ctx.env), {
+          reference: donationRef,
+          donorName: input.donorName,
+          donorEmail: input.donorEmail,
+          donorPhone: input.donorPhone,
           amount: input.amount,
-          payment_method: input.paymentMethod,
+          paymentMethod: input.paymentMethod,
           status: input.paymentMethod === "transfer" ? "pending" : "promised",
           message: input.message,
-          is_anonymous: input.isAnonymous,
-          accepts_updates: input.acceptsUpdates,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+          isAnonymous: input.isAnonymous,
+          acceptsUpdates: input.acceptsUpdates,
+        });
+      } catch (e) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: (e as Error).message,
+        });
       }
 
       // Send confirmation email
@@ -5349,17 +5342,9 @@ const donationsRouter = router({
   listAll: adminProcedure.query(async ({ ctx }) => {
     const supabase = createSupabaseAdmin(ctx.env);
 
-    const { data, error } = await supabase
-      .from("donations")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const data = await donationsDb.listAll(galleryDb.db(ctx.env));
 
-    if (error) {
-      console.error("[Worker] Donations listAll error:", error);
-      return [];
-    }
-
-    return (data || []).map(d => ({
+    return data.map((d: any) => ({
       id: d.id,
       donationReference: d.donation_reference,
       donorName: d.donor_name,
@@ -5388,25 +5373,20 @@ const donationsRouter = router({
     .mutation(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
 
-      const { error } = await supabase
-        .from("donations")
-        .update({ status: input.status, processed_by: ctx.user?.id })
-        .eq("id", input.donationId);
-
-      if (error) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-      }
+      const dd = galleryDb.db(ctx.env);
+      if (!(await donationsDb.byId(dd, input.donationId)))
+        throw new TRPCError({ code: "NOT_FOUND", message: "Don introuvable" });
+      await donationsDb.setStatus(
+        dd,
+        input.donationId,
+        input.status,
+        ctx.user?.id
+      );
 
       // Envoyer un email de confirmation quand le don passe au statut "reçu"
       if (input.status === "received") {
         try {
-          const { data: donation } = await supabase
-            .from("donations")
-            .select(
-              "donor_name, donor_email, donation_reference, amount, payment_method"
-            )
-            .eq("id", input.donationId)
-            .single();
+          const donation = await donationsDb.byId(dd, input.donationId);
 
           if (donation) {
             const { sendEmail, generateDonationReceivedEmail } = await import(
@@ -5445,24 +5425,7 @@ const donationsRouter = router({
   stats: adminProcedure.query(async ({ ctx }) => {
     const supabase = createSupabaseAdmin(ctx.env);
 
-    const { data } = await supabase.from("donations").select("amount, status");
-
-    const stats = {
-      total: 0,
-      received: 0,
-      pending: 0,
-      count: data?.length || 0,
-    };
-
-    for (const d of data || []) {
-      const amount = parseFloat(d.amount) || 0;
-      stats.total += amount;
-      if (d.status === "received") stats.received += amount;
-      if (d.status === "pending" || d.status === "promised")
-        stats.pending += amount;
-    }
-
-    return stats;
+    return donationsDb.stats(galleryDb.db(ctx.env));
   }),
 });
 
