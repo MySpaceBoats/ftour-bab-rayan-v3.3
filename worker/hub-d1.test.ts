@@ -188,6 +188,14 @@ describe("hub posts", () => {
     await expect(h.addComment(d, b, id, "over", T0 + 100)).rejects.toMatchObject({ code: "rate_limited" });
   });
 
+  it("listComments rejects a hidden post", async () => {
+    const a = await member("a@x.ma");
+    const { id } = await h.createPost(d, a, { body: "hello" }, T0);
+    await h.addComment(d, a, id, "hi", T0 + 1);
+    sqlite.prepare("UPDATE hub_posts SET status='hidden' WHERE id=?").run(id);
+    await expect(h.listComments(d, id)).rejects.toMatchObject({ code: "not_found" });
+  });
+
   it("removeContent: owner or moderator only; removed content disappears", async () => {
     const a = await member("a@x.ma"); const b = await member("b@x.ma", "Brahim");
     const mod = await member("m@x.ma", "Mona", "moderator");

@@ -190,6 +190,7 @@ export async function addComment(d: D1Like, member: MemberRow, postId: number, r
 }
 
 export async function listComments(d: D1Like, postId: number): Promise<CommentView[]> {
+  await visiblePost(d, postId);
   const { results } = await d.prepare(
     `SELECT c.id, c.post_id, c.body, c.created_at, m.id AS author_id, m.display_name AS author_name, m.avatar_key AS author_avatar
      FROM hub_comments c JOIN hub_members m ON m.id = c.member_id WHERE c.post_id = ? AND c.status = 'visible' ORDER BY c.id ASC LIMIT 200`,
