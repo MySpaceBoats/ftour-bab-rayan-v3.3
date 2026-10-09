@@ -117,3 +117,102 @@ describe("hub identity", () => {
     await expect(h.updateProfile(d, row, { avatar_key: `${member.id}/../x.jpg` })).rejects.toMatchObject({ code: "invalid" });
   });
 });
+
+async function member(email: string, first = "Amina", role?: "moderator") {
+  vol(email, "confirmed", first, "Benali");
+  const { session } = await login(email);
+  const row = (await h.getSession(d, session, T0 + 1))!;
+  if (role) sqlite.prepare("UPDATE hub_members SET role=? WHERE id=?").run(role, row.id);
+  return (await h.getSession(d, session, T0 + 1))!;
+}
+
+describe("hub posts", () => {
+  it("validates body and media", async () => {
+    const m = await member("a@x.ma");
+    await expect(h.createPost(d, m, { body: "  " }, T0)).rejects.toMatchObject({ code: "invalid" });
+    await expect(h.createPost(d, m, { body: "x".repeat(2001) }, T0)).rejects.toMatchObject({ code: "invalid" });
+    await expect(h.createPost(d, m, { body: "ok", mediaPaths: [1, 2, 3, 4, 5].map(i => `${m.id}/${i}.jpg`) }, T0)).rejects.toMatchObject({ code: "invalid" });
+    await expect(h.createPost(d, m, { body: "ok", mediaPaths: ["999/x.jpg"] }, T0)).rejects.toMatchObject({ code: "invalid" });
+    await expect(h.createPost(d, m, { body: "ok", mediaPaths: [`${m.id}/../x.jpg`] }, T0)).rejects.toMatchObject({ code: "invalid" });
+  });
+
+  it("rate-limits 10 posts per hour", async () => {
+    const m = await member("a@x.ma");
+    for (let i = 0; i < 10; i++) await h.createPost(d, m, { body: `p${i}` }, T0 + i);
+    await expect(h.createPost(d, m, { body: "p11" }, T0 + 20)).rejects.toMatchObject({ code: "rate_limited" });
+    await expect(h.createPost(d, m, { body: "later" }, T0 + 60 * 60 * 1000 + 100)).resolves.toBeTruthy();
+  });
+
+  it("feed: newest first, cursor pagination, pinned only on first page, hidden excluded, media attached", async () => {
+    const m = await member("a@x.ma");
+    const ids: number[] = [];
+    for (let i = 0; i < 25; i++) {
+      ids.push((await h.createPost(d, m, { body: `p${i}`, mediaPaths: i === 24 ? [`${m.id}/a.jpg`, `${m.id}/b.jpg`] : [] }, T0 + i * 7 * 60 * 1000)).id);
+    }
+    sqlite.prepare("UPDATE hub_posts SET pinned=1, kind='announcement' WHERE id=?").run(ids[3]);
+    sqlite.prepare("UPDATE hub_posts SET status='hidden' WHERE id=?").run(ids[10]);
+    const p1 = await h.feed(d, m.id);
+    expect(p1.pinned.map(p => p.id)).toEqual([ids[3]]);
+    expect(p1.posts).toHaveLength(20);
+    expect(p1.posts[0]).toMatchObject({ id: ids[24], media: [`${m.id}/a.jpg`, `${m.id}/b.jpg`], author: { display_name: "Amina B." } });
+    expect(p1.posts.map(p => p.id)).not.toContain(ids[3]);
+    expect(p1.posts.map(p => p.id)).not.toContain(ids[10]);
+    const p2 = await h.feed(d, m.id, p1.nextCursor);
+    expect(p2.pinned).toEqual([]);
+    expect(p2.posts.length).toBe(3);
+    expect(p2.nextCursor).toBeNull();
+  });
+
+  it("likes toggle per member, counts, liked flag, hidden post rejected", async () => {
+    const a = await member("a@x.ma"); const b = await member("b@x.ma", "Brahim");
+    const { id } = await h.createPost(d, a, { body: "hello" }, T0);
+    expect(await h.toggleLike(d, b.id, id)).toEqual({ liked: true, count: 1 });
+    expect((await h.feed(d, b.id)).posts[0]).toMatchObject({ like_count: 1, liked: true });
+    expect((await h.feed(d, a.id)).posts[0]).toMatchObject({ like_count: 1, liked: false });
+    expect(await h.toggleLike(d, b.id, id)).toEqual({ liked: false, count: 0 });
+    sqlite.prepare("UPDATE hub_posts SET status='hidden' WHERE id=?").run(id);
+    await expect(h.toggleLike(d, b.id, id)).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("comments: validate, count, list ascending, rate-limit 30/h", async () => {
+    const a = await member("a@x.ma"); const b = await member("b@x.ma", "Brahim");
+    const { id } = await h.createPost(d, a, { body: "hello" }, T0);
+    await expect(h.addComment(d, b, id, "", T0)).rejects.toMatchObject({ code: "invalid" });
+    await expect(h.addComment(d, b, id, "x".repeat(501), T0)).rejects.toMatchObject({ code: "invalid" });
+    await expect(h.addComment(d, b, 9999, "ok", T0)).rejects.toMatchObject({ code: "not_found" });
+    await h.addComment(d, b, id, "first", T0 + 1);
+    await h.addComment(d, a, id, "second", T0 + 2);
+    expect((await h.listComments(d, id)).map(c => c.body)).toEqual(["first", "second"]);
+    expect((await h.feed(d, a.id)).posts[0].comment_count).toBe(2);
+    for (let i = 0; i < 29; i++) await h.addComment(d, b, id, `c${i}`, T0 + 10 + i);
+    await expect(h.addComment(d, b, id, "over", T0 + 100)).rejects.toMatchObject({ code: "rate_limited" });
+  });
+
+  it("removeContent: owner or moderator only; removed content disappears", async () => {
+    const a = await member("a@x.ma"); const b = await member("b@x.ma", "Brahim");
+    const mod = await member("m@x.ma", "Mona", "moderator");
+    const p = await h.createPost(d, a, { body: "mine" }, T0);
+    const c = await h.addComment(d, a, p.id, "mine too", T0 + 1);
+    await expect(h.removeContent(d, b, "post", p.id)).rejects.toMatchObject({ code: "forbidden" });
+    await expect(h.removeContent(d, b, "comment", c.id)).rejects.toMatchObject({ code: "forbidden" });
+    await h.removeContent(d, a, "comment", c.id);
+    expect(await h.listComments(d, p.id)).toEqual([]);
+    await h.removeContent(d, mod, "post", p.id);
+    expect((await h.feed(d, a.id)).posts).toEqual([]);
+    await expect(h.removeContent(d, a, "post", 9999)).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("recordUpload allows 20 per hour", async () => {
+    const a = await member("a@x.ma");
+    for (let i = 0; i < 20; i++) await h.recordUpload(d, a.id, T0 + i);
+    await expect(h.recordUpload(d, a.id, T0 + 30)).rejects.toMatchObject({ code: "rate_limited" });
+    await expect(h.recordUpload(d, a.id, T0 + 60 * 60 * 1000 + 100)).resolves.toBeUndefined();
+  });
+
+  it("feed survives a suspended author", async () => {
+    const a = await member("a@x.ma");
+    await h.createPost(d, a, { body: "still here" }, T0);
+    sqlite.prepare("UPDATE hub_members SET status='suspended' WHERE id=?").run(a.id);
+    expect((await h.feed(d, a.id)).posts).toHaveLength(1);
+  });
+});
