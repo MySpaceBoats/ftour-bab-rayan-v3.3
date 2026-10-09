@@ -70,7 +70,7 @@ export default function HubPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#faf6ec]">
+    <div className="min-h-screen bg-slate-200">
       <Navbar />
       <main className="container max-w-2xl py-8 space-y-4">
         <h1 className="text-2xl font-bold">Espace bénévole</h1>
@@ -78,7 +78,7 @@ export default function HubPage() {
         {me === undefined && <Loader2 className="animate-spin" />}
 
         {me === null && (
-          <form onSubmit={sendLink} className="rounded-xl border bg-white p-4 space-y-3">
+          <form onSubmit={sendLink} className="rounded-xl border border-slate-300 bg-white shadow-sm p-4 space-y-3">
             {sent ? (
               <p>Si cet email correspond à un bénévole confirmé, un lien de connexion vient d'être envoyé. Il est valable 15 minutes.</p>
             ) : (

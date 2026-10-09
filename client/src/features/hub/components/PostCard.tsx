@@ -21,13 +21,13 @@ export default function PostCard({ post, me, onChanged }: { post: hub.Post; me: 
   const loadComments = () => act(async () => setComments(await hub.getComments(post.id)));
 
   return (
-    <article className={`rounded-xl border bg-white p-4 space-y-3 ${post.kind === "announcement" ? "border-amber-400 bg-amber-50" : ""}`}>
+    <article className={`rounded-xl border p-4 space-y-3 shadow-sm ${post.kind === "announcement" ? "border-amber-500 bg-amber-100" : "border-slate-300 bg-white"}`}>
       <header className="flex items-center justify-between text-sm">
         <div>
           <span className="font-semibold">{post.author.display_name}</span>
           <span className="ml-2 text-muted-foreground">{when(post.created_at)}</span>
         </div>
-        {post.pinned && <span className="flex items-center gap-1 text-amber-700"><Pin size={14} /> Annonce</span>}
+        {post.pinned && <span className="flex items-center gap-1 text-amber-800 font-semibold"><Pin size={14} /> Annonce</span>}
       </header>
 
       <p className="whitespace-pre-wrap break-words">{post.body}</p>

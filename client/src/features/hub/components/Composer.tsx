@@ -42,7 +42,7 @@ export default function Composer({ onPosted }: { onPosted: () => void }) {
   };
 
   return (
-    <div className="rounded-xl border bg-white p-3 space-y-3">
+    <div className="rounded-xl border border-slate-300 bg-white shadow-sm p-3 space-y-3">
       <Textarea value={body} onChange={e => setBody(e.target.value)} maxLength={2000} rows={3} placeholder="Partagez un moment, une photo, un remerciement…" />
       {files.length > 0 && (
         <div className="flex flex-wrap gap-2">

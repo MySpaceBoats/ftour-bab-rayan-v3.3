@@ -42,12 +42,12 @@ export default function HubProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#faf6ec]">
+    <div className="min-h-screen bg-slate-200">
       <Navbar />
       <main className="container max-w-xl py-8 space-y-4">
         <h1 className="text-2xl font-bold">Mon profil</h1>
         {me && (
-          <div className="rounded-xl border bg-white p-4 space-y-4">
+          <div className="rounded-xl border border-slate-300 bg-white shadow-sm p-4 space-y-4">
             {me.avatar && <img src={me.avatar} alt="" className="h-24 w-24 rounded-full object-cover" />}
             <input type="file" accept="image/jpeg,image/png,image/webp" aria-label="Photo de profil" onChange={e => { const f = e.target.files?.[0]; e.target.value = ""; pickAvatar(f); }} />
             <Input value={name} onChange={e => setName(e.target.value)} maxLength={40} aria-label="Nom affiché" />
