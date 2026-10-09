@@ -26,6 +26,7 @@ import {
   ShoppingCart,
   UserCircle2,
   Star,
+  Images,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -78,6 +79,7 @@ export default function Navbar() {
       icon: ShoppingBag,
     },
     { href: localizedHref("/equipe-ftour"), label: t.nav.team, icon: Star },
+    { href: localizedHref("/galerie"), label: t.nav.gallery, icon: Images },
   ];
 
   const handleLogout = async () => {
