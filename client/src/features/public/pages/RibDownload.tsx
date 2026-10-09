@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 const RIB_PDF_URL =
-  "https://jgnzhrlumlydmseusnbo.supabase.co/storage/v1/object/public/RIB/RIBBABRAYAN%20(1).pdf?download=RIBBABRAYAN.pdf";
+  "https://www.ftourbabrayan.ma/media/RIB/RIBBABRAYAN%20(1).pdf?download=RIBBABRAYAN.pdf";
 
 export default function RibDownload() {
   useEffect(() => {

@@ -1630,7 +1630,7 @@ export default function Benevole() {
                               {formTexts.downloadTemplateDesc}
                             </p>
                             <a
-                              href="https://jgnzhrlumlydmseusnbo.supabase.co/storage/v1/object/public/Formulaire/FORMULAIRE.xlsx"
+                              href="https://www.ftourbabrayan.ma/media/Formulaire/FORMULAIRE.xlsx"
                               download
                               target="_blank"
                               rel="noopener noreferrer"
