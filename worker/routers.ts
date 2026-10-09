@@ -8,6 +8,7 @@ import superjson from "superjson";
 import type { WorkerContext, WorkerUser } from "./context";
 import { createSupabaseAdmin } from "./supabase";
 import * as galleryDb from "./gallery-d1";
+import * as blogDb from "./blog-d1";
 import { sendEmail, generateGalleryUploadValidationEmail } from "./email";
 import * as XLSX from "xlsx";
 import {
@@ -10935,23 +10936,6 @@ function blogSlugify(text: string): string {
     .slice(0, 100);
 }
 
-async function ensureUniqueBlogSlug(
-  db: ReturnType<typeof createSupabaseAdmin>,
-  base: string,
-  excludeId?: number
-): Promise<string> {
-  let slug = base;
-  let attempt = 0;
-  while (true) {
-    let query = db.from("blog_posts").select("id").eq("slug", slug).limit(1);
-    if (excludeId) query = query.neq("id", excludeId);
-    const { data } = await query;
-    if (!data || data.length === 0) return slug;
-    attempt++;
-    slug = `${base}-${attempt}`;
-  }
-}
-
 const createBlogPostSchema = z.object({
   title: z.string().min(5).max(255),
   content: z.string().min(50),
@@ -10991,425 +10975,115 @@ const updateBlogPostSchema = z.object({
 });
 
 const blogRouter = router({
-  list: publicProcedure
-    .input(listBlogPostsSchema)
-    .query(async ({ ctx, input }) => {
-      const db = createSupabaseAdmin(ctx.env);
-      const { page, pageSize, type, category, sort, search } = input;
-      const offset = (page - 1) * pageSize;
-
-      let query = db
-        .from("blog_posts")
-        .select(
-          "id, title, slug, excerpt, hook, author_name, type, categories, cover_image, likes, views, created_at",
-          { count: "exact" }
-        )
-        .eq("status", "approved");
-
-      if (type) query = query.eq("type", type);
-      if (category) query = query.contains("categories", [category]);
-      if (search) query = query.ilike("title", `%${search}%`);
-
-      if (sort === "popular") {
-        query = query.order("likes", { ascending: false });
-      } else if (sort === "views") {
-        query = query.order("views", { ascending: false });
-      } else {
-        query = query.order("created_at", { ascending: false });
-      }
-
-      query = query.range(offset, offset + pageSize - 1);
-
-      const { data, error, count } = await query;
-
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
-
-      return {
-        posts: data ?? [],
-        total: count ?? 0,
-        page,
-        pageSize,
-        totalPages: Math.ceil((count ?? 0) / pageSize),
-      };
-    }),
+  list: publicProcedure.input(listBlogPostsSchema).query(async ({ ctx, input }) => {
+    const { posts, total } = await blogDb.listPosts(
+      galleryDb.db(ctx.env),
+      { ...input, status: "approved" },
+      false
+    );
+    return { posts, total, page: input.page, pageSize: input.pageSize, totalPages: Math.ceil(total / input.pageSize) };
+  }),
 
   bySlug: publicProcedure
     .input(z.object({ slug: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
-      const db = createSupabaseAdmin(ctx.env);
-
-      const { data, error } = await db
-        .from("blog_posts")
-        .select(
-          "id, title, slug, content, excerpt, hook, author_name, type, categories, cover_image, likes, views, status, created_at"
-        )
-        .eq("slug", input.slug)
-        .eq("status", "approved")
-        .single();
-
-      if (error || !data) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Article introuvable.",
-        });
-      }
-
+      const data = await blogDb.bySlug(galleryDb.db(ctx.env), input.slug);
+      if (!data) throw new TRPCError({ code: "NOT_FOUND", message: "Article introuvable." });
       return data;
     }),
 
   related: publicProcedure
-    .input(
-      z.object({ postId: z.number().int(), type: z.enum(BLOG_POST_TYPES) })
-    )
-    .query(async ({ ctx, input }) => {
-      const db = createSupabaseAdmin(ctx.env);
-
-      const { data } = await db
-        .from("blog_posts")
-        .select(
-          "id, title, slug, excerpt, author_name, type, cover_image, likes, created_at"
-        )
-        .eq("status", "approved")
-        .eq("type", input.type)
-        .neq("id", input.postId)
-        .order("created_at", { ascending: false })
-        .limit(3);
-
-      return data ?? [];
-    }),
+    .input(z.object({ postId: z.number().int(), type: z.enum(BLOG_POST_TYPES) }))
+    .query(({ ctx, input }) => blogDb.related(galleryDb.db(ctx.env), input.postId, input.type)),
 
   incrementViews: publicProcedure
     .input(z.object({ slug: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      const db = createSupabaseAdmin(ctx.env);
-
-      await db.rpc("increment_blog_views", { p_slug: input.slug }).catch(() => {
-        db.from("blog_posts")
-          .select("id, views")
-          .eq("slug", input.slug)
-          .single()
-          .then(({ data }) => {
-            if (data) {
-              db.from("blog_posts")
-                .update({ views: (data.views ?? 0) + 1 })
-                .eq("id", data.id);
-            }
-          });
-      });
-
+      await blogDb.incrementViews(galleryDb.db(ctx.env), input.slug);
       return { success: true };
     }),
 
-  latestForHome: publicProcedure.query(async ({ ctx }) => {
-    const db = createSupabaseAdmin(ctx.env);
+  latestForHome: publicProcedure.query(({ ctx }) => blogDb.latest(galleryDb.db(ctx.env))),
 
-    const { data } = await db
-      .from("blog_posts")
-      .select(
-        "id, title, slug, excerpt, hook, author_name, type, cover_image, likes, created_at"
-      )
-      .eq("status", "approved")
-      .order("created_at", { ascending: false })
-      .limit(3);
-
-    return data ?? [];
+  create: protectedProcedure.input(createBlogPostSchema).mutation(async ({ ctx, input }) => {
+    const d = galleryDb.db(ctx.env);
+    const created = await blogDb.createPost(d, {
+      title: input.title,
+      slug: await blogDb.uniqueSlug(d, blogSlugify(input.title)),
+      content: input.content,
+      excerpt: input.content.replace(/<[^>]*>/g, "").slice(0, 200).trim(),
+      hook: input.hook || null,
+      authorId: ctx.user.id,
+      authorName: ctx.user.name || "Anonyme",
+      type: input.type,
+      categories: input.categories,
+      coverImage: input.coverImage || null,
+    });
+    return { id: created.id, slug: created.slug };
   }),
-
-  create: protectedProcedure
-    .input(createBlogPostSchema)
-    .mutation(async ({ ctx, input }) => {
-      const db = createSupabaseAdmin(ctx.env);
-      const user = ctx.user;
-
-      const baseSlug = blogSlugify(input.title);
-      const slug = await ensureUniqueBlogSlug(db, baseSlug);
-
-      const excerpt = input.content
-        .replace(/<[^>]*>/g, "")
-        .slice(0, 200)
-        .trim();
-
-      const { data, error } = await db
-        .from("blog_posts")
-        .insert({
-          title: input.title,
-          slug,
-          content: input.content,
-          excerpt,
-          hook: input.hook || null,
-          author_id: user.id,
-          author_name: user.name || "Anonyme",
-          type: input.type,
-          categories: input.categories,
-          cover_image: input.coverImage || null,
-          consented: true,
-          status: "pending",
-        })
-        .select("id, slug")
-        .single();
-
-      if (error || !data) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error?.message ?? "Erreur création.",
-        });
-      }
-
-      return { id: data.id, slug: data.slug };
-    }),
 
   toggleLike: protectedProcedure
     .input(z.object({ postId: z.number().int() }))
-    .mutation(async ({ ctx, input }) => {
-      const db = createSupabaseAdmin(ctx.env);
-      const userId = ctx.user.id;
-
-      const { data: existing } = await db
-        .from("blog_post_likes")
-        .select("id")
-        .eq("post_id", input.postId)
-        .eq("user_id", userId)
-        .single();
-
-      if (existing) {
-        await db.from("blog_post_likes").delete().eq("id", existing.id);
-        const { data: post } = await db
-          .from("blog_posts")
-          .select("likes")
-          .eq("id", input.postId)
-          .single();
-        if (post) {
-          await db
-            .from("blog_posts")
-            .update({ likes: Math.max(0, (post.likes ?? 1) - 1) })
-            .eq("id", input.postId);
-        }
-        return { liked: false };
-      } else {
-        await db
-          .from("blog_post_likes")
-          .insert({ post_id: input.postId, user_id: userId });
-        const { data: post } = await db
-          .from("blog_posts")
-          .select("likes")
-          .eq("id", input.postId)
-          .single();
-        if (post) {
-          await db
-            .from("blog_posts")
-            .update({ likes: (post.likes ?? 0) + 1 })
-            .eq("id", input.postId);
-        }
-        return { liked: true };
-      }
-    }),
+    .mutation(async ({ ctx, input }) => ({
+      liked: await blogDb.toggleLike(galleryDb.db(ctx.env), input.postId, ctx.user.id),
+    })),
 
   hasLiked: protectedProcedure
     .input(z.object({ postId: z.number().int() }))
-    .query(async ({ ctx, input }) => {
-      const db = createSupabaseAdmin(ctx.env);
+    .query(async ({ ctx, input }) => ({
+      liked: await blogDb.hasLiked(galleryDb.db(ctx.env), input.postId, ctx.user.id),
+    })),
 
-      const { data } = await db
-        .from("blog_post_likes")
-        .select("id")
-        .eq("post_id", input.postId)
-        .eq("user_id", ctx.user.id)
-        .single();
-
-      return { liked: !!data };
-    }),
-
-  adminList: blogAdminProcedure
-    .input(listBlogPostsSchema)
-    .query(async ({ ctx, input }) => {
-      const db = createSupabaseAdmin(ctx.env);
-      const { page, pageSize, type, category, sort, search, status } = input;
-      const offset = (page - 1) * pageSize;
-
-      let query = db
-        .from("blog_posts")
-        .select(
-          "id, title, slug, excerpt, author_name, author_id, type, categories, status, likes, views, created_at, rejection_note",
-          { count: "exact" }
-        );
-
-      if (status) query = query.eq("status", status);
-      if (type) query = query.eq("type", type);
-      if (category) query = query.contains("categories", [category]);
-      if (search) query = query.ilike("title", `%${search}%`);
-
-      if (sort === "popular") {
-        query = query.order("likes", { ascending: false });
-      } else if (sort === "views") {
-        query = query.order("views", { ascending: false });
-      } else {
-        query = query.order("created_at", { ascending: false });
-      }
-
-      query = query.range(offset, offset + pageSize - 1);
-
-      const { data, error, count } = await query;
-
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
-
-      return {
-        posts: data ?? [],
-        total: count ?? 0,
-        page,
-        pageSize,
-        totalPages: Math.ceil((count ?? 0) / pageSize),
-      };
-    }),
+  adminList: blogAdminProcedure.input(listBlogPostsSchema).query(async ({ ctx, input }) => {
+    const { posts, total } = await blogDb.listPosts(galleryDb.db(ctx.env), input, true);
+    return { posts, total, page: input.page, pageSize: input.pageSize, totalPages: Math.ceil(total / input.pageSize) };
+  }),
 
   adminGetById: blogAdminProcedure
     .input(z.object({ id: z.number().int() }))
     .query(async ({ ctx, input }) => {
-      const db = createSupabaseAdmin(ctx.env);
-
-      const { data, error } = await db
-        .from("blog_posts")
-        .select("*")
-        .eq("id", input.id)
-        .single();
-
-      if (error || !data) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Article introuvable.",
-        });
-      }
-
+      const data = await blogDb.getById(galleryDb.db(ctx.env), input.id);
+      if (!data) throw new TRPCError({ code: "NOT_FOUND", message: "Article introuvable." });
       return data;
     }),
 
   approve: blogAdminProcedure
     .input(z.object({ id: z.number().int() }))
     .mutation(async ({ ctx, input }) => {
-      const db = createSupabaseAdmin(ctx.env);
-
-      const { error } = await db
-        .from("blog_posts")
-        .update({ status: "approved", rejection_note: null })
-        .eq("id", input.id);
-
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
-
+      await blogDb.updatePost(galleryDb.db(ctx.env), input.id, { status: "approved", rejection_note: null });
       return { success: true };
     }),
 
   reject: blogAdminProcedure
-    .input(
-      z.object({ id: z.number().int(), note: z.string().max(500).optional() })
-    )
+    .input(z.object({ id: z.number().int(), note: z.string().max(500).optional() }))
     .mutation(async ({ ctx, input }) => {
-      const db = createSupabaseAdmin(ctx.env);
-
-      const { error } = await db
-        .from("blog_posts")
-        .update({ status: "rejected", rejection_note: input.note || null })
-        .eq("id", input.id);
-
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
-
+      await blogDb.updatePost(galleryDb.db(ctx.env), input.id, {
+        status: "rejected",
+        rejection_note: input.note || null,
+      });
       return { success: true };
     }),
 
-  update: blogAdminProcedure
-    .input(updateBlogPostSchema)
-    .mutation(async ({ ctx, input }) => {
-      const db = createSupabaseAdmin(ctx.env);
-      const { id, coverImage, rejectionNote, ...rest } = input;
-
-      const payload: Record<string, unknown> = { ...rest };
-
-      if (coverImage !== undefined) payload.cover_image = coverImage || null;
-      if (rejectionNote !== undefined)
-        payload.rejection_note = rejectionNote || null;
-
-      if (rest.title) {
-        const baseSlug = blogSlugify(rest.title);
-        payload.slug = await ensureUniqueBlogSlug(db, baseSlug, id);
-      }
-
-      if (rest.content) {
-        payload.excerpt = rest.content
-          .replace(/<[^>]*>/g, "")
-          .slice(0, 200)
-          .trim();
-      }
-
-      const { error } = await db
-        .from("blog_posts")
-        .update(payload)
-        .eq("id", id);
-
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
-
-      return { success: true };
-    }),
+  update: blogAdminProcedure.input(updateBlogPostSchema).mutation(async ({ ctx, input }) => {
+    const d = galleryDb.db(ctx.env);
+    const { id, coverImage, rejectionNote, ...rest } = input;
+    const patch: blogDb.PostPatch = { ...rest };
+    if (coverImage !== undefined) patch.cover_image = coverImage || null;
+    if (rejectionNote !== undefined) patch.rejection_note = rejectionNote || null;
+    if (rest.title) patch.slug = await blogDb.uniqueSlug(d, blogSlugify(rest.title), id);
+    if (rest.content) patch.excerpt = rest.content.replace(/<[^>]*>/g, "").slice(0, 200).trim();
+    await blogDb.updatePost(d, id, patch);
+    return { success: true };
+  }),
 
   delete: blogAdminProcedure
     .input(z.object({ id: z.number().int() }))
     .mutation(async ({ ctx, input }) => {
-      const db = createSupabaseAdmin(ctx.env);
-
-      const { error } = await db.from("blog_posts").delete().eq("id", input.id);
-
-      if (error)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
-
+      await blogDb.deletePost(galleryDb.db(ctx.env), input.id);
       return { success: true };
     }),
 
-  stats: blogAdminProcedure.query(async ({ ctx }) => {
-    const db = createSupabaseAdmin(ctx.env);
-
-    const [pending, approved, rejected] = await Promise.all([
-      db
-        .from("blog_posts")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "pending"),
-      db
-        .from("blog_posts")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "approved"),
-      db
-        .from("blog_posts")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "rejected"),
-    ]);
-
-    return {
-      pending: pending.count ?? 0,
-      approved: approved.count ?? 0,
-      rejected: rejected.count ?? 0,
-      total:
-        (pending.count ?? 0) + (approved.count ?? 0) + (rejected.count ?? 0),
-    };
-  }),
+  stats: blogAdminProcedure.query(({ ctx }) => blogDb.stats(galleryDb.db(ctx.env))),
 });
 
 // ============================================
