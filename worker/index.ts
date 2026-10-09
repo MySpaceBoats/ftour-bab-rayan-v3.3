@@ -36,11 +36,13 @@ export interface Env {
   DB?: D1Like;
   /** Overrides d1-tables.ts: comma list of Supabase tables served from D1, or "none" (instant rollback lever). */
   D1_TABLES?: string;
+  /** Overrides d1-tables.ts R2_BUCKETS: Supabase Storage buckets served from R2, or "none". */
+  R2_BUCKETS?: string;
   GALLERY_MEDIA?: R2Like;
 }
 
 import type { D1Like, R2Like } from './gallery-d1';
-import { MEDIA_PATH_PREFIX } from './gallery-d1';
+import { handleMediaRequest } from './media-r2';
 
 const MAX_PROOF_FILE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_PROOF_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
@@ -153,23 +155,9 @@ export default {
     }
 
 
-    // Gallery images served from R2 (keys are unguessable UUIDs; only gallery/ prefix is exposed)
-    if (url.pathname.startsWith(MEDIA_PATH_PREFIX) && request.method === 'GET') {
-      const key = decodeURIComponent(url.pathname.slice(MEDIA_PATH_PREFIX.length));
-      if (!env.GALLERY_MEDIA || !key.startsWith('gallery/') || key.includes('..')) {
-        return new Response('Not found', { status: 404, headers: baseCorsHeaders });
-      }
-      const obj = await env.GALLERY_MEDIA.get(key);
-      if (!obj) return new Response('Not found', { status: 404, headers: baseCorsHeaders });
-      return new Response(obj.body, {
-        headers: {
-          ...baseCorsHeaders,
-          'Content-Type': obj.httpMetadata?.contentType ?? 'application/octet-stream',
-          'Cache-Control': 'public, max-age=31536000, immutable',
-          ETag: obj.httpEtag,
-        },
-      });
-    }
+    // Media served from R2 (public /media, signed /media-signed, signed uploads /media-upload)
+    const media = await handleMediaRequest(request, env, baseCorsHeaders);
+    if (media) return media;
 
     if (url.pathname === '/api/reservations/proof/init' && request.method === 'POST') {
       const supabase = createSupabaseAdmin(env);

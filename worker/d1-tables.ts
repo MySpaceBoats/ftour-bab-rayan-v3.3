@@ -22,3 +22,15 @@ export function d1TableSet(env: { D1_TABLES?: string }): Set<string> {
   if (o) return new Set(o === "none" ? [] : o.split(",").map(s => s.trim()).filter(Boolean));
   return new Set(D1_TABLES);
 }
+
+/**
+ * Supabase Storage buckets served from R2 instead (see media-r2.ts). Enable AFTER scripts/migrate-storage-to-r2.mjs.
+ * Rollback lever: Worker var R2_BUCKETS (comma list, or "none").
+ */
+export const R2_BUCKETS: string[] = [];
+
+export function r2BucketSet(env: { R2_BUCKETS?: string }): Set<string> {
+  const o = env.R2_BUCKETS?.trim();
+  if (o) return new Set(o === "none" ? [] : o.split(",").map(s => s.trim()).filter(Boolean));
+  return new Set(R2_BUCKETS);
+}
