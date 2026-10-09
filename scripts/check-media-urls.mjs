@@ -12,9 +12,13 @@ async function list(bucket, prefix = "") {
         if (page.length < 1000) return out;
     }
 }
-let bad = 0, n = 0;
+// gallery files that no gallery_photos row references are orphans (deleted/failed uploads): not migrated, not checked
+const rows = await (await fetch(`${U}/rest/v1/gallery_photos?select=storage_path,thumb_storage_path,medium_storage_path&limit=10000`, { headers: H })).json();
+const referenced = new Set(rows.flatMap(r => [r.storage_path, r.thumb_storage_path, r.medium_storage_path]).filter(Boolean));
+let bad = 0, n = 0, orphans = 0;
 for (const b of await (await fetch(`${U}/storage/v1/bucket`, { headers: H })).json()) {
     for (const path of await list(b.name)) {
+        if (b.name === "images" && path.startsWith("gallery/") && !referenced.has(path)) { orphans++; continue; }
         const pub = PUBLIC.has(b.name);
         const key = b.name === "images" ? path : pub ? `${b.name}/${path}` : `private/${b.name}/${path}`;
         const res = await fetch(`${ORIGIN}/media/${key.split("/").map(encodeURIComponent).join("/")}`, { method: "HEAD" });
@@ -24,5 +28,6 @@ for (const b of await (await fetch(`${U}/storage/v1/bucket`, { headers: H })).js
         if (!ok) { bad++; console.log(`BAD ${res.status} ${pub ? "public " : "private"} ${b.name}/${path}`); }
     }
 }
+console.log(`${orphans} unreferenced gallery files skipped`);
 console.log(bad ? `${bad}/${n} objects not as expected` : `all ${n} objects OK (public reachable, private hidden)`);
 process.exit(bad ? 1 : 0);
