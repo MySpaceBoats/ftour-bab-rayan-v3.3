@@ -433,7 +433,7 @@ export default function AdminDashboard() {
         id: 'capacity', icon: <AlertTriangle size={14} strokeWidth={1.5} style={{ color: 'var(--danger)' }} />,
         iconBg: 'var(--danger-bg)', label: 'Capacité quasi-saturée',
         value: `${fillRate}% de remplissage — risque de surcapacité détecté`,
-        priority: 'critique', cta: 'Gérer', route: '/admin/restaurant-reservations',
+        priority: 'critique', cta: 'Gérer', route: '/admin/reservations-calendar',
       });
     }
     if (absenceRate > 20) {
@@ -566,7 +566,7 @@ export default function AdminDashboard() {
           color={fillRate > 85 ? 'var(--danger)' : fillRate > 70 ? 'var(--warn)' : 'var(--olive)'}
           accent={fillRate > 85 ? 'var(--danger)' : 'var(--olive)'}
           sparkValues={[180, 200, 220, 240, 250, 260, totalReservations]}
-          onClick={() => navigate('/admin/restaurant-reservations')}
+          onClick={() => navigate('/admin/reservations-calendar')}
           urgent={fillRate > 90}
         />
         <KpiTile
@@ -820,7 +820,7 @@ export default function AdminDashboard() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
           <ModuleCard icon={<Utensils size={14} />} name="Réservations" keyMetric={totalReservations}
             metricLabel="confirmées" status={fillRate > 85 ? 'warn' : 'ok'}
-            onClick={() => navigate('/admin/restaurant-reservations')} />
+            onClick={() => navigate('/admin/reservations-calendar')} />
           <ModuleCard icon={<Users size={14} />} name="Bénévoles" keyMetric={presentVolunteers}
             metricLabel="présents" status={absenceRate > 20 ? 'warn' : 'ok'}
             onClick={() => navigate('/admin/benevoles')} />
@@ -853,7 +853,7 @@ export default function AdminDashboard() {
         <SectionTitle title="Accès rapides" sub="actions fréquentes" />
         <div style={{ display: 'flex', gap: 8 }}>
           <QuickBtn icon={<ScanLine size={15} />} label="Scanner QR" onClick={() => navigate('/admin/scan-reservation')} primary />
-          <QuickBtn icon={<Utensils size={15} />} label="Réservations" onClick={() => navigate('/admin/restaurant-reservations')} />
+          <QuickBtn icon={<Utensils size={15} />} label="Réservations" onClick={() => navigate('/admin/reservations-calendar')} />
           <QuickBtn icon={<UserPlus size={15} />} label="Ajouter bénévole" onClick={() => navigate('/admin/benevoles')} />
           <QuickBtn icon={<CreditCard size={15} />} label="Valider paiement" onClick={() => navigate('/admin/payments')} />
           <QuickBtn icon={<Package size={15} />} label="Gérer stock" onClick={() => navigate('/admin/inventory')} />

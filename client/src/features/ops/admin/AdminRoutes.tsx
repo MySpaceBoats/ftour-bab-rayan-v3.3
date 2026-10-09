@@ -20,7 +20,6 @@ import AdminAuditLogs from './AdminAuditLogs';
 import AdminRestaurantGroupes from '@/features/restaurant/admin/AdminRestaurantGroupes';
 import AdminRestaurantEntreprises from '@/features/restaurant/admin/AdminRestaurantEntreprises';
 import AdminRestaurants from '@/features/restaurant/admin/AdminRestaurants';
-import AdminRestaurantReservations from '@/features/restaurant/admin/AdminRestaurantReservations';
 import AdminScanReservation from '@/features/restaurant/admin/AdminScanReservation';
 import AdminReservationsCalendar from '@/features/restaurant/admin/AdminReservationsCalendar';
 
@@ -86,10 +85,6 @@ function AdminSwitch() {
       <Route path="/admin3/restaurant/entreprises" component={AdminRestaurantEntreprises} />
       <Route path="/admin/restaurants" component={AdminRestaurants} />
       <Route path="/admin3/restaurants" component={AdminRestaurants} />
-      <Route path="/admin/restaurant-reservations" component={AdminRestaurantReservations} />
-      <Route path="/admin3/restaurant-reservations" component={AdminRestaurantReservations} />
-      <Route path="/admin/reservations" component={AdminRestaurantReservations} />
-      <Route path="/admin3/reservations" component={AdminRestaurantReservations} />
       <Route path="/admin/reservations-calendar" component={AdminReservationsCalendar} />
       <Route path="/admin3/reservations-calendar" component={AdminReservationsCalendar} />
       <Route path="/admin/scan-reservation" component={AdminScanReservation} />

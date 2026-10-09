@@ -23,7 +23,6 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   {
     group: 'Restaurant',
     items: [
-      { id: 'reservations',      label: 'Réservations',        route: '/admin/restaurant-reservations' },
       { id: 'reservations-cal',  label: 'Calendrier',          route: '/admin/reservations-calendar'  },
       { id: 'groupes',           label: 'Groupes & Entreprises',route: '/admin/restaurant/groupes'     },
       { id: 'restaurants',       label: 'Restaurants',         route: '/admin/restaurants'            },
@@ -82,8 +81,6 @@ export const ROUTE_TO_NAV_ID: Record<string, string> = {
   '/admin/ramadan-stats': 'stats',
   '/admin/logs': 'logs',
   '/admin/payments': 'payments',
-  '/admin/restaurant-reservations': 'reservations',
-  '/admin/reservations': 'reservations',
   '/admin/reservations-calendar': 'reservations-cal',
   '/admin/restaurant/groupes': 'groupes',
   '/admin/restaurant/entreprises': 'groupes',
@@ -135,8 +132,6 @@ export const ROUTE_TO_TITLE: Record<string, string> = {
   '/admin/ramadan-stats': 'Stats Ramadan',
   '/admin/logs': 'Journal activité',
   '/admin/payments': 'Paiements',
-  '/admin/restaurant-reservations': 'Réservations',
-  '/admin/reservations': 'Réservations',
   '/admin/reservations-calendar': 'Calendrier réservations',
   '/admin/restaurant/groupes': 'Groupes & Entreprises',
   '/admin/restaurant/entreprises': 'Réservations Entreprises',
