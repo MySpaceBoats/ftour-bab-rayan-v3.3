@@ -34,6 +34,8 @@ export interface Env {
   RESERVATION_ADMIN_DASHBOARD_URL?: string;
   // Gallery: Cloudflare D1 (rows) + R2 (image bytes)
   DB?: D1Like;
+  /** Overrides d1-tables.ts: comma list of Supabase tables served from D1, or "none" (instant rollback lever). */
+  D1_TABLES?: string;
   GALLERY_MEDIA?: R2Like;
 }
 
