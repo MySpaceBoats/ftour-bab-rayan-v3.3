@@ -13,6 +13,8 @@ export const D1_TABLES: string[] = [
   "payments", "payment_logs", "payment_methods_config",
   // wave B
   "inventory_products", "inventory_locations", "inventory_events", "inventory_stock_balances", "inventory_movements", "feedback_responses", "testimonials", "partners",
+  // wave C
+  "restaurants", "restaurant_reservations", "reservations", "reservation_payment_tokens", "reservation_payment_proofs", "reservation_checkins", "reservation_events", "volunteers", "volunteer_group_requests", "checkins", "ramadan_config", "ramadan_daily_stats", "ramadan_days",
 ];
 
 export function d1TableSet(env: { D1_TABLES?: string }): Set<string> {
