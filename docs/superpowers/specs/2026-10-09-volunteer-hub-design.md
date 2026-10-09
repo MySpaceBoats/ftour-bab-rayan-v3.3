@@ -86,3 +86,17 @@ Chaque étape est déployable seule. Déploiement du Worker et du front à lance
 ## Hors périmètre
 
 Chat temps réel, messages privés, groupes, notifications, mentions, édition après publication, migration vers un login par mot de passe (à voir plus tard).
+
+## Écarts décidés au plan (2026-10-09)
+
+Constatés en lisant le code ; ils remplacent les passages correspondants ci-dessus.
+
+- **Session : en-tête `Authorization: Bearer`, pas de cookie.** Le site (`www.ftourbabrayan.ma`) et le Worker (`*.workers.dev`) sont sur des origines différentes : un cookie `SameSite=Lax` ne serait pas envoyé, et un cookie tiers est bloqué par Safari. Le jeton est gardé dans `localStorage` côté client.
+- **Lien magique : validé par `POST /hub/verify`**, pas `GET`, pour qu'un scanner d'emails ne consomme pas le lien. Le lien pointe vers `/fr/benevole/espace?token=…`.
+- **Éligibilité :** `volunteers.status IN ('confirmed','present')` (valeurs réelles du schéma : `registered, confirmed, present, absent, cancelled`).
+- **PUT au lieu de PATCH :** le CORS du Worker n'autorise pas PATCH.
+- **Annonces :** texte seul, publiées par un membre système « Équipe Ftour » (`equipe@hub.ftourbabrayan.ma`, non connectable). Rôles admin autorisés : `super_admin`, `admin`, `admin_ops`.
+- **Suppression = masquage** (`status = 'hidden'`) pour les publications et commentaires, par le propriétaire ou un modérateur.
+- **Tables ajoutées :** `hub_uploads` (limite 20 demandes d'upload/h) ; `hub_login_tokens.created_at` (limite 3 liens/h par email).
+- **Livraison :** un seul jalon membre (connexion, fil, photos, profil, commentaires, signalement) puis l'admin ; le plan est dans `docs/superpowers/plans/2026-10-09-volunteer-hub.md`.
+- **Hors plan :** lien « Espace bénévole » dans l'email de confirmation d'inscription ; nettoyage des photos orphelines.
