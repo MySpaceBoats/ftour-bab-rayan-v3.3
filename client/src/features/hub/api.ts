@@ -32,6 +32,10 @@ async function call<T>(method: string, path: string, opts: { body?: unknown; adm
   } catch {
     throw new HubApiError(0, "network", "Connexion impossible, réessayez.");
   }
+  // The site's service worker answers failed GETs with a cached HTML page (200): never treat a non-JSON reply as data.
+  if (!(res.headers.get("content-type") ?? "").includes("application/json")) {
+    throw new HubApiError(res.status, "bad_response", "Service indisponible, réessayez dans un instant.");
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok && res.status === 401 && !opts.admin) {
     setHubToken(null);
