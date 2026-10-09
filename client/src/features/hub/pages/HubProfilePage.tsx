@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -15,10 +15,17 @@ export default function HubProfilePage() {
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [busy, setBusy] = useState(false);
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
-    hub.getMe().then(m => { setMe(m); setName(m.display_name); setBio(m.bio); }).catch(() => { window.location.href = `/${lang}/benevole/espace`; });
-  }, [lang]);
+    hub.getMe().then(m => { setMe(m); setName(m.display_name); setBio(m.bio); }).catch(() => setLocation(`/${lang}/benevole/espace`));
+  }, [lang, setLocation]);
+
+  useEffect(() => {
+    const back = () => setLocation(`/${lang}/benevole/espace`);
+    window.addEventListener("hub:unauthorized", back);
+    return () => window.removeEventListener("hub:unauthorized", back);
+  }, [lang, setLocation]);
 
   const save = async (avatarKey?: string) => {
     setBusy(true);
@@ -42,7 +49,7 @@ export default function HubProfilePage() {
         {me && (
           <div className="rounded-xl border bg-white p-4 space-y-4">
             {me.avatar && <img src={me.avatar} alt="" className="h-24 w-24 rounded-full object-cover" />}
-            <input type="file" accept="image/jpeg,image/png,image/webp" aria-label="Photo de profil" onChange={e => pickAvatar(e.target.files?.[0])} />
+            <input type="file" accept="image/jpeg,image/png,image/webp" aria-label="Photo de profil" onChange={e => { const f = e.target.files?.[0]; e.target.value = ""; pickAvatar(f); }} />
             <Input value={name} onChange={e => setName(e.target.value)} maxLength={40} aria-label="Nom affiché" />
             <Textarea value={bio} onChange={e => setBio(e.target.value)} maxLength={300} rows={3} aria-label="Bio" placeholder="Quelques mots sur vous" />
             <Button onClick={() => save()} disabled={busy || !name.trim()}>Enregistrer</Button>

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,9 +13,14 @@ export default function Composer({ onPosted }: { onPosted: () => void }) {
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const previews = useMemo(() => files.map(f => URL.createObjectURL(f)), [files]);
+  useEffect(() => () => previews.forEach(u => URL.revokeObjectURL(u)), [previews]);
+
   const pick = (list: FileList | null) => {
     if (!list) return;
-    const next = [...files, ...Array.from(list)].filter(f => f.type.startsWith("image/")).slice(0, MAX_PHOTOS);
+    const all = [...files, ...Array.from(list)].filter(f => f.type.startsWith("image/"));
+    if (all.length > MAX_PHOTOS) toast.info("4 photos maximum");
+    const next = all.slice(0, MAX_PHOTOS);
     setFiles(next);
     if (fileRef.current) fileRef.current.value = "";
   };
@@ -43,7 +48,7 @@ export default function Composer({ onPosted }: { onPosted: () => void }) {
         <div className="flex flex-wrap gap-2">
           {files.map((f, i) => (
             <div key={i} className="relative h-20 w-20">
-              <img src={URL.createObjectURL(f)} alt="" className="h-20 w-20 rounded-lg object-cover" />
+              <img src={previews[i]} alt="" className="h-20 w-20 rounded-lg object-cover" />
               <button type="button" aria-label="Retirer la photo" className="absolute -right-1 -top-1 rounded-full bg-black/70 p-0.5 text-white" onClick={() => setFiles(files.filter((_, j) => j !== i))}>
                 <X size={14} />
               </button>

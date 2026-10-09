@@ -33,20 +33,28 @@ export default function HubPage() {
   }, []);
 
   useEffect(() => {
+    const onUnauthorized = () => { setMe(null); setSent(false); };
+    window.addEventListener("hub:unauthorized", onUnauthorized);
+    return () => window.removeEventListener("hub:unauthorized", onUnauthorized);
+  }, []);
+
+  useEffect(() => {
     if (started.current) return;
     started.current = true;
     (async () => {
       const token = new URLSearchParams(window.location.search).get("token");
       try {
         if (token) {
+          window.history.replaceState({}, "", window.location.pathname);
           const r = await hub.verifyLogin(token);
           hub.setHubToken(r.session);
-          window.history.replaceState({}, "", window.location.pathname);
           setMe(r.member);
         } else if (hub.getHubToken()) setMe(await hub.getMe());
         else setMe(null);
       } catch (e) {
-        hub.setHubToken(null);
+        // only a 401 invalidates the stored session; a network error must not log the user out
+        if (token || (e instanceof hub.HubApiError && e.status === 401)) hub.setHubToken(null);
+        else toast.error((e as Error).message);
         setMe(null);
         if (token) toast.error((e as Error).message);
       }
@@ -76,7 +84,7 @@ export default function HubPage() {
             ) : (
               <>
                 <p>Entrez l'email utilisé lors de votre inscription. Nous vous envoyons un lien de connexion.</p>
-                <Input type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="votre@email.com" />
+                <Input type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} aria-label="Email" placeholder="votre@email.com" />
                 <Button type="submit" disabled={busy || !email.trim()}>{busy ? <Loader2 size={16} className="animate-spin" /> : "Recevoir mon lien"}</Button>
               </>
             )}

@@ -39,10 +39,10 @@ export default function PostCard({ post, me, onChanged }: { post: hub.Post; me: 
       )}
 
       <footer className="flex items-center gap-1 text-sm">
-        <Button variant="ghost" size="sm" aria-pressed={liked} onClick={() => act(async () => { const r = await hub.toggleLike(post.id); setLiked(r.liked); setLikes(r.count); })}>
+        <Button variant="ghost" size="sm" aria-label={`J'aime, ${likes}`} aria-pressed={liked} onClick={() => act(async () => { const r = await hub.toggleLike(post.id); setLiked(r.liked); setLikes(r.count); })}>
           <Heart size={16} className={liked ? "mr-1 fill-red-500 text-red-500" : "mr-1"} /> {likes}
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => { setOpen(!open); if (!open && !comments) loadComments(); }}>
+        <Button variant="ghost" size="sm" aria-label={`Commentaires, ${comments ? comments.length : post.comment_count}`} aria-expanded={open} onClick={() => { setOpen(!open); if (!open && !comments) loadComments(); }}>
           <MessageCircle size={16} className="mr-1" /> {comments ? comments.length : post.comment_count}
         </Button>
         <span className="flex-1" />
@@ -70,7 +70,7 @@ export default function PostCard({ post, me, onChanged }: { post: hub.Post; me: 
             </div>
           ))}
           <form className="flex gap-2" onSubmit={e => { e.preventDefault(); if (!draft.trim()) return; act(async () => { await hub.addComment(post.id, draft); setDraft(""); await loadComments(); }); }}>
-            <Input value={draft} onChange={e => setDraft(e.target.value)} maxLength={500} placeholder="Votre commentaire…" />
+            <Input aria-label="Votre commentaire" value={draft} onChange={e => setDraft(e.target.value)} maxLength={500} placeholder="Votre commentaire…" />
             <Button type="submit" size="sm" disabled={!draft.trim()}>Envoyer</Button>
           </form>
         </div>

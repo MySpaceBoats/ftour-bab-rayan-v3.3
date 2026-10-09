@@ -33,6 +33,10 @@ async function call<T>(method: string, path: string, opts: { body?: unknown; adm
     throw new HubApiError(0, "network", "Connexion impossible, réessayez.");
   }
   const data = await res.json().catch(() => ({}));
+  if (!res.ok && res.status === 401 && !opts.admin) {
+    setHubToken(null);
+    window.dispatchEvent(new Event("hub:unauthorized"));
+  }
   if (!res.ok) throw new HubApiError(res.status, data.error ?? "error", data.message ?? "Une erreur est survenue.");
   return data as T;
 }
