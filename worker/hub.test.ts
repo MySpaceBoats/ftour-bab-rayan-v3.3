@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import type { D1Like, D1Stmt } from "./gallery-d1";
@@ -30,7 +30,9 @@ let env: HubEnv;
 let mails: { to: string; subject: string; html: string }[];
 let clock: number;
 
+let extra: Partial<HubDeps> = {};
 const deps = (): HubDeps => ({
+  ...extra,
   now: () => clock,
   sendMail: async (to, subject, html) => { mails.push({ to, subject, html }); },
   adminUser: async req => {
@@ -63,6 +65,7 @@ beforeEach(() => {
   env = { DB: fakeD1(sqlite), JWT_SECRET: "test-secret", MEDIA_BASE_URL: "https://m.test", GALLERY_MEDIA: undefined, PUBLIC_APP_URL: "https://site.test" };
   mails = [];
   clock = T0;
+  extra = {};
 });
 
 describe("hub http", () => {
@@ -173,5 +176,58 @@ describe("hub http", () => {
     expect((await call("PUT", `/hub/admin/members/${a.member.id}`, { admin: "admin", body: { status: "suspended" } })).status).toBe(200);
     expect((await call("GET", "/hub/me", { token: a.session })).status).toBe(401);
     expect((await call("PUT", `/hub/admin/members/${a.member.id}`, { admin: "admin", body: { status: "nope" } })).status).toBe(400);
+  });
+});
+
+describe("hub http hardening", () => {
+  const login = (email = "a@x.ma") => call("POST", "/hub/login", { body: { email } });
+  const seed = () => sqlite.prepare("INSERT INTO t_volunteers (first_name,last_name,email,status) VALUES ('A','B','a@x.ma','confirmed')").run();
+
+  it("login: sendMail throwing still gives 200 {ok:true}", async () => {
+    seed();
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    extra = { sendMail: async () => { throw new Error("resend down"); } };
+    const r = await login();
+    expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ ok: true });
+    spy.mockRestore();
+  });
+
+  it("login: with waitUntil the handler returns before the job; mail sent once awaited", async () => {
+    seed();
+    let job: Promise<unknown> | undefined;
+    extra = { waitUntil: p => { job = p; } };
+    const r = await login();
+    expect(await r.json()).toEqual({ ok: true });
+    expect(job).toBeInstanceOf(Promise);
+    await job;
+    expect(mails).toHaveLength(1);
+  });
+
+  it("missing JWT_SECRET: feed still 200 with null media, error logged once", async () => {
+    const { session, member } = await signIn();
+    const up = (await (await call("POST", "/hub/media", { token: session, body: { contentType: "image/png" } })).json()) as { path: string };
+    await call("POST", "/hub/posts", { token: session, body: { body: "p", media: [up.path] } });
+    env = { ...env, JWT_SECRET: undefined } as HubEnv;
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const r = await call("GET", "/hub/feed", { token: session });
+    expect(r.status).toBe(200);
+    expect(((await r.json()) as any).posts[0].media).toEqual([null]);
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+    expect(member.id).toBeGreaterThan(0);
+  });
+
+  it("non-string text fields are 400", async () => {
+    const { session } = await signIn();
+    expect((await call("POST", "/hub/posts", { token: session, body: { body: {} } })).status).toBe(400);
+    expect((await call("POST", "/hub/posts", { token: session, body: { body: 5 } })).status).toBe(400);
+  });
+
+  it("unsafe or non-numeric ids are 400", async () => {
+    const { session } = await signIn();
+    for (const id of [99999999999999999999, "abc"])
+      expect((await call("POST", "/hub/report", { token: session, body: { type: "post", id, reason: "x" } })).status).toBe(400);
+    expect((await call("GET", "/hub/posts/99999999999999999999/comments", { token: session })).status).toBe(400);
   });
 });

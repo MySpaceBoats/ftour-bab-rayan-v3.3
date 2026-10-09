@@ -10,6 +10,7 @@ export interface HubEnv extends MediaEnv { DB?: D1Like; RESEND_API_KEY?: string;
 export interface HubDeps {
   now?: () => number;
   sendMail?: (to: string, subject: string, html: string) => Promise<unknown>;
+  waitUntil?: (p: Promise<unknown>) => void;
   adminUser?: (request: Request) => Promise<{ role: string; isDemo?: boolean } | null>;
 }
 
@@ -28,7 +29,21 @@ async function readJson(request: Request): Promise<Record<string, unknown>> {
     throw new H.HubError("invalid", "JSON invalide");
   }
 }
-const num = (v: unknown) => (typeof v === "string" || typeof v === "number") && /^\d+$/.test(String(v)) ? Number(v) : NaN;
+const num = (v: unknown) => {
+  if (typeof v !== "string" && typeof v !== "number") return NaN;
+  const n = /^\d+$/.test(String(v)) ? Number(v) : NaN;
+  return Number.isSafeInteger(n) && n > 0 ? n : NaN;
+};
+const id = (v: unknown) => {
+  const n = num(v);
+  if (Number.isNaN(n)) throw new H.HubError("invalid", "Identifiant invalide");
+  return n;
+};
+const str = (v: unknown) => {
+  if (v === undefined || v === null) return "";
+  if (typeof v !== "string") throw new H.HubError("invalid", "Champ texte invalide");
+  return v;
+};
 
 export async function handleHubRequest(request: Request, env: HubEnv, cors: Record<string, string>, deps: HubDeps = {}): Promise<Response | null> {
   const url = new URL(request.url);
@@ -43,7 +58,16 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     if (!env.DB) throw new Error("D1 binding DB is not configured");
     const d = env.DB;
     const storage = createR2Storage(env, now).from("hub");
-    const sign = async (p: string | null) => (p ? ((await storage.createSignedUrl(p, SIGN_TTL_S)).data?.signedUrl ?? null) : null);
+    let signWarned = false;
+    const sign = async (p: string | null) => {
+      if (!p) return null;
+      const r = await storage.createSignedUrl(p, SIGN_TTL_S);
+      if (!r.data) {
+        if (!signWarned) { signWarned = true; console.error("[hub] cannot sign media URL", r.error?.message); }
+        return null;
+      }
+      return r.data.signedUrl ?? null;
+    };
     const present = async (p: H.PostView) => ({
       ...p,
       media: await Promise.all(p.media.map(sign)),
@@ -68,19 +92,27 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
 
     // ---- session -----------------------------------------------------------
     if (match("POST", /^login$/)) {
-      const email = String((await readJson(request)).email ?? "").trim().toLowerCase();
+      const email = str((await readJson(request)).email).trim().toLowerCase();
       if (!EMAIL_RE.test(email) || email.length > 320) throw new H.HubError("invalid", "Email invalide");
       // same answer whether or not the email is eligible (no enumeration)
       if ((await H.isEligible(d, email)) && (await H.canRequestLogin(d, email, now()))) {
+        const job = (async () => {
+          try {
         const token = await H.createLoginToken(d, email, now());
         const base = (env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma").replace(/\/$/, "");
         const link = `${base}/fr/benevole/espace?token=${token}`;
         await sendMail(email, "Votre lien de connexion — Espace bénévole", `<p>Bonjour,</p><p>Voici votre lien de connexion à l'espace bénévole Ftour Bab Rayan (valable 15 minutes, usage unique) :</p><p><a href="${link}">Ouvrir l'espace bénévole</a></p><p>Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>`);
+          } catch (e) {
+            console.error("[hub] login mail failed", e);
+          }
+        })();
+        if (deps.waitUntil) deps.waitUntil(job);
+        else await job;
       }
       return json({ ok: true });
     }
     if (match("POST", /^verify$/)) {
-      const token = String((await readJson(request)).token ?? "");
+      const token = str((await readJson(request)).token);
       return json(await H.openSession(d, token, now()));
     }
     if (match("POST", /^logout$/)) {
@@ -114,34 +146,34 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       const me = await member();
       const b = await readJson(request);
       const media = Array.isArray(b.media) ? b.media.filter((x): x is string => typeof x === "string") : [];
-      return json(await H.createPost(d, me, { body: String(b.body ?? ""), mediaPaths: media }, now()));
+      return json(await H.createPost(d, me, { body: str(b.body), mediaPaths: media }, now()));
     }
     if ((m = match("DELETE", /^posts\/(\d+)$/))) {
-      await H.removeContent(d, await member(), "post", Number(m[1]));
+      await H.removeContent(d, await member(), "post", id(m[1]));
       return json({ ok: true });
     }
     if ((m = match("POST", /^posts\/(\d+)\/like$/))) {
       const me = await member();
-      return json(await H.toggleLike(d, me.id, Number(m[1])));
+      return json(await H.toggleLike(d, me.id, id(m[1])));
     }
     if ((m = match("GET", /^posts\/(\d+)\/comments$/))) {
       await member();
-      const comments = await H.listComments(d, Number(m[1]));
+      const comments = await H.listComments(d, id(m[1]));
       return json({ comments: await Promise.all(comments.map(async c => ({ ...c, author: { ...c.author, avatar: await sign(c.author.avatar_key) } }))) });
     }
     if ((m = match("POST", /^posts\/(\d+)\/comments$/))) {
       const me = await member();
-      return json(await H.addComment(d, me, Number(m[1]), String((await readJson(request)).body ?? ""), now()));
+      return json(await H.addComment(d, me, id(m[1]), str((await readJson(request)).body), now()));
     }
     if ((m = match("DELETE", /^comments\/(\d+)$/))) {
-      await H.removeContent(d, await member(), "comment", Number(m[1]));
+      await H.removeContent(d, await member(), "comment", id(m[1]));
       return json({ ok: true });
     }
 
     // ---- media / report ----------------------------------------------------
     if (match("POST", /^media$/)) {
       const me = await member();
-      const ext = EXT[String((await readJson(request)).contentType ?? "")];
+      const ext = EXT[str((await readJson(request)).contentType)];
       if (!ext) throw new H.HubError("invalid", "Format d'image non supporté (jpeg, png, webp, gif)");
       await H.recordUpload(d, me.id, now());
       const p = `${me.id}/${crypto.randomUUID()}.${ext}`;
@@ -152,29 +184,29 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     if (match("POST", /^report$/)) {
       const me = await member();
       const b = await readJson(request);
-      await H.reportContent(d, me, b.type as "post" | "comment", num(b.id), String(b.reason ?? ""));
+      await H.reportContent(d, me, b.type as "post" | "comment", id(b.id), str(b.reason));
       return json({ ok: true });
     }
 
     // ---- admin (Supabase bearer + role) ------------------------------------
     if (match("GET", /^admin\/reports$/)) { await admin(); return json({ reports: await H.listReports(d) }); }
-    if ((m = match("POST", /^admin\/reports\/(\d+)\/dismiss$/))) { await admin(); await H.dismissReport(d, Number(m[1])); return json({ ok: true }); }
+    if ((m = match("POST", /^admin\/reports\/(\d+)\/dismiss$/))) { await admin(); await H.dismissReport(d, id(m[1])); return json({ ok: true }); }
     if (match("POST", /^admin\/posts$/)) {
       await admin();
       const b = await readJson(request);
-      return json(await H.postAnnouncement(d, { body: String(b.body ?? ""), pinned: b.pinned === true }, now()));
+      return json(await H.postAnnouncement(d, { body: str(b.body), pinned: b.pinned === true }, now()));
     }
     if (match("POST", /^admin\/hide$/)) {
       await admin();
       const b = await readJson(request);
-      await H.hideContent(d, b.type as "post" | "comment", num(b.id));
+      await H.hideContent(d, b.type as "post" | "comment", id(b.id));
       return json({ ok: true });
     }
     if (match("GET", /^admin\/members$/)) { await admin(); return json({ members: await H.listMembers(d) }); }
     if ((m = match("PUT", /^admin\/members\/(\d+)$/))) {
       await admin();
       const b = await readJson(request);
-      await H.adminUpdateMember(d, Number(m[1]), { status: b.status as any, role: b.role as any });
+      await H.adminUpdateMember(d, id(m[1]), { status: b.status as any, role: b.role as any });
       return json({ ok: true });
     }
 
