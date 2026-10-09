@@ -10075,7 +10075,8 @@ const inventoryRouter = router({
 // ============================================
 
 const ELECTION_MIN_PARTICIPATIONS = 3;
-const ELECTION_CURRENT_YEAR = new Date().getFullYear();
+// per request: Workers freeze Date at module load (getFullYear() would be 1970)
+const electionYear = () => new Date().getFullYear();
 
 const electionAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
   const allowed = ["admin", "super_admin", "admin_ops", "admin_operations"];
@@ -10104,7 +10105,7 @@ async function getElectionParticipationCount(
 
 const electionRouter = router({
   getSettings: publicProcedure.query(({ ctx }) =>
-    electionDb.getSettings(galleryDb.db(ctx.env), ELECTION_CURRENT_YEAR)
+    electionDb.getSettings(galleryDb.db(ctx.env), electionYear())
   ),
 
   listCandidates: publicProcedure
@@ -10112,7 +10113,7 @@ const electionRouter = router({
     .query(({ ctx, input }) =>
       electionDb.listCandidates(
         galleryDb.db(ctx.env),
-        input?.year ?? ELECTION_CURRENT_YEAR,
+        input?.year ?? electionYear(),
         { status: "approved" }
       )
     ),
@@ -10120,7 +10121,7 @@ const electionRouter = router({
   getResults: publicProcedure
     .input(z.object({ year: z.number().optional() }).optional())
     .query(({ ctx, input }) =>
-      electionDb.results(galleryDb.db(ctx.env), input?.year ?? ELECTION_CURRENT_YEAR)
+      electionDb.results(galleryDb.db(ctx.env), input?.year ?? electionYear())
     ),
 
   getManagersHistory: publicProcedure.query(({ ctx }) =>
@@ -10149,7 +10150,7 @@ const electionRouter = router({
     const candidateId = await electionDb.getVote(
       galleryDb.db(ctx.env),
       email.toLowerCase().trim(),
-      ELECTION_CURRENT_YEAR
+      electionYear()
     );
     return { hasVoted: !!candidateId, candidateId };
   }),
@@ -10164,7 +10165,7 @@ const electionRouter = router({
           code: "UNAUTHORIZED",
           message: "Email introuvable",
         });
-      const year = ELECTION_CURRENT_YEAR;
+      const year = electionYear();
       if (!(await electionDb.isOpen(d, year))) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -10211,7 +10212,7 @@ const electionRouter = router({
     .mutation(async ({ ctx, input }) => {
       const d = galleryDb.db(ctx.env);
       const userEmail = ctx.user.email ?? input.email;
-      const year = ELECTION_CURRENT_YEAR;
+      const year = electionYear();
       const count = await getElectionParticipationCount(userEmail, ctx.env);
       if (count < ELECTION_MIN_PARTICIPATIONS) {
         throw new TRPCError({
@@ -10275,7 +10276,7 @@ const electionRouter = router({
     .query(({ ctx, input }) =>
       electionDb.listCandidates(
         galleryDb.db(ctx.env),
-        input?.year ?? ELECTION_CURRENT_YEAR,
+        input?.year ?? electionYear(),
         { status: input?.status, newestFirst: true }
       )
     ),
@@ -10301,13 +10302,13 @@ const electionRouter = router({
   admin_getStats: electionAdminProcedure
     .input(z.object({ year: z.number().optional() }).optional())
     .query(({ ctx, input }) =>
-      electionDb.stats(galleryDb.db(ctx.env), input?.year ?? ELECTION_CURRENT_YEAR)
+      electionDb.stats(galleryDb.db(ctx.env), input?.year ?? electionYear())
     ),
 
   admin_getLiveRanking: electionAdminProcedure
     .input(z.object({ year: z.number().optional() }).optional())
     .query(({ ctx, input }) =>
-      electionDb.results(galleryDb.db(ctx.env), input?.year ?? ELECTION_CURRENT_YEAR)
+      electionDb.results(galleryDb.db(ctx.env), input?.year ?? electionYear())
     ),
 
   admin_updateSettings: electionAdminProcedure
@@ -10321,7 +10322,7 @@ const electionRouter = router({
     .mutation(({ ctx, input }) =>
       electionDb.upsertSettings(
         galleryDb.db(ctx.env),
-        input.year ?? ELECTION_CURRENT_YEAR,
+        input.year ?? electionYear(),
         { is_open: input.is_open, max_managers: input.max_managers }
       )
     ),
@@ -10329,7 +10330,7 @@ const electionRouter = router({
   admin_listVotes: electionAdminProcedure
     .input(z.object({ year: z.number().optional() }).optional())
     .query(({ ctx, input }) =>
-      electionDb.listVotes(galleryDb.db(ctx.env), input?.year ?? ELECTION_CURRENT_YEAR)
+      electionDb.listVotes(galleryDb.db(ctx.env), input?.year ?? electionYear())
     ),
 
   admin_deleteCandidate: electionAdminProcedure
