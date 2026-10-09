@@ -84,8 +84,7 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     };
     const admin = async () => {
       const u = await (deps.adminUser ?? (async (req: Request) => (await createWorkerContext(req, env as unknown as Env)).user))(request);
-      if (!u || !ADMIN_ROLES.has(u.role)) throw new H.HubError("forbidden", "Réservé aux administrateurs");
-      if (u.isDemo && request.method !== "GET") throw new H.HubError("forbidden", "Mode démo en lecture seule");
+      if (!u || u.isDemo || !ADMIN_ROLES.has(u.role)) throw new H.HubError("forbidden", "Réservé aux administrateurs");
     };
 
     let m: RegExpExecArray | null;

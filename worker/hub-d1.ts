@@ -77,7 +77,7 @@ export async function openSession(d: D1Like, loginToken: string, nowMs: number):
 export async function getSession(d: D1Like, sessionToken: string, nowMs: number): Promise<MemberRow | null> {
   if (!sessionToken) return null;
   return d.prepare(
-    "SELECT m.* FROM hub_sessions s JOIN hub_members m ON m.id = s.member_id WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > ? AND m.status = 'active'",
+    "SELECT m.* FROM hub_sessions s JOIN hub_members m ON m.id = s.member_id WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > ? AND m.status = 'active' AND EXISTS (SELECT 1 FROM t_volunteers v WHERE lower(v.email) = m.email AND v.status IN ('confirmed','present'))",
   ).bind(await sha256Hex(sessionToken), iso(nowMs)).first<MemberRow>();
 }
 

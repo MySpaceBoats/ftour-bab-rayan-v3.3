@@ -164,10 +164,11 @@ describe("hub http", () => {
     expect((await call("POST", `/hub/admin/reports/${reports.reports[0].id}/dismiss`, { admin: "admin" })).status).toBe(200);
   });
 
-  it("admin announcements and member control; demo mode is read-only", async () => {
+  it("admin announcements and member control; demo access is refused", async () => {
     const a = await signIn();
     expect((await call("POST", "/hub/admin/posts", { admin: "demo", body: { body: "x", pinned: true } })).status).toBe(403);
-    expect((await call("GET", "/hub/admin/members", { admin: "demo" })).status).toBe(200);
+    expect((await call("GET", "/hub/admin/members", { admin: "demo" })).status).toBe(403);
+    expect((await call("GET", "/hub/admin/reports", { admin: "demo" })).status).toBe(403);
     expect((await call("POST", "/hub/admin/posts", { admin: "admin", body: { body: "Réunion", pinned: true } })).status).toBe(200);
     const feed = (await (await call("GET", "/hub/feed", { token: a.session })).json()) as any;
     expect(feed.pinned[0]).toMatchObject({ body: "Réunion", kind: "announcement" });

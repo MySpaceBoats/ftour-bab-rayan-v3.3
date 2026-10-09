@@ -64,6 +64,15 @@ describe("hub identity", () => {
     await expect(h.openSession(d, late, T0 + h.LOGIN_TTL_MS + 1)).rejects.toMatchObject({ code: "unauthorized" });
   });
 
+  it("session ends when the volunteer is cancelled and returns when reconfirmed", async () => {
+    vol("a@x.ma");
+    const a = await login("a@x.ma");
+    sqlite.exec("UPDATE t_volunteers SET status='cancelled'");
+    expect(await h.getSession(d, a.session, T0 + 10)).toBeNull();
+    sqlite.exec("UPDATE t_volunteers SET status='confirmed'");
+    expect((await h.getSession(d, a.session, T0 + 10))?.email).toBe("a@x.ma");
+  });
+
   it("opens a session, creates the member once, names it from the volunteer", async () => {
     vol("a@x.ma");
     const a = await login("A@x.ma");
