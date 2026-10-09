@@ -11,6 +11,8 @@ export const D1_TABLES: string[] = [
   "pastries", "pastry_orders", "products",
   "shop_products", "shop_product_variants", "shop_orders", "shop_order_items",
   "payments", "payment_logs", "payment_methods_config",
+  // wave B
+  "inventory_products", "inventory_locations", "inventory_events", "inventory_stock_balances", "inventory_movements", "feedback_responses", "testimonials", "partners",
 ];
 
 export function d1TableSet(env: { D1_TABLES?: string }): Set<string> {
