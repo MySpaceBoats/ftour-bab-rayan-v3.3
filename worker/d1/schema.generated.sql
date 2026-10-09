@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS "t_payments" (
   "updated_at" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS "idx_t_payments_validated_by" ON "t_payments"("validated_by");
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_payments_1" ON "t_payments"(payment_reference);
 CREATE TABLE IF NOT EXISTS "t_pastry_orders" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
   "reference" TEXT NOT NULL,
@@ -60,6 +61,8 @@ CREATE TABLE IF NOT EXISTS "t_pastry_orders" (
   "updated_at" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS "idx_t_pastry_orders_scanned_by" ON "t_pastry_orders"("scanned_by");
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_pastry_orders_1" ON "t_pastry_orders"(reference);
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_pastry_orders_2" ON "t_pastry_orders"(qr_token);
 CREATE TABLE IF NOT EXISTS "t_feedback_forms" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
   "name" TEXT NOT NULL,
@@ -113,6 +116,7 @@ CREATE TABLE IF NOT EXISTS "t_orders" (
   "payment_method" TEXT DEFAULT 'cash'
 );
 CREATE INDEX IF NOT EXISTS "idx_t_orders_processed_by" ON "t_orders"("processed_by");
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_orders_1" ON "t_orders"(order_reference);
 CREATE TABLE IF NOT EXISTS "t_volunteer_profiles" (
   "id" TEXT NOT NULL PRIMARY KEY,
   "first_name" TEXT NOT NULL,
@@ -192,6 +196,7 @@ CREATE TABLE IF NOT EXISTS "t_reservation_payment_tokens" (
   "created_at" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS "idx_t_reservation_payment_tokens_reservation_id" ON "t_reservation_payment_tokens"("reservation_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_reservation_payment_tokens_1" ON "t_reservation_payment_tokens"(token_hash);
 CREATE TABLE IF NOT EXISTS "t_terroir_order_items" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
   "order_id" INTEGER NOT NULL,
@@ -230,6 +235,8 @@ CREATE TABLE IF NOT EXISTS "t_terroir_orders" (
 );
 CREATE INDEX IF NOT EXISTS "idx_t_terroir_orders_pickup_slot_id" ON "t_terroir_orders"("pickup_slot_id");
 CREATE INDEX IF NOT EXISTS "idx_t_terroir_orders_processed_by" ON "t_terroir_orders"("processed_by");
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_terroir_orders_1" ON "t_terroir_orders"(order_reference);
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_terroir_orders_2" ON "t_terroir_orders"(qr_token);
 CREATE TABLE IF NOT EXISTS "t_ramadan_daily_stats" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
   "config_id" INTEGER NOT NULL,
@@ -243,6 +250,7 @@ CREATE TABLE IF NOT EXISTS "t_ramadan_daily_stats" (
   "updated_at" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS "idx_t_ramadan_daily_stats_config_id" ON "t_ramadan_daily_stats"("config_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_ramadan_daily_stats_1" ON "t_ramadan_daily_stats"(config_id, ramadan_day);
 CREATE TABLE IF NOT EXISTS "t_feedback_campaign_recipients" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
   "campaign_id" INTEGER NOT NULL,
@@ -255,6 +263,7 @@ CREATE TABLE IF NOT EXISTS "t_feedback_campaign_recipients" (
   "created_at" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS "idx_t_feedback_campaign_recipients_campaign_id" ON "t_feedback_campaign_recipients"("campaign_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_feedback_campaign_recipients_1" ON "t_feedback_campaign_recipients"(token);
 CREATE TABLE IF NOT EXISTS "t_inventory_products" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
   "product_type" TEXT NOT NULL,
@@ -269,6 +278,7 @@ CREATE TABLE IF NOT EXISTS "t_inventory_products" (
   "created_at" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   "updated_at" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_inventory_products_1" ON "t_inventory_products"(product_type, source_product_id, source_variant_id) WHERE source_product_id IS NOT NULL;
 CREATE TABLE IF NOT EXISTS "t_shop_orders" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
   "order_reference" TEXT NOT NULL,
@@ -341,6 +351,7 @@ CREATE TABLE IF NOT EXISTS "t_volunteers" (
 );
 CREATE INDEX IF NOT EXISTS "idx_t_volunteers_day_id" ON "t_volunteers"("day_id");
 CREATE INDEX IF NOT EXISTS "idx_t_volunteers_scanned_by" ON "t_volunteers"("scanned_by");
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_volunteers_1" ON "t_volunteers"(qr_token);
 CREATE TABLE IF NOT EXISTS "t_pastries" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
   "name" TEXT NOT NULL,
@@ -378,6 +389,7 @@ CREATE TABLE IF NOT EXISTS "t_inventory_locations" (
 );
 CREATE INDEX IF NOT EXISTS "idx_t_inventory_locations_event_id" ON "t_inventory_locations"("event_id");
 CREATE INDEX IF NOT EXISTS "idx_t_inventory_locations_parent_location_id" ON "t_inventory_locations"("parent_location_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_inventory_locations_1" ON "t_inventory_locations"(code);
 CREATE TABLE IF NOT EXISTS "t_reservation_checkins" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
   "reservation_id" INTEGER,
@@ -484,6 +496,7 @@ CREATE TABLE IF NOT EXISTS "t_payment_methods_config" (
   "created_at" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   "updated_at" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_payment_methods_config_1" ON "t_payment_methods_config"(method);
 CREATE TABLE IF NOT EXISTS "t_inventory_stock_balances" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
   "product_id" INTEGER NOT NULL,
@@ -493,6 +506,7 @@ CREATE TABLE IF NOT EXISTS "t_inventory_stock_balances" (
 );
 CREATE INDEX IF NOT EXISTS "idx_t_inventory_stock_balances_product_id" ON "t_inventory_stock_balances"("product_id");
 CREATE INDEX IF NOT EXISTS "idx_t_inventory_stock_balances_location_id" ON "t_inventory_stock_balances"("location_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_inventory_stock_balances_1" ON "t_inventory_stock_balances"(product_id, location_id);
 CREATE TABLE IF NOT EXISTS "t_qr_tokens" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
   "token" TEXT NOT NULL,
@@ -505,6 +519,7 @@ CREATE TABLE IF NOT EXISTS "t_qr_tokens" (
   "expires_at" TEXT,
   "updated_at" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_qr_tokens_1" ON "t_qr_tokens"(token);
 CREATE TABLE IF NOT EXISTS "t_feedback_questions" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
   "form_id" INTEGER NOT NULL,
@@ -556,6 +571,8 @@ CREATE TABLE IF NOT EXISTS "t_restaurant_reservations" (
   "mode_deposit" TEXT,
   "date_av_reg" TEXT
 );
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_restaurant_reservations_1" ON "t_restaurant_reservations"(reference);
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_restaurant_reservations_2" ON "t_restaurant_reservations"(qr_token);
 CREATE TABLE IF NOT EXISTS "t_testimonials" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
   "name" TEXT NOT NULL,
@@ -607,6 +624,7 @@ CREATE TABLE IF NOT EXISTS "t_ramadan_config" (
   "created_at" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   "updated_at" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_ramadan_config_1" ON "t_ramadan_config"(is_active) where is_active = true;
 CREATE TABLE IF NOT EXISTS "t_qr_scans" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
   "token" TEXT NOT NULL,
@@ -673,6 +691,8 @@ CREATE TABLE IF NOT EXISTS "t_ramadan_days" (
   "created_at" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   "updated_at" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_ramadan_days_1" ON "t_ramadan_days"(day_number);
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_ramadan_days_2" ON "t_ramadan_days"(date);
 CREATE TABLE IF NOT EXISTS "t_feedback_answers" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
   "response_id" INTEGER NOT NULL,

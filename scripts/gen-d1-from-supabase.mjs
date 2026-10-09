@@ -38,6 +38,30 @@ for (const dir of ["supabase", "supabase/migrations"]) {
     }
 }
 
+// UNIQUE constraints / unique indexes, read from the repo's SQL: { table: [{ cols: "a, b", where?: "..." }] }
+const uniques = {};
+const addUnique = (table, cols, where = "") => ((uniques[table] ??= []).push({ cols: cols.trim(), where: where.trim() }));
+for (const dir of ["supabase", "supabase/migrations"]) {
+    let files = [];
+    try { files = readdirSync(dir).filter(f => f.endsWith(".sql")).map(f => `${dir}/${f}`); } catch {}
+    for (const f of files) {
+        const text = readFileSync(f, "utf8").replace(/--[^\n]*/g, "");
+        for (const m of text.matchAll(/CREATE UNIQUE INDEX(?: IF NOT EXISTS)?\s+\w+\s+ON\s+(?:public\.)?(\w+)\s*(?:USING \w+\s*)?\(((?:[^()]|\([^()]*\))*)\)(\s*WHERE[^;]*)?/gi)) addUnique(m[1].toLowerCase(), m[2], m[3] ?? "");
+        let table = null;
+        for (const line of text.split("\n")) {
+            const c = line.match(/CREATE TABLE(?: IF NOT EXISTS)?\s+(?:public\.)?"?([a-z_]+)"?/i);
+            if (c) table = c[1].toLowerCase();
+            const a = line.match(/ALTER TABLE\s+(?:IF EXISTS\s+)?(?:public\.)?([a-z_]+)/i);
+            if (a) table = a[1].toLowerCase();
+            if (!table) continue;
+            const tl = line.match(/^\s*(?:CONSTRAINT\s+\w+\s+)?UNIQUE\s*\(([^)]+)\)/i);
+            if (tl) { addUnique(table, tl[1]); continue; }
+            const inl = line.match(/^\s*(?:ADD COLUMN(?: IF NOT EXISTS)?\s+)?"?([a-z_]+)"?\s+[A-Za-z]+.*\bUNIQUE\b(?!\s*\()/i);
+            if (inl && !/^\s*(CONSTRAINT|UNIQUE|CREATE)/i.test(line)) addUnique(table, inl[1]);
+        }
+    }
+}
+
 const UUID = "(lower(hex(randomblob(4)))||'-'||lower(hex(randomblob(2)))||'-4'||substr(lower(hex(randomblob(2))),2)||'-'||substr('89ab',abs(random())%4+1,1)||substr(lower(hex(randomblob(2))),2)||'-'||lower(hex(randomblob(6))))";
 const NOW = "(strftime('%Y-%m-%dT%H:%M:%fZ','now'))";
 
@@ -96,6 +120,16 @@ for (const [name, def] of Object.entries(defs)) {
     if (pk.length > 1) lines.push(`  PRIMARY KEY (${pk.map(c => `"${c}"`).join(", ")})`);
     ddl.push(`CREATE TABLE IF NOT EXISTS "t_${name}" (\n${lines.join(",\n")}\n);`);
     for (const fk of fks) ddl.push(`CREATE INDEX IF NOT EXISTS "idx_t_${name}_${fk.col}" ON "t_${name}"("${fk.col}");`);
+    const seen = new Set(pk.length ? [pk.join(",")] : []);
+    let n = 0;
+    for (const u of uniques[name] ?? []) {
+        const idents = (u.cols.replace(/\([^)]*\)/g, m => m).match(/[a-z_]+/gi) ?? []).filter(w => !["lower", "upper", "coalesce", "date", "text", "true", "false", "null", "and", "or", "is", "not"].includes(w.toLowerCase()));
+        if (!idents.every(w => w in def.properties)) continue; // expression on unknown column
+        const norm = u.cols.replace(/\s+/g, "") + u.where;
+        if (seen.has(norm)) continue;
+        seen.add(norm);
+        ddl.push(`CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_${name}_${++n}" ON "t_${name}"(${u.cols})${u.where ? " " + u.where : ""};`);
+    }
     meta[name] = {
         cols: Object.fromEntries(cols.map(([c, p]) => [c, kind(p)])),
         pk,

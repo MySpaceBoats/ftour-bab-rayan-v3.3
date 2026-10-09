@@ -8,6 +8,7 @@ import { createD1Rest } from './d1-postgrest';
 import { META } from './d1-meta.generated';
 import { d1TableSet } from './d1-tables';
 import { db as d1Binding } from './gallery-d1';
+import { INVENTORY_RPC, inventoryRpc } from './inventory-d1';
 
 /**
  * Create Supabase admin client with service role key
@@ -35,6 +36,12 @@ function routeToD1(sb: SupabaseClient, env: Env): SupabaseClient {
     get(target, prop) {
       if (prop === 'from') {
         return (table: string) => (tables.has(table) && table in META ? rest.from(table) : target.from(table));
+      }
+      if (prop === 'rpc') {
+        return (fn: string, args?: Record<string, unknown>, ...rest: unknown[]) =>
+          INVENTORY_RPC.has(fn) && tables.has('inventory_stock_balances')
+            ? inventoryRpc(d1Binding(env), fn, args ?? {})
+            : (target.rpc as any)(fn, args, ...rest);
       }
       const v = Reflect.get(target, prop, target);
       return typeof v === 'function' ? v.bind(target) : v;
