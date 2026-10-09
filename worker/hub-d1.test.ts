@@ -224,3 +224,62 @@ describe("hub posts", () => {
     expect((await h.feed(d, a.id)).posts).toHaveLength(1);
   });
 });
+
+describe("hub moderation and admin", () => {
+  it("reports: stored once per reporter, target must be visible, reason validated", async () => {
+    const a = await member("a@x.ma"); const b = await member("b@x.ma", "Brahim");
+    const p = await h.createPost(d, a, { body: "bad stuff" }, T0);
+    await expect(h.reportContent(d, b, "post", p.id, "")).rejects.toMatchObject({ code: "invalid" });
+    await expect(h.reportContent(d, b, "post", p.id, "x".repeat(301))).rejects.toMatchObject({ code: "invalid" });
+    await expect(h.reportContent(d, b, "post", 9999, "spam")).rejects.toMatchObject({ code: "not_found" });
+    await expect(h.reportContent(d, b, "bogus" as any, 1, "spam")).rejects.toMatchObject({ code: "invalid" });
+    await expect(h.reportContent(d, b, "constructor" as any, 1, "x")).rejects.toMatchObject({ code: "invalid" });
+    await expect(h.hideContent(d, "constructor" as any, 1)).rejects.toMatchObject({ code: "invalid" });
+    await expect(h.removeContent(d, b, "constructor" as any, 1)).rejects.toMatchObject({ code: "invalid" });
+    await h.reportContent(d, b, "post", p.id, "spam");
+    await h.reportContent(d, b, "post", p.id, "spam again");
+    const list = await h.listReports(d);
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ target_type: "post", target_id: p.id, reason: "spam", reporter: "Brahim B.", body: "bad stuff", target_status: "visible" });
+  });
+
+  it("hideContent hides regardless of owner; dismissReport deletes the report", async () => {
+    const a = await member("a@x.ma"); const b = await member("b@x.ma", "Brahim");
+    const p = await h.createPost(d, a, { body: "bad" }, T0);
+    const c = await h.addComment(d, a, p.id, "bad too", T0 + 1);
+    await h.reportContent(d, b, "comment", c.id, "rude");
+    await h.hideContent(d, "comment", c.id);
+    expect(await h.listComments(d, p.id)).toEqual([]);
+    expect((await h.listReports(d))[0]).toMatchObject({ target_status: "hidden" });
+    await h.dismissReport(d, (await h.listReports(d))[0].id);
+    expect(await h.listReports(d)).toEqual([]);
+    await expect(h.hideContent(d, "post", 9999)).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("postAnnouncement uses the team member, pinned shows on first page only", async () => {
+    const a = await member("a@x.ma");
+    await expect(h.postAnnouncement(d, { body: " ", pinned: true }, T0)).rejects.toMatchObject({ code: "invalid" });
+    const x = await h.postAnnouncement(d, { body: "Réunion samedi", pinned: true }, T0);
+    await h.postAnnouncement(d, { body: "Autre", pinned: false }, T0 + 1);
+    const f = await h.feed(d, a.id);
+    expect(f.pinned.map(p => p.id)).toEqual([x.id]);
+    expect(f.pinned[0]).toMatchObject({ kind: "announcement", pinned: true, author: { display_name: "Équipe Ftour" } });
+    expect(f.posts[0]).toMatchObject({ kind: "announcement", pinned: false });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM hub_members WHERE email = ?").get(h.TEAM_EMAIL)).toEqual({ n: 1 });
+    await expect(login(h.TEAM_EMAIL)).rejects.toMatchObject({ code: "forbidden" });
+  });
+
+  it("listMembers + adminUpdateMember (status, role), suspended member loses access", async () => {
+    const a = await member("a@x.ma");
+    const { session } = await login("a@x.ma", T0 + 5);
+    const list = await h.listMembers(d);
+    expect(list[0]).toMatchObject({ email: "a@x.ma", role: "member", status: "active" });
+    await h.adminUpdateMember(d, a.id, { role: "moderator" });
+    expect((await h.getSession(d, session, T0 + 6))?.role).toBe("moderator");
+    await h.adminUpdateMember(d, a.id, { status: "suspended" });
+    expect(await h.getSession(d, session, T0 + 7)).toBeNull();
+    await expect(h.adminUpdateMember(d, a.id, { status: "bogus" as any })).rejects.toMatchObject({ code: "invalid" });
+    await expect(h.adminUpdateMember(d, a.id, { role: "root" as any })).rejects.toMatchObject({ code: "invalid" });
+    await expect(h.adminUpdateMember(d, 9999, { status: "active" })).rejects.toMatchObject({ code: "not_found" });
+  });
+});

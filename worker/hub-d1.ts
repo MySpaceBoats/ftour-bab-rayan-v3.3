@@ -199,13 +199,74 @@ export async function listComments(d: D1Like, postId: number): Promise<CommentVi
 }
 
 const TABLE = { post: "hub_posts", comment: "hub_comments" } as const;
+function tableFor(type: string): "hub_posts" | "hub_comments" {
+  if (!Object.hasOwn(TABLE, type)) throw new HubError("invalid", "Type invalide");
+  return TABLE[type as keyof typeof TABLE];
+}
 
 /** Soft delete (status = hidden). Owner or moderator. Admin hides go through hideContent (Task 3). */
 export async function removeContent(d: D1Like, actor: MemberRow, type: "post" | "comment", id: number): Promise<void> {
-  const t = TABLE[type];
-  if (!t) throw new HubError("invalid", "Type invalide");
+  const t = tableFor(type);
   const row = await d.prepare(`SELECT member_id FROM ${t} WHERE id = ? AND status = 'visible'`).bind(id).first<{ member_id: number }>();
   if (!row) throw new HubError("not_found", "Contenu introuvable");
   if (row.member_id !== actor.id && actor.role !== "moderator") throw new HubError("forbidden", "Action non autorisée");
   await d.prepare(`UPDATE ${t} SET status = 'hidden' WHERE id = ?`).bind(id).run();
+}
+
+// ---- moderation / admin ---------------------------------------------------
+
+export interface ReportView { id: number; target_type: "post" | "comment"; target_id: number; reason: string; created_at: string; reporter: string; body: string | null; target_status: string | null }
+export interface AdminMemberView { id: number; email: string; display_name: string; role: string; status: string; created_at: string }
+
+export async function reportContent(d: D1Like, member: MemberRow, type: "post" | "comment", id: number, rawReason: string): Promise<void> {
+  const t = tableFor(type);
+  const reason = cleanBody(rawReason, LIMITS.reason, "Motif");
+  if (!(await d.prepare(`SELECT 1 AS ok FROM ${t} WHERE id = ? AND status = 'visible'`).bind(id).first())) throw new HubError("not_found", "Contenu introuvable");
+  await d.prepare("INSERT OR IGNORE INTO hub_reports (target_type, target_id, member_id, reason) VALUES (?,?,?,?)").bind(type, id, member.id, reason).run();
+}
+
+export async function listReports(d: D1Like): Promise<ReportView[]> {
+  const { results } = await d.prepare(
+    `SELECT r.id, r.target_type, r.target_id, r.reason, r.created_at, m.display_name AS reporter,
+       CASE r.target_type WHEN 'post' THEN (SELECT body FROM hub_posts WHERE id = r.target_id) ELSE (SELECT body FROM hub_comments WHERE id = r.target_id) END AS body,
+       CASE r.target_type WHEN 'post' THEN (SELECT status FROM hub_posts WHERE id = r.target_id) ELSE (SELECT status FROM hub_comments WHERE id = r.target_id) END AS target_status
+     FROM hub_reports r JOIN hub_members m ON m.id = r.member_id ORDER BY r.id DESC LIMIT 100`,
+  ).all<ReportView>();
+  return results;
+}
+
+export async function dismissReport(d: D1Like, id: number): Promise<void> {
+  await d.prepare("DELETE FROM hub_reports WHERE id = ?").bind(id).run();
+}
+
+export async function hideContent(d: D1Like, type: "post" | "comment", id: number): Promise<void> {
+  const t = tableFor(type);
+  if (!(await d.prepare(`SELECT 1 AS ok FROM ${t} WHERE id = ?`).bind(id).first())) throw new HubError("not_found", "Contenu introuvable");
+  await d.prepare(`UPDATE ${t} SET status = 'hidden' WHERE id = ?`).bind(id).run();
+}
+
+async function teamMemberId(d: D1Like): Promise<number> {
+  const row = await d.prepare("INSERT INTO hub_members (email, display_name, role) VALUES (?, 'Équipe Ftour', 'moderator') ON CONFLICT(email) DO UPDATE SET email = excluded.email RETURNING id")
+    .bind(TEAM_EMAIL).first<{ id: number }>();
+  return row!.id;
+}
+
+export async function postAnnouncement(d: D1Like, input: { body: string; pinned: boolean }, nowMs: number): Promise<{ id: number }> {
+  const body = cleanBody(input.body, LIMITS.post, "Annonce");
+  const row = await d.prepare("INSERT INTO hub_posts (member_id, body, kind, pinned, created_at) VALUES (?,?,'announcement',?,?) RETURNING id")
+    .bind(await teamMemberId(d), body, input.pinned ? 1 : 0, iso(nowMs)).first<{ id: number }>();
+  return { id: row!.id };
+}
+
+export async function listMembers(d: D1Like): Promise<AdminMemberView[]> {
+  const { results } = await d.prepare("SELECT id, email, display_name, role, status, created_at FROM hub_members WHERE email <> ? ORDER BY id DESC LIMIT 500").bind(TEAM_EMAIL).all<AdminMemberView>();
+  return results;
+}
+
+export async function adminUpdateMember(d: D1Like, id: number, input: { status?: "active" | "suspended"; role?: "member" | "moderator" }): Promise<void> {
+  if (input.status !== undefined && !["active", "suspended"].includes(input.status)) throw new HubError("invalid", "Statut invalide");
+  if (input.role !== undefined && !["member", "moderator"].includes(input.role)) throw new HubError("invalid", "Rôle invalide");
+  const row = await d.prepare("UPDATE hub_members SET status = COALESCE(?, status), role = COALESCE(?, role) WHERE id = ? RETURNING id")
+    .bind(input.status ?? null, input.role ?? null, id).first();
+  if (!row) throw new HubError("not_found", "Membre introuvable");
 }
