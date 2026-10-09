@@ -118,7 +118,7 @@ export const ROUTE_TO_NAV_ID: Record<string, string> = {
   '/admin/equipe': 'equipe',
   '/admin/utilisateurs': 'utilisateurs',
   '/admin/unified-dashboard': 'unified',
-  '/admin/scan-reservation': 'reservations',
+  '/admin/scan-reservation': 'reservations-cal',
   '/admin/goodies': 'orders',
   '/admin/pastries': 'patisserie',
   '/admin/galerie/nouveau': 'galerie',
