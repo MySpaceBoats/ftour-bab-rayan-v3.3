@@ -31,7 +31,10 @@ export function createSupabaseAdmin(env: Env): SupabaseClient {
 function routeToD1(sb: SupabaseClient, env: Env): SupabaseClient {
   const tables = d1TableSet(env);
   if (tables.size === 0) return sb;
-  const rest = createD1Rest(d1Binding(env), META, { isD1: t => tables.has(t) && t in META });
+  const rest = createD1Rest(d1Binding(env), META, {
+    isD1: t => tables.has(t) && t in META,
+    external: async (table, cols, col, values) => (await sb.from(table).select(cols).in(col, values as any[])).data ?? [],
+  });
   return new Proxy(sb, {
     get(target, prop) {
       if (prop === 'from') {

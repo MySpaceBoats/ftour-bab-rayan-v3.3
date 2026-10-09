@@ -59,7 +59,13 @@
   "pk": [
    "id"
   ],
-  "fks": [],
+  "fks": [
+   {
+    "col": "validated_by",
+    "ref": "users",
+    "refCol": "id"
+   }
+  ],
   "cascade": {},
   "hasUpdatedAt": true
  },
@@ -85,7 +91,13 @@
   "pk": [
    "id"
   ],
-  "fks": [],
+  "fks": [
+   {
+    "col": "scanned_by",
+    "ref": "users",
+    "refCol": "id"
+   }
+  ],
   "cascade": {},
   "hasUpdatedAt": true
  },
@@ -182,7 +194,13 @@
   "pk": [
    "id"
   ],
-  "fks": [],
+  "fks": [
+   {
+    "col": "processed_by",
+    "ref": "users",
+    "refCol": "id"
+   }
+  ],
   "cascade": {},
   "hasUpdatedAt": true
  },
@@ -310,6 +328,11 @@
     "col": "volunteer_id",
     "ref": "volunteers",
     "refCol": "id"
+   },
+   {
+    "col": "validated_by",
+    "ref": "users",
+    "refCol": "id"
    }
   ],
   "cascade": {
@@ -408,6 +431,11 @@
    {
     "col": "pickup_slot_id",
     "ref": "terroir_pickup_slots",
+    "refCol": "id"
+   },
+   {
+    "col": "processed_by",
+    "ref": "users",
     "refCol": "id"
    }
   ],
@@ -512,7 +540,13 @@
   "pk": [
    "id"
   ],
-  "fks": [],
+  "fks": [
+   {
+    "col": "processed_by",
+    "ref": "users",
+    "refCol": "id"
+   }
+  ],
   "cascade": {},
   "hasUpdatedAt": true
  },
@@ -604,6 +638,11 @@
    {
     "col": "day_id",
     "ref": "ramadan_days",
+    "refCol": "id"
+   },
+   {
+    "col": "scanned_by",
+    "ref": "users",
     "refCol": "id"
    }
   ],
@@ -760,6 +799,11 @@
     "col": "pos_location_id",
     "ref": "inventory_locations",
     "refCol": "id"
+   },
+   {
+    "col": "performed_by",
+    "ref": "users",
+    "refCol": "id"
    }
   ],
   "cascade": {
@@ -859,6 +903,11 @@
    {
     "col": "payment_id",
     "ref": "payments",
+    "refCol": "id"
+   },
+   {
+    "col": "performed_by",
+    "ref": "users",
     "refCol": "id"
    }
   ],
@@ -1159,7 +1208,13 @@
   "pk": [
    "id"
   ],
-  "fks": [],
+  "fks": [
+   {
+    "col": "validated_by",
+    "ref": "users",
+    "refCol": "id"
+   }
+  ],
   "cascade": {},
   "hasUpdatedAt": false
  },
@@ -1374,6 +1429,11 @@
     "col": "event_id",
     "ref": "inventory_events",
     "refCol": "id"
+   },
+   {
+    "col": "counted_by",
+    "ref": "users",
+    "refCol": "id"
    }
   ],
   "cascade": {},
@@ -1390,7 +1450,13 @@
   "pk": [
    "id"
   ],
-  "fks": [],
+  "fks": [
+   {
+    "col": "created_by",
+    "ref": "users",
+    "refCol": "id"
+   }
+  ],
   "cascade": {},
   "hasUpdatedAt": false
  },

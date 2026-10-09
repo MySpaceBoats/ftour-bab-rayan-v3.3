@@ -123,3 +123,23 @@ describe("d1-postgrest", () => {
     expect(r.error?.message).toMatch(/Unknown column/);
   });
 });
+
+describe("d1-postgrest external embeds", () => {
+  it("joins a to-one relation served outside D1 (users) through opts.external", async () => {
+    const s = new DatabaseSync(":memory:");
+    s.exec(readFileSync(new URL("./d1/schema.generated.sql", import.meta.url), "utf8"));
+    const calls: unknown[] = [];
+    const ext = createD1Rest(fakeD1(s), META as any, {
+      isD1: t => t in META,
+      external: async (table, cols, col, values) => { calls.push([table, cols, col, values]); return [{ id: 7, name: "Ada", email: "a@x.y" }]; },
+    });
+    await ext.from("inventory_products").insert({ name: "P", product_type: "goodie", unit: "piece" } as any);
+    await ext.from("inventory_locations").insert({ code: "L", name: "L", location_type: "buffer" } as any);
+    await ext.from("inventory_movements").insert({ product_id: 1, quantity: 1, movement_type: "SALE", performed_by: 7 } as any);
+    const { data, error } = await ext.from("inventory_movements").select("id, users(name)").single();
+    expect(error).toBeNull();
+    expect(data.users).toMatchObject({ name: "Ada" });
+    expect(data.users).not.toHaveProperty("id");
+    expect(calls).toEqual([["users", "name,id", "id", [7]]]);
+  });
+});

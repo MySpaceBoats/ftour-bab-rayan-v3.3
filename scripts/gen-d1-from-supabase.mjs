@@ -133,7 +133,7 @@ for (const [name, def] of Object.entries(defs)) {
     meta[name] = {
         cols: Object.fromEntries(cols.map(([c, p]) => [c, kind(p)])),
         pk,
-        fks: fks.filter(f => !SKIP.has(f.ref) && !CUSTOM.has(f.ref)),
+        fks,
         cascade: cascades[name] ?? {},
         hasUpdatedAt: cols.some(([c]) => c === "updated_at"),
     };

@@ -68,8 +68,10 @@ export function parseSelect(sel: string): SelectNode {
 }
 
 export interface RestOpts {
-  /** true when `table` is served by D1 (embedded relations must be too). */
+  /** true when `table` is served by D1. */
   isD1: (table: string) => boolean;
+  /** Fetch rows of a table that is NOT in D1 (e.g. users, still in Supabase) for to-one embeds: `col IN values`. */
+  external?: (table: string, cols: string, col: string, values: unknown[]) => Promise<any[]>;
 }
 
 export function createD1Rest(d: D1Like, meta: MetaMap, opts: RestOpts) {
@@ -304,10 +306,13 @@ class Query implements PromiseLike<RestResult> {
 
     for (const plan of relPlans) {
       const keys = [...new Set(rows.map(r => r[plan.parentCol]).filter(v => v !== null && v !== undefined))];
-      const child = new Query(this.d, this.meta, this.opts, plan.rel.name);
       const subTree = plan.rel.sub;
       let childRows: any[] = [];
-      if (keys.length) {
+      const child = "external" in plan ? null : new Query(this.d, this.meta, this.opts, plan.rel.name);
+      if ("external" in plan && keys.length) {
+        const cols = subTree.cols.includes("*") ? "*" : [...new Set([...subTree.cols, plan.childCol])].join(",");
+        childRows = await this.opts.external!(plan.rel.name, cols, plan.childCol, keys);
+      } else if (keys.length && child) {
         const cp: unknown[] = [JSON.stringify(keys)];
         const cw = ` WHERE ${child.col(plan.childCol, plan.rel.name)} IN (SELECT value FROM json_each(?))`;
         // join key must be fetched to group children, then dropped if not requested
@@ -339,10 +344,12 @@ class Query implements PromiseLike<RestResult> {
   }
 
   private planRel(rel: SelectNode["rels"][number]) {
-    if (!this.meta[rel.name] || !this.opts.isD1(rel.name)) {
+    const toOne = this.meta[this.table].fks.find(f => f.ref === rel.name);
+    const external = !this.meta[rel.name] || !this.opts.isD1(rel.name);
+    if (external) {
+      if (toOne && this.opts.external) return { rel, many: false, parentCol: toOne.col, childCol: toOne.refCol, external: true };
       throw new RestFail(`Embedded table "${rel.name}" is not served by D1 (migrate it together with "${this.table}")`);
     }
-    const toOne = this.meta[this.table].fks.find(f => f.ref === rel.name);
     if (toOne) return { rel, many: false, parentCol: toOne.col, childCol: toOne.refCol };
     const toMany = this.meta[rel.name].fks.find(f => f.ref === this.table);
     if (toMany) return { rel, many: true, parentCol: toMany.refCol, childCol: toMany.col };
