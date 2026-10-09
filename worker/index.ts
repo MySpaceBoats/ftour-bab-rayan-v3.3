@@ -38,6 +38,8 @@ export interface Env {
   D1_TABLES?: string;
   /** Overrides d1-tables.ts R2_BUCKETS: Supabase Storage buckets served from R2, or "none". */
   R2_BUCKETS?: string;
+  /** Public origin of this Worker for /media URLs (default: its workers.dev URL, see media-r2.ts). */
+  MEDIA_BASE_URL?: string;
   GALLERY_MEDIA?: R2Like;
 }
 

@@ -1,3 +1,4 @@
+import { mediaUrl } from "@/lib/media";
 import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -1630,7 +1631,7 @@ export default function Benevole() {
                               {formTexts.downloadTemplateDesc}
                             </p>
                             <a
-                              href="https://www.ftourbabrayan.ma/media/Formulaire/FORMULAIRE.xlsx"
+                              href={mediaUrl("Formulaire/FORMULAIRE.xlsx")}
                               download
                               target="_blank"
                               rel="noopener noreferrer"

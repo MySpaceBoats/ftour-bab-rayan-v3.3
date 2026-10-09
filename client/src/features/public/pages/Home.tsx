@@ -1,3 +1,4 @@
+import { mediaUrl } from "@/lib/media";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
@@ -236,7 +237,7 @@ export default function Home() {
               <div className="relative">
                 <div className="aspect-square rounded-2xl overflow-hidden border border-[#F2E9D3]/10">
                   <img
-                    src="https://www.ftourbabrayan.ma/media/Images%20siteweb/WhatsApp%20Image%202026-02-16%20at%2010.17.55.jpeg"
+                    src={mediaUrl("Images siteweb/WhatsApp Image 2026-02-16 at 10.17.55.jpeg")}
                     alt="Ftour Bab Rayan"
                     className="w-full h-full object-cover"
                   />

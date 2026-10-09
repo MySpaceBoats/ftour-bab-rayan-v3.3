@@ -1,7 +1,7 @@
 // Verifies every Supabase Storage object is reachable through the Worker's /media route (public) or hidden (private).
 // Usage: node --env-file=.env.local scripts/check-media-urls.mjs [origin]
 const { SUPABASE_URL: U, SUPABASE_SERVICE_ROLE_KEY: K } = process.env;
-const ORIGIN = (process.argv[2] || "https://www.ftourbabrayan.ma").replace(/\/$/, "");
+const ORIGIN = (process.argv[2] || process.env.MEDIA_BASE_URL || "https://ftour-bab-rayan-v2.reda-sebbani-43b.workers.dev").replace(/\/$/, "");
 const PUBLIC = new Set(["images", "manager-candidates", "product-images", "Formulaire", "RIB", "Images siteweb"]); // keep in sync with worker/media-r2.ts
 const H = { apikey: K, Authorization: `Bearer ${K}`, "Content-Type": "application/json" };
 async function list(bucket, prefix = "") {
@@ -18,7 +18,8 @@ for (const b of await (await fetch(`${U}/storage/v1/bucket`, { headers: H })).js
         const pub = PUBLIC.has(b.name);
         const key = b.name === "images" ? path : pub ? `${b.name}/${path}` : `private/${b.name}/${path}`;
         const res = await fetch(`${ORIGIN}/media/${key.split("/").map(encodeURIComponent).join("/")}`, { method: "HEAD" });
-        const ok = pub ? res.status === 200 : res.status === 404;
+        const html = (res.headers.get("content-type") || "").includes("text/html"); // SPA fallback is not an object
+        const ok = pub ? res.status === 200 && !html : res.status === 404 || html;
         n++;
         if (!ok) { bad++; console.log(`BAD ${res.status} ${pub ? "public " : "private"} ${b.name}/${path}`); }
     }

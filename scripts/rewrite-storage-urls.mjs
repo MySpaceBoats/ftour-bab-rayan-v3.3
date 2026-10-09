@@ -6,7 +6,7 @@ import { execFileSync } from "node:child_process";
 
 const DB = { staging: "ftour-bab-rayan-staging-db", prod: "ftour-bab-rayan-prod-db" }[process.argv[2]];
 const { SUPABASE_URL: U } = process.env;
-const ORIGIN = (process.env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma").replace(/\/$/, "");
+const ORIGIN = (process.env.MEDIA_BASE_URL || "https://ftour-bab-rayan-v2.reda-sebbani-43b.workers.dev").replace(/\/$/, "");
 if (!DB || !U) { console.error("usage: node --env-file=.env.local scripts/rewrite-storage-urls.mjs <staging|prod> [--apply]"); process.exit(1); }
 const apply = process.argv.includes("--apply");
 

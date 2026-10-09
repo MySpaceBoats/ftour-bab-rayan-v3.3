@@ -15,12 +15,12 @@ function fakeR2() {
   return { r2, store };
 }
 
-let env: { GALLERY_MEDIA: R2Like; JWT_SECRET: string; PUBLIC_APP_URL: string };
+let env: { GALLERY_MEDIA: R2Like; JWT_SECRET: string; MEDIA_BASE_URL: string };
 let store: Map<string, any>;
 beforeEach(() => {
   const f = fakeR2();
   store = f.store;
-  env = { GALLERY_MEDIA: f.r2, JWT_SECRET: "s3cret", PUBLIC_APP_URL: "https://site.test/" };
+  env = { GALLERY_MEDIA: f.r2, JWT_SECRET: "s3cret", MEDIA_BASE_URL: "https://site.test/" };
 });
 const req = (path: string, init?: RequestInit) => new Request(`https://site.test${path}`, init);
 const T = 1_800_000_000_000;

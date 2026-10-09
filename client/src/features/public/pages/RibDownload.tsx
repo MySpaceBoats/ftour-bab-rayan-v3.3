@@ -1,7 +1,8 @@
+import { mediaUrl } from "@/lib/media";
 import { useEffect } from "react";
 
 const RIB_PDF_URL =
-  "https://www.ftourbabrayan.ma/media/RIB/RIBBABRAYAN%20(1).pdf?download=RIBBABRAYAN.pdf";
+  mediaUrl("RIB/RIBBABRAYAN (1).pdf") + "?download=RIBBABRAYAN.pdf";
 
 export default function RibDownload() {
   useEffect(() => {

@@ -12,7 +12,8 @@ import type { R2Like } from "./gallery-d1";
 export const PUBLIC_BUCKETS = new Set(["images", "manager-candidates", "product-images", "Formulaire", "RIB", "Images siteweb"]);
 export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const UPLOAD_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
-const DEFAULT_ORIGIN = "https://www.ftourbabrayan.ma";
+// www.ftourbabrayan.ma is a different deployment (static site): media must be served from the Worker itself.
+export const DEFAULT_MEDIA_BASE = "https://ftour-bab-rayan-v2.reda-sebbani-43b.workers.dev";
 
 export function objectKey(bucket: string, path: string): string {
   const p = path.replace(/^\/+/, "");
@@ -41,8 +42,8 @@ export async function verifyMedia(secret: string, purpose: Purpose, key: string,
   return diff === 0;
 }
 
-export interface MediaEnv { GALLERY_MEDIA?: R2Like; JWT_SECRET?: string; PUBLIC_APP_URL?: string }
-const originOf = (env: MediaEnv) => (env.PUBLIC_APP_URL || DEFAULT_ORIGIN).replace(/\/$/, "");
+export interface MediaEnv { GALLERY_MEDIA?: R2Like; JWT_SECRET?: string; MEDIA_BASE_URL?: string }
+const originOf = (env: MediaEnv) => (env.MEDIA_BASE_URL || DEFAULT_MEDIA_BASE).replace(/\/$/, "");
 
 async function toBytes(body: unknown): Promise<ArrayBuffer | Uint8Array> {
   if (body instanceof Uint8Array || body instanceof ArrayBuffer) return body;
