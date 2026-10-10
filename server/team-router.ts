@@ -116,7 +116,7 @@ export const teamRouter = router({
 
       if (photoBase64) {
         const image = parseImageDataUrl(photoBase64);
-        const edition = rest.edition ?? 12;
+        const edition = rest.edition ?? 13;
         const path = `team/edition-${edition}/${Date.now()}-${id}.${image.ext}`;
         const client = getSupabaseAdminClient();
         if (!client)

@@ -10366,7 +10366,7 @@ function mapTeamMember(row: any) {
     citation: row.citation ?? null,
     photoUrl: row.photo_url ?? row.photoUrl ?? null,
     displayOrder: row.display_order ?? row.displayOrder ?? 0,
-    edition: row.edition ?? 12,
+    edition: row.edition ?? 13,
     isActive: row.is_active ?? row.isActive ?? true,
     createdAt: row.created_at ?? row.createdAt ?? null,
     updatedAt: row.updated_at ?? row.updatedAt ?? null,
@@ -10462,7 +10462,7 @@ const teamRouter = router({
 
       if (photoBase64) {
         const { mimeType, ext, buffer } = parseBase64ImageData(photoBase64);
-        const edition = rest.edition ?? 12;
+        const edition = rest.edition ?? 13;
         const key = `team/edition-${edition}/${Date.now()}-${id}.${ext}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from("images")

@@ -321,7 +321,7 @@ const PRODUCTS_BY_CATEGORY: Record<OrderCategory, { name: string; price: number 
   goodies: [
     { name: "T-shirt Bab Rayan", price: 120 },
     { name: "Mug solidaire", price: 60 },
-    { name: "Tote bag édition 12", price: 80 },
+    { name: "Tote bag édition 13", price: 80 },
     { name: "Casquette brodée", price: 90 },
     { name: "Carnet Ramadan", price: 45 },
   ],
@@ -401,7 +401,7 @@ const INVENTORY_TEMPLATES: {
   { name: "Briouates", category: "patisserie", unit: "u", unitCost: 70, threshold: 20 },
   { name: "T-shirt Bab Rayan", category: "goodies", unit: "u", unitCost: 60, threshold: 40 },
   { name: "Mug solidaire", category: "goodies", unit: "u", unitCost: 25, threshold: 30 },
-  { name: "Tote bag édition 12", category: "goodies", unit: "u", unitCost: 35, threshold: 35 },
+  { name: "Tote bag édition 13", category: "goodies", unit: "u", unitCost: 35, threshold: 35 },
   { name: "Sac emballage repas", category: "logistique", unit: "pack", unitCost: 90, threshold: 10 },
   { name: "Couverts compostables", category: "logistique", unit: "pack", unitCost: 75, threshold: 12 },
   { name: "Gobelets écologiques", category: "logistique", unit: "pack", unitCost: 60, threshold: 20 },

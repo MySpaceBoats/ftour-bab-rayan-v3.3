@@ -3524,7 +3524,7 @@ export async function createTeamMemberSupabase(input: {
     role: input.role || null, citation: input.citation || null,
     photo_url: input.photoUrl || null,
     display_order: input.displayOrder ?? 0,
-    edition: input.edition ?? 12,
+    edition: input.edition ?? 13,
     is_active: true,
   }).select().single();
   if (error) throw new Error(`Erreur création membre: ${error.message}`);

@@ -101,7 +101,7 @@ export default function AdminGalerieEdit() {
             <div>
               <Label>Année xxxx ou édition xxxx</Label>
               <Input
-                placeholder="Ex: 2026 ou édition 12"
+                placeholder="Ex: 2026 ou édition 13"
                 value={form.eventDate}
                 onChange={e =>
                   setForm((f: any) => ({ ...f, eventDate: e.target.value }))

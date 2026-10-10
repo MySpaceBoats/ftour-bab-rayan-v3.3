@@ -7,7 +7,7 @@ import { Users, Loader2 } from "lucide-react";
 // ============================================
 // CURRENT EDITION
 // ============================================
-const CURRENT_EDITION = 12;
+const CURRENT_EDITION = 13;
 
 // ============================================
 // MEMBER CARD

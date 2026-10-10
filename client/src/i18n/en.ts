@@ -52,7 +52,7 @@ export const en: Translations = {
   home: {
     heroTitle: 'Ftour Bab Rayan',
     heroTitleAr: 'فطور باب ريان',
-    heroSubtitle: '12th Edition',
+    heroSubtitle: '13th Edition',
     heroDescription: 'Because every child deserves a good start in life. Let us share moments of solidarity together during this sacred month.',
     statsTitle: 'Annual Key Figures',
     statsVolunteers: 'Volunteers',
@@ -74,7 +74,7 @@ export const en: Translations = {
     impactTitle: 'The Impact of Our Action',
     impactDescription: 'Every year, thanks to your donations and our volunteers, we make a difference.',
     joinTitle: 'Join Us',
-    joinDescription: 'Together, let us make this 12th edition a success.',
+    joinDescription: 'Together, let us make this 13th edition a success.',
     solidarityActions: 'Solidarity Actions',
     ftourTitle: 'Ftour Bab Rayan',
     ftourDesc1: 'Bab Rayan Association has been organizing Ftour Bab Rayan every year since 2015. During this sacred month, most people do not have the chance to break their fast around a well-set table.',
@@ -148,7 +148,7 @@ export const en: Translations = {
   // Event Page
   event: {
     title: 'The Ftour Bab Rayan Event',
-    subtitle: 'Since 2015 - 12th Edition',
+    subtitle: 'Since 2015 - 13th Edition',
     description: 'A month of sharing, solidarity and generosity in the heart of Casablanca. More than 31,200 Ftours served every year.',
     missionTitle: 'Ftour Bab Rayan',
     missionDescription: 'Bab Rayan Association has been organizing Ftour Bab Rayan every year since 2015. During this sacred month, most people do not have the chance to break their fast around a well-set table.',
@@ -177,7 +177,7 @@ export const en: Translations = {
   // Volunteer Page
   volunteer: {
     title: 'Become a Volunteer',
-    subtitle: 'Join our volunteer team for the 12th edition',
+    subtitle: 'Join our volunteer team for the 13th edition',
     description: 'Participate in this beautiful human adventure and contribute to serving meals to people in need during Ramadan.',
     formTitle: 'Volunteer Registration',
     firstName: 'First Name',
@@ -549,13 +549,13 @@ export const en: Translations = {
   programme: {
     title: 'Ramadan Program',
     subtitle: 'Ftour Calendar',
-    description: 'Discover the complete program of the 12th edition of Ftour Bab Rayan.',
+    description: 'Discover the complete program of the 13th edition of Ftour Bab Rayan.',
   },
 
   // Footer
   footer: {
     description: 'Bab Rayan Association has been organizing Ftour Bab Rayan every year since 2015. This event brings warmth and togetherness during the holy month of Ramadan.',
-    edition: '12th edition',
+    edition: '13th edition',
     quickLinks: 'Quick Links',
     program: 'Program',
     shop: 'Solidarity Shop',

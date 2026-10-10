@@ -248,7 +248,7 @@ export function generateVolunteerConfirmationEmail(data: VolunteerEmailData): { 
   `;
 
   return {
-    subject: '✅ Confirmation inscription - Ftour Bab Rayan (12eme édition)',
+    subject: '✅ Confirmation inscription - Ftour Bab Rayan (13eme édition)',
     html: baseTemplate(content, 'linear-gradient(135deg, #5E5B34 0%, #4A4829 100%)'),
   };
 }

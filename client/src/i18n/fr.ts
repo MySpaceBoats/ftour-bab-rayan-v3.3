@@ -50,7 +50,7 @@ export const fr = {
   home: {
     heroTitle: 'Ftour Bab Rayan',
     heroTitleAr: 'فطور باب ريان',
-    heroSubtitle: '12e édition',
+    heroSubtitle: '13e édition',
     heroDescription: 'Parce que chaque enfant mérite un bon départ dans la vie. Partageons ensemble des moments de solidarité pendant ce mois sacré.',
     statsTitle: 'Chiffres clés annuels',
     statsVolunteers: 'Bénévoles',
@@ -72,7 +72,7 @@ export const fr = {
     impactTitle: "L'impact de notre action",
     impactDescription: 'Chaque année, grâce à vos dons et à nos bénévoles, nous faisons la différence.',
     joinTitle: 'Rejoignez-nous',
-    joinDescription: 'Ensemble, faisons de cette 12e édition un succès.',
+    joinDescription: 'Ensemble, faisons de cette 13e édition un succès.',
     solidarityActions: 'Actions Solidaires',
     ftourTitle: 'Les Ftours Bab Rayan',
     ftourDesc1: "L'association Bab Rayan organise chaque année depuis 2015 le Ftour Bab Rayan. Pendant ce mois sacré, la plupart n'ont pas la chance de rompre leur jeûne autour d'une table garnie.",
@@ -146,7 +146,7 @@ export const fr = {
   // Event Page
   event: {
     title: "L'événement Ftour Bab Rayan",
-    subtitle: 'Depuis 2015 - 12ème édition',
+    subtitle: 'Depuis 2015 - 13ème édition',
     description: 'Un mois de partage, de solidarité et de générosité au cœur de Casablanca. Plus de 31 200 Ftours servis chaque année.',
     missionTitle: 'Les Ftours Bab Rayan',
     missionDescription: "L'association Bab Rayan organise chaque année depuis 2015 le Ftour Bab Rayan. Pendant ce mois sacré, la plupart n'ont pas la chance de rompre leur jeûne autour d'une table garnie.",
@@ -175,7 +175,7 @@ export const fr = {
   // Volunteer Page
   volunteer: {
     title: 'Devenir bénévole',
-    subtitle: 'Rejoignez notre équipe de bénévoles pour la 12e édition',
+    subtitle: 'Rejoignez notre équipe de bénévoles pour la 13e édition',
     description: 'Participez à cette belle aventure humaine et contribuez à servir des repas aux personnes dans le besoin pendant le Ramadan.',
     formTitle: 'Inscription bénévole',
     firstName: 'Prénom',
@@ -547,13 +547,13 @@ export const fr = {
   programme: {
     title: 'Programme Ramadan',
     subtitle: 'Calendrier des Ftours',
-    description: 'Découvrez le programme complet de la 12e édition du Ftour Bab Rayan.',
+    description: 'Découvrez le programme complet de la 13e édition du Ftour Bab Rayan.',
   },
 
   // Footer
   footer: {
     description: "L'association Bab Rayan organise chaque année depuis 2015 le Ftour Bab Rayan. Cette action apporte convivialité et chaleur pendant le mois sacré du Ramadan.",
-    edition: '12e édition',
+    edition: '13e édition',
     quickLinks: 'Liens rapides',
     program: 'Programme',
     shop: 'Boutique solidaire',
