@@ -293,3 +293,107 @@ describe("market reports and admin", () => {
     await expect(mk.hideMarketContent(d, "constructor" as any, 1)).rejects.toMatchObject({ code: "invalid" });
   });
 });
+
+describe("messaging", () => {
+  async function setup() {
+    const a = await member("a@x.ma"); const b = await member("b@x.ma", "Brahim"); const c = await member("c@x.ma", "Chakib");
+    const { id } = await mk.createListing(d, a, base(), T0);
+    return { a, b, c, listingId: id };
+  }
+
+  it("openThread: unique per (listing, buyer); not with yourself; not on hidden; not new on sold", async () => {
+    const { a, b, listingId } = await setup();
+    const t1 = await mk.openThread(d, b, listingId, T0 + 1);
+    expect(t1.created).toBe(true);
+    expect(await mk.openThread(d, b, listingId, T0 + 2)).toEqual({ id: t1.id, created: false });
+    await expect(mk.openThread(d, a, listingId, T0 + 3)).rejects.toMatchObject({ code: "invalid" });
+    await expect(mk.openThread(d, b, 9999, T0 + 3)).rejects.toMatchObject({ code: "not_found" });
+    await mk.setListingStatus(d, a, listingId, "sold", T0 + 4);
+    expect((await mk.openThread(d, b, listingId, T0 + 5)).created).toBe(false); // existing continues
+    const c = await member("c2@x.ma", "Chakib");
+    await expect(mk.openThread(d, c, listingId, T0 + 6)).rejects.toMatchObject({ code: "invalid" }); // sold: no new thread
+    await mk.hideListing(d, listingId);
+    await expect(mk.openThread(d, b, listingId, T0 + 7)).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("send/list: participants only, ordering, validation, 404 for outsiders", async () => {
+    const { a, b, c, listingId } = await setup();
+    const t = await mk.openThread(d, b, listingId, T0 + 1);
+    await expect(mk.sendMessage(d, b, t.id, " ", T0 + 2)).rejects.toMatchObject({ code: "invalid" });
+    await expect(mk.sendMessage(d, b, t.id, "x".repeat(1001), T0 + 2)).rejects.toMatchObject({ code: "invalid" });
+    await mk.sendMessage(d, b, t.id, "Bonjour, dispo ?", T0 + 3);
+    await mk.sendMessage(d, a, t.id, "Oui", T0 + 4);
+    const msgs = await mk.listMessages(d, b, t.id);
+    expect(msgs.messages.map(m => m.body)).toEqual(["Bonjour, dispo ?", "Oui"]);
+    expect(msgs.other).toMatchObject({ id: a.id, display_name: "Amina B." });
+    expect(msgs.listing).toMatchObject({ id: listingId, title: "Vélo enfant" });
+    for (const outsider of [c]) {
+      await expect(mk.listMessages(d, outsider, t.id)).rejects.toMatchObject({ code: "not_found" });
+      await expect(mk.sendMessage(d, outsider, t.id, "intrus", T0 + 5)).rejects.toMatchObject({ code: "not_found" });
+      await expect(mk.markThreadRead(d, outsider, t.id, T0 + 5)).rejects.toMatchObject({ code: "not_found" });
+    }
+    await expect(mk.listMessages(d, a, 9999)).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("inbox: both sides, last message, unread counts, seller sees a thread only once a message exists", async () => {
+    const { a, b, listingId } = await setup();
+    const t = await mk.openThread(d, b, listingId, T0 + 1);
+    expect(await mk.listThreads(d, a.id)).toEqual([]); // empty thread hidden from the seller
+    expect(await mk.listThreads(d, b.id)).toHaveLength(1); // buyer sees it
+    await mk.sendMessage(d, b, t.id, "Bonjour", T0 + 2);
+    await mk.sendMessage(d, b, t.id, "Toujours dispo ?", T0 + 3);
+    const inboxA = await mk.listThreads(d, a.id);
+    expect(inboxA[0]).toMatchObject({ id: t.id, listing_title: "Vélo enfant", other: { id: b.id, display_name: "Brahim B." }, last_body: "Toujours dispo ?", unread: 2 });
+    expect((await mk.listThreads(d, b.id))[0].unread).toBe(0);
+    expect(await mk.unreadTotal(d, a.id)).toBe(2);
+    await mk.markThreadRead(d, a, t.id, T0 + 4);
+    expect(await mk.unreadTotal(d, a.id)).toBe(0);
+    expect((await mk.listMessages(d, b, t.id)).messages[0].read_at).not.toBeNull();
+  });
+
+  it("messages stay private from admins: no admin-style access exists on the data layer", async () => {
+    const { b, listingId } = await setup();
+    const t = await mk.openThread(d, b, listingId, T0 + 1);
+    await mk.sendMessage(d, b, t.id, "secret", T0 + 2);
+    expect(Object.keys(mk).filter(k => /admin/i.test(k)).sort()).toEqual(["adminListListings"]);
+    expect(JSON.stringify(await mk.adminListListings(d))).not.toContain("secret");
+    expect(JSON.stringify(await mk.listMarketReports(d))).not.toContain("secret");
+  });
+
+  it("a hidden listing or a removed seller closes the thread", async () => {
+    const { a, b, listingId } = await setup();
+    const t = await mk.openThread(d, b, listingId, T0 + 1);
+    await mk.sendMessage(d, b, t.id, "hello", T0 + 2);
+    await mk.hideListing(d, listingId);
+    await expect(mk.sendMessage(d, b, t.id, "encore", T0 + 3)).rejects.toMatchObject({ code: "not_found" });
+    expect(await mk.listThreads(d, a.id)).toEqual([]);
+  });
+
+  it("pagination: 50 latest, older via cursor", async () => {
+    const { a, b, listingId } = await setup();
+    const t = await mk.openThread(d, b, listingId, T0);
+    const ins = sqlite.prepare("INSERT INTO mk_messages (thread_id, sender_id, body, created_at) VALUES (?,?,?,?)");
+    for (let i = 0; i < 60; i++) ins.run(t.id, i % 2 ? a.id : b.id, `m${i}`, new Date(T0 + i).toISOString());
+    const p1 = await mk.listMessages(d, b, t.id);
+    expect(p1.messages).toHaveLength(50);
+    expect(p1.messages[0].body).toBe("m10");
+    expect(p1.messages[49].body).toBe("m59");
+    const p2 = await mk.listMessages(d, b, t.id, p1.nextCursor);
+    expect(p2.messages.map(m => m.body)).toEqual(["m0", "m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9"]);
+    expect(p2.nextCursor).toBeNull();
+  });
+
+  it("rate limits: 30 messages/h and 20 new threads/h", async () => {
+    const { b, listingId } = await setup();
+    const t = await mk.openThread(d, b, listingId, T0);
+    for (let i = 0; i < 30; i++) await mk.sendMessage(d, b, t.id, `m${i}`, T0 + i);
+    await expect(mk.sendMessage(d, b, t.id, "over", T0 + 100)).rejects.toMatchObject({ code: "rate_limited" });
+    await expect(mk.sendMessage(d, b, t.id, "later", T0 + HOUR + 100)).resolves.toBeTruthy();
+    const seller = await member("s@x.ma", "Sami");
+    const buyer = await member("buyer@x.ma", "Basma");
+    const ids: number[] = [];
+    for (let i = 0; i < 21; i++) ids.push(raw(seller.id, { title: `s${i}` }));
+    for (let i = 0; i < 20; i++) await mk.openThread(d, buyer, ids[i], T0 + 1000 + i);
+    await expect(mk.openThread(d, buyer, ids[20], T0 + 2000)).rejects.toMatchObject({ code: "rate_limited" });
+  });
+});

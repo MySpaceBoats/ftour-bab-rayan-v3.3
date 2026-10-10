@@ -230,3 +230,95 @@ export async function adminListListings(d: D1Like): Promise<AdminListingView[]> 
   ).all<AdminListingView>();
   return results;
 }
+
+// ---- messaging -------------------------------------------------------------
+
+export interface ThreadSummary { id: number; listing_id: number; listing_title: string; listing_status: string; cover: string | null; other: Seller; last_body: string | null; last_message_at: string; unread: number }
+export interface MessageView { id: number; sender_id: number; body: string; created_at: string; read_at: string | null }
+interface ThreadRow { id: number; listing_id: number; buyer_id: number; seller_id: number; listing_status: string; listing_title: string }
+
+/** Thread the member takes part in, on a non-hidden listing. Outsiders get a 404 (existence is not revealed). */
+async function participantThread(d: D1Like, member: MemberRow, threadId: number): Promise<ThreadRow> {
+  const t = await d.prepare(
+    `SELECT t.id, t.listing_id, t.buyer_id, t.seller_id, l.status AS listing_status, l.title AS listing_title
+     FROM mk_threads t JOIN mk_listings l ON l.id = t.listing_id WHERE t.id = ?`,
+  ).bind(threadId).first<ThreadRow>();
+  if (!t || (t.buyer_id !== member.id && t.seller_id !== member.id) || t.listing_status === "hidden") throw new HubError("not_found", "Discussion introuvable");
+  return t;
+}
+
+export async function openThread(d: D1Like, buyer: MemberRow, listingId: number, nowMs: number): Promise<{ id: number; created: boolean }> {
+  const l = await d.prepare(
+    `SELECT l.id, l.member_id, l.status FROM mk_listings l JOIN hub_members m ON m.id = l.member_id WHERE l.id = ? AND l.status IN ('active','sold') AND ${SELLER_OK}`,
+  ).bind(listingId).first<{ id: number; member_id: number; status: string }>();
+  if (!l) throw new HubError("not_found", "Annonce introuvable");
+  if (l.member_id === buyer.id) throw new HubError("invalid", "Vous ne pouvez pas vous écrire à vous-même");
+  const existing = await d.prepare("SELECT id FROM mk_threads WHERE listing_id = ? AND buyer_id = ?").bind(listingId, buyer.id).first<{ id: number }>();
+  if (existing) return { id: existing.id, created: false };
+  if (l.status === "sold") throw new HubError("invalid", "Cette annonce est vendue");
+  const n = await d.prepare("SELECT COUNT(*) AS n FROM mk_threads WHERE buyer_id = ? AND created_at > ?").bind(buyer.id, iso(nowMs - HOUR_MS)).first<{ n: number }>();
+  if ((n?.n ?? 0) >= MK_LIMITS.threadsPerHour) throw new HubError("rate_limited", "Trop de nouvelles discussions, réessayez plus tard");
+  const row = await d.prepare(
+    "INSERT INTO mk_threads (listing_id, buyer_id, seller_id, created_at, last_message_at) VALUES (?,?,?,?,?) ON CONFLICT(listing_id, buyer_id) DO UPDATE SET listing_id = excluded.listing_id RETURNING id",
+  ).bind(listingId, buyer.id, l.member_id, iso(nowMs), iso(nowMs)).first<{ id: number }>();
+  return { id: row!.id, created: true };
+}
+
+export async function sendMessage(d: D1Like, member: MemberRow, threadId: number, rawBody: string, nowMs: number): Promise<{ id: number }> {
+  const t = await participantThread(d, member, threadId);
+  const body = cleanBody(rawBody, MK_LIMITS.message, "Message");
+  const n = await d.prepare("SELECT COUNT(*) AS n FROM mk_messages WHERE sender_id = ? AND created_at > ?").bind(member.id, iso(nowMs - HOUR_MS)).first<{ n: number }>();
+  if ((n?.n ?? 0) >= MK_LIMITS.messagesPerHour) throw new HubError("rate_limited", "Trop de messages, réessayez plus tard");
+  const row = await d.prepare("INSERT INTO mk_messages (thread_id, sender_id, body, created_at) VALUES (?,?,?,?) RETURNING id").bind(t.id, member.id, body, iso(nowMs)).first<{ id: number }>();
+  await d.prepare("UPDATE mk_threads SET last_message_at = ? WHERE id = ?").bind(iso(nowMs), t.id).run();
+  return { id: row!.id };
+}
+
+export async function listThreads(d: D1Like, memberId: number): Promise<ThreadSummary[]> {
+  const { results } = await d.prepare(
+    `SELECT t.id, t.listing_id, t.last_message_at, l.title AS listing_title, l.status AS listing_status,
+       (SELECT r2_key FROM mk_listing_media WHERE listing_id = l.id AND position = 0) AS cover,
+       o.id AS other_id, o.display_name AS other_name, o.avatar_key AS other_avatar,
+       (SELECT body FROM mk_messages WHERE thread_id = t.id ORDER BY id DESC LIMIT 1) AS last_body,
+       (SELECT COUNT(*) FROM mk_messages WHERE thread_id = t.id AND sender_id <> ? AND read_at IS NULL) AS unread
+     FROM mk_threads t
+     JOIN mk_listings l ON l.id = t.listing_id
+     JOIN hub_members o ON o.id = CASE WHEN t.buyer_id = ? THEN t.seller_id ELSE t.buyer_id END
+     WHERE l.status <> 'hidden' AND (t.buyer_id = ? OR (t.seller_id = ? AND EXISTS (SELECT 1 FROM mk_messages WHERE thread_id = t.id)))
+     ORDER BY t.last_message_at DESC, t.id DESC LIMIT 100`,
+  ).bind(memberId, memberId, memberId, memberId).all<any>();
+  return results.map(r => ({
+    id: r.id, listing_id: r.listing_id, listing_title: r.listing_title, listing_status: r.listing_status, cover: r.cover,
+    other: { id: r.other_id, display_name: r.other_name, avatar_key: r.other_avatar },
+    last_body: r.last_body, last_message_at: r.last_message_at, unread: r.unread,
+  }));
+}
+
+export async function listMessages(d: D1Like, member: MemberRow, threadId: number, before: number | null = null) {
+  const t = await participantThread(d, member, threadId);
+  const { results } = await d.prepare(
+    "SELECT id, sender_id, body, created_at, read_at FROM mk_messages WHERE thread_id = ? AND (? IS NULL OR id < ?) ORDER BY id DESC LIMIT 51",
+  ).bind(threadId, before, before).all<MessageView>();
+  const page = results.slice(0, 50).reverse();
+  const otherId = t.buyer_id === member.id ? t.seller_id : t.buyer_id;
+  const o = await d.prepare("SELECT id, display_name, avatar_key FROM hub_members WHERE id = ?").bind(otherId).first<Seller>();
+  return {
+    messages: page,
+    nextCursor: results.length > 50 ? page[0].id : null,
+    other: o!,
+    listing: { id: t.listing_id, title: t.listing_title, status: t.listing_status },
+  };
+}
+
+export async function markThreadRead(d: D1Like, member: MemberRow, threadId: number, nowMs: number): Promise<void> {
+  await participantThread(d, member, threadId);
+  await d.prepare("UPDATE mk_messages SET read_at = ? WHERE thread_id = ? AND sender_id <> ? AND read_at IS NULL").bind(iso(nowMs), threadId, member.id).run();
+}
+
+export async function unreadTotal(d: D1Like, memberId: number): Promise<number> {
+  const r = await d.prepare(
+    `SELECT COUNT(*) AS n FROM mk_messages x JOIN mk_threads t ON t.id = x.thread_id JOIN mk_listings l ON l.id = t.listing_id
+     WHERE (t.buyer_id = ? OR t.seller_id = ?) AND x.sender_id <> ? AND x.read_at IS NULL AND l.status <> 'hidden'`,
+  ).bind(memberId, memberId, memberId).first<{ n: number }>();
+  return r?.n ?? 0;
+}
