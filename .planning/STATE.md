@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-08)
 Phase: 06 (design-d1-sur-le-site-principal) — EXECUTING
 Plan: 2 of 2
 Status: Phase complete — ready for verification
-Last activity: 2026-10-10 — Phase 06 execution started
+Last activity: 2026-10-10 - Completed quick task 261010-n27: Onglet Mes photos bénévole
 
 Progress: [█████░░░░░] 50%
 
@@ -103,3 +103,9 @@ None yet.
 Last session: 2026-10-10T14:37:46.909Z
 Stopped at: Completed 06-02-PLAN.md (manual UAT pending)
 Resume file: None
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 261010-n27 | Onglet Mes photos bénévole (partage Hub + proposition galerie) | 2026-10-10 | 7b3c6be | [261010-n27-onglet-mes-photos-b-n-vole-upload-profil](./quick/261010-n27-onglet-mes-photos-b-n-vole-upload-profil/) |
