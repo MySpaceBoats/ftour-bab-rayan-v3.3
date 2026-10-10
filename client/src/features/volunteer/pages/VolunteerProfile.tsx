@@ -24,7 +24,7 @@ import {
 import { toast } from "sonner";
 import PrivateRoute from "../components/PrivateRoute";
 import VolunteerBadge from "../components/VolunteerBadge";
-import VolunteerGalleryUploadModule from "@/features/gallery/components/VolunteerGalleryUploadModule";
+import MyPhotosPanel from "../components/MyPhotosPanel";
 import QrImage from "@/shared/components/QrImage";
 import {
   getMyAttendance,
@@ -276,9 +276,9 @@ export default function VolunteerProfilePage() {
                     <CalendarPlus className="h-4 w-4" />
                     Historique
                   </TabsTrigger>
-                  <TabsTrigger value="gallery" className="gap-1.5">
+                  <TabsTrigger value="photos" className="gap-1.5">
                     <Images className="h-4 w-4" />
-                    Galerie
+                    Mes photos
                   </TabsTrigger>
                   <TabsTrigger value="feedback" className="gap-1.5">
                     <MessageSquare className="h-4 w-4" />
@@ -728,19 +728,17 @@ export default function VolunteerProfilePage() {
                   </Card>
                 </TabsContent>
 
-                {/* ── GALLERY TAB ── */}
-                <TabsContent value="gallery">
+                {/* ── PHOTOS TAB ── */}
+                <TabsContent value="photos">
                   <Card>
                     <CardHeader>
-                      <CardTitle>Mes photos pour la galerie</CardTitle>
+                      <CardTitle>Mes photos</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <p className="text-sm text-stone-500 mb-4">
-                        En tant que bénévole connecté, vos photos sont
-                        enregistrées directement sans validation par email.
-                        Elles restent en attente de modération avant publication.
+                        Partagez vos photos avec les bénévoles (fil et profil de l'espace bénévole) et proposez-les à la galerie du site.
                       </p>
-                      <VolunteerGalleryUploadModule />
+                      <MyPhotosPanel />
                     </CardContent>
                   </Card>
                 </TabsContent>

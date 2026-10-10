@@ -15,7 +15,7 @@ export interface HubDeps {
   now?: () => number;
   sendMail?: (to: string, subject: string, html: string) => Promise<unknown>;
   waitUntil?: (p: Promise<unknown>) => void;
-  adminUser?: (request: Request) => Promise<{ role: string; isDemo?: boolean } | null>;
+  adminUser?: (request: Request) => Promise<{ role: string; email?: string; isDemo?: boolean } | null>;
 }
 
 // mirrors client ROUTE_ROLES for '/admin/benevoles' (ADMIN_BASE + admin_ops)
@@ -62,8 +62,21 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       if (!m) throw new H.HubError("unauthorized", "Connexion requise");
       return m;
     };
+    // Supabase site session (admin pages, volunteer "Mes photos" tab) — distinct from the hub magic-link token
+    const siteUser = () => (deps.adminUser ?? (async (req: Request) => (await createWorkerContext(req, env as unknown as Env)).user))(request);
+    // Bridges the site session to the same hub_members row as the magic link, by normalized email.
+    const volunteer = async () => {
+      const u = await siteUser();
+      const email = (u?.email ?? "").trim().toLowerCase();
+      if (!u || u.isDemo || !email) throw new H.HubError("unauthorized", "Connexion requise");
+      if (!(await H.isEligible(d, email))) throw new H.HubError("forbidden", "Accès réservé aux bénévoles confirmés");
+      const me = await H.upsertMember(d, email);
+      if (me.status !== "active") throw new H.HubError("forbidden", "Compte suspendu");
+      return me;
+    };
+    const who = path.startsWith("volunteer/") ? volunteer : member;
     const admin = async () => {
-      const u = await (deps.adminUser ?? (async (req: Request) => (await createWorkerContext(req, env as unknown as Env)).user))(request);
+      const u = await siteUser();
       if (!u || u.isDemo || !ADMIN_ROLES.has(u.role)) throw new H.HubError("forbidden", "Réservé aux administrateurs");
     };
 
@@ -121,8 +134,8 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       const f = await H.feed(d, me.id, c && /^\d+$/.test(c) ? Number(c) : null);
       return json({ pinned: await Promise.all(f.pinned.map(present)), posts: await Promise.all(f.posts.map(present)), nextCursor: f.nextCursor });
     }
-    if (match("POST", /^posts$/)) {
-      const me = await member();
+    if (match("POST", /^(?:volunteer\/)?posts$/)) {
+      const me = await who();
       const b = await readJson(request);
       const media = Array.isArray(b.media) ? b.media.filter((x): x is string => typeof x === "string") : [];
       return json(await H.createPost(d, me, { body: str(b.body), mediaPaths: media }, now()));
@@ -150,8 +163,8 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     }
 
     // ---- media / report ----------------------------------------------------
-    if (match("POST", /^media$/)) {
-      const me = await member();
+    if (match("POST", /^(?:volunteer\/)?media$/)) {
+      const me = await who();
       const ext = EXT[str((await readJson(request)).contentType)];
       if (!ext) throw new H.HubError("invalid", "Format d'image non supporté (jpeg, png, webp, gif)");
       await H.recordUpload(d, me.id, now());
@@ -159,6 +172,11 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       const r = await storage.createSignedUploadUrl(p);
       if (!r.data) throw new Error(r.error?.message ?? "signed upload failed");
       return json({ path: p, uploadUrl: r.data.signedUrl });
+    }
+    if (match("GET", /^volunteer\/photos$/)) {
+      const me = await volunteer();
+      const photos = await H.memberPhotos(d, me.id);
+      return json({ photos: await Promise.all(photos.map(async p => ({ ...p, url: await sign(p.path) }))) });
     }
     if (match("POST", /^report$/)) {
       const me = await member();

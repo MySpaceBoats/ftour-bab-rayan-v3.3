@@ -20,6 +20,7 @@ export interface Comment { id: number; post_id: number; body: string; created_at
 export interface Report { id: number; target_type: "post" | "comment"; target_id: number; reason: string; created_at: string; reporter: string; body: string | null; target_status: string | null }
 export interface AdminMember { id: number; email: string; display_name: string; role: "member" | "moderator"; status: "active" | "suspended"; created_at: string }
 
+// opts.admin = "use the Supabase site session" (admin pages and the volunteer "Mes photos" tab), not the hub token.
 export async function call<T>(method: string, path: string, opts: { body?: unknown; admin?: boolean } = {}): Promise<T> {
   const headers: Record<string, string> = {};
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";
@@ -51,7 +52,7 @@ export const getMe = () => call<{ member: Member }>("GET", "me").then(r => r.mem
 export const updateMe = (b: { display_name?: string; bio?: string; avatar_key?: string | null }) => call<{ member: Member }>("PUT", "me", { body: b }).then(r => r.member);
 export const logout = () => call<{ ok: true }>("POST", "logout").finally(() => setHubToken(null));
 export const getFeed = (cursor: number | null) => call<{ pinned: Post[]; posts: Post[]; nextCursor: number | null }>("GET", `feed${cursor ? `?cursor=${cursor}` : ""}`);
-export const createPost = (body: string, media: string[]) => call<{ id: number }>("POST", "posts", { body: { body, media } });
+export const createPost = (body: string, media: string[], site = false) => call<{ id: number }>("POST", site ? "volunteer/posts" : "posts", { body: { body, media }, admin: site });
 export const toggleLike = (id: number) => call<{ liked: boolean; count: number }>("POST", `posts/${id}/like`);
 export const getComments = (id: number) => call<{ comments: Comment[] }>("GET", `posts/${id}/comments`).then(r => r.comments);
 export const addComment = (id: number, body: string) => call<{ id: number }>("POST", `posts/${id}/comments`, { body: { body } });
@@ -60,13 +61,20 @@ export const removeComment = (id: number) => call<{ ok: true }>("DELETE", `comme
 export const report = (type: "post" | "comment", id: number, reason: string) => call<{ ok: true }>("POST", "report", { body: { type, id, reason } });
 
 /** Uploads one image to R2 through a signed URL; returns the bucket-relative path to send with the post. */
-export async function uploadImage(file: File): Promise<string> {
+export const uploadImage = (file: File): Promise<string> => upload(file, false);
+/** Same upload with the Supabase site session (volunteer "Mes photos" tab). */
+export const uploadSiteImage = (file: File): Promise<string> => upload(file, true);
+
+async function upload(file: File, site: boolean): Promise<string> {
   if (file.size > MAX_IMAGE_BYTES) throw new HubApiError(0, "too_large", "Image trop lourde (8 Mo max).");
-  const { path, uploadUrl } = await call<{ path: string; uploadUrl: string }>("POST", "media", { body: { contentType: file.type } });
+  const { path, uploadUrl } = await call<{ path: string; uploadUrl: string }>("POST", site ? "volunteer/media" : "media", { body: { contentType: file.type }, admin: site });
   const res = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
   if (!res.ok) throw new HubApiError(res.status, "upload", "Envoi de la photo impossible.");
   return path;
 }
+
+export interface Photo { path: string; url: string | null; post_id: number; created_at: string }
+export const getMyPhotos = () => call<{ photos: Photo[] }>("GET", "volunteer/photos", { admin: true }).then(r => r.photos);
 
 export const adminReports = () => call<{ reports: Report[] }>("GET", "admin/reports", { admin: true }).then(r => r.reports);
 export const adminDismiss = (id: number) => call<{ ok: true }>("POST", `admin/reports/${id}/dismiss`, { admin: true });

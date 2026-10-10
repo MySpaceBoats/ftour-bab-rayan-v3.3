@@ -50,7 +50,7 @@ export async function createLoginToken(d: D1Like, email: string, nowMs: number):
   return raw;
 }
 
-async function upsertMember(d: D1Like, email: string): Promise<MemberRow> {
+export async function upsertMember(d: D1Like, email: string): Promise<MemberRow> {
   const e = normEmail(email);
   const existing = await d.prepare("SELECT * FROM hub_members WHERE email = ?").bind(e).first<MemberRow>();
   if (existing) return existing;
@@ -100,6 +100,20 @@ export async function updateProfile(d: D1Like, member: MemberRow, input: { displ
 /** A bucket-relative media path must be "<memberId>/<file>" with no traversal. */
 export function isOwnPath(memberId: number, path: string): boolean {
   return typeof path === "string" && !path.includes("..") && /^\d+\/[\w.\-]+$/.test(path) && path.startsWith(`${memberId}/`);
+}
+
+// ---- member photos ------------------------------------------------------
+
+export interface PhotoView { path: string; post_id: number; created_at: string }
+
+/** Photos = hub_post_media of the member's visible posts (so photos posted from the Hub composer count too). */
+export async function memberPhotos(d: D1Like, memberId: number): Promise<PhotoView[]> {
+  const { results } = await d.prepare(
+    `SELECT pm.r2_key AS path, p.id AS post_id, p.created_at
+     FROM hub_post_media pm JOIN hub_posts p ON p.id = pm.post_id
+     WHERE p.member_id = ? AND p.status = 'visible' ORDER BY p.id DESC, pm.position ASC LIMIT 200`,
+  ).bind(memberId).all<PhotoView>();
+  return results;
 }
 
 // ---- posts / feed / likes / comments -------------------------------------

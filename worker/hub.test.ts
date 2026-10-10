@@ -36,13 +36,16 @@ const deps = (): HubDeps => ({
   now: () => clock,
   sendMail: async (to, subject, html) => { mails.push({ to, subject, html }); },
   adminUser: async req => {
+    const site = req.headers.get("x-site");
+    if (site) return site === "demo" ? { role: "super_admin", email: "demo@ftourbabrayan.local", isDemo: true } : { role: "user", email: site };
     const r = req.headers.get("x-admin");
     return r ? { role: r === "demo" ? "super_admin" : r, isDemo: r === "demo" } : null;
   },
 });
 
-async function call(method: string, path: string, o: { token?: string; admin?: string; body?: unknown } = {}) {
+async function call(method: string, path: string, o: { token?: string; admin?: string; site?: string; body?: unknown } = {}) {
   const headers: Record<string, string> = {};
+  if (o.site) headers["x-site"] = o.site;
   if (o.token) headers.authorization = `Bearer ${o.token}`;
   if (o.admin) headers["x-admin"] = o.admin;
   if (o.body !== undefined) headers["content-type"] = "application/json";
@@ -230,5 +233,72 @@ describe("hub http hardening", () => {
     for (const id of [99999999999999999999, "abc"])
       expect((await call("POST", "/hub/report", { token: session, body: { type: "post", id, reason: "x" } })).status).toBe(400);
     expect((await call("GET", "/hub/posts/99999999999999999999/comments", { token: session })).status).toBe(400);
+  });
+});
+
+describe("volunteer photos via site session", () => {
+  const seedVol = (email: string, status = "confirmed") =>
+    sqlite.prepare("INSERT INTO t_volunteers (first_name,last_name,email,status) VALUES ('Amina','Benali',?,?)").run(email, status);
+  const jpeg = { contentType: "image/jpeg" };
+
+  it("confirmed volunteer (mixed-case email) gets media upload; hub member created for lowercase email", async () => {
+    seedVol("Mixed@X.ma");
+    const r = await call("POST", "/hub/volunteer/media", { site: "Mixed@X.ma", body: jpeg });
+    expect(r.status).toBe(200);
+    const { path } = (await r.json()) as { path: string };
+    const row = sqlite.prepare("SELECT id FROM hub_members WHERE email = 'mixed@x.ma'").get() as { id: number };
+    expect(row).toBeTruthy();
+    expect(path).toMatch(new RegExp(`^${row.id}/`));
+  });
+
+  it("site session and magic link resolve to the same member", async () => {
+    const { member } = await signIn("a@x.ma");
+    const { path } = (await (await call("POST", "/hub/volunteer/media", { site: "A@x.ma", body: jpeg })).json()) as { path: string };
+    expect(path.startsWith(`${member.id}/`)).toBe(true);
+  });
+
+  it("rejects missing, ineligible, demo and suspended site users without writing uploads", async () => {
+    seedVol("reg@x.ma", "registered");
+    expect((await call("POST", "/hub/volunteer/media", { body: jpeg })).status).toBe(401);
+    expect((await call("POST", "/hub/volunteer/media", { site: "reg@x.ma", body: jpeg })).status).toBe(403);
+    expect((await call("POST", "/hub/volunteer/media", { site: "unknown@x.ma", body: jpeg })).status).toBe(403);
+    expect((await call("POST", "/hub/volunteer/media", { site: "demo", body: jpeg })).status).toBe(401);
+    const { member } = await signIn("s@x.ma");
+    sqlite.prepare("UPDATE hub_members SET status='suspended' WHERE id=?").run(member.id);
+    expect((await call("POST", "/hub/volunteer/media", { site: "s@x.ma", body: jpeg })).status).toBe(403);
+    expect((sqlite.prepare("SELECT COUNT(*) AS n FROM hub_uploads").get() as { n: number }).n).toBe(0);
+  });
+
+  it("shares a post visible in the feed and listed in own photos", async () => {
+    seedVol("a@x.ma");
+    const other = await signIn("b@x.ma");
+    const { path } = (await (await call("POST", "/hub/volunteer/media", { site: "a@x.ma", body: jpeg })).json()) as { path: string };
+    const p = await call("POST", "/hub/volunteer/posts", { site: "a@x.ma", body: { body: "Soirée", media: [path] } });
+    expect(p.status).toBe(200);
+    const feed = (await (await call("GET", "/hub/feed", { token: other.session })).json()) as any;
+    expect(feed.posts[0]).toMatchObject({ body: "Soirée" });
+    expect(feed.posts[0].media).toHaveLength(1);
+    const mine = (await (await call("GET", "/hub/volunteer/photos", { site: "a@x.ma" })).json()) as any;
+    expect(mine.photos).toHaveLength(1);
+    expect(mine.photos[0]).toMatchObject({ path, post_id: (await p.json() as any).id });
+    expect(mine.photos[0].url).toContain("https://m.test/media-signed/private/hub/");
+  });
+
+  it("deleting the post empties the photo list", async () => {
+    const a = await signIn("a@x.ma");
+    const { path } = (await (await call("POST", "/hub/volunteer/media", { site: "a@x.ma", body: jpeg })).json()) as { path: string };
+    const { id } = (await (await call("POST", "/hub/volunteer/posts", { site: "a@x.ma", body: { body: "x", media: [path] } })).json()) as { id: number };
+    expect((await call("DELETE", `/hub/posts/${id}`, { token: a.session })).status).toBe(200);
+    expect(((await (await call("GET", "/hub/volunteer/photos", { site: "a@x.ma" })).json()) as any).photos).toEqual([]);
+  });
+
+  it("refuses someone else's path via volunteer/posts", async () => {
+    seedVol("a@x.ma");
+    expect((await call("POST", "/hub/volunteer/posts", { site: "a@x.ma", body: { body: "x", media: ["999/a.jpg"] } })).status).toBe(400);
+  });
+
+  it("site session cannot reach other hub routes", async () => {
+    seedVol("a@x.ma");
+    expect((await call("GET", "/hub/feed", { site: "a@x.ma" })).status).toBe(401);
   });
 });
