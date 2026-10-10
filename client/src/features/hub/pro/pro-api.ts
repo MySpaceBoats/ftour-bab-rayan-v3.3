@@ -23,3 +23,25 @@ export const report = (type: ReportType, id: number, reason: string) => call<{ o
 export const adminReports = () => call<{ reports: ProReport[] }>("GET", "pro/admin/reports", { admin: true }).then(r => r.reports);
 export const adminHide = (type: ReportType, id: number) => call<{ ok: true }>("POST", "pro/admin/hide", { admin: true, body: { type, id } });
 export const adminDismiss = (id: number) => call<{ ok: true }>("POST", `pro/admin/reports/${id}/dismiss`, { admin: true });
+
+export interface JobCard { id: number; title: string; company: string; city: string; type: string; status: "open" | "closed"; created_at: string; poster: Person }
+export interface JobDetail extends JobCard { description: string; contact: string | null; updated_at: string; mine: boolean }
+export interface JobForm { title: string; company: string; city: string; type: string; description: string; contact: string }
+export interface AdminJob { id: number; title: string; company: string; status: string; poster: string; created_at: string }
+
+export const listJobs = (p: { cursor?: number | null; type?: string; city?: string; q?: string; mine?: boolean }) => {
+  const qs = new URLSearchParams();
+  if (p.cursor) qs.set("cursor", String(p.cursor));
+  if (p.type) qs.set("type", p.type);
+  if (p.city?.trim()) qs.set("city", p.city.trim());
+  if (p.q?.trim()) qs.set("q", p.q.trim());
+  if (p.mine) qs.set("mine", "1");
+  const s = qs.toString();
+  return call<{ jobs: JobCard[]; nextCursor: number | null }>("GET", `pro/jobs${s ? `?${s}` : ""}`);
+};
+export const getJob = (id: number) => call<{ job: JobDetail }>("GET", `pro/jobs/${id}`).then(r => r.job);
+export const createJob = (f: JobForm) => call<{ id: number }>("POST", "pro/jobs", { body: f });
+export const updateJob = (id: number, f: JobForm) => call<{ ok: true }>("PUT", `pro/jobs/${id}`, { body: f });
+export const setJobStatus = (id: number, status: "open" | "closed") => call<{ ok: true }>("POST", `pro/jobs/${id}/status`, { body: { status } });
+export const removeJob = (id: number) => call<{ ok: true }>("DELETE", `pro/jobs/${id}`);
+export const adminJobs = () => call<{ jobs: AdminJob[] }>("GET", "pro/admin/jobs", { admin: true }).then(r => r.jobs);

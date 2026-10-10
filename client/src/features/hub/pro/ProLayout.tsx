@@ -5,9 +5,10 @@ import type * as hub from "../api";
 import HubShell from "../components/HubShell";
 
 export type ProTab = "feed" | "jobs" | "messages";
-// Emplois (Task 7) et Messages (Task 10) s'ajoutent ici quand leurs pages existent.
+// Messages (Task 10) s'ajoute ici quand sa page existe.
 const TABS: { key: ProTab; label: string; to: string }[] = [
   { key: "feed", label: "Feed", to: "" },
+  { key: "jobs", label: "Emplois", to: "/emplois" },
 ];
 
 /** Hub frame + the Pro tab bar (Feed · Emplois · Messages). `active = null` for pages outside the tabs (profiles). */

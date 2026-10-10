@@ -7,11 +7,14 @@ const KIND = { post: "Publication", comment: "Commentaire", job: "Offre" } as co
 
 export default function ProAdmin() {
   const [reports, setReports] = useState<api.ProReport[]>([]);
+  const [jobs, setJobs] = useState<api.AdminJob[]>([]);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
-    try { setReports(await api.adminReports()); } catch (e) { toast.error((e as Error).message); }
+    const [r, j] = await Promise.allSettled([api.adminReports(), api.adminJobs()]);
+    if (r.status === "fulfilled") setReports(r.value); else toast.error((r.reason as Error).message);
+    if (j.status === "fulfilled") setJobs(j.value); else toast.error((j.reason as Error).message);
     setLoading(false);
   }, []);
   useEffect(() => { reload(); }, [reload]);
@@ -23,6 +26,7 @@ export default function ProAdmin() {
   };
 
   return (
+    <>
     <section className="space-y-2">
       <h2 className="text-lg font-semibold">Pro : signalements ({reports.length})</h2>
       {!loading && reports.length === 0 && <p className="text-sm text-muted-foreground">Aucun signalement.</p>}
@@ -39,5 +43,24 @@ export default function ProAdmin() {
         </div>
       ))}
     </section>
+
+    <section className="space-y-2">
+      <h2 className="text-lg font-semibold">Pro : offres ({jobs.length})</h2>
+      {!loading && jobs.length === 0 && <p className="text-sm text-muted-foreground">Aucune offre.</p>}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead><tr className="text-left"><th className="p-2">Poste</th><th className="p-2">Entreprise</th><th className="p-2">Publié par</th><th className="p-2">Statut</th><th className="p-2" /></tr></thead>
+          <tbody>
+            {jobs.map(j => (
+              <tr key={j.id} className="border-t">
+                <td className="p-2 break-words">{j.title}</td><td className="p-2">{j.company}</td><td className="p-2">{j.poster}</td><td className="p-2">{j.status}</td>
+                <td className="p-2"><Button size="sm" variant="destructive" disabled={busy || j.status === "hidden"} onClick={() => window.confirm(`Masquer l'offre « ${j.title} » ?`) && run(() => api.adminHide("job", j.id), "Offre masquée")}>Masquer</Button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    </>
   );
 }
