@@ -106,3 +106,6 @@ supabase/.temp/
 *.db
 *.sqlite
 *.sqlite3
+
+# Wrangler local state (miniflare D1/R2, temp bundles)
+.wrangler/
