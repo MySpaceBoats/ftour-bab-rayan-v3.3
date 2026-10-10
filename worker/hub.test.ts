@@ -393,3 +393,47 @@ describe("volunteer photo -> public gallery proposal", () => {
     expect((await propose("reg@x.ma", "1/a.jpg")).status).toBe(403);
   });
 });
+
+describe("hub member profiles", () => {
+  async function sharePhoto(token: string) {
+    const { path } = (await (await call("POST", "/hub/media", { token, body: { contentType: "image/jpeg" } })).json()) as { path: string };
+    const { id } = (await (await call("POST", "/hub/posts", { token, body: { body: "Photo", media: [path] } })).json()) as { id: number };
+    return { path, postId: id };
+  }
+
+  it("another member sees the profile and shared photos, never the email", async () => {
+    const a = await signIn("a@x.ma");
+    const b = await signIn("b@x.ma");
+    const { path } = await sharePhoto(a.session);
+    const r = await call("GET", `/hub/members/${a.member.id}`, { token: b.session });
+    expect(r.status).toBe(200);
+    const text = await r.text();
+    expect(text).not.toContain("a@x.ma");
+    const body = JSON.parse(text);
+    expect(body.member).toMatchObject({ id: a.member.id, display_name: "Amina B.", role: "member" });
+    expect(body.photos).toHaveLength(1);
+    expect(body.photos[0]).toMatchObject({ path, gallery_status: null });
+    expect(body.photos[0].url).toContain("https://m.test/media-signed/private/hub/");
+  });
+
+  it("401 without token; 404 for unknown, suspended and team members", async () => {
+    const a = await signIn("a@x.ma");
+    const b = await signIn("b@x.ma");
+    expect((await call("GET", `/hub/members/${a.member.id}`)).status).toBe(401);
+    expect((await call("GET", "/hub/members/99999", { token: b.session })).status).toBe(404);
+    sqlite.prepare("UPDATE hub_members SET status='suspended' WHERE id=?").run(a.member.id);
+    expect((await call("GET", `/hub/members/${a.member.id}`, { token: b.session })).status).toBe(404);
+    await call("POST", "/hub/admin/posts", { admin: "admin", body: { body: "Annonce", pinned: false } });
+    const team = sqlite.prepare("SELECT id FROM hub_members WHERE email = 'equipe@hub.ftourbabrayan.ma'").get() as { id: number };
+    expect((await call("GET", `/hub/members/${team.id}`, { token: b.session })).status).toBe(404);
+  });
+
+  it("deleting the post removes the photo from the profile", async () => {
+    const a = await signIn("a@x.ma");
+    const b = await signIn("b@x.ma");
+    const { postId } = await sharePhoto(a.session);
+    await call("DELETE", `/hub/posts/${postId}`, { token: a.session });
+    const body = (await (await call("GET", `/hub/members/${a.member.id}`, { token: b.session })).json()) as any;
+    expect(body.photos).toEqual([]);
+  });
+});

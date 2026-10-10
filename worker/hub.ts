@@ -127,6 +127,16 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       return json({ member: { ...view, avatar: await sign(view.avatar_key) } });
     }
 
+    if ((m = match("GET", /^members\/(\d+)$/))) {
+      await member();
+      const view = await H.publicMember(d, id(m[1]));
+      const photos = await H.memberPhotos(d, view.id);
+      return json({
+        member: { ...view, avatar: await sign(view.avatar_key) },
+        photos: await Promise.all(photos.map(async p => ({ ...p, url: await sign(p.path) }))),
+      });
+    }
+
     // ---- feed / posts ------------------------------------------------------
     if (match("GET", /^feed$/)) {
       const me = await member();

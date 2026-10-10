@@ -78,6 +78,8 @@ export interface Photo { path: string; url: string | null; post_id: number; crea
 export const proposePhoto = (path: string) => call<{ gallery_photo_id: string }>("POST", "volunteer/photos/propose", { admin: true, body: { path } });
 export const getMyPhotos = () => call<{ photos: Photo[] }>("GET", "volunteer/photos", { admin: true }).then(r => r.photos);
 
+export const getMember = (id: number) => call<{ member: Member; photos: Photo[] }>("GET", `members/${id}`);
+
 export const adminReports = () => call<{ reports: Report[] }>("GET", "admin/reports", { admin: true }).then(r => r.reports);
 export const adminDismiss = (id: number) => call<{ ok: true }>("POST", `admin/reports/${id}/dismiss`, { admin: true });
 export const adminHide = (type: "post" | "comment", id: number) => call<{ ok: true }>("POST", "admin/hide", { admin: true, body: { type, id } });

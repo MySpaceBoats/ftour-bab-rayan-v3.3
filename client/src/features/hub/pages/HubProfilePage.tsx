@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useRoute } from "wouter";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,10 +16,23 @@ export default function HubProfilePage() {
   const [bio, setBio] = useState("");
   const [busy, setBusy] = useState(false);
   const [, setLocation] = useLocation();
+  const [, params] = useRoute("/:lang/benevole/espace/membre/:id");
+  const viewedId = params ? Number(params.id) : null;
+  const [profile, setProfile] = useState<{ member: hub.Member; photos: hub.Photo[] } | null>(null);
 
   useEffect(() => {
     hub.getMe().then(m => { setMe(m); setName(m.display_name); setBio(m.bio); }).catch(() => setLocation(`/${lang}/benevole/espace`));
   }, [lang, setLocation]);
+
+  const targetId = viewedId ?? me?.id ?? null;
+  useEffect(() => {
+    if (targetId == null) return;
+    if (!Number.isSafeInteger(targetId) || targetId <= 0) { toast.error("Membre introuvable"); setProfile(null); return; }
+    let live = true;
+    setProfile(null);
+    hub.getMember(targetId).then(r => { if (live) setProfile(r); }).catch(e => { if (live) toast.error((e as Error).message); });
+    return () => { live = false; };
+  }, [targetId]);
 
   useEffect(() => {
     const back = () => setLocation(`/${lang}/benevole/espace`);
@@ -45,6 +58,41 @@ export default function HubProfilePage() {
     return <div className="flex min-h-screen items-center justify-center bg-slate-100 text-slate-500">Chargement…</div>;
   }
 
+  const readOnly = viewedId != null && viewedId !== me.id;
+  const photos = (profile?.photos ?? []).filter(p => p.url);
+  const photoGrid = (
+    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <h2 className="mb-3 font-semibold text-slate-900">Photos</h2>
+      {photos.length === 0 ? (
+        <p className="text-sm text-slate-500">Aucune photo partagée.</p>
+      ) : (
+        <div className="grid grid-cols-3 gap-1.5">
+          {photos.map(p => <img key={p.path} src={p.url!} alt="Photo partagée" loading="lazy" className="aspect-square w-full rounded-lg object-cover" />)}
+        </div>
+      )}
+    </section>
+  );
+
+  if (readOnly) {
+    const m = profile?.member;
+    return (
+      <HubShell me={me}>
+        {m && (
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="h-24 bg-gradient-to-r from-blue-800 to-blue-500" />
+            <div className="space-y-3 p-4">
+              <div className="-mt-14 w-fit rounded-full ring-4 ring-white"><Avatar name={m.display_name} src={m.avatar} size={88} /></div>
+              <h1 className="text-xl font-bold text-slate-900">{m.display_name}</h1>
+              {m.bio && <p className="whitespace-pre-wrap text-sm text-slate-700">{m.bio}</p>}
+            </div>
+          </div>
+        )}
+        {m && photoGrid}
+        <Link href={`/${lang}/benevole/espace`} className="inline-block text-sm text-blue-700 underline">← Retour au fil</Link>
+      </HubShell>
+    );
+  }
+
   return (
     <HubShell me={me}>
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -62,6 +110,7 @@ export default function HubProfilePage() {
           <Button className="bg-blue-700 hover:bg-blue-800" onClick={() => save()} disabled={busy || !name.trim()}>Enregistrer</Button>
         </div>
       </div>
+      {photoGrid}
       <Link href={`/${lang}/benevole/espace`} className="inline-block text-sm text-blue-700 underline">← Retour au fil</Link>
     </HubShell>
   );

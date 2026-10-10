@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { toast } from "sonner";
 import { Flag, Heart, MessageCircle, Pin, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useI18n } from "@/i18n";
 import * as hub from "../api";
 import Avatar from "./Avatar";
 
@@ -19,6 +21,7 @@ const ago = (iso: string) => {
 const action = "flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium text-slate-600 hover:bg-slate-100";
 
 export default function PostCard({ post, me, onChanged }: { post: hub.Post; me: hub.Member; onChanged: () => void }) {
+  const { lang } = useI18n();
   const [liked, setLiked] = useState(post.liked);
   const [likes, setLikes] = useState(post.like_count);
   const [open, setOpen] = useState(false);
@@ -36,11 +39,23 @@ export default function PostCard({ post, me, onChanged }: { post: hub.Post; me: 
   return (
     <article className={`overflow-hidden rounded-xl border shadow-sm ${post.kind === "announcement" ? "border-amber-500 bg-amber-50" : "border-slate-200 bg-white"}`}>
       <header className="flex items-start gap-3 p-4 pb-2">
-        <Avatar name={post.author.display_name} src={post.author.avatar} size={42} />
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold leading-tight text-slate-900">{post.author.display_name}</p>
-          <p className="text-xs text-slate-500">{ago(post.created_at)}</p>
-        </div>
+        {post.kind === "post" ? (
+          <Link href={`/${lang}/benevole/espace/membre/${post.author.id}`} className="flex min-w-0 flex-1 items-start gap-3">
+            <Avatar name={post.author.display_name} src={post.author.avatar} size={42} />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold leading-tight text-slate-900">{post.author.display_name}</p>
+              <p className="text-xs text-slate-500">{ago(post.created_at)}</p>
+            </div>
+          </Link>
+        ) : (
+          <>
+            <Avatar name={post.author.display_name} src={post.author.avatar} size={42} />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold leading-tight text-slate-900">{post.author.display_name}</p>
+              <p className="text-xs text-slate-500">{ago(post.created_at)}</p>
+            </div>
+          </>
+        )}
         {post.pinned && <span className="flex items-center gap-1 rounded-full bg-amber-200 px-2 py-0.5 text-xs font-semibold text-amber-900"><Pin size={12} /> Annonce</span>}
         {canDelete && (
           <button type="button" aria-label="Supprimer" className="rounded-full p-1.5 text-slate-500 hover:bg-slate-100" onClick={() => { if (window.confirm("Supprimer cette publication ?")) act(async () => { await hub.removePost(post.id); onChanged(); }); }}>

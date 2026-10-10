@@ -372,6 +372,7 @@ function LocalizedRoutes() {
       <Route path="/:lang/benevole/espace/pro/membre/:id" component={ProMemberPage} />
       <Route path="/:lang/benevole/espace/pro/profil" component={ProProfilePage} />
       <Route path="/:lang/benevole/espace/pro" component={ProFeedPage} />
+      <Route path="/:lang/benevole/espace/membre/:id" component={HubProfilePage} />
       <Route path="/:lang/benevole/espace/profil" component={HubProfilePage} />
       <Route path="/:lang/benevole/espace" component={HubPage} />
       <Route path="/:lang/evenement" component={Evenement} />

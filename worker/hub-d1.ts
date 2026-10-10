@@ -104,6 +104,13 @@ export function isOwnPath(memberId: number, path: string): boolean {
 
 // ---- member photos ------------------------------------------------------
 
+/** Public view of an active member (never the email). The team account is not a profile. */
+export async function publicMember(d: D1Like, id: number): Promise<MemberView> {
+  const row = await d.prepare("SELECT * FROM hub_members WHERE id = ? AND status = 'active' AND email <> ?").bind(id, TEAM_EMAIL).first<MemberRow>();
+  if (!row) throw new HubError("not_found", "Membre introuvable");
+  return memberView(row);
+}
+
 export type GalleryProposalStatus = "draft" | "published" | "rejected" | null;
 export interface PhotoView { path: string; post_id: number; created_at: string; gallery_status: GalleryProposalStatus }
 
