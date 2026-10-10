@@ -3,7 +3,7 @@
  * schema in an in-memory SQLite database, so a broken statement, a missing section or a leaky
  * cleanup fails here instead of halfway through a remote `wrangler d1 execute`.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 import { DEMO_DOMAIN, cleanupSql, seedSql } from "../scripts/hub-demo/build";
@@ -27,7 +27,7 @@ function freshDb(): SqliteDb {
 const n = (db: SqliteDb, sql: string): number => (db.prepare(sql).get() as { n: number }).n;
 const count = (db: SqliteDb, table: string): number => n(db, `SELECT COUNT(*) AS n FROM ${table}`);
 /** Row counts of every table the seed touches, to compare two runs. */
-const TABLES = ["hub_members", "hub_posts", "hub_comments", "hub_likes", "hub_reports", "mk_listings", "mk_comments", "mk_reports", "mk_threads", "mk_messages", "t_volunteers"];
+const TABLES = ["hub_members", "hub_posts", "hub_comments", "hub_likes", "hub_reports", "mk_listings", "mk_listing_media", "mk_comments", "mk_reports", "mk_threads", "mk_messages", "t_volunteers"];
 const snapshot = (db: SqliteDb) => TABLES.map(t => [t, count(db, t)] as const);
 
 describe("hub demo seed", () => {
@@ -71,6 +71,34 @@ describe("hub demo seed", () => {
     expect(n(db, "SELECT COUNT(*) AS n FROM mk_threads WHERE buyer_id = seller_id")).toBe(0);
     expect(n(db, "SELECT COUNT(*) AS n FROM mk_messages WHERE thread_id NOT IN (SELECT id FROM mk_threads)")).toBe(0);
     expect(n(db, "SELECT COUNT(*) AS n FROM hub_posts WHERE member_id NOT IN (SELECT id FROM hub_members)")).toBe(0);
+  });
+
+  it("gives every marketplace listing a cover photo that really exists on disk", () => {
+    const db = freshDb();
+    db.exec(seedSql());
+    const perListing = db.prepare(
+      `SELECT l.id, l.title, COUNT(m.r2_key) AS photos,
+         COALESCE(SUM(CASE WHEN m.position = 0 THEN 1 ELSE 0 END), 0) AS covers
+       FROM mk_listings l LEFT JOIN mk_listing_media m ON m.listing_id = l.id GROUP BY l.id`,
+    ).all() as { id: number; title: string; photos: number; covers: number }[];
+    expect(perListing).toHaveLength(10);
+    for (const l of perListing) {
+      expect(l.photos, `${l.title} : au moins une photo`).toBeGreaterThanOrEqual(1);
+      expect(l.covers, `${l.title} : exactement une couverture (position 0)`).toBe(1);
+      expect(l.photos, `${l.title} : 4 photos maximum`).toBeLessThanOrEqual(4);
+    }
+
+    // la base pointe des clés `demo/<fichier>` : le Worker les sert depuis private/hub/demo/<fichier>.
+    // Une clé sans fichier = une annonce à l'image cassée, donc on exige la correspondance exacte.
+    const mediaDir = new URL("../scripts/hub-demo/media/", import.meta.url);
+    const keys = (db.prepare("SELECT DISTINCT r2_key FROM mk_listing_media").all() as { r2_key: string }[]).map(r => r.r2_key);
+    expect(keys.length).toBeGreaterThanOrEqual(10);
+    for (const key of keys) {
+      expect(key.startsWith("demo/"), `${key} doit être sous demo/`).toBe(true);
+      expect(existsSync(new URL(key.slice("demo/".length), mediaDir)), `${key} absent de scripts/hub-demo/media/`).toBe(true);
+    }
+    const onDisk = readdirSync(mediaDir).filter(f => f.endsWith(".jpg")).sort();
+    expect(onDisk).toEqual([...new Set(keys.map(k => k.slice("demo/".length)))].sort());
   });
 
   it("leaves the public Ramadan capacity untouched", () => {

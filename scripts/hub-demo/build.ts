@@ -99,6 +99,25 @@ const LISTINGS: Listing[] = [
   { key: "iphone", seller: "anas", min: 5 * H, title: "iPhone 15 Pro NEUF 500 MAD !!!", description: "Urgent, contactez-moi.", price: 500, category: "high-tech", condition: "neuf", city: "Casablanca", phone: false, whatsapp: false },
 ];
 
+/**
+ * Photos de démonstration. La base stocke la clé logique `demo/<fichier>` ; le Worker la sert depuis
+ * R2 sous `private/hub/demo/<fichier>`. Les fichiers vivent dans scripts/hub-demo/media/ et
+ * worker/hub-demo.test.ts vérifie que chaque clé pointée par le seed existe sur disque.
+ */
+export const LISTING_MEDIA: Record<string, string[]> = {
+  velo: ["velo-1.jpg", "velo-2.jpg"],
+  cafe: ["cafe-1.jpg"],
+  livres: ["livres-1.jpg"],
+  poussette: ["poussette-1.jpg"],
+  robe: ["robe-1.jpg", "robe-2.jpg"],
+  casque: ["casque-1.jpg"],
+  table: ["table-1.jpg"],
+  manuels: ["manuels-1.jpg"],
+  tapis: ["tapis-1.jpg"],
+  iphone: ["iphone-1.jpg"],
+};
+export const MEDIA_KEY_PREFIX = "demo";
+
 /** [listing key, author, minutes after the listing, text] */
 const LISTING_COMMENTS: [string, string, number, string][] = [
   ["velo", "karim", 60, "Il convient à quel âge exactement ? Mon neveu a 7 ans."],
@@ -281,6 +300,12 @@ export function seedStatements(me?: string): string[] {
     out.push(
       `INSERT INTO mk_listings (member_id, title, description, price, category, item_condition, city, status, contact_phone, contact_whatsapp, created_at, updated_at) VALUES (${mid(l.seller)}, ${q(l.title)}, ${q(l.description)}, ${l.price}, ${q(l.category)}, ${q(l.condition)}, ${q(l.city)}, ${q(l.status ?? "active")}, ${phone}, ${l.whatsapp ? 1 : 0}, ${ago(l.min)}, ${ago(l.min)});`,
     );
+  }
+  // covers: position 0 is what the marketplace grid shows, the rest feed the detail carousel
+  for (const [key, files] of Object.entries(LISTING_MEDIA)) {
+    files.forEach((file, i) => {
+      out.push(`INSERT INTO mk_listing_media (listing_id, r2_key, position) VALUES (${listingRef(key)}, ${q(`${MEDIA_KEY_PREFIX}/${file}`)}, ${i});`);
+    });
   }
   for (const [key, a, delay, text] of LISTING_COMMENTS) {
     const l = LISTINGS.find(x => x.key === key)!;

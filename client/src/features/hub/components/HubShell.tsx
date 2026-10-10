@@ -55,7 +55,10 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
   ];
 
   return (
-    <div className="min-h-screen bg-slate-100 pb-16 lg:pb-0">
+    // The hub is a light app frame (bg-slate-100 + white cards) inside an app themed dark olive.
+    // data-theme="light" switches the shadcn tokens for this subtree, and text-slate-900 replaces
+    // the inherited cream foreground that made inputs, placeholders and outline buttons invisible.
+    <div data-theme="light" className="min-h-screen bg-slate-100 pb-16 text-slate-900 lg:pb-0">
       <a
         href="#hub-main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-blue-800 focus:shadow-lg"

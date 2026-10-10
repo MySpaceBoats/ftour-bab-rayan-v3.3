@@ -126,7 +126,9 @@ export default function HubPage() {
 
   if (me === null) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 p-4">
+      // Same light scope as HubShell: this screen has its own frame and is the first thing a
+      // volunteer sees, so the input and button must not inherit the app's cream foreground.
+      <div data-theme="light" className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 p-4 text-slate-900">
         <div className="w-full max-w-md space-y-5 rounded-2xl bg-white p-8 shadow-2xl">
           <div className="flex flex-col items-center gap-3 text-center">
             <img src="/logo-bab-rayan.svg" alt="" className="h-16 w-16" />
