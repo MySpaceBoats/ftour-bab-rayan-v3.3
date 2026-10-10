@@ -19,7 +19,7 @@ export default function GoodiesConfirmation({ orderReference, onClose }: Goodies
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#5E5B34]">
+      <div className="min-h-screen flex items-center justify-center bg-[#864654]">
         <div className="text-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin mx-auto text-[#F2E9D3]" />
           <p className="text-[#F2E9D3]">{t.goodies.loading}</p>
@@ -30,8 +30,8 @@ export default function GoodiesConfirmation({ orderReference, onClose }: Goodies
 
   if (error || !order) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#5E5B34]">
-        <Card className="bg-[#4A4829] border-[#F2E9D3]/20 max-w-md">
+      <div className="min-h-screen flex items-center justify-center bg-[#864654]">
+        <Card className="bg-[#6B3643] border-[#F2E9D3]/20 max-w-md">
           <CardContent className="pt-6">
             <div className="flex gap-4">
               <AlertCircle className="h-6 w-6 text-red-500 flex-shrink-0" />
@@ -41,7 +41,7 @@ export default function GoodiesConfirmation({ orderReference, onClose }: Goodies
                   {error?.message || t.goodies.orderNotFound}
                 </p>
                 <Link href="/fr/goodies">
-                  <Button className="w-full bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]">
+                  <Button className="w-full bg-[#F2E9D3] text-[#6B3643] hover:bg-[#E6DCC3]">
                     {t.goodies.continueShopping}
                   </Button>
                 </Link>
@@ -60,7 +60,7 @@ export default function GoodiesConfirmation({ orderReference, onClose }: Goodies
   };
 
   return (
-    <div className="min-h-screen bg-[#5E5B34] py-12" dir={dir}>
+    <div className="min-h-screen bg-[#864654] py-12" dir={dir}>
       <div className="container max-w-2xl mx-auto space-y-6">
         {/* Success Header */}
         <div className="text-center space-y-4 mb-8">
@@ -76,9 +76,9 @@ export default function GoodiesConfirmation({ orderReference, onClose }: Goodies
         </div>
 
         {/* Reference & Amount */}
-        <Card className="bg-[#4A4829] border-[#F2E9D3]/20">
+        <Card className="bg-[#6B3643] border-[#F2E9D3]/20">
           <CardContent className="pt-6 space-y-4">
-            <div className="bg-[#5E5B34] rounded-lg p-4">
+            <div className="bg-[#864654] rounded-lg p-4">
               <p className="text-[#E6DCC3] text-sm mb-2">{t.goodies.orderReference}</p>
               <p className="text-2xl font-bold text-[#F2E9D3]">{order.orderReference}</p>
             </div>
@@ -108,12 +108,12 @@ export default function GoodiesConfirmation({ orderReference, onClose }: Goodies
         {/* Conditional Content Based on Delivery Mode */}
         {isHomeDelivery ? (
           // Home Delivery Variant
-          <Card className="bg-[#4A4829] border-[#F2E9D3]/20">
+          <Card className="bg-[#6B3643] border-[#F2E9D3]/20">
             <CardHeader>
               <CardTitle className="text-[#F2E9D3]">{t.goodies.deliveryAddress}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-[#5E5B34] rounded-lg p-4 space-y-3">
+              <div className="bg-[#864654] rounded-lg p-4 space-y-3">
                 <p className="text-[#E6DCC3] text-sm">{t.goodies.yourOrderWillBeDeliveredTo}</p>
                 
                 {/* Address Display */}
@@ -145,7 +145,7 @@ export default function GoodiesConfirmation({ orderReference, onClose }: Goodies
               </div>
 
               {/* Next Steps for Home Delivery */}
-              <div className="bg-[#5E5B34] rounded-lg p-4 space-y-2">
+              <div className="bg-[#864654] rounded-lg p-4 space-y-2">
                 <h4 className="font-semibold text-[#F2E9D3] mb-3">{t.goodies.nextSteps}</h4>
                 <ul className="space-y-2 text-[#E6DCC3] text-sm">
                   <li className="flex gap-2">
@@ -170,19 +170,19 @@ export default function GoodiesConfirmation({ orderReference, onClose }: Goodies
           </Card>
         ) : (
           // Pickup Variant
-          <Card className="bg-[#4A4829] border-[#F2E9D3]/20">
+          <Card className="bg-[#6B3643] border-[#F2E9D3]/20">
             <CardHeader>
               <CardTitle className="text-[#F2E9D3]">{t.goodies.pickupInstructions}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-[#5E5B34] rounded-lg p-4 space-y-3">
+              <div className="bg-[#864654] rounded-lg p-4 space-y-3">
                 <h4 className="font-semibold text-[#F2E9D3]">{t.goodies.presentYourReference}</h4>
                 <p className="text-[#E6DCC3]">{t.goodies.presentReferenceAtPickup}</p>
                 <p className="text-sm text-[#E6DCC3] mt-3">{t.goodies.paymentOnPlacePickup}</p>
               </div>
 
               {/* Next Steps for Pickup */}
-              <div className="bg-[#5E5B34] rounded-lg p-4 space-y-2">
+              <div className="bg-[#864654] rounded-lg p-4 space-y-2">
                 <h4 className="font-semibold text-[#F2E9D3] mb-3">{t.goodies.nextSteps}</h4>
                 <ul className="space-y-2 text-[#E6DCC3] text-sm">
                   <li className="flex gap-2">
@@ -210,7 +210,7 @@ export default function GoodiesConfirmation({ orderReference, onClose }: Goodies
         {/* CTA Buttons */}
         <div className="flex gap-4 justify-center">
           <Link href="/fr/goodies">
-            <Button className="bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]">
+            <Button className="bg-[#F2E9D3] text-[#6B3643] hover:bg-[#E6DCC3]">
               {t.goodies.continueShopping}
             </Button>
           </Link>

@@ -40,12 +40,12 @@ export default function BoutiqueSolidaire() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#5E5B34]" dir={dir}>
+    <div className="min-h-screen flex flex-col bg-[#864654]" dir={dir}>
       <Navbar />
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="py-20 bg-[#4A4829]">
+        <section className="py-20 bg-[#6B3643]">
           <div className="container text-center">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#F2E9D3]/10 text-[#CDBB8A] text-sm font-medium mb-6">
               <Heart className="h-4 w-4" />
@@ -64,7 +64,7 @@ export default function BoutiqueSolidaire() {
         </section>
 
         {/* Categories Grid — triangle layout */}
-        <section className="py-20 bg-[#5E5B34]">
+        <section className="py-20 bg-[#864654]">
           <div className="container">
             {/* Top row: Goodies & Patisserie */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
@@ -73,7 +73,7 @@ export default function BoutiqueSolidaire() {
                 return (
                   <div
                     key={cat.key}
-                    className="bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#F2E9D3]/30 transition-all"
+                    className="bg-[#6B3643] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#F2E9D3]/30 transition-all"
                   >
                     <div className="h-1" style={{ backgroundColor: cat.color }} />
                     <div className="p-8 space-y-4">
@@ -88,7 +88,7 @@ export default function BoutiqueSolidaire() {
                       <Link href={cat.href}>
                         <Button
                           variant="outline"
-                          className="w-full mt-4 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
+                          className="w-full mt-4 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#6B3643]"
                         >
                           {cat.cta}
                           <ArrowRight className="h-4 w-4 ml-2" />
@@ -102,7 +102,7 @@ export default function BoutiqueSolidaire() {
 
             {/* Bottom row: Produits du Terroir — centré pour former le triangle */}
             <div className="flex justify-center">
-              <div className="w-full lg:w-1/2 bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#F2E9D3]/30 transition-all">
+              <div className="w-full lg:w-1/2 bg-[#6B3643] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#F2E9D3]/30 transition-all">
                 <div className="h-1" style={{ backgroundColor: terroirCategory.color }} />
                 <div className="p-8 space-y-4">
                   <div
@@ -116,7 +116,7 @@ export default function BoutiqueSolidaire() {
                   <Link href={terroirCategory.href}>
                     <Button
                       variant="outline"
-                      className="w-full mt-4 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
+                      className="w-full mt-4 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#6B3643]"
                     >
                       {terroirCategory.cta}
                       <ArrowRight className="h-4 w-4 ml-2" />
@@ -129,7 +129,7 @@ export default function BoutiqueSolidaire() {
         </section>
 
         {/* Info Banner */}
-        <section className="py-16 bg-[#4A4829]">
+        <section className="py-16 bg-[#6B3643]">
           <div className="container text-center">
             <p className="text-lg text-[#E6DCC3] max-w-2xl mx-auto">
               {t.boutique.infoText}

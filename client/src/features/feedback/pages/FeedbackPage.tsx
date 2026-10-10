@@ -193,8 +193,8 @@ export default function FeedbackPage() {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
-        <main className="flex-1 flex items-center justify-center py-20 bg-[#5E5B34]">
-          <Card className="max-w-md w-full mx-4 bg-[#4A4829] border-[#F2E9D3]/20">
+        <main className="flex-1 flex items-center justify-center py-20 bg-[#864654]">
+          <Card className="max-w-md w-full mx-4 bg-[#6B3643] border-[#F2E9D3]/20">
             <CardContent className="p-8 text-center">
               <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <MessageSquare className="w-8 h-8 text-red-400" />
@@ -216,8 +216,8 @@ export default function FeedbackPage() {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
-        <main className="flex-1 flex items-center justify-center py-20 bg-gradient-to-b from-[#5E5B34] to-[#3D3B1E]">
-          <Card className="max-w-lg w-full mx-4 bg-[#4A4829] border-[#F2E9D3]/20">
+        <main className="flex-1 flex items-center justify-center py-20 bg-gradient-to-b from-[#864654] to-[#592C37]">
+          <Card className="max-w-lg w-full mx-4 bg-[#6B3643] border-[#F2E9D3]/20">
             <CardContent className="p-10 text-center">
               <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
                 <CheckCircle className="w-10 h-10 text-green-400" />
@@ -252,7 +252,7 @@ export default function FeedbackPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-1 bg-gradient-to-b from-[#5E5B34] to-[#3D3B1E] py-12 px-4">
+      <main className="flex-1 bg-gradient-to-b from-[#864654] to-[#592C37] py-12 px-4">
         <div className="max-w-2xl mx-auto">
 
           {/* Header inspirant */}
@@ -276,7 +276,7 @@ export default function FeedbackPage() {
 
               {/* Questions du formulaire */}
               {questions.map((q, idx) => (
-                <Card key={q.id} className="bg-[#4A4829] border-[#F2E9D3]/20">
+                <Card key={q.id} className="bg-[#6B3643] border-[#F2E9D3]/20">
                   <CardContent className="p-6">
                     <Label className="text-[#F2E9D3] font-medium text-base block mb-4">
                       {idx + 1}. {q.question}
@@ -295,7 +295,7 @@ export default function FeedbackPage() {
                         placeholder="Votre réponse..."
                         value={answers.get(q.id)?.answerText ?? ""}
                         onChange={(e) => setAnswer(q.id, { answerText: e.target.value })}
-                        className="bg-[#3D3B1E] border-[#F2E9D3]/30 text-[#F2E9D3] placeholder:text-[#F2E9D3]/40 min-h-[100px]"
+                        className="bg-[#592C37] border-[#F2E9D3]/30 text-[#F2E9D3] placeholder:text-[#F2E9D3]/40 min-h-[100px]"
                       />
                     )}
 
@@ -309,7 +309,7 @@ export default function FeedbackPage() {
                             className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
                               answers.get(q.id)?.answerChoice === opt
                                 ? "bg-[#C9B97A]/20 border-[#C9B97A] text-[#F2E9D3]"
-                                : "bg-[#3D3B1E] border-[#F2E9D3]/20 text-[#F2E9D3]/70 hover:border-[#C9B97A]/50"
+                                : "bg-[#592C37] border-[#F2E9D3]/20 text-[#F2E9D3]/70 hover:border-[#C9B97A]/50"
                             }`}
                           >
                             {opt}
@@ -330,7 +330,7 @@ export default function FeedbackPage() {
                                 ? opt === "Oui"
                                   ? "bg-green-600/30 border-green-500 text-green-300"
                                   : "bg-red-600/30 border-red-500 text-red-300"
-                                : "bg-[#3D3B1E] border-[#F2E9D3]/20 text-[#F2E9D3]/70 hover:border-[#C9B97A]/50"
+                                : "bg-[#592C37] border-[#F2E9D3]/20 text-[#F2E9D3]/70 hover:border-[#C9B97A]/50"
                             }`}
                           >
                             {opt}
@@ -343,7 +343,7 @@ export default function FeedbackPage() {
               ))}
 
               {/* Anonymat */}
-              <Card className="bg-[#4A4829] border-[#F2E9D3]/20">
+              <Card className="bg-[#6B3643] border-[#F2E9D3]/20">
                 <CardContent className="p-6">
                   <div className="flex items-start gap-3 mb-4">
                     <Checkbox
@@ -365,7 +365,7 @@ export default function FeedbackPage() {
                           placeholder="Votre nom"
                           value={userName}
                           onChange={(e) => setUserName(e.target.value)}
-                          className="bg-[#3D3B1E] border-[#F2E9D3]/30 text-[#F2E9D3] placeholder:text-[#F2E9D3]/40"
+                          className="bg-[#592C37] border-[#F2E9D3]/30 text-[#F2E9D3] placeholder:text-[#F2E9D3]/40"
                         />
                       </div>
                       <div>
@@ -375,7 +375,7 @@ export default function FeedbackPage() {
                           placeholder="votre@email.com"
                           value={userEmail}
                           onChange={(e) => setUserEmail(e.target.value)}
-                          className="bg-[#3D3B1E] border-[#F2E9D3]/30 text-[#F2E9D3] placeholder:text-[#F2E9D3]/40"
+                          className="bg-[#592C37] border-[#F2E9D3]/30 text-[#F2E9D3] placeholder:text-[#F2E9D3]/40"
                         />
                       </div>
                       <div>
@@ -385,7 +385,7 @@ export default function FeedbackPage() {
                           placeholder="+212 6XX XX XX XX"
                           value={userPhone}
                           onChange={(e) => setUserPhone(e.target.value)}
-                          className="bg-[#3D3B1E] border-[#F2E9D3]/30 text-[#F2E9D3] placeholder:text-[#F2E9D3]/40"
+                          className="bg-[#592C37] border-[#F2E9D3]/30 text-[#F2E9D3] placeholder:text-[#F2E9D3]/40"
                         />
                       </div>
                     </div>
@@ -411,7 +411,7 @@ export default function FeedbackPage() {
               <Button
                 type="submit"
                 disabled={submitMutation.isPending || !formId || !consent}
-                className="w-full bg-[#C9B97A] hover:bg-[#B5A56A] text-[#3D3B1E] font-bold py-4 text-lg"
+                className="w-full bg-[#C9B97A] hover:bg-[#B5A56A] text-[#592C37] font-bold py-4 text-lg"
               >
                 {submitMutation.isPending ? (
                   <>

@@ -101,9 +101,9 @@ export default function SiteFeedbackPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-1 bg-gradient-to-b from-[#5E5B34] to-[#3D3B1E] py-10 px-4">
+      <main className="flex-1 bg-gradient-to-b from-[#864654] to-[#592C37] py-10 px-4">
         <div className="max-w-2xl mx-auto">
-          <Card className="bg-[#4A4829] border-[#F2E9D3]/20">
+          <Card className="bg-[#6B3643] border-[#F2E9D3]/20">
             <CardHeader>
               <CardTitle className="text-[#F2E9D3] text-2xl">
                 Laisser un feedback

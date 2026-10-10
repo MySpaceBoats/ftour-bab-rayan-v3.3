@@ -184,7 +184,7 @@ export function Checkout() {
     <div className="min-h-screen bg-gradient-to-b from-[#f5f5f0] to-[#efefea] py-12 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-[#5d5a3c] mb-2">
+          <h1 className="text-4xl font-bold text-[#844653] mb-2">
             {t.checkout?.title || 'Payment'}
           </h1>
           <p className="text-gray-600">
@@ -495,7 +495,7 @@ export function Checkout() {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 bg-[#5d5a3c] hover:bg-[#4a4730] text-white py-6 text-lg"
+              className="flex-1 bg-[#844653] hover:bg-[#6B3643] text-white py-6 text-lg"
             >
               {isSubmitting ? (
                 <>

@@ -158,7 +158,7 @@ export default function ElectionManagers() {
                   Connectez-vous pour voter pour votre candidat préféré.
                 </p>
                 <Link href={`/${lang}/connexion?redirectTo=/election-managers`}>
-                  <Button className="bg-[#4A4829] text-[#F2E9D3] hover:bg-[#3A3820]">
+                  <Button className="bg-[#6B3643] text-[#F2E9D3] hover:bg-[#542A34]">
                     <Lock className="h-4 w-4 mr-2" />
                     Se connecter pour voter
                   </Button>

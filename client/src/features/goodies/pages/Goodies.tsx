@@ -179,7 +179,7 @@ export default function Goodies() {
 
   if (orderSuccess) {
     return (
-      <div className="min-h-screen flex flex-col bg-[#5E5B34]" dir={dir}>
+      <div className="min-h-screen flex flex-col bg-[#864654]" dir={dir}>
         <Navbar />
         <main className="flex-1">
           <GoodiesConfirmation
@@ -194,12 +194,12 @@ export default function Goodies() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#5E5B34]" dir={dir}>
+    <div className="min-h-screen flex flex-col bg-[#864654]" dir={dir}>
       <Navbar />
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="py-16 bg-[#4A4829]">
+        <section className="py-16 bg-[#6B3643]">
           <div className="container">
             <div className="max-w-3xl mx-auto text-center space-y-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F2E9D3]/10 text-[#F2E9D3] text-sm font-medium">
@@ -223,11 +223,11 @@ export default function Goodies() {
             {isLoading ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {[...Array(8)].map((_, i) => (
-                  <Card key={i} className="animate-pulse bg-[#4A4829]">
-                    <div className="aspect-square bg-[#5E5B34]" />
+                  <Card key={i} className="animate-pulse bg-[#6B3643]">
+                    <div className="aspect-square bg-[#864654]" />
                     <CardContent className="p-4 space-y-3">
-                      <div className="h-5 bg-[#5E5B34] rounded w-3/4" />
-                      <div className="h-4 bg-[#5E5B34] rounded w-1/2" />
+                      <div className="h-5 bg-[#864654] rounded w-3/4" />
+                      <div className="h-4 bg-[#864654] rounded w-1/2" />
                     </CardContent>
                   </Card>
                 ))}
@@ -259,10 +259,10 @@ export default function Goodies() {
                   return (
                     <Card
                       key={goodie.id}
-                      className="overflow-hidden group bg-[#4A4829] border-[#F2E9D3]/10 hover:border-[#F2E9D3]/30 transition-all"
+                      className="overflow-hidden group bg-[#6B3643] border-[#F2E9D3]/10 hover:border-[#F2E9D3]/30 transition-all"
                     >
                       {/* Image / Carousel */}
-                      <div className="aspect-square bg-[#5E5B34] relative overflow-hidden">
+                      <div className="aspect-square bg-[#864654] relative overflow-hidden">
                         <ProductImageCarousel
                           image={(goodie as any).image}
                           images={(goodie as any).images}
@@ -297,7 +297,7 @@ export default function Goodies() {
                           </span>
                           <Button
                             size="sm"
-                            className="bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]"
+                            className="bg-[#F2E9D3] text-[#6B3643] hover:bg-[#E6DCC3]"
                             disabled={isOutOfStock}
                             onClick={() => {
                               addToCart(goodie);
@@ -331,10 +331,10 @@ export default function Goodies() {
       {cart.length > 0 && (
         <button
           onClick={() => setIsCartOpen(true)}
-          className="fixed bottom-6 right-6 bg-[#F2E9D3] text-[#4A4829] p-4 rounded-full shadow-lg hover:bg-[#E6DCC3] transition-colors z-50"
+          className="fixed bottom-6 right-6 bg-[#F2E9D3] text-[#6B3643] p-4 rounded-full shadow-lg hover:bg-[#E6DCC3] transition-colors z-50"
         >
           <ShoppingCart className="h-6 w-6" />
-          <span className="absolute -top-2 -right-2 bg-[#4A4829] text-[#F2E9D3] text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
+          <span className="absolute -top-2 -right-2 bg-[#6B3643] text-[#F2E9D3] text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
             {cartCount}
           </span>
         </button>
@@ -345,7 +345,7 @@ export default function Goodies() {
         open={selectedGoodie !== null}
         onOpenChange={() => setSelectedGoodie(null)}
       >
-        <DialogContent className="bg-[#4A4829] border-[#F2E9D3]/20">
+        <DialogContent className="bg-[#6B3643] border-[#F2E9D3]/20">
           <DialogHeader>
             <DialogTitle className="text-[#F2E9D3]">
               {t.goodies.selectVariant}
@@ -360,10 +360,10 @@ export default function Goodies() {
                 value={selectedVariant}
                 onValueChange={setSelectedVariant}
               >
-                <SelectTrigger className="bg-[#5E5B34] border-[#F2E9D3]/20 text-[#F2E9D3]">
+                <SelectTrigger className="bg-[#864654] border-[#F2E9D3]/20 text-[#F2E9D3]">
                   <SelectValue placeholder={t.goodies.selectOption} />
                 </SelectTrigger>
-                <SelectContent className="bg-[#4A4829] border-[#F2E9D3]/20">
+                <SelectContent className="bg-[#6B3643] border-[#F2E9D3]/20">
                   {(currentGoodie as any).variants?.map(
                     (variant: {
                       id: number;
@@ -388,7 +388,7 @@ export default function Goodies() {
               <Button
                 onClick={() => addToCart(currentGoodie)}
                 disabled={!selectedVariant}
-                className="w-full bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]"
+                className="w-full bg-[#F2E9D3] text-[#6B3643] hover:bg-[#E6DCC3]"
               >
                 {t.goodies.addToCart}
               </Button>
@@ -399,7 +399,7 @@ export default function Goodies() {
 
       {/* Cart Dialog */}
       <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
-        <DialogContent className="bg-[#4A4829] border-[#F2E9D3]/20 max-w-md">
+        <DialogContent className="bg-[#6B3643] border-[#F2E9D3]/20 max-w-md">
           <DialogHeader>
             <DialogTitle className="text-[#F2E9D3]">
               {t.goodies.yourCart}
@@ -412,7 +412,7 @@ export default function Goodies() {
             {cart.map((item, index) => (
               <div
                 key={index}
-                className="flex items-center gap-3 p-3 bg-[#5E5B34] rounded-lg"
+                className="flex items-center gap-3 p-3 bg-[#864654] rounded-lg"
               >
                 {item.imageUrl && (
                   <img
@@ -474,7 +474,7 @@ export default function Goodies() {
                 setIsCartOpen(false);
                 setIsCheckoutOpen(true);
               }}
-              className="w-full bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]"
+              className="w-full bg-[#F2E9D3] text-[#6B3643] hover:bg-[#E6DCC3]"
             >
               {t.goodies.reserve}
             </Button>
@@ -484,7 +484,7 @@ export default function Goodies() {
 
       {/* Checkout Dialog */}
       <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
-        <DialogContent className="bg-[#4A4829] border-[#F2E9D3]/20 max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-[#6B3643] border-[#F2E9D3]/20 max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-[#F2E9D3]">
               {t.goodies.finalizeReservation}
@@ -508,7 +508,7 @@ export default function Goodies() {
                   }))
                 }
                 required
-                className="bg-[#5E5B34] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                className="bg-[#864654] border-[#F2E9D3]/20 text-[#F2E9D3]"
               />
             </div>
             <div className="space-y-2">
@@ -526,7 +526,7 @@ export default function Goodies() {
                   }))
                 }
                 required
-                className="bg-[#5E5B34] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                className="bg-[#864654] border-[#F2E9D3]/20 text-[#F2E9D3]"
               />
             </div>
             <div className="space-y-2">
@@ -544,7 +544,7 @@ export default function Goodies() {
                   }))
                 }
                 required
-                className="bg-[#5E5B34] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                className="bg-[#864654] border-[#F2E9D3]/20 text-[#F2E9D3]"
               />
             </div>
 
@@ -600,7 +600,7 @@ export default function Goodies() {
             </div>
             {/* Delivery Address Form - Only shown if home delivery is selected */}
             {checkoutForm.deliveryMode === "home_delivery" && (
-              <div className="space-y-3 bg-[#5E5B34] rounded-lg p-4 border border-[#F2E9D3]/10">
+              <div className="space-y-3 bg-[#864654] rounded-lg p-4 border border-[#F2E9D3]/10">
                 <h4 className="font-semibold text-[#F2E9D3]">
                   {t.goodies.deliveryAddress}
                 </h4>
@@ -619,7 +619,7 @@ export default function Goodies() {
                       }))
                     }
                     required
-                    className="bg-[#4A4829] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                    className="bg-[#6B3643] border-[#F2E9D3]/20 text-[#F2E9D3]"
                   />
                 </div>
 
@@ -638,7 +638,7 @@ export default function Goodies() {
                         }))
                       }
                       required
-                      className="bg-[#4A4829] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                      className="bg-[#6B3643] border-[#F2E9D3]/20 text-[#F2E9D3]"
                     />
                   </div>
                   <div className="space-y-2">
@@ -658,7 +658,7 @@ export default function Goodies() {
                         }))
                       }
                       required
-                      className="bg-[#4A4829] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                      className="bg-[#6B3643] border-[#F2E9D3]/20 text-[#F2E9D3]"
                     />
                   </div>
                 </div>
@@ -677,7 +677,7 @@ export default function Goodies() {
                           deliveryPostalCode: e.target.value,
                         }))
                       }
-                      className="bg-[#4A4829] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                      className="bg-[#6B3643] border-[#F2E9D3]/20 text-[#F2E9D3]"
                     />
                   </div>
                   <div className="space-y-2">
@@ -698,7 +698,7 @@ export default function Goodies() {
                         }))
                       }
                       required
-                      className="bg-[#4A4829] border-[#F2E9D3]/20 text-[#F2E9D3]"
+                      className="bg-[#6B3643] border-[#F2E9D3]/20 text-[#F2E9D3]"
                     />
                   </div>
                 </div>
@@ -719,7 +719,7 @@ export default function Goodies() {
                         deliveryInstructions: e.target.value,
                       }))
                     }
-                    className="w-full bg-[#4A4829] border border-[#F2E9D3]/20 text-[#F2E9D3] rounded px-3 py-2 text-sm min-h-[60px]"
+                    className="w-full bg-[#6B3643] border border-[#F2E9D3]/20 text-[#F2E9D3] rounded px-3 py-2 text-sm min-h-[60px]"
                     placeholder={t.goodies.deliveryInstructions}
                   />
                 </div>
@@ -737,7 +737,7 @@ export default function Goodies() {
             />
 
             {/* Price Summary */}
-            <div className="bg-[#5E5B34] rounded-lg p-4 space-y-2">
+            <div className="bg-[#864654] rounded-lg p-4 space-y-2">
               <div className="flex justify-between text-sm text-[#E6DCC3]">
                 <span>{t.goodies.subtotal}</span>
                 <span>{cartTotal} DH</span>
@@ -761,7 +761,7 @@ export default function Goodies() {
             <Button
               type="submit"
               disabled={createOrderMutation.isPending}
-              className="w-full bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]"
+              className="w-full bg-[#F2E9D3] text-[#6B3643] hover:bg-[#E6DCC3]"
             >
               {createOrderMutation.isPending ? (
                 <>

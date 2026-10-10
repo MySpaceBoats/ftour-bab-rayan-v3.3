@@ -69,7 +69,7 @@ export default function ProductImageCarousel({
   }
 
   const imgClass = fitMode === "contain"
-    ? "w-full h-full object-contain bg-[#3A3820]"
+    ? "w-full h-full object-contain bg-[#542A34]"
     : "w-full h-full object-cover group-hover:scale-105 transition-transform duration-300";
 
   if (!hasMultiple) {

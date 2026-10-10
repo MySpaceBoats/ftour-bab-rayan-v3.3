@@ -28,12 +28,12 @@ export default function Home() {
   const { data: partners } = trpc.public.partners.useQuery();
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#5E5B34]" dir={dir}>
+    <div className="min-h-screen flex flex-col bg-[#864654]" dir={dir}>
       <Navbar />
 
       <main className="flex-1">
         {/* Hero Section - Style olive/crème */}
-        <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-[#5E5B34]">
+        <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-[#864654]">
           {/* Motif subtil */}
           <div className="absolute inset-0 opacity-5">
             <div
@@ -84,7 +84,7 @@ export default function Home() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="w-full sm:w-auto text-lg px-8 py-6 bg-transparent border-2 border-[#F2E9D3] text-[#F2E9D3] hover:bg-[#F2E9D3] hover:text-[#4A4829]"
+                    className="w-full sm:w-auto text-lg px-8 py-6 bg-transparent border-2 border-[#F2E9D3] text-[#F2E9D3] hover:bg-[#F2E9D3] hover:text-[#6B3643]"
                   >
                     <Utensils className="h-5 w-5 mr-2" />
                     Réserver ftour
@@ -94,7 +94,7 @@ export default function Home() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="w-full sm:w-auto text-lg px-8 py-6 bg-transparent border-2 border-[#F2E9D3] text-[#F2E9D3] hover:bg-[#F2E9D3] hover:text-[#4A4829]"
+                    className="w-full sm:w-auto text-lg px-8 py-6 bg-transparent border-2 border-[#F2E9D3] text-[#F2E9D3] hover:bg-[#F2E9D3] hover:text-[#6B3643]"
                   >
                     <Heart className="h-5 w-5 mr-2" />
                     {t.cta.donate}
@@ -113,7 +113,7 @@ export default function Home() {
         </section>
 
         {/* Chiffres Clés Section - Style olive foncé */}
-        <section className="py-16 bg-[#4A4829]">
+        <section className="py-16 bg-[#6B3643]">
           <div className="container">
             <h2 className="text-2xl md:text-3xl font-bold text-center mb-10 text-[#F2E9D3]">
               {t.home.statsTitle}
@@ -164,7 +164,7 @@ export default function Home() {
         </section>
 
         {/* About Ftour Bab Rayan Section */}
-        <section className="py-20 bg-[#5E5B34]">
+        <section className="py-20 bg-[#864654]">
           <div className="container">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               <div className="space-y-6">
@@ -226,7 +226,7 @@ export default function Home() {
                 <Link href={`/${lang}/evenement`}>
                   <Button
                     variant="outline"
-                    className="mt-4 border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
+                    className="mt-4 border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#6B3643]"
                   >
                     {t.cta.learnMore}
                     <ArrowRight className="h-4 w-4 ml-2" />
@@ -242,7 +242,7 @@ export default function Home() {
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <div className="absolute -bottom-6 -left-6 bg-[#4A4829] rounded-xl shadow-lg p-4 border border-[#F2E9D3]/10">
+                <div className="absolute -bottom-6 -left-6 bg-[#6B3643] rounded-xl shadow-lg p-4 border border-[#F2E9D3]/10">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-[#F2E9D3]/10 flex items-center justify-center">
                       <Utensils className="h-5 w-5 text-[#CDBB8A]" />
@@ -260,10 +260,10 @@ export default function Home() {
           </div>
         </section>
 
-        <RamadanImpactLive className="bg-[#5E5B34] text-[#F2E9D3]" />
+        <RamadanImpactLive className="bg-[#864654] text-[#F2E9D3]" />
 
         {/* Missions Bab Rayan Section */}
-        <section className="py-20 bg-[#6F6C3F]">
+        <section className="py-20 bg-[#A35063]">
           <div className="container">
             <div className="text-center mb-12">
               <h2
@@ -278,7 +278,7 @@ export default function Home() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-8">
-              <div className="bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#CDBB8A]/30 transition-all">
+              <div className="bg-[#6B3643] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#CDBB8A]/30 transition-all">
                 <div className="h-1 bg-[#CDBB8A]" />
                 <div className="p-8 space-y-4">
                   <div className="w-14 h-14 rounded-2xl bg-[#CDBB8A]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -291,7 +291,7 @@ export default function Home() {
                   <Link href={`/${lang}/association`}>
                     <Button
                       variant="outline"
-                      className="w-full mt-4 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
+                      className="w-full mt-4 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#6B3643]"
                     >
                       {t.home.discoverHome}
                       <ArrowRight className="h-4 w-4 ml-2" />
@@ -300,7 +300,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#CDBB8A]/30 transition-all">
+              <div className="bg-[#6B3643] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#CDBB8A]/30 transition-all">
                 <div className="h-1 bg-[#CDBB8A]" />
                 <div className="p-8 space-y-4">
                   <div className="w-14 h-14 rounded-2xl bg-[#CDBB8A]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -313,7 +313,7 @@ export default function Home() {
                   <Link href={`/${lang}/association`}>
                     <Button
                       variant="outline"
-                      className="w-full mt-4 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
+                      className="w-full mt-4 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#6B3643]"
                     >
                       {t.home.discoverSchool}
                       <ArrowRight className="h-4 w-4 ml-2" />
@@ -322,7 +322,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#CDBB8A]/30 transition-all">
+              <div className="bg-[#6B3643] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#CDBB8A]/30 transition-all">
                 <div className="h-1 bg-[#CDBB8A]" />
                 <div className="p-8 space-y-4">
                   <div className="w-14 h-14 rounded-2xl bg-[#CDBB8A]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -337,7 +337,7 @@ export default function Home() {
                   <Link href={`/${lang}/association`}>
                     <Button
                       variant="outline"
-                      className="w-full mt-4 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
+                      className="w-full mt-4 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#6B3643]"
                     >
                       {t.home.discoverCFI}
                       <ArrowRight className="h-4 w-4 ml-2" />
@@ -350,7 +350,7 @@ export default function Home() {
         </section>
 
         {/* CTA Cards Section */}
-        <section className="py-20 bg-[#5E5B34]">
+        <section className="py-20 bg-[#864654]">
           <div className="container">
             <div className="text-center mb-12">
               <h2
@@ -366,7 +366,7 @@ export default function Home() {
 
             <div className="grid md:grid-cols-3 gap-8">
               {/* Volunteer Card */}
-              <div className="bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#F2E9D3]/30 transition-all">
+              <div className="bg-[#6B3643] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#F2E9D3]/30 transition-all">
                 <div className="h-1 bg-[#F2E9D3]" />
                 <div className="p-8 space-y-4">
                   <div className="w-14 h-14 rounded-2xl bg-[#F2E9D3]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -377,7 +377,7 @@ export default function Home() {
                   </h3>
                   <p className="text-[#E6DCC3]">{t.home.volunteerCardDesc}</p>
                   <Link href={`/${lang}/benevole`}>
-                    <Button className="w-full mt-4 bg-[#F2E9D3] text-[#4A4829] hover:bg-[#E6DCC3]">
+                    <Button className="w-full mt-4 bg-[#F2E9D3] text-[#6B3643] hover:bg-[#E6DCC3]">
                       {t.home.register}
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
@@ -386,7 +386,7 @@ export default function Home() {
               </div>
 
               {/* Boutique Solidaire Card */}
-              <div className="bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#CDBB8A]/30 transition-all">
+              <div className="bg-[#6B3643] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#CDBB8A]/30 transition-all">
                 <div className="h-1 bg-[#CDBB8A]" />
                 <div className="p-8 space-y-4">
                   <div className="w-14 h-14 rounded-2xl bg-[#CDBB8A]/20 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -399,7 +399,7 @@ export default function Home() {
                   <Link href={`/${lang}/boutique`}>
                     <Button
                       variant="outline"
-                      className="w-full mt-4 border-[#CDBB8A]/30 text-[#CDBB8A] bg-transparent hover:bg-[#CDBB8A] hover:text-[#4A4829]"
+                      className="w-full mt-4 border-[#CDBB8A]/30 text-[#CDBB8A] bg-transparent hover:bg-[#CDBB8A] hover:text-[#6B3643]"
                     >
                       {t.home.viewBoutique}
                       <ArrowRight className="h-4 w-4 ml-2" />
@@ -409,7 +409,7 @@ export default function Home() {
               </div>
 
               {/* Donation Card */}
-              <div className="bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#F2E9D3]/30 transition-all">
+              <div className="bg-[#6B3643] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#F2E9D3]/30 transition-all">
                 <div className="h-1 bg-[#F2E9D3]" />
                 <div className="p-8 space-y-4">
                   <div className="w-14 h-14 rounded-2xl bg-[#F2E9D3]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -422,7 +422,7 @@ export default function Home() {
                   <Link href={`/${lang}/dons`}>
                     <Button
                       variant="outline"
-                      className="w-full mt-4 border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
+                      className="w-full mt-4 border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#6B3643]"
                     >
                       {t.home.donateNow}
                       <ArrowRight className="h-4 w-4 ml-2" />
@@ -436,7 +436,7 @@ export default function Home() {
 
         {/* Testimonials Section */}
         {testimonials && testimonials.length > 0 && (
-          <section className="py-20 bg-[#6F6C3F]">
+          <section className="py-20 bg-[#A35063]">
             <div className="container">
               <div className="text-center mb-12">
                 <h2
@@ -463,7 +463,7 @@ export default function Home() {
                     }) => (
                       <div
                         key={testimonial.id}
-                        className="bg-[#4A4829] rounded-lg p-6 space-y-4 border border-[#F2E9D3]/10"
+                        className="bg-[#6B3643] rounded-lg p-6 space-y-4 border border-[#F2E9D3]/10"
                       >
                         <div className="flex gap-1">
                           {[...Array(testimonial.rating || 5)].map((_, i) => (
@@ -501,7 +501,7 @@ export default function Home() {
 
         {/* Partners Section */}
         {partners && partners.length > 0 && (
-          <section className="py-16 bg-[#5E5B34]">
+          <section className="py-16 bg-[#864654]">
             <div className="container">
               <div className="text-center mb-10">
                 <h2 className="text-2xl font-bold text-[#F2E9D3] mb-2">
@@ -531,7 +531,7 @@ export default function Home() {
                           className="h-12 object-contain"
                         />
                       ) : (
-                        <div className="h-12 px-6 bg-[#4A4829] rounded flex items-center justify-center border border-[#F2E9D3]/10">
+                        <div className="h-12 px-6 bg-[#6B3643] rounded flex items-center justify-center border border-[#F2E9D3]/10">
                           <span className="font-medium text-[#E6DCC3]">
                             {partner.name}
                           </span>
@@ -546,7 +546,7 @@ export default function Home() {
         )}
 
         {/* Final CTA */}
-        <section className="py-20 bg-[#4A4829]">
+        <section className="py-20 bg-[#6B3643]">
           <div className="container text-center">
             <h2
               className="text-3xl md:text-4xl font-bold mb-4 text-[#F2E9D3]"

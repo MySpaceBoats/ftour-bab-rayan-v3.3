@@ -49,12 +49,12 @@ export default function CommerceSolidaire() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#5E5B34]" dir={dir}>
+    <div className="min-h-screen flex flex-col bg-[#864654]" dir={dir}>
       <Navbar />
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="py-20 bg-[#4A4829]">
+        <section className="py-20 bg-[#6B3643]">
           <div className="container text-center">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#F2E9D3]/10 text-[#CDBB8A] text-sm font-medium mb-6">
               <Heart className="h-4 w-4" />
@@ -73,7 +73,7 @@ export default function CommerceSolidaire() {
         </section>
 
         {/* Boutique Solidaire section */}
-        <section className="py-16 bg-[#5E5B34]">
+        <section className="py-16 bg-[#864654]">
           <div className="container">
             <h2
               className="text-2xl md:text-3xl font-bold text-[#F2E9D3] mb-10 text-center"
@@ -87,7 +87,7 @@ export default function CommerceSolidaire() {
                 return (
                   <div
                     key={cat.key}
-                    className="bg-[#4A4829] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#F2E9D3]/30 transition-all"
+                    className="bg-[#6B3643] rounded-lg overflow-hidden border border-[#F2E9D3]/10 group hover:border-[#F2E9D3]/30 transition-all"
                   >
                     <div className="h-1" style={{ backgroundColor: cat.color }} />
                     <div className="p-6 space-y-4">
@@ -102,7 +102,7 @@ export default function CommerceSolidaire() {
                       <Link href={cat.href}>
                         <Button
                           variant="outline"
-                          className="w-full mt-2 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
+                          className="w-full mt-2 border-[#F2E9D3]/30 text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#6B3643]"
                         >
                           {cat.cta}
                           <ArrowRight className="h-4 w-4 ml-2" />
@@ -122,7 +122,7 @@ export default function CommerceSolidaire() {
         </div>
 
         {/* Asso' Resto Solidaire section */}
-        <section className="py-16 bg-[#5E5B34]">
+        <section className="py-16 bg-[#864654]">
           <div className="container max-w-2xl">
             <div className="flex items-center gap-3 mb-8 justify-center">
               <UtensilsCrossed className="h-6 w-6 text-[#CDBB8A]" />
@@ -134,7 +134,7 @@ export default function CommerceSolidaire() {
               </h2>
             </div>
 
-            <Card className="bg-[#4A4829] border border-[#F2E9D3]/10">
+            <Card className="bg-[#6B3643] border border-[#F2E9D3]/10">
               <CardContent className="pt-6 space-y-4">
                 <p className="text-[#E6DCC3]">
                   {t.restaurant.tableJardin.description}
@@ -144,7 +144,7 @@ export default function CommerceSolidaire() {
                 </p>
                 <Button
                   onClick={() => navigate(`/${lang}/restaurant/particuliers`)}
-                  className="w-full bg-[#d4a574] text-[#5d5a3c] hover:bg-[#c9955f] font-medium"
+                  className="w-full bg-[#d4a574] text-[#844653] hover:bg-[#c9955f] font-medium"
                 >
                   {t.restaurant.particulierCta}
                   <ArrowRight className="h-4 w-4 ml-2" />
@@ -164,7 +164,7 @@ export default function CommerceSolidaire() {
         </section>
 
         {/* Info Banner */}
-        <section className="py-12 bg-[#4A4829]">
+        <section className="py-12 bg-[#6B3643]">
           <div className="container text-center">
             <p className="text-[#E6DCC3] max-w-2xl mx-auto">
               {t.boutique.infoText}

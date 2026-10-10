@@ -57,7 +57,7 @@ export default function PaymentMethodSelector({
               className={`cursor-pointer transition-all ${
                 isSelected
                   ? 'bg-[#F2E9D3] border-[#F2E9D3]'
-                  : 'bg-[#4A4829] border-[#F2E9D3]/20 hover:border-[#F2E9D3]/40'
+                  : 'bg-[#6B3643] border-[#F2E9D3]/20 hover:border-[#F2E9D3]/40'
               }`}
               onClick={() => onChange(method)}
             >
@@ -73,12 +73,12 @@ export default function PaymentMethodSelector({
                   />
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <div className={isSelected ? 'text-[#4A4829]' : 'text-[#F2E9D3]'}>
+                      <div className={isSelected ? 'text-[#6B3643]' : 'text-[#F2E9D3]'}>
                         {methodInfo.icon}
                       </div>
                       <label
                         className={`font-semibold cursor-pointer ${
-                          isSelected ? 'text-[#4A4829]' : 'text-[#F2E9D3]'
+                          isSelected ? 'text-[#6B3643]' : 'text-[#F2E9D3]'
                         }`}
                       >
                         {methodInfo.label}
@@ -87,7 +87,7 @@ export default function PaymentMethodSelector({
                     {showDescriptions && (
                       <p
                         className={`text-xs ${
-                          isSelected ? 'text-[#4A4829]/70' : 'text-[#E6DCC3]'
+                          isSelected ? 'text-[#6B3643]/70' : 'text-[#E6DCC3]'
                         }`}
                       >
                         {methodInfo.description}

@@ -43,7 +43,7 @@ export default function ManagersHistory() {
               <div key={year}>
                 <div className="flex items-center gap-3 mb-6">
                   <div className="h-px flex-1 bg-stone-200" />
-                  <div className="flex items-center gap-2 px-4 py-1.5 bg-[#4A4829] text-[#F2E9D3] rounded-full text-sm font-semibold">
+                  <div className="flex items-center gap-2 px-4 py-1.5 bg-[#6B3643] text-[#F2E9D3] rounded-full text-sm font-semibold">
                     <Trophy className="h-4 w-4 text-amber-400" />
                     Ramadan {year}
                   </div>

@@ -160,7 +160,7 @@ function RatingInput({
             className={`w-9 h-9 rounded-full text-sm font-medium border transition-colors
               ${
                 value === n
-                  ? "bg-[#5E5B34] text-white border-[#5E5B34]"
+                  ? "bg-[#864654] text-white border-[#864654]"
                   : "bg-white text-gray-700 border-gray-300 hover:border-[#C9B97A]"
               }`}
             aria-label={`${n}`}
@@ -217,8 +217,8 @@ function SectionCard({
   return (
     <div className="border rounded-xl p-4 bg-white shadow-sm mb-4">
       <div className="flex items-center gap-2 mb-3">
-        {icon && <span className="text-[#5E5B34]">{icon}</span>}
-        <h3 className="font-semibold text-[#5E5B34] text-base">{title}</h3>
+        {icon && <span className="text-[#864654]">{icon}</span>}
+        <h3 className="font-semibold text-[#864654] text-base">{title}</h3>
       </div>
       {description && <p className="text-sm text-gray-500 mb-3">{description}</p>}
       {children}
@@ -420,14 +420,14 @@ export default function EventFeedbackForm() {
         <div className="min-h-screen bg-[#f9f7f0] flex items-center justify-center px-4">
           <div className="text-center max-w-md">
             <CheckCircle2 size={72} className="mx-auto text-[#C9B97A] mb-4" />
-            <h1 className="text-2xl font-bold text-[#5E5B34] mb-2">Merci pour votre feedback !</h1>
+            <h1 className="text-2xl font-bold text-[#864654] mb-2">Merci pour votre feedback !</h1>
             <p className="text-gray-600 mb-6">
               Votre avis est précieux pour améliorer nos événements. Nous allons l'analyser avec
               attention.
             </p>
             <Button
               onClick={() => window.location.href = "/"}
-              className="bg-[#5E5B34] hover:bg-[#4a4829] text-white"
+              className="bg-[#864654] hover:bg-[#6B3643] text-white"
             >
               Retour à l'accueil
             </Button>
@@ -452,7 +452,7 @@ export default function EventFeedbackForm() {
         <div className="max-w-2xl mx-auto">
           {/* En-tête */}
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-[#5E5B34]">Votre feedback — Bab Rayan</h1>
+            <h1 className="text-2xl font-bold text-[#864654]">Votre feedback — Bab Rayan</h1>
             <p className="text-gray-500 text-sm mt-1">
               Aidez-nous à améliorer nos événements Ramadan
             </p>
@@ -469,7 +469,7 @@ export default function EventFeedbackForm() {
               {step === 1 && (
                 <div className="space-y-6">
                   <CardHeader className="px-0 pt-0">
-                    <CardTitle className="text-[#5E5B34] text-lg flex items-center gap-2">
+                    <CardTitle className="text-[#864654] text-lg flex items-center gap-2">
                       <Users size={20} /> Identification
                     </CardTitle>
                   </CardHeader>
@@ -485,7 +485,7 @@ export default function EventFeedbackForm() {
                           onClick={() => updateForm({ role: r.value })}
                           className={`flex flex-col items-center gap-1 p-3 rounded-lg border text-sm font-medium transition-colors
                             ${form.role === r.value
-                              ? "bg-[#5E5B34] text-white border-[#5E5B34]"
+                              ? "bg-[#864654] text-white border-[#864654]"
                               : "bg-white text-gray-700 border-gray-200 hover:border-[#C9B97A]"
                             }`}
                         >
@@ -507,7 +507,7 @@ export default function EventFeedbackForm() {
                           onClick={() => updateForm({ participationType: p.value })}
                           className={`w-full text-left px-4 py-3 rounded-lg border text-sm transition-colors
                             ${form.participationType === p.value
-                              ? "bg-[#5E5B34] text-white border-[#5E5B34]"
+                              ? "bg-[#864654] text-white border-[#864654]"
                               : "bg-white text-gray-700 border-gray-200 hover:border-[#C9B97A]"
                             }`}
                         >
@@ -579,7 +579,7 @@ export default function EventFeedbackForm() {
               {step > 1 && step < stepsCount && currentGroup && (
                 <div className="space-y-2">
                   <CardHeader className="px-0 pt-0">
-                    <CardTitle className="text-[#5E5B34] text-lg">
+                    <CardTitle className="text-[#864654] text-lg">
                       {currentGroup.stepLabel}
                     </CardTitle>
                   </CardHeader>
@@ -706,7 +706,7 @@ export default function EventFeedbackForm() {
               {step === stepsCount && (
                 <div className="space-y-5">
                   <CardHeader className="px-0 pt-0">
-                    <CardTitle className="text-[#5E5B34] text-lg flex items-center gap-2">
+                    <CardTitle className="text-[#864654] text-lg flex items-center gap-2">
                       <MessageSquare size={20} /> Suggestions & Témoignage
                     </CardTitle>
                   </CardHeader>
@@ -796,7 +796,7 @@ export default function EventFeedbackForm() {
                   <Button
                     type="button"
                     onClick={handleNext}
-                    className="bg-[#5E5B34] hover:bg-[#4a4829] text-white flex items-center gap-1"
+                    className="bg-[#864654] hover:bg-[#6B3643] text-white flex items-center gap-1"
                   >
                     Suivant <ChevronRight size={16} />
                   </Button>
@@ -805,7 +805,7 @@ export default function EventFeedbackForm() {
                     type="button"
                     onClick={handleSubmit}
                     disabled={submitMutation.isPending}
-                    className="bg-[#5E5B34] hover:bg-[#4a4829] text-white"
+                    className="bg-[#864654] hover:bg-[#6B3643] text-white"
                   >
                     {submitMutation.isPending ? (
                       <>
