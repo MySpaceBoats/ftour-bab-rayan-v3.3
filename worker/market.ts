@@ -109,5 +109,42 @@ export async function handleMarketRoute(c: MarketCtx): Promise<Response | null> 
     return json({ ok: true });
   }
 
+  // ---- messaging (members only: admin() is deliberately not used) --------
+  if ((m = match("POST", /^listings\/(\d+)\/thread$/))) {
+    const me = await member();
+    return json(await M.openThread(d, me, id(m[1]), now()));
+  }
+  if (match("GET", /^threads$/)) {
+    const me = await member();
+    const threads = await M.listThreads(d, me.id);
+    return json({
+      threads: await Promise.all(threads.map(async ({ cover, other, ...t }) => ({
+        ...t,
+        last_body: t.last_body === null ? null : t.last_body.slice(0, 120),
+        cover: await sign(cover),
+        other: await seller(other, sign),
+      }))),
+    });
+  }
+  if ((m = match("GET", /^threads\/(\d+)\/messages$/))) {
+    const me = await member();
+    const cur = url.searchParams.get("cursor");
+    const r = await M.listMessages(d, me, id(m[1]), cur && /^\d+$/.test(cur) ? Number(cur) : null);
+    return json({ ...r, other: await seller(r.other, sign) });
+  }
+  if ((m = match("POST", /^threads\/(\d+)\/messages$/))) {
+    const me = await member();
+    return json(await M.sendMessage(d, me, id(m[1]), str((await readJson(request)).body), now()));
+  }
+  if ((m = match("POST", /^threads\/(\d+)\/read$/))) {
+    const me = await member();
+    await M.markThreadRead(d, me, id(m[1]), now());
+    return json({ ok: true });
+  }
+  if (match("GET", /^unread$/)) {
+    const me = await member();
+    return json({ count: await M.unreadTotal(d, me.id) });
+  }
+
   return null;
 }

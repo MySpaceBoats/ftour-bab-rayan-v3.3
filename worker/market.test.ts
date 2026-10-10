@@ -164,3 +164,53 @@ describe("market http: comments, reports, admin", () => {
     expect((await call("POST", `/hub/market/admin/reports/${reports.reports[0].id}/dismiss`, { admin: "admin" })).status).toBe(200);
   });
 });
+
+describe("market http: messaging", () => {
+  async function pair() {
+    const a = await signIn("a@x.ma"); const b = await signIn("b@x.ma", "Brahim"); const c = await signIn("c@x.ma", "Chakib");
+    const { id } = (await (await call("POST", "/hub/market/listings", { token: a.session, body: listing() })).json()) as { id: number };
+    return { a, b, c, id };
+  }
+
+  it("open thread, exchange, unread, read, inbox", async () => {
+    const { a, b, id } = await pair();
+    const t = (await (await call("POST", `/hub/market/listings/${id}/thread`, { token: b.session })).json()) as { id: number; created: boolean };
+    expect(t.created).toBe(true);
+    expect((await call("POST", `/hub/market/threads/${t.id}/messages`, { token: b.session, body: { body: {} } })).status).toBe(400);
+    expect((await call("POST", `/hub/market/threads/${t.id}/messages`, { token: b.session, body: { body: "Bonjour" } })).status).toBe(200);
+    expect(await (await call("GET", "/hub/market/unread", { token: a.session })).json()).toEqual({ count: 1 });
+    const inbox = (await (await call("GET", "/hub/market/threads", { token: a.session })).json()) as any;
+    expect(inbox.threads[0]).toMatchObject({ id: t.id, last_body: "Bonjour", unread: 1, other: { display_name: "Brahim B." } });
+    expect(JSON.stringify(inbox)).not.toContain("@x.ma");
+    const msgs = (await (await call("GET", `/hub/market/threads/${t.id}/messages`, { token: a.session })).json()) as any;
+    expect(msgs.messages[0]).toMatchObject({ body: "Bonjour", sender_id: b.id });
+    expect(msgs.other.display_name).toBe("Brahim B.");
+    expect((await call("POST", `/hub/market/threads/${t.id}/read`, { token: a.session })).status).toBe(200);
+    expect(await (await call("GET", "/hub/market/unread", { token: a.session })).json()).toEqual({ count: 0 });
+  });
+
+  it("inbox snippet is truncated to 120 chars, thread messages keep the full body", async () => {
+    const { a, b, id } = await pair();
+    const t = (await (await call("POST", `/hub/market/listings/${id}/thread`, { token: b.session })).json()) as { id: number };
+    const long = "x".repeat(300);
+    expect((await call("POST", `/hub/market/threads/${t.id}/messages`, { token: b.session, body: { body: long } })).status).toBe(200);
+    const inbox = (await (await call("GET", "/hub/market/threads", { token: a.session })).json()) as any;
+    expect(inbox.threads[0].last_body.length).toBeLessThanOrEqual(120);
+    const msgs = (await (await call("GET", `/hub/market/threads/${t.id}/messages`, { token: a.session })).json()) as any;
+    expect(msgs.messages[0].body).toBe(long);
+  });
+
+  it("outsiders get 404, yourself is 400, anonymous 401, admins cannot read", async () => {
+    const { a, b, c, id } = await pair();
+    expect((await call("POST", `/hub/market/listings/${id}/thread`, { token: a.session })).status).toBe(400);
+    const t = (await (await call("POST", `/hub/market/listings/${id}/thread`, { token: b.session })).json()) as { id: number };
+    await call("POST", `/hub/market/threads/${t.id}/messages`, { token: b.session, body: { body: "secret" } });
+    for (const [m, p, body] of [["GET", `/hub/market/threads/${t.id}/messages`, undefined], ["POST", `/hub/market/threads/${t.id}/messages`, { body: "x" }], ["POST", `/hub/market/threads/${t.id}/read`, undefined]] as const) {
+      expect((await call(m, p, { token: c.session, body })).status, `${m} ${p}`).toBe(404);
+      expect((await call(m, p, { body })).status, `${m} ${p} anon`).toBe(401);
+      expect((await call(m, p, { admin: "admin", body })).status, `${m} ${p} admin`).toBe(401); // admin bearer is not a member session
+    }
+    expect((await call("GET", "/hub/market/threads/abc/messages", { token: a.session })).status).toBe(404); // not a numeric id: route does not match
+    expect((await call("GET", "/hub/market/threads/99999999999999999999/messages", { token: a.session })).status).toBe(400);
+  });
+});
