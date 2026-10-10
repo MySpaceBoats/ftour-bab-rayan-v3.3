@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useRoute } from "wouter";
 import { toast } from "sonner";
-import { Flag, Loader2, MessageCircle, Phone, Trash2 } from "lucide-react";
+import { Flag, Loader2, MessageCircle, Phone, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/i18n";
@@ -22,6 +22,7 @@ export default function ListingDetailPage() {
   const [comments, setComments] = useState<mk.MkComment[]>([]);
   const [draft, setDraft] = useState("");
   const [photo, setPhoto] = useState(0);
+  const [posting, setPosting] = useState(false);
 
   const act = async (fn: () => Promise<unknown>) => { try { await fn(); } catch (e) { toast.error((e as Error).message); } };
   const loadComments = useCallback(() => mk.listComments(listingId).then(setComments).catch(() => undefined), [listingId]);
@@ -103,9 +104,10 @@ export default function ListingDetailPage() {
             )}
           </div>
         ))}
-        <form className="flex items-center gap-2" onSubmit={e => { e.preventDefault(); if (!draft.trim()) return; act(async () => { await mk.addListingComment(l.id, draft); setDraft(""); await loadComments(); }); }}>
+        <form className="flex items-center gap-2" onSubmit={e => { e.preventDefault(); if (posting || !draft.trim()) return; setPosting(true); act(async () => { await mk.addListingComment(l.id, draft); setDraft(""); await loadComments(); }).finally(() => setPosting(false)); }}>
           <Avatar name={me.display_name} src={me.avatar} size={32} />
-          <Input aria-label="Votre question" className="rounded-full" value={draft} maxLength={500} onChange={e => setDraft(e.target.value)} placeholder="Posez une question publique…" />
+          <Input aria-label="Votre question" className="rounded-full" value={draft} maxLength={500} disabled={posting} onChange={e => setDraft(e.target.value)} placeholder="Posez une question publique…" />
+          <button type="submit" aria-label="Envoyer le commentaire" disabled={posting || !draft.trim()} className="text-blue-700 disabled:opacity-40"><Send size={18} /></button>
         </form>
       </section>
     </HubShell>

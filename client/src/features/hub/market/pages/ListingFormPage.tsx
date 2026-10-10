@@ -59,8 +59,9 @@ export default function ListingFormPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const priceNum = Number(f.price);
-    if (!Number.isSafeInteger(priceNum) || priceNum < 0) { toast.error("Prix invalide (nombre entier en MAD, 0 = gratuit)"); return; }
+    const priceStr = f.price.trim();
+    const priceNum = Number(priceStr);
+    if (!priceStr || !Number.isSafeInteger(priceNum) || priceNum < 0) { toast.error("Prix invalide (nombre entier en MAD, 0 = gratuit)"); return; }
     setBusy(true);
     try {
       const uploaded = await Promise.all(files.map(hub.uploadImage));

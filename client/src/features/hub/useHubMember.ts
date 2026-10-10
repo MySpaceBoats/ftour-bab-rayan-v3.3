@@ -10,10 +10,11 @@ export function useHubMember(): hub.Member | undefined {
   const [me, setMe] = useState<hub.Member | undefined>();
   useEffect(() => {
     const login = `/${lang}/benevole/espace`;
-    hub.getMe().then(setMe).catch(() => setLocation(login));
+    let alive = true;
+    hub.getMe().then(m => { if (alive) setMe(m); }).catch(e => { if (alive && e instanceof hub.HubApiError && e.status === 401) setLocation(login); });
     const back = () => setLocation(login);
     window.addEventListener("hub:unauthorized", back);
-    return () => window.removeEventListener("hub:unauthorized", back);
+    return () => { alive = false; window.removeEventListener("hub:unauthorized", back); };
   }, [lang, setLocation]);
   return me;
 }

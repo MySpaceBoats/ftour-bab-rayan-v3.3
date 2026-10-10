@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 import { Loader2, Plus, Search } from "lucide-react";
@@ -21,20 +21,30 @@ export default function MarketPage() {
   const [next, setNext] = useState<number | null>(null);
   const [category, setCategory] = useState("");
   const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [mine, setMine] = useState(false);
+  const reqId = useRef(0);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQ(q), 250);
+    return () => clearTimeout(t);
+  }, [q]);
 
   const load = useCallback(async (cursor: number | null = null) => {
+    const id = ++reqId.current;
+    if (!cursor) setNext(null);
     try {
-      const r = await mk.listListings({ cursor, category, q, mine });
+      const r = await mk.listListings({ cursor, category, q: debouncedQ, mine });
+      if (id !== reqId.current) return;
       setItems(prev => (cursor ? [...(prev ?? []), ...r.listings] : r.listings));
       setNext(r.nextCursor);
     } catch (e) {
+      if (id !== reqId.current) return;
       toast.error((e as Error).message);
       if (!cursor) setItems([]);
     }
-  }, [category, q, mine]);
+  }, [category, debouncedQ, mine]);
 
-  // ponytail: reload on every filter/search change (no debounce); fine at this scale
   useEffect(() => { if (me) load(); }, [me, load]);
 
   if (!me) return <div className="flex min-h-screen items-center justify-center bg-slate-100"><Loader2 className="animate-spin text-blue-700" /></div>;
