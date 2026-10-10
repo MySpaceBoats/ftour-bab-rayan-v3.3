@@ -18,11 +18,11 @@ export default function RestaurantParticuliers() {
         <div className="mb-6">
           <Link
             href={`/${lang}/reservation`}
-            className="text-sm text-[#5d5a3c] underline"
+            className="text-sm text-[#844653] underline"
           >
             ← Retour
           </Link>
-          <h1 className="text-3xl font-bold text-[#5d5a3c] mt-2 italic">
+          <h1 className="text-3xl font-bold text-[#844653] mt-2 italic">
             Réservation Ftour
           </h1>
           <p className="text-[#8b8b7a] mt-2">
@@ -49,7 +49,7 @@ export default function RestaurantParticuliers() {
           <CardContent className="pt-6">
             <Button
               onClick={() => navigate(`/${lang}/contact`)}
-              className="w-full bg-[#d4a574] text-[#5d5a3c] hover:bg-[#c9955f] font-medium"
+              className="w-full bg-[#d4a574] text-[#844653] hover:bg-[#c9955f] font-medium"
             >
               Nous contacter pour réserver
             </Button>

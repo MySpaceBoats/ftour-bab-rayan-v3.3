@@ -105,7 +105,7 @@ export default function RestaurantGroupes() {
       <div className="min-h-screen bg-[#f5f5f0]">
         <Navbar />
         <main className="container py-12 max-w-2xl">
-          <Card className="bg-[#5d5a3c] text-white border-0">
+          <Card className="bg-[#844653] text-white border-0">
             <CardHeader>
               <CardTitle className="text-2xl">
                 Demande de réservation envoyée
@@ -122,7 +122,7 @@ export default function RestaurantGroupes() {
                   clic sur le lien de confirmation reçu par email.
                 </p>
               </div>
-              <div className="bg-[#4a4830] p-3 rounded">
+              <div className="bg-[#6B3743] p-3 rounded">
                 <p className="text-sm font-medium">
                   Référence de votre demande
                 </p>
@@ -132,7 +132,7 @@ export default function RestaurantGroupes() {
               </div>
               <Button
                 onClick={() => navigate(`/${lang}`)}
-                className="w-full bg-[#d4a574] text-[#5d5a3c] hover:bg-[#c9955f]"
+                className="w-full bg-[#d4a574] text-[#844653] hover:bg-[#c9955f]"
               >
                 Retour à l'accueil
               </Button>
@@ -141,7 +141,7 @@ export default function RestaurantGroupes() {
 
           {/* Localisation du restaurant */}
           <div className="mt-8">
-            <div className="flex items-center gap-2 text-[#5d5a3c] mb-3">
+            <div className="flex items-center gap-2 text-[#844653] mb-3">
               <MapPin className="h-5 w-5" />
               <h2 className="text-xl font-bold">Nous trouver</h2>
             </div>
@@ -180,13 +180,13 @@ export default function RestaurantGroupes() {
       <main className="container py-12 max-w-2xl">
         <Link
           href={`/${lang}/reservation`}
-          className="text-sm text-[#5d5a3c] underline"
+          className="text-sm text-[#844653] underline"
         >
           ← Retour
         </Link>
 
         <div className="mb-8 mt-6">
-          <h1 className="text-3xl font-bold text-[#5d5a3c] italic">
+          <h1 className="text-3xl font-bold text-[#844653] italic">
             Réservation Ftour – Groupes
           </h1>
           <p className="text-[#8b8b7a] mt-2">
@@ -337,16 +337,16 @@ export default function RestaurantGroupes() {
 
               {/* Bloc informatif */}
               <div className="bg-[#f9f9f5] p-4 rounded border border-[#d4a574]">
-                <p className="text-sm text-[#5d5a3c]">
+                <p className="text-sm text-[#844653]">
                   Après envoi, vous recevrez un email de vérification. Votre
                   demande sera prise en compte uniquement après clic sur le lien
                   de confirmation.
                 </p>
                 <div className="mt-3 border-t border-[#d4a574]/40 pt-3">
-                  <p className="text-sm font-semibold text-[#5d5a3c]">
+                  <p className="text-sm font-semibold text-[#844653]">
                     Conditions d'annulation :
                   </p>
-                  <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-[#5d5a3c]">
+                  <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-[#844653]">
                     <li>
                       En cas d’annulation moins de 72h avant l’événement,
                       l’acompte de 50% sera conservé.
@@ -357,7 +357,7 @@ export default function RestaurantGroupes() {
                       jour même.
                     </li>
                   </ul>
-                  <p className="mt-2 text-sm text-[#5d5a3c]">
+                  <p className="mt-2 text-sm text-[#844653]">
                     Merci pour votre compréhension.
                   </p>
                 </div>
@@ -367,7 +367,7 @@ export default function RestaurantGroupes() {
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-[#5d5a3c] text-white hover:bg-[#4a4830]"
+                className="w-full bg-[#844653] text-white hover:bg-[#6B3743]"
               >
                 {isSubmitting ? "Envoi en cours..." : "Envoyer ma demande →"}
               </Button>

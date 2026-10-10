@@ -109,7 +109,7 @@ export default function CompanyBooking() {
       <div className="min-h-screen bg-[#f5f5f0]">
         <Navbar />
         <main className="container py-12 max-w-2xl">
-          <Card className="bg-[#5d5a3c] text-white border-0">
+          <Card className="bg-[#844653] text-white border-0">
             <CardHeader>
               <CardTitle className="text-white">Demande de réservation envoyée</CardTitle>
             </CardHeader>
@@ -119,11 +119,11 @@ export default function CompanyBooking() {
                 <p className="text-sm">Notre équipe organisatrice l'étudiera dans les plus brefs délais.</p>
                 <p className="text-sm">Vous recevrez une confirmation par email sous 48 heures avec les instructions de paiement et votre QR d'accès.</p>
               </div>
-              <div className="bg-[#4a4830] p-3 rounded">
+              <div className="bg-[#6B3743] p-3 rounded">
                 <p className="text-sm font-medium">Référence de votre demande</p>
                 <p className="text-lg font-bold text-[#d4a574]">{reference || 'RES-PENDING'}</p>
               </div>
-              <Button onClick={() => navigate(`/${lang}`)} className="w-full bg-[#d4a574] text-[#5d5a3c] hover:bg-[#c9955f]">Retour à l'accueil</Button>
+              <Button onClick={() => navigate(`/${lang}`)} className="w-full bg-[#d4a574] text-[#844653] hover:bg-[#c9955f]">Retour à l'accueil</Button>
             </CardContent>
           </Card>
         </main>
@@ -137,8 +137,8 @@ export default function CompanyBooking() {
       <Navbar />
       <main className="container py-12 max-w-2xl">
         <div className="mb-6">
-          <Link href={`/${lang}/reservation`} className="text-sm text-[#5d5a3c] underline">← Retour au hub réservation</Link>
-          <h1 className="text-3xl font-bold text-[#5d5a3c] mt-2 italic">Réservation Entreprise</h1>
+          <Link href={`/${lang}/reservation`} className="text-sm text-[#844653] underline">← Retour au hub réservation</Link>
+          <h1 className="text-3xl font-bold text-[#844653] mt-2 italic">Réservation Entreprise</h1>
           <p className="text-[#8b8b7a] mt-2">
             Demande de réservation pour votre équipe dans le cadre du ftour solidaire.
           </p>
@@ -287,7 +287,7 @@ export default function CompanyBooking() {
 
                 {/* Info Block */}
                 <div className="bg-[#f0ebe0] border border-[#d4a574] rounded p-4 mt-6">
-                  <p className="text-sm text-[#5d5a3c]">
+                  <p className="text-sm text-[#844653]">
                     <strong>Après validation :</strong> Vous recevrez un email de confirmation avec les instructions de paiement et votre QR d'accès.
                   </p>
                 </div>
@@ -307,7 +307,7 @@ export default function CompanyBooking() {
               )}
               <Button 
                 onClick={handleNext} 
-                className="flex-1 bg-[#d4a574] text-[#5d5a3c] hover:bg-[#c9955f]"
+                className="flex-1 bg-[#d4a574] text-[#844653] hover:bg-[#c9955f]"
               >
                 {step === 1 ? 'Suivant →' : 'Envoyer la demande →'}
               </Button>

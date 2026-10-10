@@ -78,7 +78,7 @@ export default function Reservation() {
       <div className="min-h-screen bg-[#f5f5f0]">
         <Navbar />
         <main className="container py-12 max-w-2xl">
-          <Card className="bg-[#5d5a3c] text-white border-0">
+          <Card className="bg-[#844653] text-white border-0">
             <CardHeader>
               <CardTitle className="text-white text-2xl">Demande de réservation envoyée</CardTitle>
             </CardHeader>
@@ -89,13 +89,13 @@ export default function Reservation() {
                   Notre équipe organisatrice l'étudiera dans les plus brefs délais et vous contactera par email.
                 </p>
               </div>
-              <div className="bg-[#4a4830] p-3 rounded">
+              <div className="bg-[#6B3743] p-3 rounded">
                 <p className="text-sm font-medium text-[#d4c4a0]">Référence de votre demande</p>
                 <p className="text-lg font-bold text-[#d4a574]">{reference || 'RES-PENDING'}</p>
               </div>
               <Button
                 onClick={() => navigate(`/${lang}`)}
-                className="w-full bg-[#d4a574] text-[#5d5a3c] hover:bg-[#c9955f]"
+                className="w-full bg-[#d4a574] text-[#844653] hover:bg-[#c9955f]"
               >
                 Retour à l'accueil
               </Button>
@@ -103,7 +103,7 @@ export default function Reservation() {
           </Card>
 
           <div className="mt-8">
-            <div className="flex items-center gap-2 text-[#5d5a3c] mb-3">
+            <div className="flex items-center gap-2 text-[#844653] mb-3">
               <MapPin className="h-5 w-5" />
               <h2 className="text-xl font-bold">Nous trouver</h2>
             </div>
@@ -143,7 +143,7 @@ export default function Reservation() {
       <Navbar />
 
       {/* ── Hero ────────────────────────────────────────── */}
-      <section className="bg-[#5d5a3c] text-white py-16 px-4">
+      <section className="bg-[#844653] text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <p className="text-[#d4a574] text-xs font-semibold uppercase tracking-[0.2em] mb-4">
             Restaurant Solidaire · Ramadan
@@ -169,7 +169,7 @@ export default function Reservation() {
       </section>
 
       {/* ── Info bar ─────────────────────────────────────── */}
-      <section className="bg-[#4a4830] py-5 px-4">
+      <section className="bg-[#6B3743] py-5 px-4">
         <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-5">
           <div className="flex items-center gap-3 text-white">
             <Clock className="h-5 w-5 text-[#d4a574] shrink-0" />
@@ -205,7 +205,7 @@ export default function Reservation() {
               <span className="text-xs font-semibold uppercase tracking-widest">Une expérience unique</span>
               <Star className="h-4 w-4" />
             </div>
-            <h2 className="text-2xl md:text-3xl font-bold text-[#5d5a3c] mb-4">
+            <h2 className="text-2xl md:text-3xl font-bold text-[#844653] mb-4">
               Un ftour solidaire & mémorable
             </h2>
             <p className="text-[#8b8b7a] max-w-2xl mx-auto leading-relaxed">
@@ -216,14 +216,14 @@ export default function Reservation() {
 
           {/* ── Nos espaces ──────────────────────────────── */}
           <div className="mb-12">
-            <h2 className="text-xl font-bold text-[#5d5a3c] mb-6 text-center">Nos espaces</h2>
+            <h2 className="text-xl font-bold text-[#844653] mb-6 text-center">Nos espaces</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="bg-white rounded-xl p-6 shadow-sm border border-[#e8e5d8] hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="h-9 w-9 rounded-full bg-[#5d5a3c]/10 flex items-center justify-center shrink-0">
-                    <Leaf className="h-4 w-4 text-[#5d5a3c]" />
+                  <div className="h-9 w-9 rounded-full bg-[#844653]/10 flex items-center justify-center shrink-0">
+                    <Leaf className="h-4 w-4 text-[#844653]" />
                   </div>
-                  <h3 className="text-base font-bold text-[#5d5a3c]">Pavillon du Jardin</h3>
+                  <h3 className="text-base font-bold text-[#844653]">Pavillon du Jardin</h3>
                 </div>
                 <p className="text-[#8b8b7a] text-sm leading-relaxed">
                   Un espace verdoyant et aéré, idéal pour profiter d'une atmosphère sereine en plein cœur de Casablanca.
@@ -232,10 +232,10 @@ export default function Reservation() {
               </div>
               <div className="bg-white rounded-xl p-6 shadow-sm border border-[#e8e5d8] hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="h-9 w-9 rounded-full bg-[#5d5a3c]/10 flex items-center justify-center shrink-0">
-                    <UtensilsCrossed className="h-4 w-4 text-[#5d5a3c]" />
+                  <div className="h-9 w-9 rounded-full bg-[#844653]/10 flex items-center justify-center shrink-0">
+                    <UtensilsCrossed className="h-4 w-4 text-[#844653]" />
                   </div>
-                  <h3 className="text-base font-bold text-[#5d5a3c]">Salon Palmier</h3>
+                  <h3 className="text-base font-bold text-[#844653]">Salon Palmier</h3>
                 </div>
                 <p className="text-[#8b8b7a] text-sm leading-relaxed">
                   Un salon raffiné sous les palmiers, alliant élégance et intimité.
@@ -248,7 +248,7 @@ export default function Reservation() {
           {/* ── Formulaire de réservation ─────────────────── */}
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-[#5d5a3c] mb-1">Réservez votre table</h2>
+              <h2 className="text-2xl font-bold text-[#844653] mb-1">Réservez votre table</h2>
               <p className="text-[#8b8b7a] text-sm">
                 Remplissez le formulaire ci-dessous pour soumettre votre demande de réservation.
               </p>
@@ -265,7 +265,7 @@ export default function Reservation() {
             <form onSubmit={handleSubmit} className={isReservationClosed ? 'hidden' : ''}>
               <Card className="border border-[#e8e5d8]">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base text-[#5d5a3c]">Vos informations</CardTitle>
+                  <CardTitle className="text-base text-[#844653]">Vos informations</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
 
@@ -358,7 +358,7 @@ export default function Reservation() {
                   <Button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full bg-[#d4a574] text-[#5d5a3c] hover:bg-[#c9955f] font-semibold py-5 text-base"
+                    className="w-full bg-[#d4a574] text-[#844653] hover:bg-[#c9955f] font-semibold py-5 text-base"
                   >
                     {isSubmitting ? 'Envoi en cours…' : 'Envoyer ma demande →'}
                   </Button>
@@ -370,7 +370,7 @@ export default function Reservation() {
           {/* ── Carte / Localisation ─────────────────────── */}
           <div className="max-w-2xl mx-auto mt-14">
             <div className="text-center mb-4">
-              <div className="inline-flex items-center gap-2 text-[#5d5a3c]">
+              <div className="inline-flex items-center gap-2 text-[#844653]">
                 <MapPin className="h-5 w-5" />
                 <h2 className="text-xl font-bold">Nous trouver</h2>
               </div>

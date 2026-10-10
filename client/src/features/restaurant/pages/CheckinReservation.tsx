@@ -67,8 +67,8 @@ export default function CheckinReservation() {
     return (
       <div className="min-h-screen bg-[#f5f5f0] flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="animate-spin w-12 h-12 border-4 border-[#5d5a3c] border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-[#6b6b4e]">Chargement de la réservation...</p>
+          <div className="animate-spin w-12 h-12 border-4 border-[#844653] border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-[#A14F62]">Chargement de la réservation...</p>
         </div>
       </div>
     );
@@ -87,7 +87,7 @@ export default function CheckinReservation() {
               </p>
               <Button
                 onClick={() => setLocation('/fr')}
-                className="bg-[#5d5a3c] hover:bg-[#4a4730] text-[#f5f5dc]"
+                className="bg-[#844653] hover:bg-[#6B3643] text-[#f5f5dc]"
               >
                 <Home className="w-4 h-4 mr-2" />
                 Retour à l'accueil
@@ -113,7 +113,7 @@ export default function CheckinReservation() {
   return (
     <div className="min-h-screen bg-[#f5f5f0]">
       {/* Header */}
-      <div className="bg-[#5d5a3c] text-[#f5f5dc] p-6 text-center">
+      <div className="bg-[#844653] text-[#f5f5dc] p-6 text-center">
         <h1 className="text-2xl font-bold">Ftour Bab Rayan</h1>
         <p className="text-[#d4d4aa] mt-1">Réservation Ftour Solidaire</p>
       </div>
@@ -135,61 +135,61 @@ export default function CheckinReservation() {
         <Card className="border-[#d4d4aa]">
           <CardContent className="pt-6 space-y-4">
             <div className="text-center pb-4 border-b border-[#d4d4aa]">
-              <p className="text-sm text-[#6b6b4e]">Référence</p>
-              <p className="text-2xl font-mono font-bold text-[#5d5a3c]">{reservation.reference}</p>
+              <p className="text-sm text-[#A14F62]">Référence</p>
+              <p className="text-2xl font-mono font-bold text-[#844653]">{reservation.reference}</p>
             </div>
 
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <Users className="w-5 h-5 text-[#5d5a3c]" />
+                <Users className="w-5 h-5 text-[#844653]" />
                 <div>
-                  <p className="text-sm text-[#6b6b4e]">Nom</p>
-                  <p className="font-medium text-[#5d5a3c]">{reservation.name}</p>
+                  <p className="text-sm text-[#A14F62]">Nom</p>
+                  <p className="font-medium text-[#844653]">{reservation.name}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
-                <Calendar className="w-5 h-5 text-[#5d5a3c]" />
+                <Calendar className="w-5 h-5 text-[#844653]" />
                 <div>
-                  <p className="text-sm text-[#6b6b4e]">Date</p>
-                  <p className="font-medium text-[#5d5a3c]">{formatDate(reservation.date)}</p>
+                  <p className="text-sm text-[#A14F62]">Date</p>
+                  <p className="font-medium text-[#844653]">{formatDate(reservation.date)}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
-                <Users className="w-5 h-5 text-[#5d5a3c]" />
+                <Users className="w-5 h-5 text-[#844653]" />
                 <div>
-                  <p className="text-sm text-[#6b6b4e]">Nombre de couverts</p>
-                  <p className="font-medium text-[#5d5a3c]">{reservation.seatsTotal} personne(s)</p>
+                  <p className="text-sm text-[#A14F62]">Nombre de couverts</p>
+                  <p className="font-medium text-[#844653]">{reservation.seatsTotal} personne(s)</p>
                 </div>
               </div>
 
               {reservation.phone && (
                 <div className="flex items-center gap-3">
-                  <Phone className="w-5 h-5 text-[#5d5a3c]" />
+                  <Phone className="w-5 h-5 text-[#844653]" />
                   <div>
-                    <p className="text-sm text-[#6b6b4e]">Téléphone</p>
-                    <p className="font-medium text-[#5d5a3c]">{reservation.phone}</p>
+                    <p className="text-sm text-[#A14F62]">Téléphone</p>
+                    <p className="font-medium text-[#844653]">{reservation.phone}</p>
                   </div>
                 </div>
               )}
 
               {reservation.email && (
                 <div className="flex items-center gap-3">
-                  <Mail className="w-5 h-5 text-[#5d5a3c]" />
+                  <Mail className="w-5 h-5 text-[#844653]" />
                   <div>
-                    <p className="text-sm text-[#6b6b4e]">Email</p>
-                    <p className="font-medium text-[#5d5a3c]">{reservation.email}</p>
+                    <p className="text-sm text-[#A14F62]">Email</p>
+                    <p className="font-medium text-[#844653]">{reservation.email}</p>
                   </div>
                 </div>
               )}
 
               {reservation.groupName && (
                 <div className="flex items-center gap-3">
-                  <Users className="w-5 h-5 text-[#5d5a3c]" />
+                  <Users className="w-5 h-5 text-[#844653]" />
                   <div>
-                    <p className="text-sm text-[#6b6b4e]">Groupe</p>
-                    <p className="font-medium text-[#5d5a3c]">{reservation.groupName}</p>
+                    <p className="text-sm text-[#A14F62]">Groupe</p>
+                    <p className="font-medium text-[#844653]">{reservation.groupName}</p>
                   </div>
                 </div>
               )}
@@ -202,9 +202,9 @@ export default function CheckinReservation() {
           <Card className="border-[#d4d4aa] bg-[#f5f5dc]/50">
             <CardContent className="pt-4">
               <div className="flex gap-3">
-                <AlertCircle className="w-5 h-5 text-[#5d5a3c] shrink-0 mt-0.5" />
-                <div className="text-sm text-[#6b6b4e]">
-                  <p className="font-medium text-[#5d5a3c] mb-1">Instructions</p>
+                <AlertCircle className="w-5 h-5 text-[#844653] shrink-0 mt-0.5" />
+                <div className="text-sm text-[#A14F62]">
+                  <p className="font-medium text-[#844653] mb-1">Instructions</p>
                   <ul className="space-y-1">
                     <li>Présentez ce QR code à l'entrée du restaurant</li>
                     <li>Arrivez 15 minutes avant l'heure du Ftour</li>
@@ -221,7 +221,7 @@ export default function CheckinReservation() {
           <Button
             variant="outline"
             onClick={() => setLocation('/fr')}
-            className="border-[#5d5a3c] text-[#5d5a3c]"
+            className="border-[#844653] text-[#844653]"
           >
             <Home className="w-4 h-4 mr-2" />
             Retour à l'accueil
@@ -230,7 +230,7 @@ export default function CheckinReservation() {
       </div>
 
       {/* Footer */}
-      <div className="bg-[#5d5a3c] text-[#d4d4aa] p-4 text-center text-sm mt-8">
+      <div className="bg-[#844653] text-[#d4d4aa] p-4 text-center text-sm mt-8">
         <p>Association Bab Rayan</p>
         <p>4 rue Bayt Lahm, quartier Palmier, Casablanca</p>
         <p>+212 (0) 666-690534</p>

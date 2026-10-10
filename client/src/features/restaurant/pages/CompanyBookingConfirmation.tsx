@@ -45,8 +45,8 @@ export default function CompanyBookingConfirmation() {
             <p className="text-muted-foreground">Vous recevrez une confirmation par email sous 48 heures.</p>
           </div>
           <div className="bg-[#f5f5f0] p-3 rounded border border-[#d4a574] mt-4 inline-block">
-            <p className="text-sm font-medium text-[#5d5a3c]">Référence de votre demande</p>
-            <p className="text-xl font-bold text-[#5d5a3c]">{booking.reference}</p>
+            <p className="text-sm font-medium text-[#844653]">Référence de votre demande</p>
+            <p className="text-xl font-bold text-[#844653]">{booking.reference}</p>
           </div>
         </div>
 

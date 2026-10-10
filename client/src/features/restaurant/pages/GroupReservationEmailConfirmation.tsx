@@ -46,7 +46,7 @@ export default function GroupReservationEmailConfirmation() {
             )}
 
             {status === "idle" && (
-              <p className="text-sm text-[#5d5a3c]">
+              <p className="text-sm text-[#844653]">
                 Vérification de votre lien de confirmation en cours...
               </p>
             )}
@@ -56,7 +56,7 @@ export default function GroupReservationEmailConfirmation() {
                 <p className="font-medium text-green-700">
                   ✅ Votre email est confirmé.
                 </p>
-                <p className="text-sm text-[#5d5a3c]">
+                <p className="text-sm text-[#844653]">
                   Votre demande de réservation groupe a été transmise à
                   l&apos;administration restaurant.
                 </p>
