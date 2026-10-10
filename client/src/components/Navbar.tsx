@@ -90,7 +90,7 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full">
       {/* Top Menu (niveau 0) - Menu utilitaire */}
-      <div className="bg-[#3A3820] border-b border-[#F2E9D3]/10">
+      <div className="bg-[#542A34] border-b border-[#F2E9D3]/10">
         <div className="container flex h-9 items-center justify-end gap-4 text-sm">
           {/* Cart Icon - Boutique solidaire */}
           <button
@@ -107,7 +107,7 @@ export default function Navbar() {
           >
             <ShoppingCart className="h-4 w-4" />
             {cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-[#F2E9D3] text-[#4A4829] text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+              <span className="absolute -top-2 -right-2 bg-[#F2E9D3] text-[#6B3643] text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                 {cartCount}
               </span>
             )}
@@ -151,14 +151,14 @@ export default function Navbar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align={dir === "rtl" ? "start" : "end"}
-              className="bg-[#4A4829] border-[#F2E9D3]/20"
+              className="bg-[#6B3643] border-[#F2E9D3]/20"
             >
               {languages.map(language => (
                 <DropdownMenuItem
                   key={language.code}
                   onClick={() => setLang(language.code)}
-                  className={`text-[#F2E9D3] hover:bg-[#5E5B34] cursor-pointer ${
-                    lang === language.code ? "bg-[#5E5B34]" : ""
+                  className={`text-[#F2E9D3] hover:bg-[#864654] cursor-pointer ${
+                    lang === language.code ? "bg-[#864654]" : ""
                   }`}
                 >
                   {language.nativeName}
@@ -179,7 +179,7 @@ export default function Navbar() {
       </div>
 
       {/* Menu Principal (niveau 1) */}
-      <div className="bg-[#4A4829] border-b border-[#F2E9D3]/20">
+      <div className="bg-[#6B3643] border-b border-[#F2E9D3]/20">
         <div className="container flex h-16 items-center justify-between">
           {/* Logo */}
           <Link href={localizedHref("/")} className="flex items-center gap-3">
@@ -209,8 +209,8 @@ export default function Navbar() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={`text-sm text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#5E5B34] ${
-                    location === link.href ? "bg-[#5E5B34] text-[#CDBB8A]" : ""
+                  className={`text-sm text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#864654] ${
+                    location === link.href ? "bg-[#864654] text-[#CDBB8A]" : ""
                   }`}
                 >
                   {link.label}
@@ -226,7 +226,7 @@ export default function Navbar() {
                 variant="ghost"
                 size="sm"
                 onClick={handleLogout}
-                className="text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#5E5B34]"
+                className="text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#864654]"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 {t.auth.logout}
@@ -248,7 +248,7 @@ export default function Navbar() {
                 size="sm"
                 variant="outline"
                 onClick={() => trackNavCtaClick("faire_un_don")}
-                className="border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829] font-semibold"
+                className="border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#6B3643] font-semibold"
               >
                 <Heart className="h-4 w-4 mr-2" />
                 {t.cta.donate}
@@ -259,7 +259,7 @@ export default function Navbar() {
                 size="sm"
                 variant="outline"
                 onClick={() => trackNavCtaClick("devenir_partenaire")}
-                className="border-[#CDBB8A] text-[#CDBB8A] bg-transparent hover:bg-[#CDBB8A] hover:text-[#4A4829] font-semibold"
+                className="border-[#CDBB8A] text-[#CDBB8A] bg-transparent hover:bg-[#CDBB8A] hover:text-[#6B3643] font-semibold"
                 aria-label={t.cta.partner}
               >
                 <Handshake className="h-4 w-4 mr-2" />
@@ -274,7 +274,7 @@ export default function Navbar() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-[#F2E9D3] hover:bg-[#5E5B34]"
+                className="text-[#F2E9D3] hover:bg-[#864654]"
               >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Menu</span>
@@ -282,7 +282,7 @@ export default function Navbar() {
             </SheetTrigger>
             <SheetContent
               side={dir === "rtl" ? "left" : "right"}
-              className="w-[300px] sm:w-[350px] bg-[#4A4829] border-l border-[#F2E9D3]/20"
+              className="w-[300px] sm:w-[350px] bg-[#6B3643] border-l border-[#F2E9D3]/20"
             >
               <div className="flex flex-col gap-6 mt-6">
                 {/* Language Selector Mobile */}
@@ -295,7 +295,7 @@ export default function Navbar() {
                         onClick={() => setLang(language.code)}
                         className={`px-2 py-1 rounded text-sm ${
                           lang === language.code
-                            ? "bg-[#5E5B34] text-[#F2E9D3]"
+                            ? "bg-[#864654] text-[#F2E9D3]"
                             : "text-[#CDBB8A] hover:text-[#F2E9D3]"
                         }`}
                       >
@@ -317,9 +317,9 @@ export default function Navbar() {
                       >
                         <Button
                           variant="ghost"
-                          className={`w-full justify-start text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#5E5B34] ${
+                          className={`w-full justify-start text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#864654] ${
                             location === link.href
-                              ? "bg-[#5E5B34] text-[#CDBB8A]"
+                              ? "bg-[#864654] text-[#CDBB8A]"
                               : ""
                           }`}
                         >
@@ -341,7 +341,7 @@ export default function Navbar() {
                         <Link href="/admin" onClick={() => setIsOpen(false)}>
                           <Button
                             variant="outline"
-                            className="w-full border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829]"
+                            className="w-full border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#6B3643]"
                           >
                             <LayoutDashboard className="h-4 w-4 mr-2" />
                             {t.nav.administration}
@@ -350,7 +350,7 @@ export default function Navbar() {
                       )}
                       <Button
                         variant="ghost"
-                        className="w-full text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#5E5B34]"
+                        className="w-full text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#864654]"
                         onClick={handleLogout}
                       >
                         <LogOut className="h-4 w-4 mr-2" />
@@ -376,7 +376,7 @@ export default function Navbar() {
                     <Button
                       variant="outline"
                       onClick={() => trackNavCtaClick("faire_un_don")}
-                      className="w-full border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#4A4829] font-semibold"
+                      className="w-full border-[#F2E9D3] text-[#F2E9D3] bg-transparent hover:bg-[#F2E9D3] hover:text-[#6B3643] font-semibold"
                     >
                       <Heart className="h-4 w-4 mr-2" />
                       {t.cta.donate}
@@ -389,7 +389,7 @@ export default function Navbar() {
                     <Button
                       variant="outline"
                       onClick={() => trackNavCtaClick("devenir_partenaire")}
-                      className="w-full border-[#CDBB8A] text-[#CDBB8A] bg-transparent hover:bg-[#CDBB8A] hover:text-[#4A4829] font-semibold"
+                      className="w-full border-[#CDBB8A] text-[#CDBB8A] bg-transparent hover:bg-[#CDBB8A] hover:text-[#6B3643] font-semibold"
                       aria-label={t.cta.partner}
                     >
                       <Handshake className="h-4 w-4 mr-2" />

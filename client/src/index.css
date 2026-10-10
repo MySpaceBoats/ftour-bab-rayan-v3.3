@@ -52,7 +52,7 @@
 
 /* ============================================
    Ftour Bab Rayan - 13e édition
-   Palette: Olive mat + Crème/Ivoire
+   Palette: Mauve d1 « Sunset Mauve 7644C » (luminance-matched) + Crème/Ivoire
    Esprit: Humanitaire, sobre, chaleureux, artisanal
    ============================================ */
 
@@ -65,10 +65,10 @@
      PALETTE FTOUR BAB RAYAN
      ============================================ */
   
-  /* Fonds olive */
-  --bg-olive: #5E5B34;
-  --bg-olive-dark: #4A4829;
-  --bg-olive-soft: #6F6C3F;
+  /* Fonds marque — « olive » est un nom legacy : ces tokens portent la couleur de base de la marque (mauve d1). */
+  --bg-olive: #864654;
+  --bg-olive-dark: #6B3643;
+  --bg-olive-soft: #A35063;
   
   /* Textes crème/ivoire */
   --ink-cream: #F2E9D3;
@@ -82,31 +82,31 @@
      ============================================ */
   
   /* Background et foreground - Olive comme fond principal */
-  --background: #5E5B34;
+  --background: #864654;
   --foreground: #F2E9D3;
   
   /* Primary - Crème sur olive */
   --primary: #F2E9D3;
-  --primary-foreground: #4A4829;
+  --primary-foreground: #6B3643;
   
   /* Secondary - Sable */
   --secondary: #CDBB8A;
-  --secondary-foreground: #4A4829;
+  --secondary-foreground: #6B3643;
   
   /* Cartes et surfaces */
-  --card: #4A4829;
+  --card: #6B3643;
   --card-foreground: #F2E9D3;
   
   /* Popover */
-  --popover: #4A4829;
+  --popover: #6B3643;
   --popover-foreground: #F2E9D3;
   
   /* Muted */
-  --muted: #6F6C3F;
+  --muted: #A35063;
   --muted-foreground: #E6DCC3;
   
   /* Accent */
-  --accent: #6F6C3F;
+  --accent: #A35063;
   --accent-foreground: #F2E9D3;
   
   /* Destructive */
@@ -121,16 +121,16 @@
   /* Chart colors - Variations olive/crème */
   --chart-1: #F2E9D3;
   --chart-2: #CDBB8A;
-  --chart-3: #6F6C3F;
+  --chart-3: #A35063;
   --chart-4: #E6DCC3;
-  --chart-5: #8A8555;
+  --chart-5: #B56F80;
   
   /* Sidebar */
-  --sidebar: #4A4829;
+  --sidebar: #6B3643;
   --sidebar-foreground: #F2E9D3;
   --sidebar-primary: #F2E9D3;
-  --sidebar-primary-foreground: #4A4829;
-  --sidebar-accent: #6F6C3F;
+  --sidebar-primary-foreground: #6B3643;
+  --sidebar-accent: #A35063;
   --sidebar-accent-foreground: #F2E9D3;
   --sidebar-border: rgba(242, 233, 211, 0.15);
   --sidebar-ring: #CDBB8A;
@@ -139,31 +139,31 @@
 /* Mode clair pour les pages admin/formulaires */
 .light, [data-theme="light"] {
   --background: #F2E9D3;
-  --foreground: #4A4829;
+  --foreground: #6B3643;
   
   --card: #FFFFFF;
-  --card-foreground: #4A4829;
+  --card-foreground: #6B3643;
   
   --popover: #FFFFFF;
-  --popover-foreground: #4A4829;
+  --popover-foreground: #6B3643;
   
-  --primary: #5E5B34;
+  --primary: #864654;
   --primary-foreground: #F2E9D3;
   
   --secondary: #E6DCC3;
-  --secondary-foreground: #4A4829;
+  --secondary-foreground: #6B3643;
   
   --muted: #E6DCC3;
-  --muted-foreground: #6F6C3F;
+  --muted-foreground: #A35063;
   
   --accent: #CDBB8A;
-  --accent-foreground: #4A4829;
+  --accent-foreground: #6B3643;
   
-  --border: rgba(74, 72, 41, 0.2);
-  --input: rgba(74, 72, 41, 0.1);
-  --ring: #5E5B34;
+  --border: rgba(107, 54, 67, 0.2);
+  --input: rgba(107, 54, 67, 0.1);
+  --ring: #864654;
   
-  --sidebar: #4A4829;
+  --sidebar: #6B3643;
   --sidebar-foreground: #F2E9D3;
 }
 
@@ -179,8 +179,8 @@
   --ink-mute:     #8C8978;
   --line:         #E7E2D2;
   --line-soft:    #F0EBDB;
-  --olive:        #5E5B34;
-  --olive-deep:   #3D3B22;
+  --olive:        #864654;
+  --olive-deep:   #592C37;
   --olive-soft:   #EFEDE0;
   --sand:         #CDBB8A;
   --sand-soft:    #F1E9D2;

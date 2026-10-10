@@ -8,7 +8,7 @@ export default function Footer() {
   const isRTL = lang === 'ar';
 
   return (
-    <footer className="bg-[#4A4829] text-[#F2E9D3]" dir={isRTL ? 'rtl' : 'ltr'}>
+    <footer className="bg-[#6B3643] text-[#F2E9D3]" dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="container py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand */}
