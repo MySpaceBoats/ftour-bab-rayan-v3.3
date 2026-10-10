@@ -30,6 +30,9 @@ import Temoignages from "@/features/public/pages/Temoignages";
 import Galerie from "@/features/gallery/pages/Galerie";
 import BenevoleGalerieUpload from "@/features/gallery/pages/BenevoleGalerieUpload";
 import HubPage from "@/features/hub/pages/HubPage";
+import MarketPage from "@/features/hub/market/pages/MarketPage";
+import ListingDetailPage from "@/features/hub/market/pages/ListingDetailPage";
+import ListingFormPage from "@/features/hub/market/pages/ListingFormPage";
 import HubProfilePage from "@/features/hub/pages/HubProfilePage";
 import GalerieValidationUpload from "@/features/gallery/pages/GalerieValidationUpload";
 
@@ -333,6 +336,10 @@ function LocalizedRoutes() {
       <Route path="/:lang/programme" component={Programme} />
       <Route path="/:lang/benevole" component={Benevole} />
       <Route path="/:lang/benevole/photos" component={BenevoleGalerieUpload} />
+      <Route path="/:lang/benevole/espace/marketplace/nouveau" component={ListingFormPage} />
+      <Route path="/:lang/benevole/espace/marketplace/:id/modifier" component={ListingFormPage} />
+      <Route path="/:lang/benevole/espace/marketplace/:id" component={ListingDetailPage} />
+      <Route path="/:lang/benevole/espace/marketplace" component={MarketPage} />
       <Route path="/:lang/benevole/espace/profil" component={HubProfilePage} />
       <Route path="/:lang/benevole/espace" component={HubPage} />
       <Route path="/:lang/evenement" component={Evenement} />

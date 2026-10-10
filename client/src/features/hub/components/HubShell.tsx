@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "wouter";
-import { Home, LogOut, Newspaper, User } from "lucide-react";
+import { Home, LogOut, Newspaper, Store, User } from "lucide-react";
 import { useI18n } from "@/i18n";
 import * as hub from "../api";
 import Avatar from "./Avatar";
@@ -47,6 +47,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
             </div>
             <nav className="rounded-xl border border-slate-200 bg-white p-2 shadow-sm" aria-label="Navigation de l'espace">
               <Link href={base} className={link}><Newspaper size={18} /> Fil d'actualité</Link>
+              <Link href={`${base}/marketplace`} className={link}><Store size={18} /> Marketplace</Link>
               <Link href={`${base}/profil`} className={link}><User size={18} /> Mon profil</Link>
               <Link href={`/${lang}`} className={link}><Home size={18} /> Retour au site</Link>
               <button type="button" onClick={logout} className={`${link} w-full`}><LogOut size={18} /> Se déconnecter</button>
@@ -59,8 +60,9 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
         {right && <aside className="hidden xl:block"><div className="sticky top-[72px] space-y-3">{right}</div></aside>}
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-slate-200 bg-white text-xs text-slate-700 lg:hidden" aria-label="Navigation mobile">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-slate-200 bg-white text-xs text-slate-700 lg:hidden" aria-label="Navigation mobile">
         <Link href={base} className="flex flex-col items-center gap-0.5 py-2"><Newspaper size={20} />Fil</Link>
+        <Link href={`${base}/marketplace`} className="flex flex-col items-center gap-0.5 py-2"><Store size={20} />Marketplace</Link>
         <Link href={`${base}/profil`} className="flex flex-col items-center gap-0.5 py-2"><User size={20} />Profil</Link>
         <Link href={`/${lang}`} className="flex flex-col items-center gap-0.5 py-2"><Home size={20} />Site</Link>
       </nav>

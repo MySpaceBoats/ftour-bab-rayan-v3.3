@@ -20,7 +20,7 @@ export interface Comment { id: number; post_id: number; body: string; created_at
 export interface Report { id: number; target_type: "post" | "comment"; target_id: number; reason: string; created_at: string; reporter: string; body: string | null; target_status: string | null }
 export interface AdminMember { id: number; email: string; display_name: string; role: "member" | "moderator"; status: "active" | "suspended"; created_at: string }
 
-async function call<T>(method: string, path: string, opts: { body?: unknown; admin?: boolean } = {}): Promise<T> {
+export async function call<T>(method: string, path: string, opts: { body?: unknown; admin?: boolean } = {}): Promise<T> {
   const headers: Record<string, string> = {};
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";
   // ponytail: admin calls use the stored Supabase access token as-is; tRPC refreshes it on the next admin request
