@@ -127,21 +127,21 @@ export default function AdminReservations() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#5d5a3c]">Réservations Ftour</h1>
-            <p className="text-[#6b6b4e]">Gérez les réservations des restaurants solidaires</p>
+            <h1 className="text-2xl font-bold text-[#844653]">Réservations Ftour</h1>
+            <p className="text-[#A14F62]">Gérez les réservations des restaurants solidaires</p>
           </div>
           <div className="flex gap-2">
             <Button
               variant="outline"
               onClick={() => refetch()}
-              className="border-[#5d5a3c] text-[#5d5a3c]"
+              className="border-[#844653] text-[#844653]"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Actualiser
             </Button>
             <Button
               onClick={handleExportCSV}
-              className="bg-[#5d5a3c] hover:bg-[#4a4730] text-[#f5f5dc]"
+              className="bg-[#844653] hover:bg-[#6B3643] text-[#f5f5dc]"
             >
               <Download className="w-4 h-4 mr-2" />
               Export CSV
@@ -153,8 +153,8 @@ export default function AdminReservations() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card className="border-[#d4d4aa]">
             <CardContent className="pt-4">
-              <div className="text-2xl font-bold text-[#5d5a3c]">{stats?.total || 0}</div>
-              <div className="text-sm text-[#6b6b4e]">Total</div>
+              <div className="text-2xl font-bold text-[#844653]">{stats?.total || 0}</div>
+              <div className="text-sm text-[#A14F62]">Total</div>
             </CardContent>
           </Card>
           <Card className="border-green-200 bg-green-50">
@@ -186,7 +186,7 @@ export default function AdminReservations() {
         {/* Filters */}
         <Card className="border-[#d4d4aa]">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2 text-[#5d5a3c]">
+            <CardTitle className="text-lg flex items-center gap-2 text-[#844653]">
               <Filter className="w-5 h-5" />
               Filtres
             </CardTitle>
@@ -194,7 +194,7 @@ export default function AdminReservations() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="text-sm text-[#6b6b4e] mb-1 block">Date</label>
+                <label className="text-sm text-[#A14F62] mb-1 block">Date</label>
                 <Input
                   type="date"
                   value={dateFilter}
@@ -203,7 +203,7 @@ export default function AdminReservations() {
                 />
               </div>
               <div>
-                <label className="text-sm text-[#6b6b4e] mb-1 block">Restaurant</label>
+                <label className="text-sm text-[#A14F62] mb-1 block">Restaurant</label>
                 <Select value={restaurantFilter} onValueChange={setRestaurantFilter}>
                   <SelectTrigger className="border-[#d4d4aa]">
                     <SelectValue placeholder="Tous les restaurants" />
@@ -217,7 +217,7 @@ export default function AdminReservations() {
                 </Select>
               </div>
               <div>
-                <label className="text-sm text-[#6b6b4e] mb-1 block">Statut</label>
+                <label className="text-sm text-[#A14F62] mb-1 block">Statut</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="border-[#d4d4aa]">
                     <SelectValue placeholder="Tous les statuts" />
@@ -233,9 +233,9 @@ export default function AdminReservations() {
                 </Select>
               </div>
               <div>
-                <label className="text-sm text-[#6b6b4e] mb-1 block">Recherche</label>
+                <label className="text-sm text-[#A14F62] mb-1 block">Recherche</label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b6b4e]" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A14F62]" />
                   <Input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -253,21 +253,21 @@ export default function AdminReservations() {
           <CardContent className="p-0">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="animate-spin w-8 h-8 border-4 border-[#5d5a3c] border-t-transparent rounded-full"></div>
+                <div className="animate-spin w-8 h-8 border-4 border-[#844653] border-t-transparent rounded-full"></div>
               </div>
             ) : filteredReservations && filteredReservations.length > 0 ? (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-[#f5f5f0]">
-                      <TableHead className="text-[#5d5a3c]">Référence</TableHead>
-                      <TableHead className="text-[#5d5a3c]">Date</TableHead>
-                      <TableHead className="text-[#5d5a3c]">Restaurant</TableHead>
-                      <TableHead className="text-[#5d5a3c]">Nom</TableHead>
-                      <TableHead className="text-[#5d5a3c]">Téléphone</TableHead>
-                      <TableHead className="text-[#5d5a3c]">Places</TableHead>
-                      <TableHead className="text-[#5d5a3c]">Statut</TableHead>
-                      <TableHead className="text-[#5d5a3c]">Actions</TableHead>
+                      <TableHead className="text-[#844653]">Référence</TableHead>
+                      <TableHead className="text-[#844653]">Date</TableHead>
+                      <TableHead className="text-[#844653]">Restaurant</TableHead>
+                      <TableHead className="text-[#844653]">Nom</TableHead>
+                      <TableHead className="text-[#844653]">Téléphone</TableHead>
+                      <TableHead className="text-[#844653]">Places</TableHead>
+                      <TableHead className="text-[#844653]">Statut</TableHead>
+                      <TableHead className="text-[#844653]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -279,7 +279,7 @@ export default function AdminReservations() {
                         <TableCell className="font-medium">{reservation.fullName}</TableCell>
                         <TableCell>{reservation.phone}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="border-[#5d5a3c] text-[#5d5a3c]">
+                          <Badge variant="outline" className="border-[#844653] text-[#844653]">
                             {reservation.seats} {reservation.seats > 1 ? 'places' : 'place'}
                           </Badge>
                         </TableCell>
@@ -299,7 +299,7 @@ export default function AdminReservations() {
                               }}
                               title="Voir détails"
                             >
-                              <Eye className="w-4 h-4 text-[#5d5a3c]" />
+                              <Eye className="w-4 h-4 text-[#844653]" />
                             </Button>
                             {reservation.status === 'confirmed' && (
                               <Button
@@ -329,7 +329,7 @@ export default function AdminReservations() {
                 </Table>
               </div>
             ) : (
-              <div className="text-center py-12 text-[#6b6b4e]">
+              <div className="text-center py-12 text-[#A14F62]">
                 <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>Aucune réservation trouvée</p>
               </div>
@@ -341,7 +341,7 @@ export default function AdminReservations() {
         <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle className="text-[#5d5a3c]">Détails de la réservation</DialogTitle>
+              <DialogTitle className="text-[#844653]">Détails de la réservation</DialogTitle>
               <DialogDescription>
                 Référence: {selectedReservation?.referenceCode}
               </DialogDescription>
@@ -350,38 +350,38 @@ export default function AdminReservations() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm text-[#6b6b4e]">Date</label>
-                    <p className="font-medium text-[#5d5a3c]">{formatDate(selectedReservation.date)}</p>
+                    <label className="text-sm text-[#A14F62]">Date</label>
+                    <p className="font-medium text-[#844653]">{formatDate(selectedReservation.date)}</p>
                   </div>
                   <div>
-                    <label className="text-sm text-[#6b6b4e]">Restaurant</label>
-                    <p className="font-medium text-[#5d5a3c]">{selectedReservation.restaurant?.name}</p>
+                    <label className="text-sm text-[#A14F62]">Restaurant</label>
+                    <p className="font-medium text-[#844653]">{selectedReservation.restaurant?.name}</p>
                   </div>
                   <div>
-                    <label className="text-sm text-[#6b6b4e]">Nom complet</label>
-                    <p className="font-medium text-[#5d5a3c]">{selectedReservation.fullName}</p>
+                    <label className="text-sm text-[#A14F62]">Nom complet</label>
+                    <p className="font-medium text-[#844653]">{selectedReservation.fullName}</p>
                   </div>
                   <div>
-                    <label className="text-sm text-[#6b6b4e]">Téléphone</label>
-                    <p className="font-medium text-[#5d5a3c]">{selectedReservation.phone}</p>
+                    <label className="text-sm text-[#A14F62]">Téléphone</label>
+                    <p className="font-medium text-[#844653]">{selectedReservation.phone}</p>
                   </div>
                   <div>
-                    <label className="text-sm text-[#6b6b4e]">Email</label>
-                    <p className="font-medium text-[#5d5a3c]">{selectedReservation.email || '-'}</p>
+                    <label className="text-sm text-[#A14F62]">Email</label>
+                    <p className="font-medium text-[#844653]">{selectedReservation.email || '-'}</p>
                   </div>
                   <div>
-                    <label className="text-sm text-[#6b6b4e]">Places</label>
-                    <p className="font-medium text-[#5d5a3c]">{selectedReservation.seats}</p>
+                    <label className="text-sm text-[#A14F62]">Places</label>
+                    <p className="font-medium text-[#844653]">{selectedReservation.seats}</p>
                   </div>
                 </div>
                 {selectedReservation.notes && (
                   <div>
-                    <label className="text-sm text-[#6b6b4e]">Notes</label>
-                    <p className="font-medium text-[#5d5a3c]">{selectedReservation.notes}</p>
+                    <label className="text-sm text-[#A14F62]">Notes</label>
+                    <p className="font-medium text-[#844653]">{selectedReservation.notes}</p>
                   </div>
                 )}
                 <div className="flex items-center gap-2">
-                  <label className="text-sm text-[#6b6b4e]">Statut:</label>
+                  <label className="text-sm text-[#A14F62]">Statut:</label>
                   <Badge className={statusColors[selectedReservation.status as ReservationStatus]}>
                     {statusLabels[selectedReservation.status as ReservationStatus]}
                   </Badge>
@@ -389,7 +389,7 @@ export default function AdminReservations() {
                 
                 {/* QR Code */}
                 <div className="text-center border-t pt-4">
-                  <p className="text-sm text-[#6b6b4e] mb-2">QR Code de la réservation</p>
+                  <p className="text-sm text-[#A14F62] mb-2">QR Code de la réservation</p>
                   <img 
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`https://ftourbabrayan.ma/checkin-reservation/${selectedReservation.qrToken}`)}`}
                     alt="QR Code"

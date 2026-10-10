@@ -1068,7 +1068,7 @@ async function sendAdminNotification(opts: {
     opts.source === "email_campaign" ? "Campagne email" : "Page publique";
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <h2 style="color: #5E5B34;">🔔 Nouveau feedback reçu — Bab Rayan</h2>
+      <h2 style="color: #864654;">🔔 Nouveau feedback reçu — Bab Rayan</h2>
       <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
         <tr><td style="padding: 8px; font-weight: bold; width: 150px;">Source :</td><td style="padding: 8px;">${sourceLabel}</td></tr>
         <tr><td style="padding: 8px; font-weight: bold;">Anonyme :</td><td style="padding: 8px;">${opts.isAnonymous ? "Oui" : "Non"}</td></tr>
@@ -1076,7 +1076,7 @@ async function sendAdminNotification(opts: {
         ${opts.rating !== undefined ? `<tr><td style="padding: 8px; font-weight: bold;">Score :</td><td style="padding: 8px;">${opts.rating}/5 ⭐</td></tr>` : ""}
         ${opts.comment ? `<tr><td style="padding: 8px; font-weight: bold;">Commentaire :</td><td style="padding: 8px; font-style: italic;">"${opts.comment}"</td></tr>` : ""}
       </table>
-      <a href="${baseUrl}/admin/feedback" style="display: inline-block; background: #5E5B34; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none;">Voir dans l'admin</a>
+      <a href="${baseUrl}/admin/feedback" style="display: inline-block; background: #864654; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none;">Voir dans l'admin</a>
     </div>
   `;
 
@@ -1100,7 +1100,7 @@ async function sendSiteFeedbackNotification(opts: {
   const baseUrl = resolveBaseUrl();
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <h2 style="color: #5E5B34;">🔔 Nouveau feedback reçu</h2>
+      <h2 style="color: #864654;">🔔 Nouveau feedback reçu</h2>
       <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
         <tr><td style="padding: 8px; font-weight: bold; width: 150px;">Type :</td><td style="padding: 8px;">${opts.feedbackType}</td></tr>
         <tr><td style="padding: 8px; font-weight: bold;">Note :</td><td style="padding: 8px;">${opts.rating}/5</td></tr>
@@ -1109,7 +1109,7 @@ async function sendSiteFeedbackNotification(opts: {
         <tr><td style="padding: 8px; font-weight: bold;">Nom :</td><td style="padding: 8px;">${opts.name}</td></tr>
         <tr><td style="padding: 8px; font-weight: bold;">Email :</td><td style="padding: 8px;">${opts.email}</td></tr>
       </table>
-      <a href="${baseUrl}/admin/feedback" style="display: inline-block; background: #5E5B34; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none;">Voir dans l'admin</a>
+      <a href="${baseUrl}/admin/feedback" style="display: inline-block; background: #864654; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none;">Voir dans l'admin</a>
     </div>
   `;
 
@@ -1128,7 +1128,7 @@ function generateCampaignEmailHtml(opts: {
 }): string {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9f7f0; padding: 0;">
-      <div style="background: #5E5B34; padding: 30px; text-align: center;">
+      <div style="background: #864654; padding: 30px; text-align: center;">
         <h1 style="color: #F2E9D3; margin: 0; font-size: 24px;">Bab Rayan</h1>
         <p style="color: #C9B97A; margin: 8px 0 0;">Votre avis compte pour nous</p>
       </div>
@@ -1136,14 +1136,14 @@ function generateCampaignEmailHtml(opts: {
         <div style="color: #333; line-height: 1.7; white-space: pre-line;">${opts.emailContent}</div>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${opts.feedbackUrl}"
-             style="display: inline-block; background: #5E5B34; color: white; padding: 14px 32px;
+             style="display: inline-block; background: #864654; color: white; padding: 14px 32px;
                     border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: bold;">
             Donner mon feedback
           </a>
         </div>
         <p style="color: #777; font-size: 14px; text-align: center;">Cela prend moins de 2 minutes. Merci pour votre contribution.</p>
       </div>
-      <div style="background: #5E5B34; padding: 20px; text-align: center;">
+      <div style="background: #864654; padding: 20px; text-align: center;">
         <p style="color: #C9B97A; margin: 0; font-size: 12px;">Association Bab Rayan — contact@babrayan.org</p>
       </div>
     </div>

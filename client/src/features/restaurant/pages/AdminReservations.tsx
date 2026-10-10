@@ -152,7 +152,7 @@ export default function AdminReservations() {
       <Navbar />
       <main className="container py-12 max-w-6xl">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-[#5d5a3c] italic">Admin - Réservations Restaurant</h1>
+          <h1 className="text-3xl font-bold text-[#844653] italic">Admin - Réservations Restaurant</h1>
           <p className="text-[#8b8b7a] mt-2">Gérez les demandes de réservation</p>
         </div>
 
@@ -188,7 +188,7 @@ export default function AdminReservations() {
                         onClick={() => setSelectedReservation(reservation)}
                         className={`p-3 border rounded cursor-pointer transition ${
                           selectedReservation?.id === reservation.id
-                            ? 'bg-[#5d5a3c] text-white border-[#5d5a3c]'
+                            ? 'bg-[#844653] text-white border-[#844653]'
                             : 'bg-white border-[#d4a574] hover:bg-[#f9f9f5]'
                         }`}
                       >
@@ -200,7 +200,7 @@ export default function AdminReservations() {
                               {reservation.date.toLocaleDateString('fr-FR')} • {reservation.seatsTotal} places
                             </p>
                           </div>
-                          <span className="text-xs px-2 py-1 bg-[#d4a574] text-[#5d5a3c] rounded">
+                          <span className="text-xs px-2 py-1 bg-[#d4a574] text-[#844653] rounded">
                             {reservation.type}
                           </span>
                         </div>
@@ -268,7 +268,7 @@ export default function AdminReservations() {
                     <Button
                       onClick={() => handleValidate(selectedReservation)}
                       disabled={isLoading || selectedReservation.status !== 'pending_validation'}
-                      className="w-full bg-[#5d5a3c] text-white hover:bg-[#4a4830]"
+                      className="w-full bg-[#844653] text-white hover:bg-[#6B3743]"
                     >
                       ✓ Valider
                     </Button>

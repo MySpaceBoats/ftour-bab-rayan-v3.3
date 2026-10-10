@@ -294,7 +294,7 @@ export default function AdminReservationsCalendar() {
           </Link>
           <div>
             <h1 className="font-bold text-lg flex items-center gap-2">
-              <CalendarDays className="h-5 w-5 text-[#5d5a3c]" />
+              <CalendarDays className="h-5 w-5 text-[#844653]" />
               Calendrier des Réservations
             </h1>
             <p className="text-xs text-muted-foreground">
@@ -315,12 +315,12 @@ export default function AdminReservationsCalendar() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="flex items-center gap-3 bg-[#f5f5e8]/70 rounded-xl p-3 border border-[#d4d4aa]">
-                <div className="w-11 h-11 rounded-full bg-[#5E5B34] flex items-center justify-center">
+                <div className="w-11 h-11 rounded-full bg-[#864654] flex items-center justify-center">
                   <UtensilsCrossed className="h-5 w-5 text-[#F2E9D3]" />
                 </div>
                 <div>
-                  <p className="text-xs text-[#6b6b4e] font-medium">Places réservées</p>
-                  <p className="text-2xl font-bold text-[#5d5a3c]">{ramadanStats.totalSeats}</p>
+                  <p className="text-xs text-[#A14F62] font-medium">Places réservées</p>
+                  <p className="text-2xl font-bold text-[#844653]">{ramadanStats.totalSeats}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 bg-white/70 rounded-xl p-3 border border-amber-200">
@@ -356,7 +356,7 @@ export default function AdminReservationsCalendar() {
               >
                 <ChevronLeft className="h-5 w-5" />
               </Button>
-              <CardTitle className="text-lg text-[#5d5a3c] capitalize">
+              <CardTitle className="text-lg text-[#844653] capitalize">
                 {format(currentMonth, "MMMM yyyy", { locale: fr })}
               </CardTitle>
               <Button
@@ -371,7 +371,7 @@ export default function AdminReservationsCalendar() {
           <CardContent>
             {isLoading ? (
               <div className="flex justify-center py-20">
-                <Loader2 className="h-8 w-8 animate-spin text-[#5d5a3c]" />
+                <Loader2 className="h-8 w-8 animate-spin text-[#844653]" />
               </div>
             ) : (
               <div className="w-full">
@@ -380,7 +380,7 @@ export default function AdminReservationsCalendar() {
                   {weekDays.map((day) => (
                     <div
                       key={day}
-                      className="text-center text-xs font-medium text-[#6b6b4e] py-2"
+                      className="text-center text-xs font-medium text-[#A14F62] py-2"
                     >
                       {day}
                     </div>
@@ -402,13 +402,13 @@ export default function AdminReservationsCalendar() {
                         className={`
                           relative min-h-[80px] sm:min-h-[100px] rounded-lg border p-1.5 text-left transition-all
                           ${!inCurrentMonth ? "opacity-40" : ""}
-                          ${today ? "border-[#5d5a3c] ring-1 ring-[#5d5a3c]/30" : "border-[#e8e8d8]"}
-                          ${hasReservations ? "cursor-pointer hover:bg-[#f5f5e8] hover:border-[#5d5a3c]/50" : "cursor-default"}
+                          ${today ? "border-[#844653] ring-1 ring-[#844653]/30" : "border-[#e8e8d8]"}
+                          ${hasReservations ? "cursor-pointer hover:bg-[#f5f5e8] hover:border-[#844653]/50" : "cursor-default"}
                           ${hasReservations ? "bg-[#fafaf0]" : "bg-white"}
                         `}
                       >
                         {/* Day number */}
-                        <div className={`text-xs font-medium mb-1 ${today ? "text-[#5d5a3c] font-bold" : inCurrentMonth ? "text-[#5d5a3c]" : "text-[#b0b090]"}`}>
+                        <div className={`text-xs font-medium mb-1 ${today ? "text-[#844653] font-bold" : inCurrentMonth ? "text-[#844653]" : "text-[#b0b090]"}`}>
                           {format(dayData.date, "d")}
                         </div>
 
@@ -416,15 +416,15 @@ export default function AdminReservationsCalendar() {
                         {hasReservations && (
                           <div className="space-y-0.5">
                             <div className="flex items-center gap-1">
-                              <UtensilsCrossed className="h-3 w-3 text-[#5d5a3c] shrink-0" />
-                              <span className="text-xs font-bold text-[#5d5a3c]">
+                              <UtensilsCrossed className="h-3 w-3 text-[#844653] shrink-0" />
+                              <span className="text-xs font-bold text-[#844653]">
                                 {dayData.totalSeats}/{dayData.capacity ?? "-"}
-                                <span className="font-normal text-[#6b6b4e] hidden sm:inline"> pl.</span>
+                                <span className="font-normal text-[#A14F62] hidden sm:inline"> pl.</span>
                               </span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <UsersRound className="h-3 w-3 text-[#6b6b4e] shrink-0" />
-                              <span className="text-xs text-[#6b6b4e]">
+                              <UsersRound className="h-3 w-3 text-[#A14F62] shrink-0" />
+                              <span className="text-xs text-[#A14F62]">
                                 {dayData.groupCount}
                                 <span className="hidden sm:inline"> grp{dayData.groupCount > 1 ? "s" : ""}</span>
                               </span>
@@ -434,7 +434,7 @@ export default function AdminReservationsCalendar() {
                               {dayData.reservations.slice(0, 2).map((r) => (
                                 <div
                                   key={r.id}
-                                  className="text-[10px] text-[#6b6b4e] truncate leading-tight"
+                                  className="text-[10px] text-[#A14F62] truncate leading-tight"
                                   title={getGroupLabel(r)}
                                 >
                                   {getGroupLabel(r)}
@@ -461,7 +461,7 @@ export default function AdminReservationsCalendar() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-[#5d5a3c] flex items-center gap-2">
+              <DialogTitle className="text-[#844653] flex items-center gap-2">
                 <CalendarDays className="h-5 w-5" />
                 {selectedDay && format(selectedDay.date, "EEEE d MMMM yyyy", { locale: fr })}
               </DialogTitle>
@@ -479,18 +479,18 @@ export default function AdminReservationsCalendar() {
                 {/* Summary */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-[#f5f5e8] rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-[#5d5a3c]">{selectedDay.totalSeats}/{selectedDay.capacity ?? "-"}</p>
-                    <p className="text-xs text-[#6b6b4e]">Inscrits / capacité</p>
+                    <p className="text-2xl font-bold text-[#844653]">{selectedDay.totalSeats}/{selectedDay.capacity ?? "-"}</p>
+                    <p className="text-xs text-[#A14F62]">Inscrits / capacité</p>
                   </div>
                   <div className="bg-[#f5f5e8] rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-[#5d5a3c]">{selectedDay.groupCount}</p>
-                    <p className="text-xs text-[#6b6b4e]">Groupes inscrits</p>
+                    <p className="text-2xl font-bold text-[#844653]">{selectedDay.groupCount}</p>
+                    <p className="text-xs text-[#A14F62]">Groupes inscrits</p>
                   </div>
                 </div>
 
                 {selectedDay.id && (
                   <div className="border border-[#e8e8d8] rounded-lg p-3 bg-[#fafaf0] space-y-2">
-                    <p className="text-xs font-semibold text-[#5d5a3c]">Modifier la capacité du jour</p>
+                    <p className="text-xs font-semibold text-[#844653]">Modifier la capacité du jour</p>
                     <div className="flex items-center gap-2">
                       <Input
                         type="number"
@@ -512,14 +512,14 @@ export default function AdminReservationsCalendar() {
 
                 {/* Reservation list */}
                 <div className="space-y-2">
-                  <h3 className="text-sm font-semibold text-[#5d5a3c]">Détail des réservations</h3>
+                  <h3 className="text-sm font-semibold text-[#844653]">Détail des réservations</h3>
                   {selectedDay.reservations.map((r) => (
                     <div
                       key={`${r.type}-${r.id}`}
                       className="border border-[#e8e8d8] rounded-lg p-3 space-y-2 bg-white"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium text-sm text-[#5d5a3c]">
+                        <span className="font-medium text-sm text-[#844653]">
                           {getGroupLabel(r)}
                         </span>
                         <div className="flex gap-1 shrink-0">
@@ -527,14 +527,14 @@ export default function AdminReservationsCalendar() {
                           {getStatusBadge(r.status)}
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-[#6b6b4e]">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-[#A14F62]">
                         <div>
                           <span className="text-[#8b8b6e]">Contact: </span>
                           <span className="font-medium">{r.name}</span>
                         </div>
                         <div>
                           <span className="text-[#8b8b6e]">Places: </span>
-                          <span className="font-bold text-[#5d5a3c]">{r.seatsTotal}</span>
+                          <span className="font-bold text-[#844653]">{r.seatsTotal}</span>
                         </div>
                         {r.phone && (
                           <div>

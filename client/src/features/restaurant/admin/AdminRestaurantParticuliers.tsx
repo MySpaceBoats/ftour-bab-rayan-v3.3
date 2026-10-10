@@ -136,7 +136,7 @@ export default function AdminRestaurantParticuliers() {
           </Link>
           <div>
             <h1 className="font-bold text-lg flex items-center gap-2">
-              <UtensilsCrossed className="h-5 w-5 text-[#5d5a3c]" />
+              <UtensilsCrossed className="h-5 w-5 text-[#844653]" />
               Réservations Particuliers
             </h1>
             <p className="text-xs text-muted-foreground">

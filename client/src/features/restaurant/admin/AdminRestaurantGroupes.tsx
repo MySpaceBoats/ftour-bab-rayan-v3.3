@@ -683,7 +683,7 @@ export default function AdminRestaurantGroupes() {
           </Link>
           <div>
             <h1 className="font-bold text-lg flex items-center gap-2">
-              <UsersRound className="h-5 w-5 text-[#5d5a3c]" />
+              <UsersRound className="h-5 w-5 text-[#844653]" />
               Réservations Restaurant
             </h1>
             <p className="text-xs text-muted-foreground">

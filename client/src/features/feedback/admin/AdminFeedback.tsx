@@ -200,7 +200,7 @@ function ResponseDetailDialog({
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="bg-[#2D2B15] border-[#F2E9D3]/20 text-[#F2E9D3] max-w-lg max-h-[80vh] overflow-y-auto">
+      <DialogContent className="bg-[#412028] border-[#F2E9D3]/20 text-[#F2E9D3] max-w-lg max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-[#F2E9D3]">
             Détail du feedback #{response.id}
@@ -268,7 +268,7 @@ function ResponseDetailDialog({
                   <StarDisplay rating={a.answer_rating} />
                 )}
                 {a.answer_text && (
-                  <p className="text-[#F2E9D3]/90 text-sm italic bg-[#3D3B1E] px-3 py-2 rounded">
+                  <p className="text-[#F2E9D3]/90 text-sm italic bg-[#592C37] px-3 py-2 rounded">
                     "{a.answer_text}"
                   </p>
                 )}
@@ -292,7 +292,7 @@ function ResponseDetailDialog({
                 {response.message && (
                   <div>
                     <p className="text-[#C9B97A] text-sm mb-1">Commentaire</p>
-                    <p className="text-[#F2E9D3]/90 text-sm italic bg-[#3D3B1E] px-3 py-2 rounded">
+                    <p className="text-[#F2E9D3]/90 text-sm italic bg-[#592C37] px-3 py-2 rounded">
                       "{response.message}"
                     </p>
                   </div>
@@ -314,12 +314,12 @@ function ResponseDetailDialog({
               <SelectTrigger className={`border ${config.bg} text-[#F2E9D3]`}>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-[#2D2B15] border-[#F2E9D3]/20">
+              <SelectContent className="bg-[#412028] border-[#F2E9D3]/20">
                 {Object.entries(MODERATION_CONFIG).map(([k, v]) => (
                   <SelectItem
                     key={k}
                     value={k}
-                    className="text-[#F2E9D3] focus:bg-[#3D3B1E]"
+                    className="text-[#F2E9D3] focus:bg-[#592C37]"
                   >
                     {v.label}
                   </SelectItem>
@@ -452,7 +452,7 @@ export default function AdminFeedback() {
   ].filter(d => d.value > 0);
 
   return (
-    <div className="min-h-screen bg-[#1A1910] text-[#F2E9D3] p-6">
+    <div className="min-h-screen bg-[#261318] text-[#F2E9D3] p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
@@ -509,7 +509,7 @@ export default function AdminFeedback() {
       ) : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-            <Card className="bg-[#2D2B15] border-[#F2E9D3]/10">
+            <Card className="bg-[#412028] border-[#F2E9D3]/10">
               <CardContent className="p-4">
                 <p className="text-[#C9B97A] text-xs mb-1">Total feedbacks</p>
                 <p className="text-3xl font-bold text-[#F2E9D3]">
@@ -517,7 +517,7 @@ export default function AdminFeedback() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="bg-[#2D2B15] border-[#F2E9D3]/10">
+            <Card className="bg-[#412028] border-[#F2E9D3]/10">
               <CardContent className="p-4">
                 <p className="text-[#C9B97A] text-xs mb-1 flex items-center gap-1">
                   <Star className="w-3 h-3" /> Note moyenne
@@ -527,7 +527,7 @@ export default function AdminFeedback() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="bg-[#2D2B15] border-[#F2E9D3]/10">
+            <Card className="bg-[#412028] border-[#F2E9D3]/10">
               <CardContent className="p-4">
                 <p className="text-[#C9B97A] text-xs mb-1 flex items-center gap-1">
                   <ThumbsUp className="w-3 h-3" /> Recommandation
@@ -537,7 +537,7 @@ export default function AdminFeedback() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="bg-[#2D2B15] border-[#F2E9D3]/10">
+            <Card className="bg-[#412028] border-[#F2E9D3]/10">
               <CardContent className="p-4">
                 <p className="text-[#C9B97A] text-xs mb-1 flex items-center gap-1">
                   <EyeOff className="w-3 h-3" /> Anonymes
@@ -547,7 +547,7 @@ export default function AdminFeedback() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="bg-[#2D2B15] border-[#F2E9D3]/10">
+            <Card className="bg-[#412028] border-[#F2E9D3]/10">
               <CardContent className="p-4">
                 <p className="text-[#C9B97A] text-xs mb-1 flex items-center gap-1">
                   <Eye className="w-3 h-3" /> Identifiés
@@ -562,7 +562,7 @@ export default function AdminFeedback() {
           {/* Charts */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {/* Rating distribution */}
-            <Card className="bg-[#2D2B15] border-[#F2E9D3]/10">
+            <Card className="bg-[#412028] border-[#F2E9D3]/10">
               <CardHeader className="pb-2">
                 <CardTitle className="text-[#F2E9D3] text-sm">
                   Distribution des notes
@@ -582,7 +582,7 @@ export default function AdminFeedback() {
                     />
                     <Tooltip
                       contentStyle={{
-                        background: "#2D2B15",
+                        background: "#412028",
                         border: "1px solid #C9B97A/30",
                         color: "#F2E9D3",
                       }}
@@ -594,7 +594,7 @@ export default function AdminFeedback() {
             </Card>
 
             {/* Timeline */}
-            <Card className="bg-[#2D2B15] border-[#F2E9D3]/10">
+            <Card className="bg-[#412028] border-[#F2E9D3]/10">
               <CardHeader className="pb-2">
                 <CardTitle className="text-[#F2E9D3] text-sm flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-[#C9B97A]" />
@@ -615,7 +615,7 @@ export default function AdminFeedback() {
                     />
                     <Tooltip
                       contentStyle={{
-                        background: "#2D2B15",
+                        background: "#412028",
                         border: "1px solid #C9B97A/30",
                         color: "#F2E9D3",
                       }}
@@ -633,7 +633,7 @@ export default function AdminFeedback() {
             </Card>
 
             {/* Source */}
-            <Card className="bg-[#2D2B15] border-[#F2E9D3]/10">
+            <Card className="bg-[#412028] border-[#F2E9D3]/10">
               <CardHeader className="pb-2">
                 <CardTitle className="text-[#F2E9D3] text-sm">
                   Source des feedbacks
@@ -664,7 +664,7 @@ export default function AdminFeedback() {
                         </Pie>
                         <Tooltip
                           contentStyle={{
-                            background: "#2D2B15",
+                            background: "#412028",
                             border: "1px solid #C9B97A/30",
                             color: "#F2E9D3",
                           }}
@@ -700,7 +700,7 @@ export default function AdminFeedback() {
       )}
 
       {/* Filtres */}
-      <Card className="bg-[#2D2B15] border-[#F2E9D3]/10 mb-6">
+      <Card className="bg-[#412028] border-[#F2E9D3]/10 mb-6">
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-3 items-end">
             <div>
@@ -709,7 +709,7 @@ export default function AdminFeedback() {
                 type="date"
                 value={fromDate}
                 onChange={e => setFromDate(e.target.value)}
-                className="bg-[#3D3B1E] border border-[#F2E9D3]/20 text-[#F2E9D3] rounded px-3 py-1.5 text-sm"
+                className="bg-[#592C37] border border-[#F2E9D3]/20 text-[#F2E9D3] rounded px-3 py-1.5 text-sm"
               />
             </div>
             <div>
@@ -718,7 +718,7 @@ export default function AdminFeedback() {
                 type="date"
                 value={toDate}
                 onChange={e => setToDate(e.target.value)}
-                className="bg-[#3D3B1E] border border-[#F2E9D3]/20 text-[#F2E9D3] rounded px-3 py-1.5 text-sm"
+                className="bg-[#592C37] border border-[#F2E9D3]/20 text-[#F2E9D3] rounded px-3 py-1.5 text-sm"
               />
             </div>
             <div>
@@ -727,25 +727,25 @@ export default function AdminFeedback() {
                 value={sourceFilter}
                 onValueChange={v => setSourceFilter(v as any)}
               >
-                <SelectTrigger className="bg-[#3D3B1E] border-[#F2E9D3]/20 text-[#F2E9D3] w-40">
+                <SelectTrigger className="bg-[#592C37] border-[#F2E9D3]/20 text-[#F2E9D3] w-40">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#2D2B15] border-[#F2E9D3]/20">
+                <SelectContent className="bg-[#412028] border-[#F2E9D3]/20">
                   <SelectItem
                     value="all"
-                    className="text-[#F2E9D3] focus:bg-[#3D3B1E]"
+                    className="text-[#F2E9D3] focus:bg-[#592C37]"
                   >
                     Toutes sources
                   </SelectItem>
                   <SelectItem
                     value="public_page"
-                    className="text-[#F2E9D3] focus:bg-[#3D3B1E]"
+                    className="text-[#F2E9D3] focus:bg-[#592C37]"
                   >
                     Page web
                   </SelectItem>
                   <SelectItem
                     value="email_campaign"
-                    className="text-[#F2E9D3] focus:bg-[#3D3B1E]"
+                    className="text-[#F2E9D3] focus:bg-[#592C37]"
                   >
                     Email
                   </SelectItem>
@@ -758,13 +758,13 @@ export default function AdminFeedback() {
                 value={moderationFilter}
                 onValueChange={v => setModerationFilter(v as any)}
               >
-                <SelectTrigger className="bg-[#3D3B1E] border-[#F2E9D3]/20 text-[#F2E9D3] w-40">
+                <SelectTrigger className="bg-[#592C37] border-[#F2E9D3]/20 text-[#F2E9D3] w-40">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#2D2B15] border-[#F2E9D3]/20">
+                <SelectContent className="bg-[#412028] border-[#F2E9D3]/20">
                   <SelectItem
                     value="all"
-                    className="text-[#F2E9D3] focus:bg-[#3D3B1E]"
+                    className="text-[#F2E9D3] focus:bg-[#592C37]"
                   >
                     Tous statuts
                   </SelectItem>
@@ -772,7 +772,7 @@ export default function AdminFeedback() {
                     <SelectItem
                       key={k}
                       value={k}
-                      className="text-[#F2E9D3] focus:bg-[#3D3B1E]"
+                      className="text-[#F2E9D3] focus:bg-[#592C37]"
                     >
                       {v.label}
                     </SelectItem>
@@ -798,7 +798,7 @@ export default function AdminFeedback() {
       </Card>
 
       {/* Table des réponses */}
-      <Card className="bg-[#2D2B15] border-[#F2E9D3]/10">
+      <Card className="bg-[#412028] border-[#F2E9D3]/10">
         <CardHeader>
           <CardTitle className="text-[#F2E9D3] text-lg">
             Réponses ({listQuery.data?.total ?? 0})
@@ -855,7 +855,7 @@ export default function AdminFeedback() {
                     return (
                       <tr
                         key={r.id}
-                        className="border-b border-[#F2E9D3]/5 hover:bg-[#3D3B1E]/50 cursor-pointer"
+                        className="border-b border-[#F2E9D3]/5 hover:bg-[#592C37]/50 cursor-pointer"
                         onClick={() => setSelectedResponse(r)}
                       >
                         <td className="py-3 px-3 text-[#F2E9D3]/70 whitespace-nowrap">
@@ -933,7 +933,7 @@ export default function AdminFeedback() {
         </CardContent>
       </Card>
 
-      <Card className="bg-[#2D2B15] border-[#F2E9D3]/10 mt-8">
+      <Card className="bg-[#412028] border-[#F2E9D3]/10 mt-8">
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <CardTitle className="text-[#F2E9D3] text-lg">
@@ -958,10 +958,10 @@ export default function AdminFeedback() {
               value={siteTypeFilter}
               onValueChange={(v: any) => setSiteTypeFilter(v)}
             >
-              <SelectTrigger className="w-[170px] bg-[#2D2B15] border-[#F2E9D3]/20">
+              <SelectTrigger className="w-[170px] bg-[#412028] border-[#F2E9D3]/20">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-[#2D2B15] border-[#F2E9D3]/20">
+              <SelectContent className="bg-[#412028] border-[#F2E9D3]/20">
                 <SelectItem value="all" className="text-[#F2E9D3]">
                   Tous types
                 </SelectItem>
@@ -986,10 +986,10 @@ export default function AdminFeedback() {
               value={siteMinRating}
               onValueChange={(v: any) => setSiteMinRating(v)}
             >
-              <SelectTrigger className="w-[160px] bg-[#2D2B15] border-[#F2E9D3]/20">
+              <SelectTrigger className="w-[160px] bg-[#412028] border-[#F2E9D3]/20">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-[#2D2B15] border-[#F2E9D3]/20">
+              <SelectContent className="bg-[#412028] border-[#F2E9D3]/20">
                 <SelectItem value="all" className="text-[#F2E9D3]">
                   Toutes notes
                 </SelectItem>
@@ -1014,10 +1014,10 @@ export default function AdminFeedback() {
               value={siteStatusFilter}
               onValueChange={(v: any) => setSiteStatusFilter(v)}
             >
-              <SelectTrigger className="w-[160px] bg-[#2D2B15] border-[#F2E9D3]/20">
+              <SelectTrigger className="w-[160px] bg-[#412028] border-[#F2E9D3]/20">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-[#2D2B15] border-[#F2E9D3]/20">
+              <SelectContent className="bg-[#412028] border-[#F2E9D3]/20">
                 <SelectItem value="all" className="text-[#F2E9D3]">
                   Tous statuts
                 </SelectItem>
@@ -1109,7 +1109,7 @@ export default function AdminFeedback() {
                           <SelectTrigger className="h-8 w-[130px] border-[#F2E9D3]/20 text-[#F2E9D3]">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-[#2D2B15] border-[#F2E9D3]/20">
+                          <SelectContent className="bg-[#412028] border-[#F2E9D3]/20">
                             <SelectItem value="new" className="text-[#F2E9D3]">
                               new
                             </SelectItem>

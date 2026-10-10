@@ -138,7 +138,7 @@ export default function AdminRestaurantEntreprises() {
           </Link>
           <div>
             <h1 className="font-bold text-lg flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-[#5d5a3c]" />
+              <Building2 className="h-5 w-5 text-[#844653]" />
               Réservations Entreprises
             </h1>
             <p className="text-xs text-muted-foreground">

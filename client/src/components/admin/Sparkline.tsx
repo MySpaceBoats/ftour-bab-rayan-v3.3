@@ -6,7 +6,7 @@ interface SparklineProps {
   fill?: boolean;
 }
 
-export default function Sparkline({ values, width = 80, height = 24, color = '#5E5B34', fill = true }: SparklineProps) {
+export default function Sparkline({ values, width = 80, height = 24, color = '#864654', fill = true }: SparklineProps) {
   if (!values || values.length < 2) return null;
   const max = Math.max(...values);
   const min = Math.min(...values);

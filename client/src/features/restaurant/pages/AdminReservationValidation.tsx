@@ -44,7 +44,7 @@ export default function AdminReservationValidation() {
             )}
 
             {status === "idle" && (
-              <p className="text-sm text-[#5d5a3c]">
+              <p className="text-sm text-[#844653]">
                 Validation en cours...
               </p>
             )}
@@ -60,11 +60,11 @@ export default function AdminReservationValidation() {
                     Reservation validee avec succes.
                   </p>
                 )}
-                <p className="text-sm text-[#5d5a3c]">
+                <p className="text-sm text-[#844653]">
                   Reference : <strong>{mutation.data?.reference}</strong>
                 </p>
                 {!mutation.data?.alreadyValidated && (
-                  <p className="text-sm text-[#5d5a3c]">
+                  <p className="text-sm text-[#844653]">
                     Un email de confirmation a ete envoye au client ({mutation.data?.clientEmail}).
                   </p>
                 )}

@@ -118,14 +118,14 @@ export default function AdminRestaurants() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#5d5a3c]">Restaurants solidaires</h1>
-            <p className="text-[#6b6b4e]">Gérez les lieux de Ftour</p>
+            <h1 className="text-2xl font-bold text-[#844653]">Restaurants solidaires</h1>
+            <p className="text-[#A14F62]">Gérez les lieux de Ftour</p>
           </div>
           <div className="flex gap-2">
             <Button
               variant="outline"
               onClick={() => refetch()}
-              className="border-[#5d5a3c] text-[#5d5a3c]"
+              className="border-[#844653] text-[#844653]"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Actualiser
@@ -136,7 +136,7 @@ export default function AdminRestaurants() {
                 setFormData(defaultFormData);
                 setShowDialog(true);
               }}
-              className="bg-[#5d5a3c] hover:bg-[#4a4730] text-[#f5f5dc]"
+              className="bg-[#844653] hover:bg-[#6B3643] text-[#f5f5dc]"
             >
               <Plus className="w-4 h-4 mr-2" />
               Ajouter un restaurant
@@ -147,7 +147,7 @@ export default function AdminRestaurants() {
         {/* Restaurants Grid */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin w-8 h-8 border-4 border-[#5d5a3c] border-t-transparent rounded-full"></div>
+            <div className="animate-spin w-8 h-8 border-4 border-[#844653] border-t-transparent rounded-full"></div>
           </div>
         ) : restaurants && restaurants.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -155,7 +155,7 @@ export default function AdminRestaurants() {
               <Card key={restaurant.id} className={`border-[#d4d4aa] ${!restaurant.active ? 'opacity-60' : ''}`}>
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg text-[#5d5a3c] flex items-center gap-2">
+                    <CardTitle className="text-lg text-[#844653] flex items-center gap-2">
                       <Utensils className="w-5 h-5" />
                       {restaurant.name}
                     </CardTitle>
@@ -165,29 +165,29 @@ export default function AdminRestaurants() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex items-start gap-2 text-sm text-[#6b6b4e]">
+                  <div className="flex items-start gap-2 text-sm text-[#A14F62]">
                     <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
                     <span>{restaurant.address}</span>
                   </div>
                   {restaurant.phone && (
-                    <div className="flex items-center gap-2 text-sm text-[#6b6b4e]">
+                    <div className="flex items-center gap-2 text-sm text-[#A14F62]">
                       <Phone className="w-4 h-4" />
                       <span>{restaurant.phone}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-2 text-sm text-[#6b6b4e]">
+                  <div className="flex items-center gap-2 text-sm text-[#A14F62]">
                     <Users className="w-4 h-4" />
                     <span>Capacité: {restaurant.capacity} places</span>
                   </div>
                   {restaurant.description && (
-                    <p className="text-sm text-[#6b6b4e] line-clamp-2">{restaurant.description}</p>
+                    <p className="text-sm text-[#A14F62] line-clamp-2">{restaurant.description}</p>
                   )}
                   <div className="flex gap-2 pt-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleEdit(restaurant)}
-                      className="flex-1 border-[#5d5a3c] text-[#5d5a3c]"
+                      className="flex-1 border-[#844653] text-[#844653]"
                     >
                       <Pencil className="w-4 h-4 mr-1" />
                       Modifier
@@ -208,15 +208,15 @@ export default function AdminRestaurants() {
         ) : (
           <Card className="border-[#d4d4aa]">
             <CardContent className="py-12 text-center">
-              <Utensils className="w-12 h-12 mx-auto mb-4 text-[#6b6b4e] opacity-50" />
-              <p className="text-[#6b6b4e]">Aucun restaurant configuré</p>
+              <Utensils className="w-12 h-12 mx-auto mb-4 text-[#A14F62] opacity-50" />
+              <p className="text-[#A14F62]">Aucun restaurant configuré</p>
               <Button
                 onClick={() => {
                   setEditingId(null);
                   setFormData(defaultFormData);
                   setShowDialog(true);
                 }}
-                className="mt-4 bg-[#5d5a3c] hover:bg-[#4a4730] text-[#f5f5dc]"
+                className="mt-4 bg-[#844653] hover:bg-[#6B3643] text-[#f5f5dc]"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Ajouter le premier restaurant
@@ -229,7 +229,7 @@ export default function AdminRestaurants() {
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle className="text-[#5d5a3c]">
+              <DialogTitle className="text-[#844653]">
                 {editingId ? 'Modifier le restaurant' : 'Nouveau restaurant'}
               </DialogTitle>
               <DialogDescription>
@@ -238,7 +238,7 @@ export default function AdminRestaurants() {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="name" className="text-[#5d5a3c]">Nom *</Label>
+                <Label htmlFor="name" className="text-[#844653]">Nom *</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -248,7 +248,7 @@ export default function AdminRestaurants() {
                 />
               </div>
               <div>
-                <Label htmlFor="address" className="text-[#5d5a3c]">Adresse *</Label>
+                <Label htmlFor="address" className="text-[#844653]">Adresse *</Label>
                 <Input
                   id="address"
                   value={formData.address}
@@ -258,7 +258,7 @@ export default function AdminRestaurants() {
                 />
               </div>
               <div>
-                <Label htmlFor="phone" className="text-[#5d5a3c]">Téléphone</Label>
+                <Label htmlFor="phone" className="text-[#844653]">Téléphone</Label>
                 <Input
                   id="phone"
                   value={formData.phone}
@@ -268,7 +268,7 @@ export default function AdminRestaurants() {
                 />
               </div>
               <div>
-                <Label htmlFor="capacity" className="text-[#5d5a3c]">Capacité (places)</Label>
+                <Label htmlFor="capacity" className="text-[#844653]">Capacité (places)</Label>
                 <Input
                   id="capacity"
                   type="number"
@@ -279,7 +279,7 @@ export default function AdminRestaurants() {
                 />
               </div>
               <div>
-                <Label htmlFor="description" className="text-[#5d5a3c]">Description</Label>
+                <Label htmlFor="description" className="text-[#844653]">Description</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
@@ -295,7 +295,7 @@ export default function AdminRestaurants() {
                   checked={formData.active}
                   onCheckedChange={(checked) => setFormData({ ...formData, active: checked })}
                 />
-                <Label htmlFor="active" className="text-[#5d5a3c]">Restaurant actif</Label>
+                <Label htmlFor="active" className="text-[#844653]">Restaurant actif</Label>
               </div>
             </div>
             <DialogFooter>
@@ -305,7 +305,7 @@ export default function AdminRestaurants() {
               <Button
                 onClick={handleSubmit}
                 disabled={createRestaurant.isPending || updateRestaurant.isPending}
-                className="bg-[#5d5a3c] hover:bg-[#4a4730] text-[#f5f5dc]"
+                className="bg-[#844653] hover:bg-[#6B3643] text-[#f5f5dc]"
               >
                 {(createRestaurant.isPending || updateRestaurant.isPending) ? (
                   <div className="animate-spin w-4 h-4 border-2 border-[#f5f5dc] border-t-transparent rounded-full mr-2" />

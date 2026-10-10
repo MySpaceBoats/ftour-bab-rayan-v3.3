@@ -126,9 +126,9 @@ export default function AdminElections() {
   return (
     <div className="min-h-screen bg-stone-50">
       {/* Header */}
-      <div className="bg-[#4A4829] text-[#F2E9D3] px-6 py-4 flex items-center gap-4">
+      <div className="bg-[#6B3643] text-[#F2E9D3] px-6 py-4 flex items-center gap-4">
         <Link href="/admin">
-          <Button variant="ghost" size="icon" className="text-[#CDBB8A] hover:text-[#F2E9D3] hover:bg-[#5E5B34]">
+          <Button variant="ghost" size="icon" className="text-[#CDBB8A] hover:text-[#F2E9D3] hover:bg-[#864654]">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
@@ -475,7 +475,7 @@ export default function AdminElections() {
                       <Button
                         onClick={handleUpdateMaxManagers}
                         disabled={updateSettings.isPending || !maxManagersInput}
-                        className="bg-[#4A4829] text-[#F2E9D3] hover:bg-[#3A3820]"
+                        className="bg-[#6B3643] text-[#F2E9D3] hover:bg-[#542A34]"
                       >
                         {updateSettings.isPending ? (
                           <Loader2 className="h-4 w-4 animate-spin" />

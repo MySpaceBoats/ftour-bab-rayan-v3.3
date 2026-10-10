@@ -118,7 +118,7 @@ function CreateCampaignDialog({
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="bg-[#2D2B15] border-[#F2E9D3]/20 text-[#F2E9D3] max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="bg-[#412028] border-[#F2E9D3]/20 text-[#F2E9D3] max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-[#F2E9D3] flex items-center gap-2">
             <Plus className="w-5 h-5 text-[#C9B97A]" />
@@ -133,21 +133,21 @@ function CreateCampaignDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ex: Feedback Ramadan 2026"
-              className="bg-[#3D3B1E] border-[#F2E9D3]/20 text-[#F2E9D3] placeholder:text-[#F2E9D3]/30"
+              className="bg-[#592C37] border-[#F2E9D3]/20 text-[#F2E9D3] placeholder:text-[#F2E9D3]/30"
             />
           </div>
 
           <div>
             <Label className="text-[#C9B97A] text-sm mb-1 block">Groupe destinataire *</Label>
             <Select value={targetGroup} onValueChange={setTargetGroup}>
-              <SelectTrigger className="bg-[#3D3B1E] border-[#F2E9D3]/20 text-[#F2E9D3]">
+              <SelectTrigger className="bg-[#592C37] border-[#F2E9D3]/20 text-[#F2E9D3]">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-[#2D2B15] border-[#F2E9D3]/20">
-                <SelectItem value="volunteers" className="text-[#F2E9D3] focus:bg-[#3D3B1E]">Bénévoles</SelectItem>
-                <SelectItem value="restaurant_clients" className="text-[#F2E9D3] focus:bg-[#3D3B1E]">Clients restaurant</SelectItem>
-                <SelectItem value="foodstore_clients" className="text-[#F2E9D3] focus:bg-[#3D3B1E]">Clients foodstore</SelectItem>
-                <SelectItem value="all" className="text-[#F2E9D3] focus:bg-[#3D3B1E]">Tous</SelectItem>
+              <SelectContent className="bg-[#412028] border-[#F2E9D3]/20">
+                <SelectItem value="volunteers" className="text-[#F2E9D3] focus:bg-[#592C37]">Bénévoles</SelectItem>
+                <SelectItem value="restaurant_clients" className="text-[#F2E9D3] focus:bg-[#592C37]">Clients restaurant</SelectItem>
+                <SelectItem value="foodstore_clients" className="text-[#F2E9D3] focus:bg-[#592C37]">Clients foodstore</SelectItem>
+                <SelectItem value="all" className="text-[#F2E9D3] focus:bg-[#592C37]">Tous</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -155,12 +155,12 @@ function CreateCampaignDialog({
           <div>
             <Label className="text-[#C9B97A] text-sm mb-1 block">Formulaire *</Label>
             <Select value={formId} onValueChange={setFormId}>
-              <SelectTrigger className="bg-[#3D3B1E] border-[#F2E9D3]/20 text-[#F2E9D3]">
+              <SelectTrigger className="bg-[#592C37] border-[#F2E9D3]/20 text-[#F2E9D3]">
                 <SelectValue placeholder="Choisir un formulaire..." />
               </SelectTrigger>
-              <SelectContent className="bg-[#2D2B15] border-[#F2E9D3]/20">
+              <SelectContent className="bg-[#412028] border-[#F2E9D3]/20">
                 {forms.map((f: any) => (
-                  <SelectItem key={f.id} value={String(f.id)} className="text-[#F2E9D3] focus:bg-[#3D3B1E]">
+                  <SelectItem key={f.id} value={String(f.id)} className="text-[#F2E9D3] focus:bg-[#592C37]">
                     {f.title}
                   </SelectItem>
                 ))}
@@ -173,7 +173,7 @@ function CreateCampaignDialog({
             <Input
               value={emailSubject}
               onChange={(e) => setEmailSubject(e.target.value)}
-              className="bg-[#3D3B1E] border-[#F2E9D3]/20 text-[#F2E9D3] placeholder:text-[#F2E9D3]/30"
+              className="bg-[#592C37] border-[#F2E9D3]/20 text-[#F2E9D3] placeholder:text-[#F2E9D3]/30"
             />
           </div>
 
@@ -183,7 +183,7 @@ function CreateCampaignDialog({
               value={emailContent}
               onChange={(e) => setEmailContent(e.target.value)}
               rows={8}
-              className="bg-[#3D3B1E] border-[#F2E9D3]/20 text-[#F2E9D3] placeholder:text-[#F2E9D3]/30"
+              className="bg-[#592C37] border-[#F2E9D3]/20 text-[#F2E9D3] placeholder:text-[#F2E9D3]/30"
             />
             <p className="text-[#C9B97A]/50 text-xs mt-1">
               Un bouton "Donner mon feedback" sera automatiquement ajouté avec le lien personnalisé.
@@ -198,7 +198,7 @@ function CreateCampaignDialog({
           <Button
             onClick={handleCreate}
             disabled={createMutation.isPending}
-            className="bg-[#C9B97A] hover:bg-[#B5A56A] text-[#2D2B15] font-semibold"
+            className="bg-[#C9B97A] hover:bg-[#B5A56A] text-[#412028] font-semibold"
           >
             {createMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
             Créer la campagne
@@ -219,7 +219,7 @@ function CampaignStatsDialog({ campaignId, onClose }: { campaignId: number; onCl
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="bg-[#2D2B15] border-[#F2E9D3]/20 text-[#F2E9D3] max-w-md">
+      <DialogContent className="bg-[#412028] border-[#F2E9D3]/20 text-[#F2E9D3] max-w-md">
         <DialogHeader>
           <DialogTitle className="text-[#F2E9D3]">Statistiques campagne</DialogTitle>
         </DialogHeader>
@@ -230,18 +230,18 @@ function CampaignStatsDialog({ campaignId, onClose }: { campaignId: number; onCl
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-[#3D3B1E] rounded-lg">
+            <div className="text-center p-4 bg-[#592C37] rounded-lg">
               <p className="text-3xl font-bold text-[#F2E9D3]">{stats?.total ?? 0}</p>
               <p className="text-[#C9B97A] text-xs mt-1">Envoyés</p>
             </div>
-            <div className="text-center p-4 bg-[#3D3B1E] rounded-lg">
+            <div className="text-center p-4 bg-[#592C37] rounded-lg">
               <p className="text-3xl font-bold text-blue-400">{stats?.opened ?? 0}</p>
               <p className="text-[#C9B97A] text-xs mt-1">Ouverts</p>
               {(stats?.total ?? 0) > 0 && (
                 <p className="text-[#C9B97A]/50 text-xs">{Math.round(((stats?.opened ?? 0) / (stats?.total ?? 1)) * 100)}%</p>
               )}
             </div>
-            <div className="text-center p-4 bg-[#3D3B1E] rounded-lg">
+            <div className="text-center p-4 bg-[#592C37] rounded-lg">
               <p className="text-3xl font-bold text-green-400">{stats?.submitted ?? 0}</p>
               <p className="text-[#C9B97A] text-xs mt-1">Répondus</p>
               {(stats?.total ?? 0) > 0 && (
@@ -283,7 +283,7 @@ export default function AdminFeedbackCampagnes() {
   const forms = formsQuery.data ?? [];
 
   return (
-    <div className="min-h-screen bg-[#1A1910] text-[#F2E9D3] p-6">
+    <div className="min-h-screen bg-[#261318] text-[#F2E9D3] p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
@@ -303,7 +303,7 @@ export default function AdminFeedbackCampagnes() {
         </div>
         <Button
           onClick={() => setShowCreate(true)}
-          className="bg-[#C9B97A] hover:bg-[#B5A56A] text-[#2D2B15] font-semibold"
+          className="bg-[#C9B97A] hover:bg-[#B5A56A] text-[#412028] font-semibold"
         >
           <Plus className="w-4 h-4 mr-2" />
           Nouvelle campagne
@@ -311,7 +311,7 @@ export default function AdminFeedbackCampagnes() {
       </div>
 
       {/* Info box */}
-      <Card className="bg-[#2D2B15] border-[#C9B97A]/30 mb-6">
+      <Card className="bg-[#412028] border-[#C9B97A]/30 mb-6">
         <CardContent className="p-4 flex gap-3 items-start">
           <AlertTriangle className="w-5 h-5 text-[#C9B97A] shrink-0 mt-0.5" />
           <div className="text-sm text-[#F2E9D3]/80">
@@ -328,13 +328,13 @@ export default function AdminFeedbackCampagnes() {
           <Loader2 className="w-8 h-8 animate-spin text-[#C9B97A]" />
         </div>
       ) : campaigns.length === 0 ? (
-        <Card className="bg-[#2D2B15] border-[#F2E9D3]/10">
+        <Card className="bg-[#412028] border-[#F2E9D3]/10">
           <CardContent className="p-12 text-center">
             <Mail className="w-12 h-12 text-[#C9B97A]/40 mx-auto mb-4" />
             <p className="text-[#C9B97A]/60">Aucune campagne créée</p>
             <Button
               onClick={() => setShowCreate(true)}
-              className="mt-4 bg-[#C9B97A] hover:bg-[#B5A56A] text-[#2D2B15] font-semibold"
+              className="mt-4 bg-[#C9B97A] hover:bg-[#B5A56A] text-[#412028] font-semibold"
             >
               Créer la première campagne
             </Button>
@@ -347,7 +347,7 @@ export default function AdminFeedbackCampagnes() {
             const form = (campaign.feedback_forms as any);
 
             return (
-              <Card key={campaign.id} className="bg-[#2D2B15] border-[#F2E9D3]/10">
+              <Card key={campaign.id} className="bg-[#412028] border-[#F2E9D3]/10">
                 <CardContent className="p-5">
                   <div className="flex flex-col md:flex-row md:items-center gap-4">
                     <div className="flex-1">
@@ -398,7 +398,7 @@ export default function AdminFeedbackCampagnes() {
                       {campaign.status !== "sent" && (
                         <Button
                           size="sm"
-                          className="bg-[#C9B97A] hover:bg-[#B5A56A] text-[#2D2B15] font-semibold"
+                          className="bg-[#C9B97A] hover:bg-[#B5A56A] text-[#412028] font-semibold"
                           onClick={() => setSendConfirm(campaign.id)}
                         >
                           <Send className="w-3.5 h-3.5 mr-1.5" />
@@ -426,7 +426,7 @@ export default function AdminFeedbackCampagnes() {
       {/* Send confirm dialog */}
       {sendConfirm !== null && (
         <AlertDialog open onOpenChange={() => setSendConfirm(null)}>
-          <AlertDialogContent className="bg-[#2D2B15] border-[#F2E9D3]/20 text-[#F2E9D3]">
+          <AlertDialogContent className="bg-[#412028] border-[#F2E9D3]/20 text-[#F2E9D3]">
             <AlertDialogHeader>
               <AlertDialogTitle className="text-[#F2E9D3]">Confirmer l'envoi</AlertDialogTitle>
               <AlertDialogDescription className="text-[#C9B97A]/80">
@@ -435,11 +435,11 @@ export default function AdminFeedbackCampagnes() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel className="border-[#F2E9D3]/20 text-[#F2E9D3] bg-transparent hover:bg-[#3D3B1E]">
+              <AlertDialogCancel className="border-[#F2E9D3]/20 text-[#F2E9D3] bg-transparent hover:bg-[#592C37]">
                 Annuler
               </AlertDialogCancel>
               <AlertDialogAction
-                className="bg-[#C9B97A] hover:bg-[#B5A56A] text-[#2D2B15] font-semibold"
+                className="bg-[#C9B97A] hover:bg-[#B5A56A] text-[#412028] font-semibold"
                 onClick={() => sendMutation.mutate({ campaignId: sendConfirm! })}
                 disabled={sendMutation.isPending}
               >

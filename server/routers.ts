@@ -3666,14 +3666,14 @@ function generateReservationConfirmationEmail(reservation: any) {
 <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f0;">
   <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
     <!-- Header -->
-    <div style="background-color: #5d5a3c; padding: 30px; text-align: center;">
+    <div style="background-color: #844653; padding: 30px; text-align: center;">
       <h1 style="color: #f5f5dc; margin: 0; font-size: 28px;">Ftour Bab Rayan</h1>
       <p style="color: #d4d4aa; margin: 10px 0 0 0; font-size: 14px;">Réservation confirmée</p>
     </div>
     
     <!-- Content -->
     <div style="padding: 30px;">
-      <h2 style="color: #5d5a3c; margin-top: 0;">Bonjour ${reservation.fullName},</h2>
+      <h2 style="color: #844653; margin-top: 0;">Bonjour ${reservation.fullName},</h2>
       
       <p style="color: #333; line-height: 1.6;">
         Votre réservation pour le Ftour solidaire a été confirmée.
@@ -3681,7 +3681,7 @@ function generateReservationConfirmationEmail(reservation: any) {
       
       <!-- Reservation Details -->
       <div style="background-color: #f5f5f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
-        <h3 style="color: #5d5a3c; margin-top: 0;">Détails de votre réservation</h3>
+        <h3 style="color: #844653; margin-top: 0;">Détails de votre réservation</h3>
         <table style="width: 100%; border-collapse: collapse;">
           <tr>
             <td style="padding: 8px 0; color: #666;">Référence:</td>
@@ -3704,21 +3704,21 @@ function generateReservationConfirmationEmail(reservation: any) {
       
       <!-- QR Code Section -->
       <div style="text-align: center; margin: 30px 0;">
-        <p style="color: #5d5a3c; font-weight: bold;">Présentez ce QR code à votre arrivée:</p>
+        <p style="color: #844653; font-weight: bold;">Présentez ce QR code à votre arrivée:</p>
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrUrl)}" 
              alt="QR Code" style="margin: 15px 0;" />
         <p style="color: #666; font-size: 12px;">Référence: ${reservation.referenceCode}</p>
       </div>
       
       <!-- Address -->
-      <div style="background-color: #5d5a3c; color: #f5f5dc; border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <div style="background-color: #844653; color: #f5f5dc; border-radius: 8px; padding: 20px; margin: 20px 0;">
         <h3 style="margin-top: 0;">📍 Adresse</h3>
         <p style="margin: 0;">${reservation.restaurant?.address || "4 rue Bayt Lahm, quartier Palmier, Casablanca"}</p>
       </div>
       
       <!-- Important Notes -->
-      <div style="border-left: 4px solid #5d5a3c; padding-left: 15px; margin: 20px 0;">
-        <h4 style="color: #5d5a3c; margin-top: 0;">Informations importantes</h4>
+      <div style="border-left: 4px solid #844653; padding-left: 15px; margin: 20px 0;">
+        <h4 style="color: #844653; margin-top: 0;">Informations importantes</h4>
         <ul style="color: #666; padding-left: 20px;">
           <li>Présentez-vous 15 minutes avant l'heure du Ftour</li>
           <li>Munissez-vous de ce QR code (imprimé ou sur téléphone)</li>
@@ -3728,7 +3728,7 @@ function generateReservationConfirmationEmail(reservation: any) {
     </div>
     
     <!-- Footer -->
-    <div style="background-color: #5d5a3c; padding: 20px; text-align: center;">
+    <div style="background-color: #844653; padding: 20px; text-align: center;">
       <p style="color: #d4d4aa; margin: 0; font-size: 14px;">
         Association Bab Rayan<br/>
         📞 +212 (0) 666-690534 | ✉️ contact@ftourbabrayan.ma
@@ -4434,12 +4434,12 @@ const restaurantModuleRouter = router({
           <p style="color:rgba(255,255,255,0.9);margin:10px 0 0 0;font-size:14px;">Réservation confirmée</p>
         </td></tr>
         <tr><td style="padding:40px 30px;">
-          <h2 style="color:#5d5a3c;margin:0 0 20px 0;font-size:24px;">Votre réservation est confirmée</h2>
+          <h2 style="color:#844653;margin:0 0 20px 0;font-size:24px;">Votre réservation est confirmée</h2>
           <p style="color:#374151;font-size:16px;line-height:1.6;">Bonjour <strong>${reservation.name}</strong>,</p>
           <p style="color:#374151;font-size:16px;line-height:1.6;">Excellente nouvelle ! Votre réservation au Restaurant Solidaire a été confirmée.</p>
           <table role="presentation" style="width:100%;border-collapse:collapse;background-color:#f5f5f0;border-radius:8px;margin:20px 0;">
             <tr><td style="padding:20px;">
-              <h3 style="color:#5d5a3c;margin:0 0 15px 0;font-size:18px;">Détails de votre réservation</h3>
+              <h3 style="color:#844653;margin:0 0 15px 0;font-size:18px;">Détails de votre réservation</h3>
               <p style="margin:5px 0;color:#374151;"><strong>Type :</strong> ${typeLabel[reservation.type] || reservation.type}</p>
               <p style="margin:5px 0;color:#374151;"><strong>Nombre de places :</strong> ${reservation.seats_total}</p>
               ${reservation.company_name ? `<p style="margin:5px 0;color:#374151;"><strong>Entreprise :</strong> ${reservation.company_name}</p>` : ""}
@@ -4448,7 +4448,7 @@ const restaurantModuleRouter = router({
             </td></tr>
           </table>
           <div style="text-align:center;margin:30px 0;padding:20px;background-color:#ffffff;border:2px dashed #d4a574;border-radius:8px;">
-            <h3 style="color:#5d5a3c;margin:0 0 15px 0;font-size:18px;">Votre QR Code d'accès</h3>
+            <h3 style="color:#844653;margin:0 0 15px 0;font-size:18px;">Votre QR Code d'accès</h3>
             <img src="${qrCodeUrl}" alt="QR Code" style="width:200px;height:200px;margin:10px 0;" />
             <p style="color:#6b7280;font-size:14px;margin:10px 0 0 0;">Présentez ce QR code à l'entrée le jour de votre visite</p>
           </div>

@@ -178,7 +178,7 @@ function FeedbackDetailModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="font-semibold text-[#5E5B34]">Détail du feedback #{item.id}</h2>
+          <h2 className="font-semibold text-[#864654]">Détail du feedback #{item.id}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X size={20} />
           </button>
@@ -261,7 +261,7 @@ function FeedbackDetailModal({
                   disabled={updateMutation.isPending}
                   className={`px-3 py-1 rounded-full text-xs border transition-colors
                     ${item.moderation === m
-                      ? "bg-[#5E5B34] text-white border-[#5E5B34]"
+                      ? "bg-[#864654] text-white border-[#864654]"
                       : "bg-white text-gray-600 border-gray-300 hover:border-[#C9B97A]"
                     }`}
                 >
@@ -360,7 +360,7 @@ export default function AdminEventFeedback() {
       {/* En-tête */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#5E5B34]">Feedback Événement Ramadan</h1>
+          <h1 className="text-2xl font-bold text-[#864654]">Feedback Événement Ramadan</h1>
           <p className="text-gray-500 text-sm mt-0.5">
             Analyse multi-dimensionnelle des retours participants
           </p>
@@ -368,7 +368,7 @@ export default function AdminEventFeedback() {
         <Button
           onClick={handleExport}
           variant="outline"
-          className="flex items-center gap-2 border-[#C9B97A] text-[#5E5B34]"
+          className="flex items-center gap-2 border-[#C9B97A] text-[#864654]"
         >
           <Download size={16} /> Export CSV
         </Button>
@@ -507,7 +507,7 @@ export default function AdminEventFeedback() {
           onClick={() => setExpandedSection(expandedSection === "heatmap" ? null : "heatmap")}
         >
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base text-[#5E5B34]">Scores par section (heatmap)</CardTitle>
+            <CardTitle className="text-base text-[#864654]">Scores par section (heatmap)</CardTitle>
             {expandedSection === "heatmap" ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </div>
         </CardHeader>
@@ -552,7 +552,7 @@ export default function AdminEventFeedback() {
         {/* Par rôle */}
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base text-[#5E5B34]">Scores par rôle</CardTitle>
+            <CardTitle className="text-base text-[#864654]">Scores par rôle</CardTitle>
           </CardHeader>
           <CardContent>
             {analytics?.scoresByRole?.length ? (
@@ -580,7 +580,7 @@ export default function AdminEventFeedback() {
         {/* Par jour */}
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base text-[#5E5B34]">Évolution par jour</CardTitle>
+            <CardTitle className="text-base text-[#864654]">Évolution par jour</CardTitle>
           </CardHeader>
           <CardContent>
             {analytics?.scoresByDay?.length ? (
@@ -597,7 +597,7 @@ export default function AdminEventFeedback() {
                   <Line
                     type="monotone"
                     dataKey="avgScore"
-                    stroke="#5E5B34"
+                    stroke="#864654"
                     strokeWidth={2}
                     dot={{ fill: "#C9B97A", r: 4 }}
                     name="Score moyen"
@@ -615,7 +615,7 @@ export default function AdminEventFeedback() {
       {analytics?.topTags?.length ? (
         <Card className="mb-6 border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base text-[#5E5B34]">Tags les plus fréquents</CardTitle>
+            <CardTitle className="text-base text-[#864654]">Tags les plus fréquents</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
@@ -640,7 +640,7 @@ export default function AdminEventFeedback() {
       <Card className="border-0 shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base text-[#5E5B34]">
+            <CardTitle className="text-base text-[#864654]">
               Réponses ({listData?.total ?? "…"})
             </CardTitle>
             <div className="flex gap-2">
