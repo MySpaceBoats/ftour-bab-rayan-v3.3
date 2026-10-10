@@ -88,3 +88,144 @@ export async function getProfile(d: D1Like, viewerId: number, memberId: number):
     skills: parseSkills(r.skills), open_to_work: Boolean(r.open_to_work), mine: r.id === viewerId,
   };
 }
+
+// ---- feed -------------------------------------------------------------------
+
+export interface PostView {
+  id: number; body: string; link: string | null; created_at: string;
+  author: Person & { headline: string };
+  like_count: number; comment_count: number; liked: boolean; media: string[];
+}
+export interface CommentView { id: number; post_id: number; body: string; created_at: string; author: Person }
+
+/** Only http(s) links are kept (never javascript:, data:, …); returns the normalised URL. */
+export function cleanLink(raw: unknown): string | null {
+  if (raw === undefined || raw === null || raw === "") return null;
+  if (typeof raw !== "string") throw new HubError("invalid", "Lien invalide");
+  let u: URL;
+  try { u = new URL(raw.trim()); } catch { throw new HubError("invalid", "Lien invalide"); }
+  if (u.protocol !== "http:" && u.protocol !== "https:") throw new HubError("invalid", "Lien invalide (http ou https)");
+  if (u.href.length > PRO_LIMITS.link) throw new HubError("invalid", "Lien trop long (300 caractères max)");
+  return u.href;
+}
+
+export async function createPost(d: D1Like, member: MemberRow, input: { body: string; link?: unknown; mediaPaths?: string[] }, nowMs: number): Promise<{ id: number }> {
+  const body = cleanBody(input.body, PRO_LIMITS.post, "Message");
+  const link = cleanLink(input.link);
+  const media = input.mediaPaths ?? [];
+  if (media.length > PRO_LIMITS.media || !media.every(p => isOwnPath(member.id, p))) throw new HubError("invalid", "Photos invalides (4 max)");
+  if ((await recent(d, "pro_posts", "member_id", member.id, nowMs - HOUR_MS)) >= PRO_LIMITS.postsPerHour) throw new HubError("rate_limited", "Trop de publications, réessayez plus tard");
+  // ponytail: post then media are two statements (not atomic); a failed media insert leaves a text-only post
+  const row = await d.prepare("INSERT INTO pro_posts (member_id, body, link, created_at) VALUES (?,?,?,?) RETURNING id").bind(member.id, body, link, iso(nowMs)).first<{ id: number }>();
+  if (media.length) await d.batch(media.map((p, i) => d.prepare("INSERT INTO pro_post_media (post_id, r2_key, position) VALUES (?,?,?)").bind(row!.id, p, i)));
+  return { id: row!.id };
+}
+
+export async function feed(d: D1Like, viewerId: number, cursor: number | null = null, limit = 20): Promise<{ posts: PostView[]; nextCursor: number | null }> {
+  const lim = Math.min(Math.max(Math.trunc(limit) || 20, 1), 50);
+  const { results } = await d.prepare(
+    `SELECT p.id, p.body, p.link, p.created_at, m.id AS author_id, m.display_name AS author_name, m.avatar_key AS author_avatar, COALESCE(pp.headline, '') AS author_headline,
+       (SELECT COUNT(*) FROM pro_likes l WHERE l.post_id = p.id) AS like_count,
+       (SELECT COUNT(*) FROM pro_comments c WHERE c.post_id = p.id AND c.status = 'visible') AS comment_count,
+       EXISTS(SELECT 1 FROM pro_likes l WHERE l.post_id = p.id AND l.member_id = ?) AS liked
+     FROM pro_posts p JOIN hub_members m ON m.id = p.member_id LEFT JOIN pro_profiles pp ON pp.member_id = m.id
+     WHERE p.status = 'visible' AND ${AUTHOR_OK} AND (? IS NULL OR p.id < ?)
+     ORDER BY p.id DESC LIMIT ?`,
+  ).bind(viewerId, cursor, cursor, lim + 1).all<any>();
+  const posts: PostView[] = results.slice(0, lim).map(r => ({
+    id: r.id, body: r.body, link: r.link, created_at: r.created_at,
+    author: { id: r.author_id, display_name: r.author_name, avatar_key: r.author_avatar, headline: r.author_headline },
+    like_count: r.like_count, comment_count: r.comment_count, liked: Boolean(r.liked), media: [],
+  }));
+  if (posts.length) {
+    const ids = posts.map(p => p.id);
+    const m = await d.prepare(`SELECT post_id, r2_key FROM pro_post_media WHERE post_id IN (${ids.map(() => "?").join(",")}) ORDER BY post_id, position`).bind(...ids).all<{ post_id: number; r2_key: string }>();
+    for (const row of m.results) posts.find(p => p.id === row.post_id)!.media.push(row.r2_key);
+  }
+  return { posts, nextCursor: results.length > lim ? posts[posts.length - 1].id : null };
+}
+
+async function visiblePost(d: D1Like, postId: number): Promise<void> {
+  const r = await d.prepare(`SELECT 1 AS ok FROM pro_posts p JOIN hub_members m ON m.id = p.member_id WHERE p.id = ? AND p.status = 'visible' AND ${AUTHOR_OK}`).bind(postId).first();
+  if (!r) throw new HubError("not_found", "Publication introuvable");
+}
+
+export async function toggleLike(d: D1Like, memberId: number, postId: number): Promise<{ liked: boolean; count: number }> {
+  await visiblePost(d, postId);
+  const removed = await d.prepare("DELETE FROM pro_likes WHERE post_id = ? AND member_id = ? RETURNING 1 AS x").bind(postId, memberId).first();
+  if (!removed) await d.prepare("INSERT OR IGNORE INTO pro_likes (post_id, member_id) VALUES (?,?)").bind(postId, memberId).run();
+  const c = await d.prepare("SELECT COUNT(*) AS n FROM pro_likes WHERE post_id = ?").bind(postId).first<{ n: number }>();
+  return { liked: !removed, count: c?.n ?? 0 };
+}
+
+export async function addComment(d: D1Like, member: MemberRow, postId: number, rawBody: string, nowMs: number): Promise<{ id: number }> {
+  const body = cleanBody(rawBody, PRO_LIMITS.comment, "Commentaire");
+  await visiblePost(d, postId);
+  if ((await recent(d, "pro_comments", "member_id", member.id, nowMs - HOUR_MS)) >= PRO_LIMITS.commentsPerHour) throw new HubError("rate_limited", "Trop de commentaires, réessayez plus tard");
+  const row = await d.prepare("INSERT INTO pro_comments (post_id, member_id, body, created_at) VALUES (?,?,?,?) RETURNING id").bind(postId, member.id, body, iso(nowMs)).first<{ id: number }>();
+  return { id: row!.id };
+}
+
+export async function listComments(d: D1Like, postId: number): Promise<CommentView[]> {
+  await visiblePost(d, postId);
+  // ponytail: comment_count in the feed counts every visible comment, including ones by suspended authors that are filtered out here
+  const { results } = await d.prepare(
+    `SELECT c.id, c.post_id, c.body, c.created_at, m.id AS author_id, m.display_name AS author_name, m.avatar_key AS author_avatar
+     FROM pro_comments c JOIN hub_members m ON m.id = c.member_id WHERE c.post_id = ? AND c.status = 'visible' AND ${AUTHOR_OK} ORDER BY c.id ASC LIMIT 200`,
+  ).bind(postId).all<any>();
+  return results.map(r => ({ id: r.id, post_id: r.post_id, body: r.body, created_at: r.created_at, author: { id: r.author_id, display_name: r.author_name, avatar_key: r.author_avatar } }));
+}
+
+/** Soft delete (status = hidden). Owner or moderator. Jobs are handled by hideJob. */
+export async function removeContent(d: D1Like, actor: MemberRow, type: "post" | "comment", id: number): Promise<void> {
+  const t = type === "post" ? "pro_posts" : type === "comment" ? "pro_comments" : null;
+  if (!t) throw new HubError("invalid", "Type invalide");
+  const row = await d.prepare(`SELECT member_id FROM ${t} WHERE id = ? AND status = 'visible'`).bind(id).first<{ member_id: number }>();
+  if (!row) throw new HubError("not_found", "Contenu introuvable");
+  if (row.member_id !== actor.id && actor.role !== "moderator") throw new HubError("forbidden", "Action non autorisée");
+  await d.prepare(`UPDATE ${t} SET status = 'hidden' WHERE id = ?`).bind(id).run();
+}
+
+// ---- reports / admin --------------------------------------------------------
+
+export type TargetType = "post" | "comment" | "job";
+const TARGET = { post: "pro_posts", comment: "pro_comments", job: "pro_jobs" } as const;
+const VISIBLE = { post: "status = 'visible'", comment: "status = 'visible'", job: "status IN ('open','closed')" } as const;
+function target(type: string): TargetType {
+  if (!Object.hasOwn(TARGET, type)) throw new HubError("invalid", "Type invalide");
+  return type as TargetType;
+}
+
+export interface ReportView { id: number; target_type: TargetType; target_id: number; reason: string; created_at: string; reporter: string; body: string | null; target_status: string | null }
+
+export async function reportContent(d: D1Like, member: MemberRow, rawType: string, id: number, rawReason: string): Promise<void> {
+  const type = target(rawType);
+  const reason = cleanBody(rawReason, PRO_LIMITS.reason, "Motif");
+  if (!(await d.prepare(`SELECT 1 AS ok FROM ${TARGET[type]} WHERE id = ? AND ${VISIBLE[type]}`).bind(id).first())) throw new HubError("not_found", "Contenu introuvable");
+  await d.prepare("INSERT OR IGNORE INTO pro_reports (target_type, target_id, member_id, reason) VALUES (?,?,?,?)").bind(type, id, member.id, reason).run();
+}
+
+export async function listReports(d: D1Like): Promise<ReportView[]> {
+  const { results } = await d.prepare(
+    `SELECT r.id, r.target_type, r.target_id, r.reason, r.created_at, m.display_name AS reporter,
+       CASE r.target_type WHEN 'post' THEN (SELECT body FROM pro_posts WHERE id = r.target_id)
+         WHEN 'comment' THEN (SELECT body FROM pro_comments WHERE id = r.target_id)
+         ELSE (SELECT title FROM pro_jobs WHERE id = r.target_id) END AS body,
+       CASE r.target_type WHEN 'post' THEN (SELECT status FROM pro_posts WHERE id = r.target_id)
+         WHEN 'comment' THEN (SELECT status FROM pro_comments WHERE id = r.target_id)
+         ELSE (SELECT status FROM pro_jobs WHERE id = r.target_id) END AS target_status
+     FROM pro_reports r JOIN hub_members m ON m.id = r.member_id ORDER BY r.id DESC LIMIT 100`,
+  ).all<ReportView>();
+  return results;
+}
+
+export async function dismissReport(d: D1Like, id: number): Promise<void> {
+  await d.prepare("DELETE FROM pro_reports WHERE id = ?").bind(id).run();
+}
+
+/** Admin hide (caller already authorised): no ownership check. */
+export async function hideContent(d: D1Like, rawType: string, id: number): Promise<void> {
+  const t = TARGET[target(rawType)];
+  if (!(await d.prepare(`SELECT 1 AS ok FROM ${t} WHERE id = ?`).bind(id).first())) throw new HubError("not_found", "Contenu introuvable");
+  await d.prepare(`UPDATE ${t} SET status = 'hidden' WHERE id = ?`).bind(id).run();
+}
