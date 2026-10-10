@@ -10,6 +10,7 @@ import * as N from "./hub-notify";
 import { appBaseUrl, emailField, id, readJson, str } from "./hub-http";
 import { handleMarketRoute } from "./market";
 import { handleStayRoute } from "./stay";
+import { handleMeetupRoute } from "./meetup";
 import { handlePro } from "./pro";
 
 export interface HubEnv extends MediaEnv { DB?: D1Like; RESEND_API_KEY?: string; EMAIL_PROVIDER_KEY?: string; PUBLIC_APP_URL?: string }
@@ -346,6 +347,12 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     // ---- hébergement (façon Airbnb) ----------------------------------------
     if (path.startsWith("stay/")) {
       const r = await handleStayRoute({ d, request, url, path: path.slice("stay/".length), now, json, member, admin, sign });
+      if (r) return r;
+    }
+
+    // ---- meetup entre bénévoles --------------------------------------------
+    if (path.startsWith("meetup/")) {
+      const r = await handleMeetupRoute({ d, request, url, path: path.slice("meetup/".length), now, json, member, admin, sign });
       if (r) return r;
     }
 
