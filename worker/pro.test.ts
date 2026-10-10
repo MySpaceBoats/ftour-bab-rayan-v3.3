@@ -264,6 +264,19 @@ describe("realtime chat route", () => {
     expect(calls[0].init.headers["x-member-id"]).toBe(String(a.id));
   });
 
+  it("suspending a member tells the Durable Object to drop their sockets", async () => {
+    const a = await signIn("a@x.ma");
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const e2 = { ...env, HUB_CHAT: fakeNs(calls) } as HubEnv;
+    const put = (status: string) => handleHubRequest(new Request(`https://w.test/hub/admin/members/${a.id}`, { method: "PUT", headers: { "x-admin": "admin", "content-type": "application/json" }, body: JSON.stringify({ status }) }), e2, CORS, deps());
+    expect((await put("active"))!.status).toBe(200);
+    expect(calls).toHaveLength(0);
+    expect((await put("suspended"))!.status).toBe(200);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe("https://hub-chat/kick");
+    expect(JSON.parse(calls[0].init!.body as string)).toEqual({ member: a.id });
+  });
+
   it("pushes to the thread's other participant after a message, never on failure", async () => {
     const a = await signIn("a@x.ma"), b = await signIn("b@x.ma", "Bilal");
     const calls: { url: string; init?: RequestInit }[] = [];

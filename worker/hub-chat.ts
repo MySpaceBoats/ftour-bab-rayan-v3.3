@@ -1,15 +1,20 @@
 /** Durable Object holding the hub WebSockets: presence, message push, typing relay. State lives in the sockets (hibernation API). */
-import { broadcast, deliver, onlineIds, parseClientEvent, presenceOnClose, presenceOnOpen, type ChatSource, type Conn, type ServerEvent } from "./hub-chat-core";
+import { broadcast, deliver, isSource, onlineIds, parseClientEvent, presenceOnClose, presenceOnOpen, type Conn, type ServerEvent } from "./hub-chat-core";
 
 interface ChatState {
   acceptWebSocket(ws: WebSocket, tags?: string[]): void;
   getWebSockets(tag?: string): WebSocket[];
   getTags(ws: WebSocket): string[];
+  setWebSocketAutoResponse?(pair: unknown): void;
 }
 declare const WebSocketPair: { new (): { 0: WebSocket; 1: WebSocket } };
+declare const WebSocketRequestResponsePair: { new (request: string, response: string): unknown } | undefined;
 
 export class HubChat {
-  constructor(private state: ChatState, _env: unknown) {}
+  constructor(private state: ChatState, _env: unknown) {
+    // heartbeat answered by the runtime even while hibernating: the client pings, a dead link is detected client-side
+    if (typeof WebSocketRequestResponsePair !== "undefined") state.setWebSocketAutoResponse?.(new WebSocketRequestResponsePair("ping", "pong"));
+  }
 
   private conns(except?: WebSocket): Conn[] {
     return this.state.getWebSockets().filter(w => w !== except).map(w => ({ memberId: Number(this.state.getTags(w)[0]), send: (s: string) => w.send(s) }));
@@ -18,9 +23,19 @@ export class HubChat {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === "/notify" && request.method === "POST") {
-      const b = (await request.json().catch(() => null)) as { to?: number; source?: ChatSource; thread_id?: number } | null;
-      if (!b || !Number.isSafeInteger(b.to) || !Number.isSafeInteger(b.thread_id) || !b.source) return new Response(null, { status: 400 });
+      const b = (await request.json().catch(() => null)) as { to?: number; source?: unknown; thread_id?: number } | null;
+      if (!b || !Number.isSafeInteger(b.to) || !Number.isSafeInteger(b.thread_id) || !isSource(b.source)) return new Response(null, { status: 400 });
       deliver(this.conns(), b.to!, { type: "message", source: b.source, thread_id: b.thread_id! });
+      return new Response(null, { status: 204 });
+    }
+    if (url.pathname === "/kick" && request.method === "POST") {
+      const b = (await request.json().catch(() => null)) as { member?: number } | null;
+      if (!b || !Number.isSafeInteger(b.member)) return new Response(null, { status: 400 });
+      const sockets = this.state.getWebSockets(String(b.member));
+      for (const w of sockets) { try { w.close(4403, "suspended"); } catch { /* already closed */ } }
+      const rest = this.state.getWebSockets().filter(w => !sockets.includes(w)).map(w => ({ memberId: Number(this.state.getTags(w)[0]), send: (s: string) => w.send(s) }));
+      const ev = presenceOnClose(rest, b.member!);
+      if (ev) broadcast(rest, ev);
       return new Response(null, { status: 204 });
     }
     if (url.pathname === "/ws" && request.headers.get("upgrade") === "websocket") {

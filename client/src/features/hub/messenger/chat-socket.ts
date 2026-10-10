@@ -15,6 +15,12 @@ let connected = false;
 let users = 0;
 let retry = 1000;
 let timer: ReturnType<typeof setTimeout> | undefined;
+let closeTimer: ReturnType<typeof setTimeout> | undefined;
+let ping: ReturnType<typeof setInterval> | undefined;
+let pongTimer: ReturnType<typeof setTimeout> | undefined;
+const PING_MS = 25_000;
+const PONG_WAIT_MS = 10_000;
+const RELEASE_DELAY_MS = 2_000;
 
 function url(): string {
   const base = (import.meta.env.VITE_API_URL as string | undefined) || "/api/trpc";
@@ -33,8 +39,21 @@ function open() {
   let sock: WebSocket;
   try { sock = new WebSocket(url(), ["hub", token]); } catch { return; }
   ws = sock;
-  sock.onopen = () => { retry = 1000; connected = true; fire({ type: "presence_snapshot", online: Array.from(online) }); };
+  sock.onopen = () => {
+    retry = 1000;
+    connected = true;
+    fire({ type: "presence_snapshot", online: Array.from(online) });
+    // heartbeat: the server answers "ping" with "pong"; silence means a dead link, so reconnect
+    clearInterval(ping);
+    ping = setInterval(() => {
+      if (sock.readyState !== WebSocket.OPEN) return;
+      sock.send("ping");
+      clearTimeout(pongTimer);
+      pongTimer = setTimeout(() => sock.close(), PONG_WAIT_MS);
+    }, PING_MS);
+  };
   sock.onmessage = ev => {
+    if (ev.data === "pong") { clearTimeout(pongTimer); return; }
     let e: ServerEvent;
     try { e = JSON.parse(String(ev.data)); } catch { return; }
     if (e.type === "presence_snapshot") { online.clear(); e.online.forEach(i => online.add(i)); }
@@ -42,7 +61,11 @@ function open() {
     fire(e);
   };
   sock.onclose = () => {
-    if (ws === sock) ws = null;
+    // a late close of a replaced socket must not touch the state of the new one
+    if (ws !== sock) return;
+    ws = null;
+    clearInterval(ping);
+    clearTimeout(pongTimer);
     connected = false;
     online.clear();
     fire({ type: "presence_snapshot", online: [] });
@@ -53,12 +76,32 @@ function open() {
 /** Keep the socket open while at least one component needs it. Returns the release function. */
 export function retain(): () => void {
   users++;
+  clearTimeout(closeTimer);
   open();
   return () => {
     users--;
-    if (users === 0) { clearTimeout(timer); ws?.close(); ws = null; connected = false; online.clear(); }
+    // every hub page mounts its own shell: wait a moment so a page change reuses the socket
+    if (users === 0) closeTimer = setTimeout(close, RELEASE_DELAY_MS);
   };
 }
+
+function close() {
+  if (users === 0) teardown();
+}
+
+function teardown() {
+  clearTimeout(timer);
+  clearInterval(ping);
+  clearTimeout(pongTimer);
+  const sock = ws;
+  ws = null;
+  connected = false;
+  online.clear();
+  sock?.close();
+}
+
+// logged out or session revoked: stop the socket and do not reconnect (the token is gone)
+if (typeof window !== "undefined") window.addEventListener("hub:unauthorized", () => { teardown(); fire({ type: "presence_snapshot", online: [] }); });
 export const subscribe = (l: Listener) => { listeners.add(l); return () => { listeners.delete(l); }; };
 export const isOnline = (id: number) => online.has(id);
 export const isConnected = () => connected;

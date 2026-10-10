@@ -10,6 +10,7 @@ export interface Conn { memberId: number; send(data: string): void }
 
 const MAX_FRAME = 512;
 const SOURCES = new Set<string>(["pro", "market", "stay"]);
+export const isSource = (v: unknown): v is ChatSource => typeof v === "string" && SOURCES.has(v);
 const posInt = (v: unknown): v is number => typeof v === "number" && Number.isSafeInteger(v) && v > 0;
 
 export const onlineIds = (conns: Conn[]): number[] => [...new Set(conns.map(c => c.memberId))].sort((a, b) => a - b);
@@ -19,7 +20,7 @@ export function parseClientEvent(raw: unknown): ClientEvent | null {
   let v: any;
   try { v = JSON.parse(raw); } catch { return null; }
   if (!v || typeof v !== "object" || v.type !== "typing") return null;
-  if (!posInt(v.to) || !posInt(v.thread_id) || !SOURCES.has(v.source)) return null;
+  if (!posInt(v.to) || !posInt(v.thread_id) || !isSource(v.source)) return null;
   return { type: "typing", to: v.to, source: v.source, thread_id: v.thread_id };
 }
 

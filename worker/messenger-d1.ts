@@ -30,12 +30,14 @@ async function eligibleSet(d: D1Like, ids: number[]): Promise<Set<number>> {
 export async function inbox(d: D1Like, memberId: number): Promise<InboxItem[]> {
   const [pro, mk, stay] = await Promise.all([P.listThreads(d, memberId), M.listThreads(d, memberId), S.listMyRequests(d, memberId, "all")]);
   const last = await lastStayMessages(d, stay.map(r => r.id));
+  const { results: pend } = await d.prepare("SELECT id FROM st_requests WHERE host_id = ? AND status = 'pending'").bind(memberId).all<{ id: number }>();
+  const pending = new Set(pend.map(r => r.id));
   const items: InboxItem[] = [
     ...pro.map(t => ({ source: "pro" as const, id: t.id, other: t.other, context: t.job_title, last_body: cut(t.last_body), last_message_at: t.last_message_at, unread: t.unread })),
     ...mk.map(t => ({ source: "market" as const, id: t.id, other: { id: t.other.id, display_name: t.other.display_name, avatar_key: t.other.avatar_key }, context: t.listing_title, last_body: cut(t.last_body), last_message_at: t.last_message_at, unread: t.unread })),
     ...stay.map(r => ({
       source: "stay" as const, id: r.id, other: r.other, context: r.listing_title,
-      last_body: cut(last.get(r.id)?.body ?? null), last_message_at: last.get(r.id)?.created_at ?? r.created_at, unread: r.unread,
+      last_body: cut(last.get(r.id)?.body ?? null), last_message_at: last.get(r.id)?.created_at ?? r.created_at, unread: r.unread + (pending.has(r.id) ? 1 : 0),
     })),
   ];
   const ok = await eligibleSet(d, [...new Set(items.map(i => i.other.id))]);
@@ -45,9 +47,26 @@ export async function inbox(d: D1Like, memberId: number): Promise<InboxItem[]> {
     .slice(0, LIMIT);
 }
 
+/** Unread counts that agree with the inbox: conversations with a suspended/ineligible member never count. */
 export async function unreadAll(d: D1Like, memberId: number): Promise<number> {
-  const [a, b, c] = await Promise.all([P.unreadTotal(d, memberId), M.unreadTotal(d, memberId), S.unreadTotal(d, memberId)]);
-  return a + b + c;
+  const ok = P.memberOk("o");
+  const [a, mk, st] = await Promise.all([
+    P.unreadTotal(d, memberId),
+    d.prepare(
+      `SELECT COUNT(*) AS n FROM mk_messages x JOIN mk_threads t ON t.id = x.thread_id JOIN mk_listings l ON l.id = t.listing_id
+       JOIN hub_members o ON o.id = CASE WHEN t.buyer_id = ? THEN t.seller_id ELSE t.buyer_id END
+       WHERE (t.buyer_id = ? OR t.seller_id = ?) AND x.sender_id <> ? AND x.read_at IS NULL AND l.status <> 'hidden' AND ${ok}`,
+    ).bind(memberId, memberId, memberId, memberId).first<{ n: number }>(),
+    d.prepare(
+      `SELECT
+         (SELECT COUNT(*) FROM st_request_messages x JOIN st_requests q ON q.id = x.request_id JOIN st_listings l ON l.id = q.listing_id
+            JOIN hub_members o ON o.id = CASE WHEN q.guest_id = ? THEN q.host_id ELSE q.guest_id END
+            WHERE (q.guest_id = ? OR q.host_id = ?) AND x.sender_id <> ? AND x.read_at IS NULL AND x.status = 'visible' AND l.status <> 'hidden' AND ${ok})
+         + (SELECT COUNT(*) FROM st_requests q JOIN st_listings l ON l.id = q.listing_id JOIN hub_members o ON o.id = q.guest_id
+            WHERE q.host_id = ? AND q.status = 'pending' AND l.status <> 'hidden' AND ${ok}) AS n`,
+    ).bind(memberId, memberId, memberId, memberId, memberId).first<{ n: number }>(),
+  ]);
+  return a + (mk?.n ?? 0) + (st?.n ?? 0);
 }
 
 const OTHER_SQL: Record<Source, string> = {

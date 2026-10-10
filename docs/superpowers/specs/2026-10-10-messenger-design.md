@@ -36,6 +36,8 @@ Une messagerie de type Messenger dans l'espace bénévole. Chaque section (Pro, 
 ## 4. Configuration
 - `wrangler.toml` : `[[durable_objects.bindings]]` `HUB_CHAT` / classe `HubChat`, `[[migrations]]` `tag = "v1"`, `new_sqlite_classes = ["HubChat"]`, en prod et dans `[env.staging]`.
 - La classe est exportée depuis `worker/index.ts`. `Env.HUB_CHAT` est optionnel : absent, `ws` répond 503 et tout le reste fonctionne.
+- La migration Durable Object `v1` n'est appliquée que par `npx wrangler deploy [--env staging]` : le premier déploiement de cette version doit passer par là, pas par `wrangler versions upload` ni par `deploy:cloudflare` (Pages).
+- Suspension d'un membre : le Worker demande au Durable Object (`/kick`) de fermer ses sockets (code 4403). Heartbeat : le client envoie `ping` toutes les 25 s, le runtime répond `pong` (`setWebSocketAutoResponse`), sans réponse en 10 s le client se reconnecte.
 - Aucune table D1 ajoutée. Le Worker se déploie avec `pnpm build:cloudflare && npx wrangler deploy`.
 
 ## 5. Tests

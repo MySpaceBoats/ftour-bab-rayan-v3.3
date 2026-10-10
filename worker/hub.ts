@@ -351,7 +351,12 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     if ((m = match("PUT", /^admin\/members\/(\d+)$/))) {
       await admin();
       const b = await readJson(request);
-      await H.adminUpdateMember(d, id(m[1]), { status: b.status as any, role: b.role as any });
+      const memberId = id(m[1]);
+      await H.adminUpdateMember(d, memberId, { status: b.status as any, role: b.role as any });
+      // a suspended member must not stay "online" nor keep receiving pushes: drop their live sockets
+      if (b.status === "suspended" && env.HUB_CHAT) {
+        await background("chat kick", () => env.HUB_CHAT!.get(env.HUB_CHAT!.idFromName("hub")).fetch("https://hub-chat/kick", { method: "POST", body: JSON.stringify({ member: memberId }) }));
+      }
       return json({ ok: true });
     }
 

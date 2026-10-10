@@ -104,3 +104,23 @@ describe("recipientOf / isEligible", () => {
     expect(await mx.isEligible(d, 9999)).toBe(false);
   });
 });
+
+describe("badge consistency with the inbox", () => {
+  it("does not count unread from members the inbox hides (suspended)", async () => {
+    const a = await member("a@x.ma"), b = await member("b@x.ma", "Bilal"), g = await member("g@x.ma", "Ghita");
+    marketThread(a.id, b.id, [[b.id, "1", 1], [b.id, "2", 2]]);
+    stayRequest(a.id, g.id, [[g.id, "3", 3]]);
+    expect(await mx.unreadAll(d, a.id)).toBe(2 + 1 + 1); // 2 market + 1 stay message + 1 pending request
+    suspend(b.id);
+    suspend(g.id);
+    expect(await mx.unreadAll(d, a.id)).toBe(0);
+    expect(await mx.inbox(d, a.id)).toEqual([]);
+  });
+
+  it("a pending stay request shows as 1 unread on its inbox row for the host", async () => {
+    const a = await member("a@x.ma"), g = await member("g@x.ma", "Ghita");
+    stayRequest(a.id, g.id, []);
+    expect((await mx.inbox(d, a.id))[0]).toMatchObject({ source: "stay", unread: 1 });
+    expect(await mx.unreadAll(d, a.id)).toBe(1);
+  });
+});
