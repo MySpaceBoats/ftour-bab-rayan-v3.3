@@ -107,6 +107,17 @@ describe("market http: listings", () => {
     expect(det.listing).toMatchObject({ title: "Nouveau", status: "sold" });
   });
 
+  it("malformed media on PUT is a 400 and keeps the photos; create without media is fine", async () => {
+    const a = await signIn("a@x.ma");
+    const { id } = (await (await call("POST", "/hub/market/listings", { token: a.session, body: listing({ media: [`${a.id}/p.jpg`] }) })).json()) as { id: number };
+    for (const media of ["abc", [1, null]]) {
+      expect((await call("PUT", `/hub/market/listings/${id}`, { token: a.session, body: listing({ media }) })).status, JSON.stringify(media)).toBe(400);
+    }
+    const own = (await (await call("GET", `/hub/market/listings/${id}`, { token: a.session })).json()) as any;
+    expect(own.listing.media_keys).toEqual([`${a.id}/p.jpg`]);
+    expect((await call("POST", "/hub/market/listings", { token: a.session, body: listing() })).status).toBe(200);
+  });
+
   it("hostile input is a 400, never a 500", async () => {
     const a = await signIn("a@x.ma");
     for (const over of [{ price: "12" }, { price: -1 }, { price: 1.5 }, { title: {} }, { title: 5 }, { category: "x" }, { phone: 5 }, { media: ["999/a.jpg"] }, { media: ["1/../a.jpg"] }]) {

@@ -8,6 +8,7 @@ import { useI18n } from "@/i18n";
 import HubShell from "../../components/HubShell";
 import Avatar from "../../components/Avatar";
 import { useHubMember } from "../../useHubMember";
+import { HubApiError } from "../../api";
 import * as mk from "../market-api";
 
 const POLL_MS = 10_000;
@@ -23,14 +24,17 @@ export default function ConversationPage() {
   const [busy, setBusy] = useState(false);
   const sending = useRef(false);
   const bottom = useRef<HTMLDivElement>(null);
+  const dataRef = useRef(data);
+  dataRef.current = data;
 
   const load = useCallback(async () => {
     try {
       const r = await mk.listMessages(threadId);
       setData(r);
       if (r.messages.some(m => m.sender_id !== me?.id && !m.read_at)) mk.markRead(threadId).catch(() => undefined);
-    } catch {
-      setData(null);
+    } catch (err) {
+      if (err instanceof HubApiError && err.status === 404) setData(null);
+      else if (!dataRef.current) toast.error((err as Error).message);
     }
   }, [threadId, me?.id]);
 
@@ -53,7 +57,8 @@ export default function ConversationPage() {
     if (!draft.trim() || sending.current) return;
     sending.current = true;
     setBusy(true);
-    try { await mk.sendMessage(threadId, draft); setDraft(""); await load(); } catch (err) { toast.error((err as Error).message); } finally { sending.current = false; setBusy(false); }
+    const text = draft;
+    try { await mk.sendMessage(threadId, text); setDraft(d => (d === text ? "" : d)); await load(); } catch (err) { toast.error((err as Error).message); } finally { sending.current = false; setBusy(false); }
   };
 
   return (

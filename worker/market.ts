@@ -19,12 +19,13 @@ export interface MarketCtx {
 const seller = async (s: M.Seller, sign: MarketCtx["sign"]) => ({ id: s.id, display_name: s.display_name, avatar: await sign(s.avatar_key) });
 
 function listingInput(b: Record<string, unknown>): M.ListingInput {
+  if (b.media !== undefined && !(Array.isArray(b.media) && b.media.every(x => typeof x === "string"))) throw new H.HubError("invalid", "Photos invalides");
   return {
     title: str(b.title), description: str(b.description),
     price: typeof b.price === "number" ? b.price : NaN,
     category: str(b.category), condition: str(b.condition), city: str(b.city),
     phone: b.phone, whatsapp: b.whatsapp === true,
-    mediaPaths: Array.isArray(b.media) ? b.media.filter((x): x is string => typeof x === "string") : [],
+    mediaPaths: (b.media as string[] | undefined) ?? [],
   };
 }
 
