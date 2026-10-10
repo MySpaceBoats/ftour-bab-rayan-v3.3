@@ -21,6 +21,10 @@ const cursorOf = (url: URL) => {
   return c && /^\d+$/.test(c) ? Number(c) : null;
 };
 
+function jobInput(b: Record<string, unknown>): P.JobInput {
+  return { title: str(b.title), company: str(b.company), city: str(b.city), type: str(b.type), description: str(b.description), contact: b.contact };
+}
+
 export async function handlePro(c: ProCtx): Promise<Response | null> {
   const { d, request, url, path, now, json, member, admin, sign } = c;
   const match = (method: string, re: RegExp) => (request.method === method ? re.exec(path) : null);
@@ -91,6 +95,43 @@ export async function handlePro(c: ProCtx): Promise<Response | null> {
     await P.hideContent(d, str(b.type), id(b.id));
     return json({ ok: true });
   }
+
+  // ---- jobs --------------------------------------------------------------
+  if (match("GET", /^jobs$/)) {
+    const me = await member();
+    const r = await P.listJobs(d, me.id, {
+      cursor: cursorOf(url),
+      type: url.searchParams.get("type") ?? undefined,
+      city: url.searchParams.get("city") ?? undefined,
+      q: url.searchParams.get("q") ?? undefined,
+      mine: url.searchParams.get("mine") === "1",
+    });
+    return json({ jobs: await Promise.all(r.jobs.map(async j => ({ ...j, poster: await who(j.poster) }))), nextCursor: r.nextCursor });
+  }
+  if (match("POST", /^jobs$/)) {
+    const me = await member();
+    return json(await P.createJob(d, me, jobInput(await readJson(request)), now()));
+  }
+  if ((m = match("GET", /^jobs\/(\d+)$/))) {
+    const me = await member();
+    const j = await P.getJob(d, me.id, id(m[1]));
+    return json({ job: { ...j, poster: await who(j.poster) } });
+  }
+  if ((m = match("PUT", /^jobs\/(\d+)$/))) {
+    const me = await member();
+    await P.updateJob(d, me, id(m[1]), jobInput(await readJson(request)), now());
+    return json({ ok: true });
+  }
+  if ((m = match("POST", /^jobs\/(\d+)\/status$/))) {
+    const me = await member();
+    await P.setJobStatus(d, me, id(m[1]), str((await readJson(request)).status) as "open" | "closed", now());
+    return json({ ok: true });
+  }
+  if ((m = match("DELETE", /^jobs\/(\d+)$/))) {
+    await P.hideJob(d, id(m[1]), await member());
+    return json({ ok: true });
+  }
+  if (match("GET", /^admin\/jobs$/)) { await admin(); return json({ jobs: await P.adminListJobs(d) }); }
 
   return null;
 }

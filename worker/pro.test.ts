@@ -110,3 +110,59 @@ describe("pro http: profile and feed", () => {
     expect((await call("POST", `/hub/pro/admin/reports/${reports.reports[0].id}/dismiss`, { admin: "admin" })).status).toBe(200);
   });
 });
+
+const jobBody = (over: Record<string, unknown> = {}) => ({ title: "Dev React", company: "Acme", city: "Rabat", type: "cdi", description: "On recrute", contact: "rh@acme.ma", ...over });
+
+describe("pro http: jobs", () => {
+  it("requires a member session", async () => {
+    for (const [m, p] of [["GET", "/hub/pro/jobs"], ["POST", "/hub/pro/jobs"], ["GET", "/hub/pro/jobs/1"], ["PUT", "/hub/pro/jobs/1"], ["DELETE", "/hub/pro/jobs/1"]])
+      expect((await call(m, p)).status).toBe(401);
+  });
+
+  it("creates, lists, reads, edits, closes and removes a job", async () => {
+    const a = await signIn("a@x.ma");
+    const b = await signIn("b@x.ma", "Youssef");
+    const created = await call("POST", "/hub/pro/jobs", { token: a.session, body: jobBody() });
+    expect(created.status).toBe(200);
+    const { id } = (await created.json()) as { id: number };
+
+    const list = (await (await call("GET", "/hub/pro/jobs?type=cdi&city=rabat&q=react", { token: b.session })).json()) as any;
+    expect(list.jobs).toHaveLength(1);
+    expect(list.jobs[0]).toMatchObject({ id, title: "Dev React", poster: { id: a.id } });
+    expect(list.jobs[0].description).toBeUndefined();
+
+    const detail = (await (await call("GET", `/hub/pro/jobs/${id}`, { token: b.session })).json()) as any;
+    expect(detail.job).toMatchObject({ id, description: "On recrute", contact: "rh@acme.ma", mine: false, poster: { id: a.id } });
+    expect(JSON.stringify(detail.job)).not.toMatch(/a@x\.ma|b@x\.ma/);
+
+    expect((await call("PUT", `/hub/pro/jobs/${id}`, { token: b.session, body: jobBody() })).status).toBe(403);
+    expect((await call("PUT", `/hub/pro/jobs/${id}`, { token: a.session, body: jobBody({ title: "Lead React" }) })).status).toBe(200);
+    expect((await call("POST", `/hub/pro/jobs/${id}/status`, { token: a.session, body: { status: "closed" } })).status).toBe(200);
+    expect(((await (await call("GET", "/hub/pro/jobs", { token: b.session })).json()) as any).jobs).toEqual([]);
+    expect(((await (await call("GET", "/hub/pro/jobs?mine=1", { token: a.session })).json()) as any).jobs).toHaveLength(1);
+    expect((await call("POST", `/hub/pro/jobs/${id}/status`, { token: a.session, body: { status: "hidden" } })).status).toBe(400);
+
+    expect((await call("DELETE", `/hub/pro/jobs/${id}`, { token: b.session })).status).toBe(403);
+    expect((await call("DELETE", `/hub/pro/jobs/${id}`, { token: a.session })).status).toBe(200);
+    expect((await call("GET", `/hub/pro/jobs/${id}`, { token: b.session })).status).toBe(404);
+  });
+
+  it("returns 400 on invalid input and 429 past the daily limit", async () => {
+    const a = await signIn("a@x.ma");
+    expect((await call("POST", "/hub/pro/jobs", { token: a.session, body: jobBody({ type: "interim" }) })).status).toBe(400);
+    expect((await call("GET", "/hub/pro/jobs?type=interim", { token: a.session })).status).toBe(400);
+    for (let i = 0; i < 3; i++) expect((await call("POST", "/hub/pro/jobs", { token: a.session, body: jobBody() })).status).toBe(200);
+    expect((await call("POST", "/hub/pro/jobs", { token: a.session, body: jobBody() })).status).toBe(429);
+  });
+
+  it("report + admin: list jobs, hide", async () => {
+    const a = await signIn("a@x.ma");
+    const b = await signIn("b@x.ma", "Youssef");
+    const { id } = (await (await call("POST", "/hub/pro/jobs", { token: a.session, body: jobBody() })).json()) as { id: number };
+    expect((await call("POST", "/hub/pro/report", { token: b.session, body: { type: "job", id, reason: "arnaque" } })).status).toBe(200);
+    expect((await call("GET", "/hub/pro/admin/jobs")).status).toBe(403);
+    expect(((await (await call("GET", "/hub/pro/admin/jobs", { admin: "admin" })).json()) as any).jobs[0]).toMatchObject({ id, status: "open" });
+    expect((await call("POST", "/hub/pro/admin/hide", { admin: "admin", body: { type: "job", id } })).status).toBe(200);
+    expect((await call("GET", `/hub/pro/jobs/${id}`, { token: b.session })).status).toBe(404);
+  });
+});
