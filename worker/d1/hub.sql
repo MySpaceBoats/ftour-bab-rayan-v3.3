@@ -79,3 +79,11 @@ CREATE TABLE IF NOT EXISTS hub_uploads (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_hub_uploads_member ON hub_uploads(member_id, created_at);
+
+-- Photos du Hub proposées à la galerie publique (une proposition par photo ; la galerie reste en brouillon jusqu'à modération admin)
+CREATE TABLE IF NOT EXISTS hub_gallery_proposals (
+  r2_key TEXT PRIMARY KEY,
+  member_id INTEGER NOT NULL REFERENCES hub_members(id) ON DELETE CASCADE,
+  gallery_photo_id TEXT,
+  created_at TEXT NOT NULL
+);

@@ -30,3 +30,18 @@ export function openDb(): Sqlite {
   for (const f of ["hub.sql", "pro.sql"]) sqlite.exec(readFileSync(new URL(`./d1/${f}`, import.meta.url), "utf8"));
   return sqlite;
 }
+
+/** gallery_albums + gallery_photos DDL (offline mirror of the D1 gallery schema). */
+export const GALLERY_SCHEMA = `
+CREATE TABLE gallery_albums (id TEXT PRIMARY KEY, name TEXT NOT NULL, slug TEXT NOT NULL UNIQUE,
+  sort_order INTEGER NOT NULL DEFAULT 0, cover_photo_id TEXT,
+  status TEXT NOT NULL DEFAULT 'published', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE gallery_photos (id TEXT PRIMARY KEY, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, title TEXT, description TEXT, event_date TEXT,
+  tags TEXT NOT NULL DEFAULT '[]', album_id TEXT, sort_order INTEGER NOT NULL DEFAULT 0,
+  is_featured TEXT NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'draft',
+  image_original_url TEXT NOT NULL, image_thumb_url TEXT NOT NULL, image_medium_url TEXT,
+  storage_path TEXT NOT NULL, thumb_storage_path TEXT, medium_storage_path TEXT,
+  width INTEGER, height INTEGER, size_bytes INTEGER NOT NULL, mime_type TEXT NOT NULL, uploaded_by TEXT,
+  validation_email TEXT, validation_token TEXT, validation_sent_at TEXT, validated_at TEXT);`;

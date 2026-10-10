@@ -1,6 +1,6 @@
 /** REST handler for the volunteer hub. Mounted from worker/index.ts like handleMediaRequest. */
-import type { D1Like } from "./gallery-d1";
-import { createR2Storage, type MediaEnv } from "./media-r2";
+import { insertPhoto, type D1Like } from "./gallery-d1";
+import { createR2Storage, objectKey, type MediaEnv } from "./media-r2";
 import { sendEmail } from "./email";
 import { createWorkerContext } from "./context";
 import type { Env } from "./index";
@@ -177,6 +177,32 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       const me = await volunteer();
       const photos = await H.memberPhotos(d, me.id);
       return json({ photos: await Promise.all(photos.map(async p => ({ ...p, url: await sign(p.path) }))) });
+    }
+    if (match("POST", /^volunteer\/photos\/propose$/)) {
+      const me = await volunteer();
+      const path = str((await readJson(request)).path);
+      // Copies the private hub object to the public gallery key and inserts a DRAFT row: no validation token, so only admin moderation can publish it.
+      const publish = async (caption: string) => {
+        if (!env.GALLERY_MEDIA) throw new Error("R2 binding GALLERY_MEDIA is not configured");
+        const obj = await env.GALLERY_MEDIA.get(objectKey("hub", path));
+        const type = obj?.httpMetadata?.contentType ?? "";
+        if (!obj || !EXT[type]) throw new H.HubError("not_found", "Photo introuvable");
+        const bytes = new Uint8Array(await new Response(obj.body).arrayBuffer());
+        const key = `gallery/original/${crypto.randomUUID()}.${EXT[type]}`;
+        await env.GALLERY_MEDIA.put(key, bytes, { httpMetadata: { contentType: type } });
+        try {
+          const photo = await insertPhoto(d, {
+            description: caption, eventDate: null, tags: [], sortOrder: 0, isFeatured: false, status: "draft",
+            storagePath: key, sizeBytes: bytes.byteLength, mimeType: type, uploadedBy: me.email,
+            validationEmail: null, validationToken: null, validated: false,
+          }, url.origin);
+          return photo!.id as string;
+        } catch (e) {
+          await env.GALLERY_MEDIA.delete(key).catch(() => {});
+          throw e;
+        }
+      };
+      return json(await H.proposeToGallery(d, me, path, now(), publish));
     }
     if (match("POST", /^report$/)) {
       const me = await member();

@@ -73,7 +73,9 @@ async function upload(file: File, site: boolean): Promise<string> {
   return path;
 }
 
-export interface Photo { path: string; url: string | null; post_id: number; created_at: string }
+export type GalleryStatus = "draft" | "published" | "rejected" | null;
+export interface Photo { path: string; url: string | null; post_id: number; created_at: string; gallery_status: GalleryStatus }
+export const proposePhoto = (path: string) => call<{ gallery_photo_id: string }>("POST", "volunteer/photos/propose", { admin: true, body: { path } });
 export const getMyPhotos = () => call<{ photos: Photo[] }>("GET", "volunteer/photos", { admin: true }).then(r => r.photos);
 
 export const adminReports = () => call<{ reports: Report[] }>("GET", "admin/reports", { admin: true }).then(r => r.reports);

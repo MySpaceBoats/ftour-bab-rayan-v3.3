@@ -104,16 +104,44 @@ export function isOwnPath(memberId: number, path: string): boolean {
 
 // ---- member photos ------------------------------------------------------
 
-export interface PhotoView { path: string; post_id: number; created_at: string }
+export type GalleryProposalStatus = "draft" | "published" | "rejected" | null;
+export interface PhotoView { path: string; post_id: number; created_at: string; gallery_status: GalleryProposalStatus }
 
 /** Photos = hub_post_media of the member's visible posts (so photos posted from the Hub composer count too). */
 export async function memberPhotos(d: D1Like, memberId: number): Promise<PhotoView[]> {
+  // gallery_status: no proposal -> NULL; copy in progress -> draft; else the gallery row status (row deleted by admin = rejected)
   const { results } = await d.prepare(
-    `SELECT pm.r2_key AS path, p.id AS post_id, p.created_at
+    `SELECT pm.r2_key AS path, p.id AS post_id, p.created_at,
+       CASE WHEN gp.r2_key IS NULL THEN NULL WHEN gp.gallery_photo_id IS NULL THEN 'draft' ELSE COALESCE(g.status, 'rejected') END AS gallery_status
      FROM hub_post_media pm JOIN hub_posts p ON p.id = pm.post_id
+     LEFT JOIN hub_gallery_proposals gp ON gp.r2_key = pm.r2_key
+     LEFT JOIN gallery_photos g ON g.id = gp.gallery_photo_id
      WHERE p.member_id = ? AND p.status = 'visible' ORDER BY p.id DESC, pm.position ASC LIMIT 200`,
   ).bind(memberId).all<PhotoView>();
   return results;
+}
+
+/**
+ * Proposes one of the member's shared photos to the public gallery. `publish` (injected: R2 copy + draft gallery row)
+ * returns the new gallery photo id. One proposal per photo (PRIMARY KEY claim, released if publish fails).
+ */
+export async function proposeToGallery(d: D1Like, member: MemberRow, path: string, nowMs: number, publish: (caption: string) => Promise<string>): Promise<{ gallery_photo_id: string }> {
+  if (!isOwnPath(member.id, path)) throw new HubError("invalid", "Photo invalide");
+  const post = await d.prepare(
+    "SELECT p.body FROM hub_post_media pm JOIN hub_posts p ON p.id = pm.post_id WHERE pm.r2_key = ? AND p.member_id = ? AND p.status = 'visible' LIMIT 1",
+  ).bind(path, member.id).first<{ body: string }>();
+  if (!post) throw new HubError("not_found", "Photo introuvable");
+  const claim = await d.prepare("INSERT INTO hub_gallery_proposals (r2_key, member_id, created_at) VALUES (?,?,?) ON CONFLICT(r2_key) DO NOTHING RETURNING r2_key")
+    .bind(path, member.id, iso(nowMs)).first();
+  if (!claim) throw new HubError("invalid", "Photo déjà proposée à la galerie");
+  try {
+    const gallery_photo_id = await publish(post.body);
+    await d.prepare("UPDATE hub_gallery_proposals SET gallery_photo_id = ? WHERE r2_key = ?").bind(gallery_photo_id, path).run();
+    return { gallery_photo_id };
+  } catch (e) {
+    await d.prepare("DELETE FROM hub_gallery_proposals WHERE r2_key = ?").bind(path).run();
+    throw e;
+  }
 }
 
 // ---- posts / feed / likes / comments -------------------------------------

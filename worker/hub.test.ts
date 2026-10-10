@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import type { D1Like, D1Stmt } from "./gallery-d1";
 import { handleHubRequest, type HubDeps, type HubEnv } from "./hub";
+import { GALLERY_SCHEMA } from "./test-d1";
 
 const { DatabaseSync } = createRequire(import.meta.url)("node:sqlite") as typeof import("node:sqlite");
 
@@ -29,6 +30,7 @@ let sqlite: InstanceType<typeof DatabaseSync>;
 let env: HubEnv;
 let mails: { to: string; subject: string; html: string }[];
 let clock: number;
+let r2: Map<string, { bytes: Uint8Array; type: string }>;
 
 let extra: Partial<HubDeps> = {};
 const deps = (): HubDeps => ({
@@ -65,7 +67,14 @@ beforeEach(() => {
   sqlite = new DatabaseSync(":memory:");
   sqlite.exec("CREATE TABLE t_volunteers (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT, last_name TEXT, email TEXT, status TEXT);");
   sqlite.exec(readFileSync(new URL("./d1/hub.sql", import.meta.url), "utf8"));
-  env = { DB: fakeD1(sqlite), JWT_SECRET: "test-secret", MEDIA_BASE_URL: "https://m.test", GALLERY_MEDIA: undefined, PUBLIC_APP_URL: "https://site.test" };
+  sqlite.exec(GALLERY_SCHEMA);
+  r2 = new Map();
+  const fakeR2 = {
+    put: async (k: string, v: ArrayBuffer | Uint8Array, o?: { httpMetadata?: { contentType?: string } }) => { r2.set(k, { bytes: new Uint8Array(v), type: o?.httpMetadata?.contentType ?? "" }); },
+    get: async (k: string) => { const o = r2.get(k); return o ? { body: new Response(o.bytes).body!, httpEtag: "e", httpMetadata: { contentType: o.type } } : null; },
+    delete: async (k: string | string[]) => { for (const x of Array.isArray(k) ? k : [k]) r2.delete(x); },
+  };
+  env = { DB: fakeD1(sqlite), JWT_SECRET: "test-secret", MEDIA_BASE_URL: "https://m.test", GALLERY_MEDIA: fakeR2, PUBLIC_APP_URL: "https://site.test" };
   mails = [];
   clock = T0;
   extra = {};
@@ -300,5 +309,87 @@ describe("volunteer photos via site session", () => {
   it("site session cannot reach other hub routes", async () => {
     seedVol("a@x.ma");
     expect((await call("GET", "/hub/feed", { site: "a@x.ma" })).status).toBe(401);
+  });
+});
+
+describe("volunteer photo -> public gallery proposal", () => {
+  const BYTES = new Uint8Array([1, 2, 3, 4, 5]);
+  const seedVol = (email: string) =>
+    sqlite.prepare("INSERT INTO t_volunteers (first_name,last_name,email,status) VALUES ('Amina','Benali',?,'confirmed')").run(email);
+  /** uploads + shares one photo via the site session; the hub object is seeded in the fake R2. */
+  async function share(email: string, caption = "Soirée du 3") {
+    seedVol(email);
+    const { path } = (await (await call("POST", "/hub/volunteer/media", { site: email, body: { contentType: "image/jpeg" } })).json()) as { path: string };
+    r2.set(`private/hub/${path}`, { bytes: BYTES, type: "image/jpeg" });
+    await call("POST", "/hub/volunteer/posts", { site: email, body: { body: caption, media: [path] } });
+    return path;
+  }
+  const propose = (site: string | undefined, path: unknown) => call("POST", "/hub/volunteer/photos/propose", { site, body: { path } });
+  const galleryRows = () => sqlite.prepare("SELECT * FROM gallery_photos").all() as any[];
+  const proposals = () => (sqlite.prepare("SELECT COUNT(*) AS n FROM hub_gallery_proposals").get() as { n: number }).n;
+
+  it("creates a draft gallery photo (no token, uploaded_by = email) with the R2 bytes copied", async () => {
+    const path = await share("a@x.ma");
+    const r = await propose("a@x.ma", path);
+    expect(r.status).toBe(200);
+    const { gallery_photo_id } = (await r.json()) as { gallery_photo_id: string };
+    const rows = galleryRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ id: gallery_photo_id, status: "draft", validation_token: null, validated_at: null, uploaded_by: "a@x.ma", description: "Soirée du 3" });
+    expect(rows[0].storage_path).toMatch(/^gallery\/original\/[0-9a-f-]+\.jpg$/);
+    const copied = r2.get(rows[0].storage_path)!;
+    expect(Array.from(copied.bytes)).toEqual(Array.from(BYTES));
+    expect(copied.type).toBe("image/jpeg");
+  });
+
+  it("photos list shows the proposal status", async () => {
+    const path = await share("a@x.ma");
+    const status = async () => ((await (await call("GET", "/hub/volunteer/photos", { site: "a@x.ma" })).json()) as any).photos[0].gallery_status;
+    expect(await status()).toBeNull();
+    await propose("a@x.ma", path);
+    expect(await status()).toBe("draft");
+    sqlite.exec("UPDATE gallery_photos SET status='published'");
+    expect(await status()).toBe("published");
+    sqlite.exec("DELETE FROM gallery_photos");
+    expect(await status()).toBe("rejected");
+  });
+
+  it("a photo can be proposed only once", async () => {
+    const path = await share("a@x.ma");
+    expect((await propose("a@x.ma", path)).status).toBe(200);
+    expect((await propose("a@x.ma", path)).status).toBe(400);
+    expect(galleryRows()).toHaveLength(1);
+  });
+
+  it("refuses foreign paths, traversal and photos not on a visible post", async () => {
+    const path = await share("a@x.ma");
+    seedVol("b@x.ma");
+    expect((await propose("b@x.ma", path)).status).toBe(400);
+    expect((await propose("a@x.ma", "1/../x.jpg")).status).toBe(400);
+    expect((await propose("a@x.ma", 5)).status).toBe(400);
+    const orphan = ((await (await call("POST", "/hub/volunteer/media", { site: "a@x.ma", body: { contentType: "image/jpeg" } })).json()) as { path: string }).path;
+    r2.set(`private/hub/${orphan}`, { bytes: BYTES, type: "image/jpeg" });
+    expect((await propose("a@x.ma", orphan)).status).toBe(404);
+    sqlite.exec("UPDATE hub_posts SET status='hidden'");
+    expect((await propose("a@x.ma", path)).status).toBe(404);
+    expect(galleryRows()).toHaveLength(0);
+    expect(proposals()).toBe(0);
+  });
+
+  it("missing R2 source: 404, claim released so a retry succeeds", async () => {
+    const path = await share("a@x.ma");
+    const saved = r2.get(`private/hub/${path}`)!;
+    r2.delete(`private/hub/${path}`);
+    expect((await propose("a@x.ma", path)).status).toBe(404);
+    expect(galleryRows()).toHaveLength(0);
+    expect(proposals()).toBe(0);
+    r2.set(`private/hub/${path}`, saved);
+    expect((await propose("a@x.ma", path)).status).toBe(200);
+  });
+
+  it("unauthenticated 401, non-confirmed 403", async () => {
+    sqlite.prepare("INSERT INTO t_volunteers (first_name,last_name,email,status) VALUES ('N','B','reg@x.ma','registered')").run();
+    expect((await propose(undefined, "1/a.jpg")).status).toBe(401);
+    expect((await propose("reg@x.ma", "1/a.jpg")).status).toBe(403);
   });
 });

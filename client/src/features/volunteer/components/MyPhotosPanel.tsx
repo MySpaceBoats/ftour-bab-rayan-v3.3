@@ -16,6 +16,8 @@ export default function MyPhotosPanel() {
   const [caption, setCaption] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
+  const [toGallery, setToGallery] = useState(false);
+  const [proposing, setProposing] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const previews = useMemo(() => files.map(f => URL.createObjectURL(f)), [files]);
@@ -47,6 +49,11 @@ export default function MyPhotosPanel() {
       for (const f of files) paths.push(await hub.uploadSiteImage(f));
       await hub.createPost(caption.trim() || "Nouvelles photos", paths, true);
       toast.success("Photos partagées avec la communauté");
+      if (toGallery) {
+        for (const p of paths) {
+          try { await hub.proposePhoto(p); } catch (e) { toast.error((e as Error).message); }
+        }
+      }
       setCaption("");
       setFiles([]);
       await load();
@@ -54,6 +61,19 @@ export default function MyPhotosPanel() {
       toast.error((e as Error).message);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const propose = async (path: string) => {
+    setProposing(path);
+    try {
+      await hub.proposePhoto(path);
+      toast.success("Photo proposée, en attente de validation");
+      await load();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setProposing(null);
     }
   };
 
@@ -75,6 +95,10 @@ export default function MyPhotosPanel() {
             ))}
           </div>
         )}
+        <label className="flex items-start gap-2 text-sm text-stone-700">
+          <input type="checkbox" className="mt-1" checked={toGallery} onChange={e => setToGallery(e.target.checked)} />
+          Proposer aussi à la galerie publique du site (après validation par l'équipe)
+        </label>
         <div className="flex items-center justify-between">
           <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={e => pick(e.target.files)} />
           <Button type="button" variant="outline" size="sm" disabled={files.length >= MAX_PHOTOS || busy} onClick={() => fileRef.current?.click()}>
@@ -93,7 +117,18 @@ export default function MyPhotosPanel() {
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {photos.filter(p => p.url).map(p => (
-            <img key={p.path} src={p.url!} alt="Photo partagée" loading="lazy" className="aspect-square w-full rounded-lg object-cover" />
+            <div key={p.path} className="space-y-1.5">
+              <img src={p.url!} alt="Photo partagée" loading="lazy" className="aspect-square w-full rounded-lg object-cover" />
+              {p.gallery_status === null ? (
+                <Button type="button" variant="outline" size="sm" className="w-full" disabled={proposing === p.path} onClick={() => propose(p.path)}>
+                  {proposing === p.path ? <Loader2 size={14} className="animate-spin" /> : "Proposer à la galerie"}
+                </Button>
+              ) : (
+                <span className="block rounded-md bg-stone-100 px-2 py-1 text-center text-xs text-stone-600">
+                  {p.gallery_status === "draft" ? "En attente de validation" : p.gallery_status === "published" ? "Publiée dans la galerie" : "Non retenue"}
+                </span>
+              )}
+            </div>
           ))}
         </div>
       )}
