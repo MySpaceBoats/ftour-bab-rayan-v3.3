@@ -11,7 +11,7 @@ export class HubError extends Error {
 
 export const LOGIN_TTL_MS = 15 * 60 * 1000;
 export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const HOUR_MS = 60 * 60 * 1000;
+export const HOUR_MS = 60 * 60 * 1000;
 export const LIMITS = { postsPerHour: 10, commentsPerHour: 30, uploadsPerHour: 20, loginsPerHour: 3, post: 2000, comment: 500, media: 4, reason: 300, name: 40, bio: 300 };
 export const TEAM_EMAIL = "equipe@hub.ftourbabrayan.ma"; // never a volunteer email: cannot log in
 
@@ -116,7 +116,7 @@ async function countSince(d: D1Like, table: "hub_posts" | "hub_comments" | "hub_
   return r?.n ?? 0;
 }
 
-function cleanBody(raw: unknown, max: number, label: string): string {
+export function cleanBody(raw: unknown, max: number, label: string): string {
   const body = typeof raw === "string" ? raw.trim() : "";
   if (body.length < 1 || body.length > max) throw new HubError("invalid", `${label} invalide (1 à ${max} caractères)`);
   return body;
