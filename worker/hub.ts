@@ -10,6 +10,7 @@ import * as N from "./hub-notify";
 import { appBaseUrl, emailField, id, readJson, str } from "./hub-http";
 import { handleMarketRoute } from "./market";
 import { handleStayRoute } from "./stay";
+import { handleMeetupRoute } from "./meetup";
 import { handlePro } from "./pro";
 import * as X from "./messenger-d1";
 
@@ -381,6 +382,12 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     if (path.startsWith("stay/")) {
       const r = await handleStayRoute({ d, request, url, path: path.slice("stay/".length), now, json, member, admin, sign });
       if (r) { await pushAfterSend(r); return r; }
+    }
+
+    // ---- meetup entre bénévoles --------------------------------------------
+    if (path.startsWith("meetup/")) {
+      const r = await handleMeetupRoute({ d, request, url, path: path.slice("meetup/".length), now, json, member, admin, sign });
+      if (r) return r;
     }
 
     // ---- professional network ----------------------------------------------

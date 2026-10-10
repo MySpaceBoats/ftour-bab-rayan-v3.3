@@ -39,6 +39,10 @@ import StayDetailPage from "@/features/hub/stay/pages/StayDetailPage";
 import StayFormPage from "@/features/hub/stay/pages/StayFormPage";
 import StayRequestsPage from "@/features/hub/stay/pages/StayRequestsPage";
 import StayRequestPage from "@/features/hub/stay/pages/StayRequestPage";
+import MeetupPage from "@/features/hub/meetup/pages/MeetupPage";
+import MeetupDetailPage from "@/features/hub/meetup/pages/MeetupDetailPage";
+import MeetupFormPage from "@/features/hub/meetup/pages/MeetupFormPage";
+import MeetupMinePage from "@/features/hub/meetup/pages/MeetupMinePage";
 import ProFeedPage from "@/features/hub/pro/pages/ProFeedPage";
 import ProProfilePage from "@/features/hub/pro/pages/ProProfilePage";
 import ProMemberPage from "@/features/hub/pro/pages/ProMemberPage";
@@ -363,6 +367,11 @@ function LocalizedRoutes() {
       <Route path="/:lang/benevole/espace/hebergement/:id/modifier" component={StayFormPage} />
       <Route path="/:lang/benevole/espace/hebergement/:id" component={StayDetailPage} />
       <Route path="/:lang/benevole/espace/hebergement" component={StayPage} />
+      <Route path="/:lang/benevole/espace/meetup/nouveau" component={MeetupFormPage} />
+      <Route path="/:lang/benevole/espace/meetup/mes-meetups" component={MeetupMinePage} />
+      <Route path="/:lang/benevole/espace/meetup/:id/modifier" component={MeetupFormPage} />
+      <Route path="/:lang/benevole/espace/meetup/:id" component={MeetupDetailPage} />
+      <Route path="/:lang/benevole/espace/meetup" component={MeetupPage} />
       <Route path="/:lang/benevole/espace/pro/messages/:threadId">{() => <RedirectMessages from="/:lang/benevole/espace/pro/messages" source="pro" />}</Route>
       <Route path="/:lang/benevole/espace/pro/messages">{() => <RedirectMessages from="/:lang/benevole/espace/pro/messages" />}</Route>
       <Route path="/:lang/benevole/espace/pro/emplois/nouveau" component={ProJobFormPage} />

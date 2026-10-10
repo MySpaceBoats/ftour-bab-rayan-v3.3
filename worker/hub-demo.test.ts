@@ -7,7 +7,8 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
-import { DEMO_DOMAIN, DEMO_LABEL, LISTING_MEDIA, cleanupSql, seedSql } from "../scripts/hub-demo/build";
+import { DEMO_DOMAIN, DEMO_LABEL, LISTING_MEDIA, POST_MEDIA, cleanupSql, seedSql } from "../scripts/hub-demo/build";
+import { PRO_POST_MEDIA } from "../scripts/hub-demo/pro";
 import { STAY_MEDIA } from "../scripts/hub-demo/stay";
 import type { D1Like, D1Stmt } from "./gallery-d1";
 import * as H from "./hub-d1";
@@ -48,7 +49,7 @@ const n = (db: SqliteDb, sql: string): number => (db.prepare(sql).get() as { n: 
 const count = (db: SqliteDb, table: string): number => n(db, `SELECT COUNT(*) AS n FROM ${table}`);
 /** Row counts of every table the seed touches, to compare two runs. */
 const TABLES = [
-  "hub_members", "hub_posts", "hub_comments", "hub_likes", "hub_reports",
+  "hub_members", "hub_posts", "hub_post_media", "hub_comments", "hub_likes", "hub_reports",
   "mk_listings", "mk_listing_media", "mk_comments", "mk_reports", "mk_threads", "mk_messages",
   "st_listings", "st_listing_media", "st_requests", "st_request_messages", "st_reviews", "st_reports",
   "pro_profiles", "pro_posts", "pro_post_media", "pro_likes", "pro_comments", "pro_jobs", "pro_threads", "pro_messages", "pro_reports",
@@ -147,10 +148,38 @@ describe("hub demo seed: Fil and Marketplace", () => {
       expect(key.startsWith("demo/"), `${key} doit être sous demo/`).toBe(true);
       expect(existsSync(new URL(key.slice("demo/".length), mediaDir)), `${key} absent de scripts/hub-demo/media/`).toBe(true);
     }
+    // every listing photo is declared, and no listing photo is an orphan (post photos are checked below)
     const declared = [...Object.values(LISTING_MEDIA).flat(), ...Object.values(STAY_MEDIA).flat()];
-    const onDisk = readdirSync(mediaDir).filter(f => f.endsWith(".jpg")).sort();
-    expect(onDisk).toEqual([...new Set(declared)].sort());
-    expect(onDisk).toEqual([...new Set(keys.map(k => k.slice("demo/".length)))].sort());
+    expect([...new Set(keys.map(k => k.slice("demo/".length)))].sort()).toEqual([...new Set(declared)].sort());
+  });
+
+  it("gives every member an illustrated avatar and uploads every referenced image (no broken photo)", () => {
+    const db = freshDb();
+    db.exec(seedSql());
+    const mediaDir = new URL("../scripts/hub-demo/media/", import.meta.url);
+    const members = db.prepare("SELECT email, avatar_key FROM hub_members WHERE email LIKE ?").all(`%@${DEMO_DOMAIN}`) as { email: string; avatar_key: string | null }[];
+    expect(members).toHaveLength(10);
+    for (const m of members) {
+      expect(m.avatar_key, m.email).toMatch(/^demo\/avatar-[a-z]+\.png$/);
+      expect(m.avatar_key).toBe(`demo/avatar-${m.email.split("@")[0]}.png`);
+    }
+    // every key written anywhere by the seed must be a file that scripts/hub-demo/upload-media.sh will upload
+    const keys = new Set<string>();
+    for (const [table] of [["hub_post_media"], ["pro_post_media"], ["mk_listing_media"], ["st_listing_media"]])
+      for (const r of db.prepare(`SELECT r2_key FROM ${table}`).all() as { r2_key: string }[]) keys.add(r.r2_key);
+    for (const m of members) keys.add(m.avatar_key!);
+    expect(keys.size).toBeGreaterThanOrEqual(50);
+    for (const key of keys) {
+      expect(key, key).toMatch(/^demo\/[a-z0-9-]+\.(jpg|png)$/);
+      expect(existsSync(new URL(key.slice("demo/".length), mediaDir)), `${key} absent de scripts/hub-demo/media/`).toBe(true);
+    }
+    // and nothing in the folder is an orphan image
+    const images = readdirSync(mediaDir).filter(f => /\.(jpe?g|png|webp)$/.test(f)).sort();
+    expect(images).toEqual([...keys].map(k => k.slice("demo/".length)).sort());
+    expect(n(db, "SELECT COUNT(DISTINCT post_id) AS n FROM hub_post_media")).toBe(Object.keys(POST_MEDIA).length);
+    expect(n(db, "SELECT COUNT(DISTINCT post_id) AS n FROM pro_post_media")).toBe(Object.keys(PRO_POST_MEDIA).length);
+    expect(Object.keys(POST_MEDIA).length).toBeGreaterThanOrEqual(10);
+    expect(Object.keys(PRO_POST_MEDIA).length).toBeGreaterThanOrEqual(6);
   });
 
   it("marks every demo profile, post and listing as test data", () => {
@@ -352,6 +381,10 @@ describe("hub demo seed: Pro", () => {
     expect(feed.posts).toHaveLength(16);
     expect(feed.posts.filter(p => p.link).length).toBeGreaterThanOrEqual(4);
     expect(feed.posts.every(p => p.author.headline.startsWith(DEMO_LABEL))).toBe(true);
+    const proPhotos = feed.posts.filter(p => p.media.length > 0);
+    expect(proPhotos).toHaveLength(Object.keys(PRO_POST_MEDIA).length);
+    expect(proPhotos.flatMap(p => p.media).every(k => /^demo\/[a-z0-9-]+\.jpg$/.test(k))).toBe(true);
+    expect(feed.posts.every(p => p.author.avatar_key?.startsWith("demo/avatar-"))).toBe(true);
     expect(feed.posts.some(p => p.like_count >= 6)).toBe(true);
     expect(feed.posts.some(p => p.like_count <= 3)).toBe(true);
     const commented = feed.posts.find(p => p.comment_count >= 3)!;
@@ -420,6 +453,11 @@ describe("hub demo seed: Fil and Marketplace through the real data layer", () =>
     const withComments = feed.posts.find(p => p.comment_count >= 4)!;
     out.push(await H.listComments(d, withComments.id));
     expect(feed.posts.some(p => p.like_count === 0)).toBe(true);
+    const withPhotos = feed.posts.filter(p => p.media.length > 0);
+    expect(withPhotos).toHaveLength(Object.keys(POST_MEDIA).length);
+    for (const p of withPhotos) expect(p.media.length).toBeLessThanOrEqual(4);
+    expect(feed.posts.every(p => p.author.avatar_key?.startsWith("demo/avatar-"))).toBe(true);
+    expect(Math.max(...withPhotos.map(p => p.media.length))).toBe(3);
 
     const all = await mk.listListings(d, real.id, { limit: 50 });
     out.push(all);

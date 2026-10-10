@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { BedDouble, Briefcase, Home, LogOut, Mail, Newspaper, Store, User } from "lucide-react";
+import { BedDouble, Briefcase, CalendarDays, Home, LogOut, Mail, Newspaper, Store, User } from "lucide-react";
 import { useI18n } from "@/i18n";
 import {
   DropdownMenu,
@@ -26,6 +26,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
   const messages = `${base}/messages`;
   const profile = `${base}/profil`;
   const stay = `${base}/hebergement`;
+  const meetup = `${base}/meetup`;
   const pro = `${base}/pro`;
   const [unread, setUnread] = useState(0);
   const [notifUnread, setNotifUnread] = useState(0);
@@ -55,6 +56,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
   const isMessages = path.startsWith(messages);
   const isMarket = path.startsWith(market);
   const isStay = path.startsWith(stay);
+  const isMeetup = path === meetup || path.startsWith(`${meetup}/`);
   // "/pro" is also a prefix of "/profil": require a path boundary.
   const isPro = path === pro || path.startsWith(`${pro}/`);
   const isProfile = path.startsWith(profile);
@@ -64,6 +66,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
     { href: market, label: "Marketplace", short: "Market", icon: <Store size={18} aria-hidden />, active: isMarket, badge: 0, badgeLabel: "" },
     { href: pro, label: "Offre d'emploi", short: "Emplois", icon: <Briefcase size={18} aria-hidden />, active: isPro, badge: 0, badgeLabel: "" },
     { href: stay, label: "Hébergement", short: "Logement", icon: <BedDouble size={18} aria-hidden />, active: isStay, badge: 0, badgeLabel: "" },
+    { href: meetup, label: "Meetup", short: "Meetup", icon: <CalendarDays size={18} aria-hidden />, active: isMeetup, badge: 0, badgeLabel: "" },
     { href: messages, label: "Messages", short: "Messages", icon: <Mail size={18} aria-hidden />, active: isMessages, badge: unread, badgeLabel: "messages non lus" },
     { href: profile, label: "Mon profil", short: "Profil", icon: <User size={18} aria-hidden />, active: isProfile, badge: 0, badgeLabel: "" },
   ];
@@ -147,7 +150,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
         {right && <aside className="hidden xl:block"><div className="sticky top-[72px] space-y-3">{right}</div></aside>}
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-slate-200 bg-white text-xs text-slate-700 lg:hidden" aria-label="Navigation mobile">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-7 border-t border-slate-200 bg-white text-[11px] text-slate-700 lg:hidden" aria-label="Navigation mobile">
         {navLinks.map(l => (
           <Link key={l.href} href={l.href} className={l.active ? activeTab : tab} aria-current={l.active ? "page" : undefined}>
             <span className="relative">
