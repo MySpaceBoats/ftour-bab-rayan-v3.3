@@ -133,5 +133,36 @@ export async function handlePro(c: ProCtx): Promise<Response | null> {
   }
   if (match("GET", /^admin\/jobs$/)) { await admin(); return json({ jobs: await P.adminListJobs(d) }); }
 
+  // ---- messaging ---------------------------------------------------------
+  if (match("POST", /^threads$/)) {
+    const me = await member();
+    const b = await readJson(request);
+    const jobId = b.job_id === undefined || b.job_id === null ? 0 : id(b.job_id);
+    return json(await P.openThread(d, me, { to: id(b.to), jobId }, now()));
+  }
+  if (match("GET", /^threads$/)) {
+    const me = await member();
+    const threads = await P.listThreads(d, me.id);
+    return json({ threads: await Promise.all(threads.map(async t => ({ ...t, other: await who(t.other) }))) });
+  }
+  if ((m = match("GET", /^threads\/(\d+)\/messages$/))) {
+    const me = await member();
+    const r = await P.listMessages(d, me, id(m[1]), cursorOf(url));
+    return json({ ...r, other: await who(r.other) });
+  }
+  if ((m = match("POST", /^threads\/(\d+)\/messages$/))) {
+    const me = await member();
+    return json(await P.sendMessage(d, me, id(m[1]), str((await readJson(request)).body), now()));
+  }
+  if ((m = match("POST", /^threads\/(\d+)\/read$/))) {
+    const me = await member();
+    await P.markThreadRead(d, me, id(m[1]), now());
+    return json({ ok: true });
+  }
+  if (match("GET", /^unread$/)) {
+    const me = await member();
+    return json({ count: await P.unreadTotal(d, me.id) });
+  }
+
   return null;
 }

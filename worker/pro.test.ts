@@ -166,3 +166,50 @@ describe("pro http: jobs", () => {
     expect((await call("GET", `/hub/pro/jobs/${id}`, { token: b.session })).status).toBe(404);
   });
 });
+
+describe("pro http: messaging", () => {
+  it("requires a member session", async () => {
+    for (const [m, p] of [["POST", "/hub/pro/threads"], ["GET", "/hub/pro/threads"], ["GET", "/hub/pro/threads/1/messages"], ["POST", "/hub/pro/threads/1/messages"], ["POST", "/hub/pro/threads/1/read"], ["GET", "/hub/pro/unread"]])
+      expect((await call(m, p)).status).toBe(401);
+  });
+
+  it("applies to a job, exchanges messages, tracks unread and read", async () => {
+    const a = await signIn("a@x.ma");
+    const b = await signIn("b@x.ma", "Youssef");
+    const { id: jobId } = (await (await call("POST", "/hub/pro/jobs", { token: a.session, body: jobBody() })).json()) as { id: number };
+
+    const opened = await call("POST", "/hub/pro/threads", { token: b.session, body: { to: a.id, job_id: jobId } });
+    expect(opened.status).toBe(200);
+    const { id: tid, created } = (await opened.json()) as { id: number; created: boolean };
+    expect(created).toBe(true);
+    expect(((await (await call("POST", "/hub/pro/threads", { token: b.session, body: { to: a.id, job_id: jobId } })).json()) as any).id).toBe(tid);
+
+    expect((await call("POST", `/hub/pro/threads/${tid}/messages`, { token: b.session, body: { body: "Je postule" } })).status).toBe(200);
+    expect(((await (await call("GET", "/hub/pro/unread", { token: a.session })).json()) as any).count).toBe(1);
+
+    const inbox = (await (await call("GET", "/hub/pro/threads", { token: a.session })).json()) as any;
+    expect(inbox.threads[0]).toMatchObject({ id: tid, unread: 1, last_body: "Je postule", job_title: "Dev React", other: { id: b.id } });
+    expect(JSON.stringify(inbox)).not.toMatch(/@x\.ma/);
+
+    const conv = (await (await call("GET", `/hub/pro/threads/${tid}/messages`, { token: a.session })).json()) as any;
+    expect(conv.messages.map((x: any) => x.body)).toEqual(["Je postule"]);
+    expect(conv).toMatchObject({ other: { id: b.id }, job: { id: jobId } });
+    expect((await call("POST", `/hub/pro/threads/${tid}/read`, { token: a.session })).status).toBe(200);
+    expect(((await (await call("GET", "/hub/pro/unread", { token: a.session })).json()) as any).count).toBe(0);
+  });
+
+  it("outsiders and admins cannot read a thread; self-thread and bad input are rejected", async () => {
+    const a = await signIn("a@x.ma");
+    const b = await signIn("b@x.ma", "Youssef");
+    const c = await signIn("c@x.ma", "Sara");
+    const { id: tid } = (await (await call("POST", "/hub/pro/threads", { token: b.session, body: { to: a.id } })).json()) as { id: number };
+    await call("POST", `/hub/pro/threads/${tid}/messages`, { token: b.session, body: { body: "secret" } });
+    expect((await call("GET", `/hub/pro/threads/${tid}/messages`, { token: c.session })).status).toBe(404);
+    expect((await call("POST", `/hub/pro/threads/${tid}/messages`, { token: c.session, body: { body: "intrus" } })).status).toBe(404);
+    expect((await call("GET", `/hub/pro/threads/${tid}/messages`, { admin: "admin" })).status).toBe(401); // admin role gives no member access
+    expect((await call("POST", "/hub/pro/threads", { token: a.session, body: { to: a.id } })).status).toBe(400);
+    expect((await call("POST", "/hub/pro/threads", { token: a.session, body: { to: "abc" } })).status).toBe(400);
+    expect((await call("POST", "/hub/pro/threads", { token: a.session, body: { to: 9999 } })).status).toBe(404);
+    expect((await call("POST", `/hub/pro/threads/${tid}/messages`, { token: a.session, body: { body: "" } })).status).toBe(400);
+  });
+});
