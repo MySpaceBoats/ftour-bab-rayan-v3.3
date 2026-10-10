@@ -3,11 +3,13 @@ import { toast } from "sonner";
 import { Loader2, MailCheck, Pin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import * as hub from "../api";
 import Composer from "../components/Composer";
 import PostCard from "../components/PostCard";
 import HubShell from "../components/HubShell";
 import Avatar from "../components/Avatar";
+import { PasswordTab } from "../components/HubLoginForms";
 import { EmptyPanel, ErrorPanel, LoadingPanel } from "../components/StatePanel";
 
 const EMAIL_KEY = "hub_login_email";
@@ -143,59 +145,79 @@ export default function HubPage() {
             <p role="status" className="rounded-lg bg-blue-50 p-4 text-sm text-blue-900">{notice}</p>
           )}
 
-          {sent ? (
-            <div className="space-y-4">
-              <div role="status" className="flex items-start gap-3 rounded-lg bg-emerald-50 p-4 text-sm text-emerald-900">
-                <MailCheck size={20} className="mt-0.5 shrink-0" aria-hidden />
-                <span>
-                  Si cet email correspond à un bénévole confirmé, un lien de connexion vient d'être envoyé à <strong>{email.trim()}</strong>.
-                  Il est valable <strong>15 minutes</strong>.
-                </span>
+          <Tabs defaultValue="lien" className="gap-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="lien">Lien par email</TabsTrigger>
+              <TabsTrigger value="motdepasse">Mot de passe</TabsTrigger>
+            </TabsList>
+            <TabsContent value="lien">
+            {sent ? (
+              <div className="space-y-4">
+                <div role="status" className="flex items-start gap-3 rounded-lg bg-emerald-50 p-4 text-sm text-emerald-900">
+                  <MailCheck size={20} className="mt-0.5 shrink-0" aria-hidden />
+                  <span>
+                    Si cet email correspond à un bénévole confirmé, un lien de connexion vient d'être envoyé à <strong>{email.trim()}</strong>.
+                    Il est valable <strong>15 minutes</strong>.
+                  </span>
+                </div>
+                <p className="text-center text-xs text-slate-500">
+                  Rien reçu ? Vérifiez vos spams, puis demandez un nouveau lien.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full"
+                  disabled={busy || cooldown > 0}
+                  onClick={sendLink}
+                >
+                  {busy
+                    ? <Loader2 size={16} className="animate-spin" aria-hidden />
+                    : cooldown > 0 ? `Renvoyer dans ${cooldown} s` : "Renvoyer le lien"}
+                </Button>
+                <button
+                  type="button"
+                  className="block w-full text-center text-xs text-blue-700 underline"
+                  onClick={() => { setSent(false); setCooldown(0); setLoginError(null); setNotice(null); }}
+                >
+                  Utiliser une autre adresse email
+                </button>
               </div>
-              <p className="text-center text-xs text-slate-500">
-                Rien reçu ? Vérifiez vos spams, puis demandez un nouveau lien.
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-11 w-full"
-                disabled={busy || cooldown > 0}
-                onClick={sendLink}
-              >
-                {busy
-                  ? <Loader2 size={16} className="animate-spin" aria-hidden />
-                  : cooldown > 0 ? `Renvoyer dans ${cooldown} s` : "Renvoyer le lien"}
-              </Button>
-              <button
-                type="button"
-                className="block w-full text-center text-xs text-blue-700 underline"
-                onClick={() => { setSent(false); setCooldown(0); setLoginError(null); setNotice(null); }}
-              >
-                Utiliser une autre adresse email
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={sendLink} className="space-y-5">
-              <div className="space-y-1.5">
-                <label htmlFor="hub-email" className="text-sm font-medium text-slate-700">Votre email d'inscription</label>
-                <Input
-                  id="hub-email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  aria-describedby="hub-email-hint"
-                  placeholder="L'email de votre inscription"
-                  className="h-11"
-                />
-              </div>
-              <Button type="submit" className="h-11 w-full bg-blue-700 hover:bg-blue-800" disabled={busy || !email.trim()}>
-                {busy ? <Loader2 size={16} className="animate-spin" aria-hidden /> : "Recevoir mon lien de connexion"}
-              </Button>
-              <p id="hub-email-hint" className="text-center text-xs text-slate-500">Pas de mot de passe : un lien sécurisé, valable 15 minutes, vous est envoyé par email.</p>
-            </form>
-          )}
+            ) : (
+              <form onSubmit={sendLink} className="space-y-5">
+                <div className="space-y-1.5">
+                  <label htmlFor="hub-email" className="text-sm font-medium text-slate-700">Votre email d'inscription</label>
+                  <Input
+                    id="hub-email"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    aria-describedby="hub-email-hint"
+                    placeholder="L'email de votre inscription"
+                    className="h-11"
+                  />
+                </div>
+                <Button type="submit" className="h-11 w-full bg-blue-700 hover:bg-blue-800" disabled={busy || !email.trim()}>
+                  {busy ? <Loader2 size={16} className="animate-spin" aria-hidden /> : "Recevoir mon lien de connexion"}
+                </Button>
+                <p id="hub-email-hint" className="text-center text-xs text-slate-500">Un lien sécurisé, valable 15 minutes, vous est envoyé par email.</p>
+              </form>
+            )}
+            </TabsContent>
+            <TabsContent value="motdepasse">
+              <PasswordTab
+                initialEmail={email}
+                onSession={r => {
+                  try { localStorage.setItem(EMAIL_KEY, r.email); } catch { /* storage unavailable */ }
+                  hub.setHubToken(r.session);
+                  setLoginError(null);
+                  setNotice(null);
+                  setMe(r.member);
+                }}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     );

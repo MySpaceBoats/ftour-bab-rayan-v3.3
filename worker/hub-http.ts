@@ -23,3 +23,14 @@ export const str = (v: unknown) => {
   if (typeof v !== "string") throw new H.HubError("invalid", "Champ texte invalide");
   return v;
 };
+
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+/** Required email field: trimmed, lowercased, validated. */
+export const emailField = (v: unknown): string => {
+  const e = str(v).trim().toLowerCase();
+  if (!EMAIL_RE.test(e) || e.length > 320) throw new H.HubError("invalid", "Email invalide");
+  return e;
+};
+/** Public site origin used in mail links (no trailing slash). */
+export const appBaseUrl = (env: { PUBLIC_APP_URL?: string }): string =>
+  (env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma").replace(/\/$/, "");

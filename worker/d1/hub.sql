@@ -87,3 +87,20 @@ CREATE TABLE IF NOT EXISTS hub_gallery_proposals (
   gallery_photo_id TEXT,
   created_at TEXT NOT NULL
 );
+
+-- Identifiants : un mot de passe (hash PBKDF2) et une adresse de récupération vérifiée par membre. password_hash NULL = pas de mot de passe
+CREATE TABLE IF NOT EXISTS hub_credentials (
+  member_id INTEGER PRIMARY KEY REFERENCES hub_members(id) ON DELETE CASCADE,
+  password_hash TEXT,
+  recovery_email TEXT,
+  recovery_verified_at TEXT,
+  updated_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_hub_credentials_recovery ON hub_credentials(recovery_email);
+
+-- Échecs de connexion par mot de passe (clé "pw:<email>" ou "ip:<ip>") pour le rate-limit
+CREATE TABLE IF NOT EXISTS hub_auth_attempts (
+  key TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_hub_auth_attempts ON hub_auth_attempts(key, created_at);

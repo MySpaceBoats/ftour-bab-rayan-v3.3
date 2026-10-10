@@ -38,7 +38,7 @@ export async function call<T>(method: string, path: string, opts: { body?: unkno
     throw new HubApiError(res.status, "bad_response", "Service indisponible, réessayez dans un instant.");
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok && res.status === 401 && !opts.admin) {
+  if (!res.ok && res.status === 401 && !opts.admin && token) {
     setHubToken(null);
     window.dispatchEvent(new Event("hub:unauthorized"));
   }
@@ -48,6 +48,10 @@ export async function call<T>(method: string, path: string, opts: { body?: unkno
 
 export const requestLogin = (email: string) => call<{ ok: true }>("POST", "login", { body: { email } });
 export const verifyLogin = (token: string) => call<{ session: string; member: Member }>("POST", "verify", { body: { token } });
+export const loginWithPassword = (email: string, password: string) => call<{ session: string; member: Member }>("POST", "login/password", { body: { email, password } });
+export interface Security { has_password: boolean; recovery_email: string | null }
+export const getSecurity = () => call<Security>("GET", "me/security");
+export const setPassword = (password: string, current?: string) => call<{ ok: true }>("PUT", "me/password", { body: { password, ...(current ? { current } : {}) } });
 export const getMe = () => call<{ member: Member }>("GET", "me").then(r => r.member);
 export const updateMe = (b: { display_name?: string; bio?: string; avatar_key?: string | null }) => call<{ member: Member }>("PUT", "me", { body: b }).then(r => r.member);
 export const logout = () => call<{ ok: true }>("POST", "logout").finally(() => setHubToken(null));

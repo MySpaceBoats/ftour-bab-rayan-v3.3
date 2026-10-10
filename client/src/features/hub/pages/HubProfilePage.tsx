@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/i18n";
 import * as hub from "../api";
 import HubShell from "../components/HubShell";
+import AccountSettings from "../components/AccountSettings";
 import Avatar from "../components/Avatar";
 
 export default function HubProfilePage() {
@@ -111,6 +112,7 @@ export default function HubProfilePage() {
         </div>
       </div>
       {photoGrid}
+      <AccountSettings />
       <Link href={`/${lang}/benevole/espace`} className="inline-block text-sm text-blue-700 underline">← Retour au fil</Link>
     </HubShell>
   );

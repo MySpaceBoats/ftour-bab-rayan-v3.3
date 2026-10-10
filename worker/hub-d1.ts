@@ -68,6 +68,10 @@ export async function openSession(d: D1Like, loginToken: string, nowMs: number):
   if (!(await isEligible(d, used.email))) throw new HubError("forbidden", "Accès réservé aux bénévoles confirmés");
   const member = await upsertMember(d, used.email);
   if (member.status !== "active") throw new HubError("forbidden", "Compte suspendu");
+  return createSession(d, member, nowMs);
+}
+
+export async function createSession(d: D1Like, member: MemberRow, nowMs: number): Promise<{ session: string; member: MemberView }> {
   const session = randomToken();
   await d.prepare("INSERT INTO hub_sessions (token_hash, member_id, expires_at) VALUES (?,?,?)")
     .bind(await sha256Hex(session), member.id, iso(nowMs + SESSION_TTL_MS)).run();

@@ -5,7 +5,8 @@ import { sendEmail } from "./email";
 import { createWorkerContext } from "./context";
 import type { Env } from "./index";
 import * as H from "./hub-d1";
-import { id, readJson, str } from "./hub-http";
+import * as A from "./hub-auth-d1";
+import { appBaseUrl, emailField, id, readJson, str } from "./hub-http";
 import { handleMarketRoute } from "./market";
 import { handleStayRoute } from "./stay";
 import { handlePro } from "./pro";
@@ -23,7 +24,6 @@ const ADMIN_ROLES = new Set(["super_admin", "admin", "admin_ops"]);
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
 const STATUS: Record<H.HubErrorCode, number> = { unauthorized: 401, forbidden: 403, not_found: 404, invalid: 400, rate_limited: 429 };
 const SIGN_TTL_S = 3600;
-const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export async function handleHubRequest(request: Request, env: HubEnv, cors: Record<string, string>, deps: HubDeps = {}): Promise<Response | null> {
   const url = new URL(request.url);
@@ -56,6 +56,14 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     const sendMail = deps.sendMail ?? ((to: string, subject: string, html: string) =>
       sendEmail({ to, subject, html, apiKey: env.RESEND_API_KEY || env.EMAIL_PROVIDER_KEY || "" }));
 
+    const base = appBaseUrl(env);
+    // Best-effort side effect (mail): runs after the response when waitUntil exists, else awaited. Never throws.
+    const background = (label: string, job: () => Promise<unknown>): Promise<unknown> | void => {
+      const p = job().catch(e => console.error(`[hub] ${label} failed`, e));
+      if (deps.waitUntil) deps.waitUntil(p);
+      else return p;
+    };
+
     const member = async () => {
       const a = request.headers.get("authorization") ?? "";
       const m = a.startsWith("Bearer ") ? await H.getSession(d, a.slice(7), now()) : null;
@@ -84,23 +92,33 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
 
     // ---- session -----------------------------------------------------------
     if (match("POST", /^login$/)) {
-      const email = str((await readJson(request)).email).trim().toLowerCase();
-      if (!EMAIL_RE.test(email) || email.length > 320) throw new H.HubError("invalid", "Email invalide");
+      const email = emailField((await readJson(request)).email);
       // same answer whether or not the email is eligible (no enumeration)
       if ((await H.isEligible(d, email)) && (await H.canRequestLogin(d, email, now()))) {
-        const job = (async () => {
-          try {
-        const token = await H.createLoginToken(d, email, now());
-        const base = (env.PUBLIC_APP_URL || "https://www.ftourbabrayan.ma").replace(/\/$/, "");
-        const link = `${base}/fr/benevole/espace?token=${token}`;
-        await sendMail(email, "Votre lien de connexion — Espace bénévole", `<p>Bonjour,</p><p>Voici votre lien de connexion à l'espace bénévole Ftour Bab Rayan (valable 15 minutes, usage unique) :</p><p><a href="${link}">Ouvrir l'espace bénévole</a></p><p>Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>`);
-          } catch (e) {
-            console.error("[hub] login mail failed", e);
-          }
-        })();
-        if (deps.waitUntil) deps.waitUntil(job);
-        else await job;
+        await background("login mail", async () => {
+          const token = await H.createLoginToken(d, email, now());
+          const link = `${base}/fr/benevole/espace?token=${token}`;
+          await sendMail(email, "Votre lien de connexion — Espace bénévole", `<p>Bonjour,</p><p>Voici votre lien de connexion à l'espace bénévole Ftour Bab Rayan (valable 15 minutes, usage unique) :</p><p><a href="${link}">Ouvrir l'espace bénévole</a></p><p>Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>`);
+        });
       }
+      return json({ ok: true });
+    }
+    if (match("POST", /^login\/password$/)) {
+      const b = await readJson(request);
+      const email = emailField(b.email);
+      const password = str(b.password);
+      if (!password || password.length > A.PASSWORD_MAX) throw new H.HubError("unauthorized", "Email ou mot de passe incorrect");
+      return json(await A.loginWithPassword(d, email, password, now(), request.headers.get("cf-connecting-ip")));
+    }
+    if (match("GET", /^me\/security$/)) {
+      const me = await member();
+      return json(await A.security(d, me.id));
+    }
+    if (match("PUT", /^me\/password$/)) {
+      const me = await member();
+      const b = await readJson(request);
+      await A.setPassword(d, me, { current: str(b.current), password: str(b.password), keepSessionToken: (request.headers.get("authorization") ?? "").slice(7) }, now());
+      await background("password notice", () => sendMail(me.email, "Votre mot de passe a été modifié — Espace bénévole", `<p>Bonjour,</p><p>Le mot de passe de votre espace bénévole Ftour Bab Rayan vient d'être modifié.</p><p>Si ce n'était pas vous, utilisez « Mot de passe oublié » sur la page de connexion ou contactez l'équipe.</p>`));
       return json({ ok: true });
     }
     if (match("POST", /^verify$/)) {
