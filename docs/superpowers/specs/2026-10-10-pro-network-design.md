@@ -85,3 +85,9 @@ Déploiement côté utilisateur : appliquer `worker/d1/pro.sql` sur la D1 de pro
 ## Hors périmètre
 
 CV/candidatures structurées, réseau de contacts, notifications email/push, groupes, recommandations, recherche de membres, messages vocaux/pièces jointes, signalement de messages privés.
+
+## Précisions décidées au plan (2026-10-10)
+
+- `pro_threads` gagne `created_by` (limite de nouvelles discussions ; discussion encore vide invisible pour l'autre participant).
+- Liste publique des offres : `open` seulement ; `mine=1` : `open` + `closed` ; détail : `open` + `closed`.
+- Le contact d'une offre est du texte brut, jamais un lien cliquable.
