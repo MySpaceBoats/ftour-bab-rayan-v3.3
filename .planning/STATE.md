@@ -2,19 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 1
-current_phase_name: Test Harness
+current_phase: 06
+current_phase_name: design-d1-sur-le-site-principal
 status: executing
-stopped_at: Phase 1 context gathered
-last_updated: "2026-08-09T11:45:41.362Z"
-last_activity: 2026-08-09
-last_activity_desc: Phase 1 execution started
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-10-10T14:34:40.437Z"
+last_activity: 2026-10-10
+last_activity_desc: Phase 06 execution started
 progress:
-  total_phases: 5
+  total_phases: 3
   completed_phases: 0
-  total_plans: 1
-  completed_plans: 0
-  percent: 0
+  total_plans: 4
+  completed_plans: 1
 ---
 
 # Project State
@@ -24,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-08)
 
 **Core value:** All existing modules (client, server API, worker edge, shared/infra) work reliably — green tests, clean typecheck, working build, real bugs fixed.
-**Current focus:** Phase 1 — Test Harness
+**Current focus:** Phase 06 — design-d1-sur-le-site-principal
 
 ## Current Position
 
-Phase: 1 (Test Harness) — EXECUTING
-Plan: 1 of 1
-Status: Executing Phase 1
-Last activity: 2026-08-09 — Phase 1 execution started
+Phase: 06 (design-d1-sur-le-site-principal) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-10-10 — Phase 06 execution started
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 25%
 
 ## Performance Metrics
 
@@ -52,6 +51,11 @@ Progress: [░░░░░░░░░░] 0%
 **Recent Trend:** n/a (no plans completed yet)
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 06 P01 | 20min | 3 tasks | 30 files |
 
 ## Accumulated Context
 
@@ -67,6 +71,7 @@ Recent decisions affecting current work:
 - [Research]: Mock Supabase/Resend at module boundary with vi.mock; keep tests hermetic
 - [Research]: qrcode contract should throw consistently (tRPC-style) — decision confirmed in Phase 2
 - [Research]: Email subjects use canonical constants imported by impl + tests
+- [Phase ?]: Phase 06-01: luminance-matched d1 mauve (hue of d1, WCAG luminance of olive); rows 6-13 olive shades also remapped; PALETTE in scripts/palette-d1.mjs is single source
 
 ### Pending Todos
 
@@ -93,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-08T20:49:29.582Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-test-harness-hermetic-suite/01-CONTEXT.md
+Last session: 2026-10-10T14:34:40.432Z
+Stopped at: Completed 06-01-PLAN.md
+Resume file: None
