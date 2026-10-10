@@ -44,7 +44,7 @@ export default function ProPostCard({ post, me, onChanged }: { post: api.ProPost
       </header>
 
       <p className="whitespace-pre-wrap break-words px-4 pb-3 text-[15px] text-slate-900">{post.body}</p>
-      {post.link && (
+      {post.link && /^https?:\/\//i.test(post.link) && (
         <a href={post.link} target="_blank" rel="noopener noreferrer nofollow" className="mx-4 mb-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-blue-700 hover:bg-slate-100">
           <ExternalLink size={16} className="shrink-0" /><span className="truncate">{host(post.link)}</span>
         </a>

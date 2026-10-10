@@ -111,7 +111,7 @@ describe("pro http: profile and feed", () => {
   });
 });
 
-const jobBody = (over: Record<string, unknown> = {}) => ({ title: "Dev React", company: "Acme", city: "Rabat", type: "cdi", description: "On recrute", contact: "rh@acme.ma", ...over });
+const jobBody = (over: Record<string, unknown> = {}) => ({ title: "Dev React", company: "Acme", city: "Rabat", type: "cdi", description: "On recrute", contact: "+212 6 12 34 56 78", ...over });
 
 describe("pro http: jobs", () => {
   it("requires a member session", async () => {
@@ -125,6 +125,7 @@ describe("pro http: jobs", () => {
     const created = await call("POST", "/hub/pro/jobs", { token: a.session, body: jobBody() });
     expect(created.status).toBe(200);
     const { id } = (await created.json()) as { id: number };
+    expect((await call("POST", "/hub/pro/jobs", { token: a.session, body: jobBody({ contact: "rh@acme.ma" }) })).status).toBe(400);
 
     const list = (await (await call("GET", "/hub/pro/jobs?type=cdi&city=rabat&q=react", { token: b.session })).json()) as any;
     expect(list.jobs).toHaveLength(1);
@@ -132,7 +133,7 @@ describe("pro http: jobs", () => {
     expect(list.jobs[0].description).toBeUndefined();
 
     const detail = (await (await call("GET", `/hub/pro/jobs/${id}`, { token: b.session })).json()) as any;
-    expect(detail.job).toMatchObject({ id, description: "On recrute", contact: "rh@acme.ma", mine: false, poster: { id: a.id } });
+    expect(detail.job).toMatchObject({ id, description: "On recrute", contact: "+212612345678", mine: false, poster: { id: a.id } });
     expect(JSON.stringify(detail.job)).not.toMatch(/a@x\.ma|b@x\.ma/);
 
     expect((await call("PUT", `/hub/pro/jobs/${id}`, { token: b.session, body: jobBody() })).status).toBe(403);

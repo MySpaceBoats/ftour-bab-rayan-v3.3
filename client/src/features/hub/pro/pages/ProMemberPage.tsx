@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useRoute } from "wouter";
 import { toast } from "sonner";
 import { Briefcase, Loader2, MapPin } from "lucide-react";
@@ -18,9 +18,13 @@ export default function ProMemberPage() {
   const base = `/${lang}/benevole/espace/pro`;
   const [p, setP] = useState<api.ProProfileView | null | undefined>(undefined);
 
+  const reqId = useRef(0);
   useEffect(() => {
-    if (!me || !Number.isSafeInteger(memberId)) return;
-    api.getProfile(memberId).then(setP).catch(() => setP(null));
+    if (!me) return;
+    const id = ++reqId.current;
+    if (!Number.isSafeInteger(memberId) || memberId <= 0) { setP(null); return; }
+    setP(undefined);
+    api.getProfile(memberId).then(r => { if (id === reqId.current) setP(r); }).catch(() => { if (id === reqId.current) setP(null); });
   }, [me, memberId]);
 
   if (!me || p === undefined) return <div className="flex min-h-screen items-center justify-center bg-slate-100"><Loader2 className="animate-spin text-blue-700" /></div>;

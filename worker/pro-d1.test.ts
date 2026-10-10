@@ -193,7 +193,7 @@ describe("pro reports", () => {
   });
 });
 
-const job = (over: Partial<pro.JobInput> = {}): pro.JobInput => ({ title: "Développeur React", company: "Acme", city: "Casablanca", type: "cdi", description: "Nous recrutons.", contact: "rh@acme.ma", ...over });
+const job = (over: Partial<pro.JobInput> = {}): pro.JobInput => ({ title: "Développeur React", company: "Acme", city: "Casablanca", type: "cdi", description: "Nous recrutons.", contact: "0612345678", ...over });
 /** Insert a job directly (bypasses the daily rate limit) for list/search/pagination tests. */
 function rawJob(memberId: number, over: Record<string, unknown> = {}) {
   const o = { title: "Poste", company: "Co", city: "", type: "cdi", description: "desc", status: "open", ...over };
@@ -207,7 +207,7 @@ describe("pro jobs: write", () => {
     const b = await member("b@x.ma", "Youssef");
     await pro.saveProfile(d, a, { headline: "RH" }, T0);
     const { id } = await pro.createJob(d, a, job(), T0);
-    expect(await pro.getJob(d, a.id, id)).toMatchObject({ title: "Développeur React", company: "Acme", type: "cdi", status: "open", contact: "rh@acme.ma", mine: true, poster: { id: a.id, headline: "RH" } });
+    expect(await pro.getJob(d, a.id, id)).toMatchObject({ title: "Développeur React", company: "Acme", type: "cdi", status: "open", contact: "0612345678", mine: true, poster: { id: a.id, headline: "RH" } });
     expect((await pro.getJob(d, b.id, id)).mine).toBe(false);
   });
 
@@ -215,9 +215,34 @@ describe("pro jobs: write", () => {
     const a = await member("a@x.ma");
     const bad: Partial<pro.JobInput>[] = [
       { title: "" }, { title: "x".repeat(81) }, { company: "" }, { company: "x".repeat(81) }, { city: "x".repeat(61) },
-      { type: "interim" }, { description: "" }, { description: "x".repeat(3001) }, { contact: "x".repeat(121) }, { contact: 5 as any },
+      { type: "interim" }, { description: "" }, { description: "x".repeat(3001) }, { contact: "x".repeat(121) }, { contact: 5 as any }, { contact: "rh@acme.ma" }, { contact: "0612 abc" }, { contact: "123" },
     ];
     for (const over of bad) await expect(pro.createJob(d, a, job(over), T0)).rejects.toMatchObject({ code: "invalid" });
+  });
+
+  it("normalizes a phone contact and rejects emails with a clear message", async () => {
+    const a = await member("a@x.ma");
+    await expect(pro.createJob(d, a, job({ contact: "rh@acme.ma" }), T0)).rejects.toMatchObject({ code: "invalid", message: "Téléphone invalide (8 à 15 chiffres)" });
+    const { id } = await pro.createJob(d, a, job({ contact: "+212 (6) 12-34.56.78" }), T0);
+    expect((await pro.getJob(d, a.id, id)).contact).toBe("+212612345678");
+  });
+
+  it("never exposes an email in job, feed, profile or thread payloads", async () => {
+    const a = await member("author@secret.ma");
+    const b = await member("b@x.ma", "Youssef");
+    await pro.saveProfile(d, a, { headline: "RH" }, T0);
+    const { id } = await pro.createJob(d, a, job(), T0);
+    sqlite.prepare("INSERT INTO pro_jobs (member_id,title,company,city,type,description,contact) VALUES (?,?,?,?,?,?,?)").run(a.id, "Legacy", "Co", "", "cdi", "d", "old@leak.ma");
+    const legacy = Number((sqlite.prepare("SELECT max(id) AS i FROM pro_jobs").get() as { i: number }).i);
+    await pro.createPost(d, a, { body: "salut" }, T0);
+    const t = await pro.openThread(d, b, { to: a.id, jobId: id }, T0);
+    await pro.sendMessage(d, b, t.id, "Bonjour", T0);
+    const payloads = [
+      await pro.getJob(d, b.id, id), await pro.getJob(d, b.id, legacy), await pro.listJobs(d, b.id, {} as any),
+      await pro.feed(d, b.id), await pro.getProfile(d, b.id, a.id), await pro.listThreads(d, a.id), await pro.listMessages(d, a, t.id),
+    ];
+    for (const p of payloads) expect(JSON.stringify(p)).not.toMatch(/[^\s@]+@[^\s@]+\.[^\s@]+/);
+    expect((await pro.getJob(d, b.id, legacy)).contact).toBeNull();
   });
 
   it("limits to 3 jobs per 24 h", async () => {
@@ -428,6 +453,31 @@ describe("pro messaging", () => {
     suspend(b.id);
     expect(await pro.listThreads(d, a.id)).toEqual([]);
     expect(await pro.unreadTotal(d, a.id)).toBe(0);
+  });
+
+  it("listMessages is not_found once the other participant is suspended", async () => {
+    const a = await member("a@x.ma");
+    const b = await member("b@x.ma", "Youssef");
+    const t = await pro.openThread(d, b, { to: a.id }, T0);
+    await pro.sendMessage(d, b, t.id, "Bonjour", T0);
+    expect((await pro.listMessages(d, a, t.id)).messages).toHaveLength(1);
+    suspend(b.id);
+    await expect(pro.listMessages(d, a, t.id)).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("feed counters ignore likes and comments of suspended members", async () => {
+    const a = await member("a@x.ma");
+    const b = await member("b@x.ma", "Youssef");
+    const c = await member("c@x.ma", "Sara");
+    const { id } = await pro.createPost(d, a, post(), T0);
+    await pro.addComment(d, b, id, "ok", T0);
+    await pro.addComment(d, c, id, "bien", T0);
+    await pro.toggleLike(d, b.id, id);
+    await pro.toggleLike(d, c.id, id);
+    expect((await pro.feed(d, a.id)).posts[0]).toMatchObject({ like_count: 2, comment_count: 2 });
+    suspend(c.id);
+    expect((await pro.feed(d, a.id)).posts[0]).toMatchObject({ like_count: 1, comment_count: 1 });
+    expect(await pro.listComments(d, id)).toHaveLength(1);
   });
 
   it("paginates messages 50 at a time", async () => {

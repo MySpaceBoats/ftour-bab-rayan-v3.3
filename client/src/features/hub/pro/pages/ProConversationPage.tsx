@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/i18n";
 import Avatar from "../../components/Avatar";
+import { HubApiError } from "../../api";
 import { useHubMember } from "../../useHubMember";
 import * as api from "../pro-api";
 import ProLayout from "../ProLayout";
@@ -25,18 +26,29 @@ export default function ProConversationPage() {
   const prefilled = useRef(false);
   const sending = useRef(false);
   const bottom = useRef<HTMLDivElement>(null);
+  const reqId = useRef(0);
+  const hasData = useRef(false);
 
   const load = useCallback(async () => {
+    const id = ++reqId.current;
     try {
       const r = await api.getMessages(threadId);
+      if (id !== reqId.current) return;
+      hasData.current = true;
       setData(r);
       if (r.messages.some(m => m.sender_id !== me?.id && !m.read_at)) api.markRead(threadId).catch(() => undefined);
-    } catch { setData(null); }
+    } catch (e) {
+      if (id !== reqId.current) return;
+      if (e instanceof HubApiError && e.status === 404) { hasData.current = false; setData(null); }
+      else if (!hasData.current) toast.error((e as Error).message);
+    }
   }, [threadId, me?.id]);
 
   // ponytail: polling every 10 s instead of websockets; fine for a small community
   useEffect(() => {
-    if (!me || !Number.isSafeInteger(threadId)) return;
+    if (!me) return;
+    if (!Number.isSafeInteger(threadId) || threadId <= 0) { setData(null); return; }
+    hasData.current = false;
     load();
     const t = setInterval(() => { if (!document.hidden) load(); }, POLL_MS);
     return () => clearInterval(t);
@@ -58,10 +70,11 @@ export default function ProConversationPage() {
   const send = async (e: React.FormEvent) => {
     e.preventDefault();
     // ref guard: state `busy` alone can lag behind a fast double Enter
-    if (!draft.trim() || sending.current) return;
+    const text = draft;
+    if (!text.trim() || sending.current) return;
     sending.current = true;
     setBusy(true);
-    try { await api.sendMessage(threadId, draft); setDraft(""); await load(); } catch (err) { toast.error((err as Error).message); } finally { sending.current = false; setBusy(false); }
+    try { await api.sendMessage(threadId, text); setDraft(d => (d === text ? "" : d)); await load(); } catch (err) { toast.error((err as Error).message); } finally { sending.current = false; setBusy(false); }
   };
 
   return (

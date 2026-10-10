@@ -4,6 +4,7 @@
  */
 import type { D1Like } from "./gallery-d1";
 import { HOUR_MS, HubError, cleanBody, iso, isOwnPath, type MemberRow } from "./hub-d1";
+import { normalizePhone } from "./market-d1";
 
 export const JOB_TYPES = ["cdi", "cdd", "stage", "freelance", "benevolat"] as const;
 export const PRO_LIMITS = {
@@ -125,8 +126,8 @@ export async function feed(d: D1Like, viewerId: number, cursor: number | null = 
   const lim = Math.min(Math.max(Math.trunc(limit) || 20, 1), 50);
   const { results } = await d.prepare(
     `SELECT p.id, p.body, p.link, p.created_at, m.id AS author_id, m.display_name AS author_name, m.avatar_key AS author_avatar, COALESCE(pp.headline, '') AS author_headline,
-       (SELECT COUNT(*) FROM pro_likes l WHERE l.post_id = p.id) AS like_count,
-       (SELECT COUNT(*) FROM pro_comments c WHERE c.post_id = p.id AND c.status = 'visible') AS comment_count,
+       (SELECT COUNT(*) FROM pro_likes l JOIN hub_members lm ON lm.id = l.member_id WHERE l.post_id = p.id AND ${memberOk("lm")}) AS like_count,
+       (SELECT COUNT(*) FROM pro_comments c JOIN hub_members cm ON cm.id = c.member_id WHERE c.post_id = p.id AND c.status = 'visible' AND ${memberOk("cm")}) AS comment_count,
        EXISTS(SELECT 1 FROM pro_likes l WHERE l.post_id = p.id AND l.member_id = ?) AS liked
      FROM pro_posts p JOIN hub_members m ON m.id = p.member_id LEFT JOIN pro_profiles pp ON pp.member_id = m.id
      WHERE p.status = 'visible' AND ${AUTHOR_OK} AND (? IS NULL OR p.id < ?)
@@ -154,7 +155,7 @@ export async function toggleLike(d: D1Like, memberId: number, postId: number): P
   await visiblePost(d, postId);
   const removed = await d.prepare("DELETE FROM pro_likes WHERE post_id = ? AND member_id = ? RETURNING 1 AS x").bind(postId, memberId).first();
   if (!removed) await d.prepare("INSERT OR IGNORE INTO pro_likes (post_id, member_id) VALUES (?,?)").bind(postId, memberId).run();
-  const c = await d.prepare("SELECT COUNT(*) AS n FROM pro_likes WHERE post_id = ?").bind(postId).first<{ n: number }>();
+  const c = await d.prepare(`SELECT COUNT(*) AS n FROM pro_likes l JOIN hub_members lm ON lm.id = l.member_id WHERE l.post_id = ? AND ${memberOk("lm")}`).bind(postId).first<{ n: number }>();
   return { liked: !removed, count: c?.n ?? 0 };
 }
 
@@ -168,7 +169,6 @@ export async function addComment(d: D1Like, member: MemberRow, postId: number, r
 
 export async function listComments(d: D1Like, postId: number): Promise<CommentView[]> {
   await visiblePost(d, postId);
-  // ponytail: comment_count in the feed counts every visible comment, including ones by suspended authors that are filtered out here
   const { results } = await d.prepare(
     `SELECT c.id, c.post_id, c.body, c.created_at, m.id AS author_id, m.display_name AS author_name, m.avatar_key AS author_avatar
      FROM pro_comments c JOIN hub_members m ON m.id = c.member_id WHERE c.post_id = ? AND c.status = 'visible' AND ${AUTHOR_OK} ORDER BY c.id ASC LIMIT 200`,
@@ -244,7 +244,7 @@ function cleanJob(i: JobInput): CleanJob {
   const description = cleanBody(i.description, PRO_LIMITS.jobDescription, "Description");
   if (!(JOB_TYPES as readonly string[]).includes(i.type)) throw new HubError("invalid", "Type de contrat invalide");
   const city = text(i.city, PRO_LIMITS.city, "Ville");
-  const contact = text(i.contact, PRO_LIMITS.contact, "Contact") || null;
+  const contact = normalizePhone(i.contact);
   return { title, company, city, type: i.type, description, contact };
 }
 
@@ -326,7 +326,7 @@ export async function getJob(d: D1Like, viewerId: number, id: number): Promise<J
   if (!r) throw new HubError("not_found", "Offre introuvable");
   return {
     id: r.id, title: r.title, company: r.company, city: r.city, type: r.type, status: r.status, created_at: r.created_at, updated_at: r.updated_at,
-    description: r.description, contact: r.contact ?? null, mine: r.member_id === viewerId,
+    description: r.description, contact: r.contact && !r.contact.includes("@") ? r.contact : null, mine: r.member_id === viewerId,
     poster: { id: r.poster_id, display_name: r.poster_name, avatar_key: r.poster_avatar, headline: r.poster_headline },
   };
 }
@@ -415,11 +415,12 @@ export async function listMessages(d: D1Like, me: MemberRow, threadId: number, b
   ).bind(threadId, before, before).all<MessageView>();
   const page = results.slice(0, 50).reverse();
   const otherId = t.member_a === me.id ? t.member_b : t.member_a;
-  const o = await d.prepare("SELECT id, display_name, avatar_key FROM hub_members WHERE id = ?").bind(otherId).first<Person>();
+  const o = await d.prepare(`SELECT o.id, o.display_name, o.avatar_key FROM hub_members o WHERE o.id = ? AND ${memberOk("o")}`).bind(otherId).first<Person>();
+  if (!o) throw new HubError("not_found", "Conversation introuvable");
   const j = t.job_id > 0
     ? await d.prepare("SELECT id, title FROM pro_jobs WHERE id = ? AND status <> 'hidden'").bind(t.job_id).first<{ id: number; title: string }>()
     : null;
-  return { messages: page, nextCursor: results.length > 50 ? page[0].id : null, other: o!, job: j ?? null };
+  return { messages: page, nextCursor: results.length > 50 ? page[0].id : null, other: o, job: j ?? null };
 }
 
 export async function markThreadRead(d: D1Like, me: MemberRow, threadId: number, nowMs: number): Promise<void> {

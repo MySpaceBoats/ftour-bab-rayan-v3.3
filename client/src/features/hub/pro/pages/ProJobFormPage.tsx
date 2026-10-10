@@ -58,8 +58,8 @@ export default function ProJobFormPage() {
           </select>
         </div>
         <Textarea aria-label="Description" required rows={8} maxLength={3000} value={f.description} onChange={e => set("description", e.target.value)} placeholder="Missions, profil recherché, conditions…" />
-        <Input aria-label="Contact" maxLength={120} value={f.contact} onChange={e => set("contact", e.target.value)} placeholder="Contact (email, téléphone) — facultatif" />
-        <p className="text-xs text-slate-500">Les candidats pourront aussi vous écrire en messagerie.</p>
+        <Input aria-label="Téléphone" type="tel" inputMode="tel" maxLength={30} value={f.contact} onChange={e => set("contact", e.target.value)} placeholder="Téléphone (facultatif)" />
+        <p className="text-xs text-slate-500">Visible des membres connectés. Les candidats pourront aussi vous écrire en messagerie.</p>
         <Button type="submit" className="bg-blue-700 hover:bg-blue-800" disabled={busy || !f.title.trim() || !f.company.trim() || !f.description.trim()}>{editId ? "Enregistrer" : "Publier"}</Button>
       </form>
     </ProLayout>

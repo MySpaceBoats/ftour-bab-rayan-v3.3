@@ -21,7 +21,10 @@ export default function ProJobDetailPage() {
   const [busy, setBusy] = useState(false);
 
   const load = () => api.getJob(jobId).then(setJob).catch(() => setJob(null));
-  useEffect(() => { if (me && Number.isSafeInteger(jobId)) load(); }, [me, jobId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!me) return;
+    if (!Number.isSafeInteger(jobId) || jobId <= 0) setJob(null); else load();
+  }, [me, jobId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!me || job === undefined) return <div className="flex min-h-screen items-center justify-center bg-slate-100"><Loader2 className="animate-spin text-blue-700" /></div>;
   if (job === null) return <ProLayout me={me} active="jobs"><p className="rounded-xl bg-white p-8 text-center text-slate-600">Offre introuvable. <Link href={`${pro}/emplois`} className="text-blue-700 underline">Voir les offres</Link></p></ProLayout>;

@@ -59,7 +59,7 @@ export default function ProJobsPage() {
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="relative min-w-[10rem] flex-1">
           <Search size={16} className="pointer-events-none absolute left-3 top-3 text-slate-400" />
-          <Input aria-label="Rechercher" className="pl-9" value={q} maxLength={24} onChange={e => setQ(e.target.value)} placeholder="Poste, entreprise…" />
+          <Input aria-label="Rechercher" className="pl-9" value={q} maxLength={16} onChange={e => setQ(e.target.value)} placeholder="Poste, entreprise…" />
         </div>
         <Input aria-label="Ville" className="w-36" value={city} maxLength={60} onChange={e => setCity(e.target.value)} placeholder="Ville" />
         <select aria-label="Type de contrat" className={select} value={type} onChange={e => setType(e.target.value)}>
