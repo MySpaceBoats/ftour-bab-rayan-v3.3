@@ -17,7 +17,7 @@ export default function ProLayout({ me, active, children }: { me: hub.Member; ac
   const base = `/${lang}/benevole/espace/pro`;
   return (
     <HubShell me={me}>
-      <nav aria-label="Navigation Pro" className="flex gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+      <nav aria-label="Navigation offres d'emploi" className="flex gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
         {TABS.map(t => (
           <Link key={t.key} href={`${base}${t.to}`} aria-current={active === t.key ? "page" : undefined}
             className={`flex-1 rounded-lg px-3 py-2 text-center text-sm font-semibold ${active === t.key ? "bg-blue-700 text-white" : "text-slate-700 hover:bg-slate-100"}`}>

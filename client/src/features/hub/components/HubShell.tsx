@@ -63,7 +63,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
   const navLinks = [
     { href: feed, label: "Fil d'actualité", short: "Fil", icon: <Newspaper size={18} aria-hidden />, active: isFeed, badge: 0, badgeLabel: "" },
     { href: market, label: "Marketplace", short: "Market", icon: <Store size={18} aria-hidden />, active: isMarket, badge: 0, badgeLabel: "" },
-    { href: pro, label: "Pro", short: "Pro", icon: <Briefcase size={18} aria-hidden />, active: isPro, badge: proUnread, badgeLabel: "messages Pro non lus" },
+    { href: pro, label: "Offre d'emploi", short: "Emplois", icon: <Briefcase size={18} aria-hidden />, active: isPro, badge: proUnread, badgeLabel: "messages d'offres d'emploi non lus" },
     { href: stay, label: "Hébergement", short: "Logement", icon: <BedDouble size={18} aria-hidden />, active: isStay, badge: stayUnread, badgeLabel: "demandes de séjour" },
     { href: messages, label: "Mes messages", short: "Messages", icon: <Mail size={18} aria-hidden />, active: isMessages, badge: unread, badgeLabel: "messages non lus" },
     { href: profile, label: "Mon profil", short: "Profil", icon: <User size={18} aria-hidden />, active: isProfile, badge: 0, badgeLabel: "" },
