@@ -35,6 +35,8 @@ export interface Env {
   RESERVATION_ADMIN_DASHBOARD_URL?: string;
   // Gallery: Cloudflare D1 (rows) + R2 (image bytes)
   DB?: D1Like;
+  /** Hub realtime chat (presence + push). Absent: /hub/ws answers 503 and the hub falls back to polling. */
+  HUB_CHAT?: import('./hub').ChatNamespace;
   /** Overrides d1-tables.ts: comma list of Supabase tables served from D1, or "none" (instant rollback lever). */
   D1_TABLES?: string;
   /** Overrides d1-tables.ts R2_BUCKETS: Supabase Storage buckets served from R2, or "none". */
@@ -47,6 +49,7 @@ export interface Env {
 import type { D1Like, R2Like } from './gallery-d1';
 import { handleMediaRequest } from './media-r2';
 import { handleHubRequest } from './hub';
+export { HubChat } from './hub-chat';
 
 const MAX_PROOF_FILE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_PROOF_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);

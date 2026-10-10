@@ -11,8 +11,10 @@ import { appBaseUrl, emailField, id, readJson, str } from "./hub-http";
 import { handleMarketRoute } from "./market";
 import { handleStayRoute } from "./stay";
 import { handlePro } from "./pro";
+import * as X from "./messenger-d1";
 
-export interface HubEnv extends MediaEnv { DB?: D1Like; RESEND_API_KEY?: string; EMAIL_PROVIDER_KEY?: string; PUBLIC_APP_URL?: string }
+export interface ChatNamespace { idFromName(n: string): unknown; get(id: unknown): { fetch(input: string, init?: RequestInit): Promise<Response> } }
+export interface HubEnv extends MediaEnv { DB?: D1Like; HUB_CHAT?: ChatNamespace; RESEND_API_KEY?: string; EMAIL_PROVIDER_KEY?: string; PUBLIC_APP_URL?: string }
 export interface HubDeps {
   now?: () => number;
   sendMail?: (to: string, subject: string, html: string) => Promise<unknown>;
@@ -65,6 +67,22 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       const p = job().catch(e => console.error(`[hub] ${label} failed`, e));
       if (deps.waitUntil) deps.waitUntil(p);
       else return p;
+    };
+
+    // Realtime push: after a message was stored, tell the Durable Object who to wake up. Best effort, never fails the request.
+    const SENT = /^pro\/threads\/(\d+)\/messages$|^market\/threads\/(\d+)\/messages$|^stay\/requests\/(\d+)\/messages$/;
+    const pushAfterSend = async (res: Response): Promise<void> => {
+      if (!res.ok || request.method !== "POST" || !env.HUB_CHAT) return;
+      const m = SENT.exec(path);
+      if (!m) return;
+      const source: X.Source = m[1] ? "pro" : m[2] ? "market" : "stay";
+      const threadId = Number(m[1] ?? m[2] ?? m[3]);
+      await background("chat push", async () => {
+        const me = await member();
+        const to = await X.recipientOf(d, source, threadId, me.id);
+        if (to === null || !(await X.isEligible(d, to))) return;
+        await env.HUB_CHAT!.get(env.HUB_CHAT!.idFromName("hub")).fetch("https://hub-chat/notify", { method: "POST", body: JSON.stringify({ to, source, thread_id: threadId }) });
+      });
     };
 
     const member = async () => {
@@ -337,22 +355,33 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       return json({ ok: true });
     }
 
+    // ---- realtime chat -----------------------------------------------------
+    if (match("GET", /^ws$/)) {
+      if (request.headers.get("upgrade") !== "websocket") return json({ error: "invalid", message: "WebSocket requis" }, 400);
+      if (!env.HUB_CHAT) return json({ error: "unavailable", message: "Chat temps réel indisponible" }, 503);
+      // browsers cannot set headers on a WebSocket: the token rides in Sec-WebSocket-Protocol ("hub, <token>")
+      const token = (request.headers.get("sec-websocket-protocol") ?? "").split(",").map(x => x.trim())[1] ?? "";
+      const me = token ? await H.getSession(d, token, now()) : null;
+      if (!me) throw new H.HubError("unauthorized", "Connexion requise");
+      return env.HUB_CHAT.get(env.HUB_CHAT.idFromName("hub")).fetch("https://hub-chat/ws", { headers: { upgrade: "websocket", "x-member-id": String(me.id) } });
+    }
+
     // ---- marketplace -------------------------------------------------------
     if (path.startsWith("market/")) {
       const r = await handleMarketRoute({ d, request, url, path: path.slice("market/".length), now, json, member, admin, sign });
-      if (r) return r;
+      if (r) { await pushAfterSend(r); return r; }
     }
 
     // ---- hébergement (façon Airbnb) ----------------------------------------
     if (path.startsWith("stay/")) {
       const r = await handleStayRoute({ d, request, url, path: path.slice("stay/".length), now, json, member, admin, sign });
-      if (r) return r;
+      if (r) { await pushAfterSend(r); return r; }
     }
 
     // ---- professional network ----------------------------------------------
     if (path.startsWith("pro/")) {
       const r = await handlePro({ d, request, url, path: path.slice("pro/".length), now, json, member, admin, sign });
-      if (r) return r;
+      if (r) { await pushAfterSend(r); return r; }
     }
 
     return json({ error: "not_found", message: "Route inconnue" }, 404);
