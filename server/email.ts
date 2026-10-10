@@ -1353,7 +1353,7 @@ export function generateReservationRequestEmail(data: ReservationRequestEmailDat
   }[data.reservationType];
 
   const content = `
-    <h2 style="color: #5d5a3c; margin: 0 0 20px 0; font-size: 24px;">
+    <h2 style="color: #844653; margin: 0 0 20px 0; font-size: 24px;">
       Demande de réservation reçue
     </h2>
 
@@ -1381,7 +1381,7 @@ export function generateReservationRequestEmail(data: ReservationRequestEmailDat
     <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f0; border-radius: 8px; margin: 20px 0;">
       <tr>
         <td style="padding: 20px;">
-          <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">📋 Récapitulatif de votre demande</h3>
+          <h3 style="color: #844653; margin: 0 0 15px 0; font-size: 18px;">📋 Récapitulatif de votre demande</h3>
           <p style="margin: 5px 0; color: #374151;"><strong>Type :</strong> ${typeLabel}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Nombre de participants :</strong> ${data.participantsCount}</p>
@@ -1442,7 +1442,7 @@ export function generateReservationConfirmationEmail(data: ReservationConfirmati
   const checkinUrl = `${data.baseUrl}/checkin-reservation/${data.qrToken}`;
 
   const content = `
-    <h2 style="color: #5d5a3c; margin: 0 0 20px 0; font-size: 24px;">
+    <h2 style="color: #844653; margin: 0 0 20px 0; font-size: 24px;">
       Votre réservation est confirmée ✅
     </h2>
     
@@ -1458,7 +1458,7 @@ export function generateReservationConfirmationEmail(data: ReservationConfirmati
     <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f0; border-radius: 8px; margin: 20px 0;">
       <tr>
         <td style="padding: 20px;">
-          <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de votre réservation</h3>
+          <h3 style="color: #844653; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de votre réservation</h3>
           <p style="margin: 5px 0; color: #374151;"><strong>Espace :</strong> ${data.space}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Nombre de participants :</strong> ${data.participantsCount}</p>
@@ -1469,7 +1469,7 @@ export function generateReservationConfirmationEmail(data: ReservationConfirmati
 
     <!-- QR Code -->
     <div style="text-align: center; margin: 30px 0; padding: 20px; background-color: #ffffff; border: 2px dashed #d4a574; border-radius: 8px;">
-      <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">🎫 Votre QR Code d'accès</h3>
+      <h3 style="color: #844653; margin: 0 0 15px 0; font-size: 18px;">🎫 Votre QR Code d'accès</h3>
       <img src="${qrCodeUrl}" alt="QR Code" style="width: 200px; height: 200px; margin: 10px 0;" />
       <p style="color: #6b7280; font-size: 14px; margin: 10px 0 0 0;">
         Présentez ce QR code à l'entrée le jour de votre visite
@@ -1546,7 +1546,7 @@ export interface ParticulierReservationRequestEmailData {
 
 export function generateParticulierReservationRequestEmail(data: ParticulierReservationRequestEmailData): { subject: string; html: string } {
   const content = `
-    <h2 style="color: #5d5a3c; margin: 0 0 20px 0; font-size: 24px;">
+    <h2 style="color: #844653; margin: 0 0 20px 0; font-size: 24px;">
       Votre demande de réservation a bien été reçue
     </h2>
     
@@ -1562,7 +1562,7 @@ export function generateParticulierReservationRequestEmail(data: ParticulierRese
     <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f0; border-radius: 8px; margin: 20px 0;">
       <tr>
         <td style="padding: 20px;">
-          <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de votre demande</h3>
+          <h3 style="color: #844653; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de votre demande</h3>
           <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Nombre de places :</strong> ${data.participantsCount}</p>
           ${data.displayChoice ? `<p style="margin: 5px 0; color: #374151;"><strong>Salle :</strong> ${data.displayChoice}</p>` : ''}
@@ -1634,7 +1634,7 @@ export interface ParticulierReservationConfirmedEmailData {
 
 export function generateParticulierReservationConfirmedEmail(data: ParticulierReservationConfirmedEmailData): { subject: string; html: string } {
   const content = `
-    <h2 style="color: #5d5a3c; margin: 0 0 20px 0; font-size: 24px;">
+    <h2 style="color: #844653; margin: 0 0 20px 0; font-size: 24px;">
       Votre réservation est confirmée ✅
     </h2>
     
@@ -1650,7 +1650,7 @@ export function generateParticulierReservationConfirmedEmail(data: ParticulierRe
     <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f0; border-radius: 8px; margin: 20px 0;">
       <tr>
         <td style="padding: 20px;">
-          <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de votre réservation</h3>
+          <h3 style="color: #844653; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de votre réservation</h3>
           <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Nombre de places confirmées :</strong> ${data.participantsCount}</p>
           <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;"><strong>Référence :</strong> ${data.reference}</p>
@@ -1660,7 +1660,7 @@ export function generateParticulierReservationConfirmedEmail(data: ParticulierRe
     
     <!-- QR Code -->
     <div style="text-align: center; margin: 30px 0; padding: 20px; background-color: #ffffff; border: 2px dashed #d4a574; border-radius: 8px;">
-      <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">🎛 Votre QR Code d'accès</h3>
+      <h3 style="color: #844653; margin: 0 0 15px 0; font-size: 18px;">🎛 Votre QR Code d'accès</h3>
       <img src="${getReservationQrCodeUrl(data.qrToken, data.baseUrl)}" alt="QR Code" style="width: 200px; height: 200px; margin: 10px 0;" />
       <p style="color: #6b7280; font-size: 14px; margin: 10px 0 0 0;">
         Présentez ce QR code à l'entrée le jour de votre visite
@@ -1820,7 +1820,7 @@ export function generateRestaurantReservationRejectedEmail(
 
   const content = `
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">Nous n’avons pas pu confirmer votre réservation pour ce créneau.</div>
-    <h2 style="color:#5d5a3c;margin:0 0 18px 0;font-size:24px;">Réservation non disponible</h2>
+    <h2 style="color:#844653;margin:0 0 18px 0;font-size:24px;">Réservation non disponible</h2>
     <p style="margin:0 0 16px 0;color:#374151;font-size:16px;line-height:1.6;">Bonjour <strong>${escapeHtml(data.firstName)}</strong>,</p>
     <p style="margin:0 0 16px 0;color:#374151;font-size:16px;line-height:1.6;">
       Merci pour votre demande de réservation à <strong>${escapeHtml(brandName)}</strong>.<br>
@@ -1830,7 +1830,7 @@ export function generateRestaurantReservationRejectedEmail(
     <table role="presentation" style="width:100%;border-collapse:collapse;background-color:#f5f5f0;border-radius:8px;margin:20px 0;">
       <tr>
         <td style="padding:20px;">
-          <h3 style="margin:0 0 12px 0;color:#5d5a3c;font-size:18px;">📋 Votre demande</h3>
+          <h3 style="margin:0 0 12px 0;color:#844653;font-size:18px;">📋 Votre demande</h3>
           <p style="margin:5px 0;color:#374151;"><strong>Date :</strong> ${escapeHtml(data.reservationDateLong)}</p>
           ${data.reservationTime ? `<p style="margin:5px 0;color:#374151;"><strong>Heure :</strong> ${escapeHtml(data.reservationTime)}</p>` : ""}
           <p style="margin:5px 0;color:#374151;"><strong>Nombre de personnes :</strong> ${data.partySize}</p>
@@ -1936,14 +1936,14 @@ export function generateNewBookingNotificationEmail(data: NewBookingNotification
   }[data.type];
 
   const content = `
-    <h2 style="color: #5d5a3c; margin: 0 0 20px 0; font-size: 24px;">
+    <h2 style="color: #844653; margin: 0 0 20px 0; font-size: 24px;">
       📬 Nouvelle demande reçue
     </h2>
     
     <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f0; border-radius: 8px; margin: 20px 0;">
       <tr>
         <td style="padding: 20px;">
-          <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de la demande</h3>
+          <h3 style="color: #844653; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de la demande</h3>
           <p style="margin: 5px 0; color: #374151;"><strong>Type :</strong> ${typeLabel}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Participants :</strong> ${data.participantsCount}</p>
@@ -1995,7 +1995,7 @@ export function generateAdminReservationValidationEmail(data: AdminReservationVa
   }[data.type];
 
   const content = `
-    <h2 style="color: #5d5a3c; margin: 0 0 20px 0; font-size: 24px;">
+    <h2 style="color: #844653; margin: 0 0 20px 0; font-size: 24px;">
       Nouvelle demande de reservation restaurant
     </h2>
 
@@ -2006,7 +2006,7 @@ export function generateAdminReservationValidationEmail(data: AdminReservationVa
     <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f0; border-radius: 8px; margin: 20px 0;">
       <tr>
         <td style="padding: 20px;">
-          <h3 style="color: #5d5a3c; margin: 0 0 15px 0; font-size: 18px;">Details de la demande</h3>
+          <h3 style="color: #844653; margin: 0 0 15px 0; font-size: 18px;">Details de la demande</h3>
           <p style="margin: 5px 0; color: #374151;"><strong>Type :</strong> ${typeLabel}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Date :</strong> ${data.date}</p>
           <p style="margin: 5px 0; color: #374151;"><strong>Participants :</strong> ${data.participantsCount}</p>
