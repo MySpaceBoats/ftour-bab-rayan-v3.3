@@ -5,6 +5,8 @@ import { sendEmail } from "./email";
 import { createWorkerContext } from "./context";
 import type { Env } from "./index";
 import * as H from "./hub-d1";
+import { id, readJson, str } from "./hub-http";
+import { handleMarketRoute } from "./market";
 
 export interface HubEnv extends MediaEnv { DB?: D1Like; RESEND_API_KEY?: string; EMAIL_PROVIDER_KEY?: string; PUBLIC_APP_URL?: string }
 export interface HubDeps {
@@ -20,30 +22,6 @@ const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "
 const STATUS: Record<H.HubErrorCode, number> = { unauthorized: 401, forbidden: 403, not_found: 404, invalid: 400, rate_limited: 429 };
 const SIGN_TTL_S = 3600;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-
-async function readJson(request: Request): Promise<Record<string, unknown>> {
-  try {
-    const b = await request.json();
-    return b && typeof b === "object" ? (b as Record<string, unknown>) : {};
-  } catch {
-    throw new H.HubError("invalid", "JSON invalide");
-  }
-}
-const num = (v: unknown) => {
-  if (typeof v !== "string" && typeof v !== "number") return NaN;
-  const n = /^\d+$/.test(String(v)) ? Number(v) : NaN;
-  return Number.isSafeInteger(n) && n > 0 ? n : NaN;
-};
-const id = (v: unknown) => {
-  const n = num(v);
-  if (Number.isNaN(n)) throw new H.HubError("invalid", "Identifiant invalide");
-  return n;
-};
-const str = (v: unknown) => {
-  if (v === undefined || v === null) return "";
-  if (typeof v !== "string") throw new H.HubError("invalid", "Champ texte invalide");
-  return v;
-};
 
 export async function handleHubRequest(request: Request, env: HubEnv, cors: Record<string, string>, deps: HubDeps = {}): Promise<Response | null> {
   const url = new URL(request.url);
@@ -207,6 +185,12 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       const b = await readJson(request);
       await H.adminUpdateMember(d, id(m[1]), { status: b.status as any, role: b.role as any });
       return json({ ok: true });
+    }
+
+    // ---- marketplace -------------------------------------------------------
+    if (path.startsWith("market/")) {
+      const r = await handleMarketRoute({ d, request, url, path: path.slice("market/".length), now, json, member, admin, sign });
+      if (r) return r;
     }
 
     return json({ error: "not_found", message: "Route inconnue" }, 404);
