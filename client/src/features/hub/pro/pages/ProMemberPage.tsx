@@ -8,6 +8,8 @@ import Avatar from "../../components/Avatar";
 import { useHubMember } from "../../useHubMember";
 import * as api from "../pro-api";
 import ProLayout from "../ProLayout";
+import PresenceDot from "../../messenger/PresenceDot";
+import { useChat } from "../../messenger/useChat";
 
 export default function ProMemberPage() {
   const { lang } = useI18n();
@@ -17,6 +19,7 @@ export default function ProMemberPage() {
   const memberId = Number(params?.id);
   const base = `/${lang}/benevole/espace/pro`;
   const [p, setP] = useState<api.ProProfileView | null | undefined>(undefined);
+  const { isOnline } = useChat();
 
   const reqId = useRef(0);
   useEffect(() => {
@@ -35,7 +38,7 @@ export default function ProMemberPage() {
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="h-20 bg-gradient-to-r from-blue-800 to-blue-500" />
         <div className="space-y-3 p-4">
-          <div className="-mt-12 rounded-full ring-4 ring-white w-fit"><Avatar name={p.member.display_name} src={p.member.avatar} size={80} /></div>
+          <div className="-mt-12 relative rounded-full ring-4 ring-white w-fit"><Avatar name={p.member.display_name} src={p.member.avatar} size={80} /><PresenceDot online={isOnline(p.member.id)} className="absolute bottom-1 right-1 h-4 w-4" /></div>
           <div>
             <h1 className="text-xl font-bold text-slate-900">{p.member.display_name}</h1>
             {p.headline && <p className="text-slate-700">{p.headline}</p>}
@@ -49,7 +52,7 @@ export default function ProMemberPage() {
           {p.skills.length > 0 && <ul className="flex flex-wrap gap-2">{p.skills.map(s => <li key={s} className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700">{s}</li>)}</ul>}
           {p.mine && <Link href={`${base}/profil`} className="inline-block text-sm text-blue-700 underline">Modifier mon profil pro</Link>}
           {!p.mine && (
-            <Button className="bg-blue-700 hover:bg-blue-800" onClick={() => api.openThread({ to: p.member.id }).then(t => setLocation(`${base}/messages/${t.id}`)).catch(e => toast.error((e as Error).message))}>Écrire</Button>
+            <Button className="bg-blue-700 hover:bg-blue-800" onClick={() => api.openThread({ to: p.member.id }).then(t => setLocation(`/${lang}/benevole/espace/messages/pro/${t.id}`)).catch(e => toast.error((e as Error).message))}>Écrire</Button>
           )}
         </div>
       </div>

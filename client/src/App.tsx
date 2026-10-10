@@ -31,8 +31,6 @@ import Galerie from "@/features/gallery/pages/Galerie";
 import BenevoleGalerieUpload from "@/features/gallery/pages/BenevoleGalerieUpload";
 import HubPage from "@/features/hub/pages/HubPage";
 import MarketPage from "@/features/hub/market/pages/MarketPage";
-import InboxPage from "@/features/hub/market/pages/InboxPage";
-import ConversationPage from "@/features/hub/market/pages/ConversationPage";
 import ListingDetailPage from "@/features/hub/market/pages/ListingDetailPage";
 import ListingFormPage from "@/features/hub/market/pages/ListingFormPage";
 import HubProfilePage from "@/features/hub/pages/HubProfilePage";
@@ -47,8 +45,8 @@ import ProMemberPage from "@/features/hub/pro/pages/ProMemberPage";
 import ProJobsPage from "@/features/hub/pro/pages/ProJobsPage";
 import ProJobDetailPage from "@/features/hub/pro/pages/ProJobDetailPage";
 import ProJobFormPage from "@/features/hub/pro/pages/ProJobFormPage";
-import ProInboxPage from "@/features/hub/pro/pages/ProInboxPage";
-import ProConversationPage from "@/features/hub/pro/pages/ProConversationPage";
+import MessengerPage from "@/features/hub/messenger/MessengerPage";
+import { RedirectMessages } from "@/features/hub/messenger/Redirects";
 import GalerieValidationUpload from "@/features/gallery/pages/GalerieValidationUpload";
 
 // ============================================
@@ -351,8 +349,10 @@ function LocalizedRoutes() {
       <Route path="/:lang/programme" component={Programme} />
       <Route path="/:lang/benevole" component={Benevole} />
       <Route path="/:lang/benevole/photos" component={BenevoleGalerieUpload} />
-      <Route path="/:lang/benevole/espace/marketplace/messages/:threadId" component={ConversationPage} />
-      <Route path="/:lang/benevole/espace/marketplace/messages" component={InboxPage} />
+      <Route path="/:lang/benevole/espace/messages/:source/:id" component={MessengerPage} />
+      <Route path="/:lang/benevole/espace/messages" component={MessengerPage} />
+      <Route path="/:lang/benevole/espace/marketplace/messages/:threadId">{() => <RedirectMessages from="/:lang/benevole/espace/marketplace/messages" source="market" />}</Route>
+      <Route path="/:lang/benevole/espace/marketplace/messages">{() => <RedirectMessages from="/:lang/benevole/espace/marketplace/messages" />}</Route>
       <Route path="/:lang/benevole/espace/marketplace/nouveau" component={ListingFormPage} />
       <Route path="/:lang/benevole/espace/marketplace/:id/modifier" component={ListingFormPage} />
       <Route path="/:lang/benevole/espace/marketplace/:id" component={ListingDetailPage} />
@@ -363,8 +363,8 @@ function LocalizedRoutes() {
       <Route path="/:lang/benevole/espace/hebergement/:id/modifier" component={StayFormPage} />
       <Route path="/:lang/benevole/espace/hebergement/:id" component={StayDetailPage} />
       <Route path="/:lang/benevole/espace/hebergement" component={StayPage} />
-      <Route path="/:lang/benevole/espace/pro/messages/:threadId" component={ProConversationPage} />
-      <Route path="/:lang/benevole/espace/pro/messages" component={ProInboxPage} />
+      <Route path="/:lang/benevole/espace/pro/messages/:threadId">{() => <RedirectMessages from="/:lang/benevole/espace/pro/messages" source="pro" />}</Route>
+      <Route path="/:lang/benevole/espace/pro/messages">{() => <RedirectMessages from="/:lang/benevole/espace/pro/messages" />}</Route>
       <Route path="/:lang/benevole/espace/pro/emplois/nouveau" component={ProJobFormPage} />
       <Route path="/:lang/benevole/espace/pro/emplois/:id/modifier" component={ProJobFormPage} />
       <Route path="/:lang/benevole/espace/pro/emplois/:id" component={ProJobDetailPage} />

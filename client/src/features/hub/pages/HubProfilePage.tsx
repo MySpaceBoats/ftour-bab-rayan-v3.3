@@ -9,6 +9,9 @@ import * as hub from "../api";
 import HubShell from "../components/HubShell";
 import AccountSettings from "../components/AccountSettings";
 import Avatar from "../components/Avatar";
+import PresenceDot from "../messenger/PresenceDot";
+import { useChat } from "../messenger/useChat";
+import * as proApi from "../pro/pro-api";
 
 export default function HubProfilePage() {
   const { lang } = useI18n();
@@ -17,6 +20,7 @@ export default function HubProfilePage() {
   const [bio, setBio] = useState("");
   const [busy, setBusy] = useState(false);
   const [, setLocation] = useLocation();
+  const { isOnline } = useChat();
   const [, params] = useRoute("/:lang/benevole/espace/membre/:id");
   const viewedId = params ? Number(params.id) : null;
   const [profile, setProfile] = useState<{ member: hub.Member; photos: hub.Photo[] } | null>(null);
@@ -82,9 +86,10 @@ export default function HubProfilePage() {
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <div className="h-24 bg-gradient-to-r from-blue-800 to-blue-500" />
             <div className="space-y-3 p-4">
-              <div className="-mt-14 w-fit rounded-full ring-4 ring-white"><Avatar name={m.display_name} src={m.avatar} size={88} /></div>
+              <div className="relative -mt-14 w-fit rounded-full ring-4 ring-white"><Avatar name={m.display_name} src={m.avatar} size={88} /><PresenceDot online={isOnline(m.id)} className="absolute bottom-1 right-1 h-4 w-4" /></div>
               <h1 className="text-xl font-bold text-slate-900">{m.display_name}</h1>
               {m.bio && <p className="whitespace-pre-wrap text-sm text-slate-700">{m.bio}</p>}
+              <Button className="bg-blue-700 hover:bg-blue-800" onClick={() => proApi.openThread({ to: m.id }).then(t => setLocation(`/${lang}/benevole/espace/messages/pro/${t.id}`)).catch(e => toast.error((e as Error).message))}>Écrire</Button>
             </div>
           </div>
         )}

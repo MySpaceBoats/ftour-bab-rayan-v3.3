@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { BedDouble, Briefcase, Home, LogOut, Mail, Newspaper, Store, User } from "lucide-react";
 import { useI18n } from "@/i18n";
@@ -13,9 +13,8 @@ import {
 import * as hub from "../api";
 import Avatar from "./Avatar";
 import NotificationBell from "./NotificationBell";
-import * as mk from "../market/market-api";
-import * as st from "../stay/stay-api";
 import * as proApi from "../pro/pro-api";
+import { useChat } from "../messenger/useChat";
 
 /** Dedicated app frame for the volunteer space: top bar, side columns (desktop), tab bar (mobile). */
 export default function HubShell({ me, right, children }: { me: hub.Member; right?: ReactNode; children: ReactNode }) {
@@ -24,27 +23,24 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
   const base = `/${lang}/benevole/espace`;
   const feed = base;
   const market = `${base}/marketplace`;
-  const messages = `${market}/messages`;
+  const messages = `${base}/messages`;
   const profile = `${base}/profil`;
   const stay = `${base}/hebergement`;
   const pro = `${base}/pro`;
   const [unread, setUnread] = useState(0);
-  const [stayUnread, setStayUnread] = useState(0);
-  const [proUnread, setProUnread] = useState(0);
   const [notifUnread, setNotifUnread] = useState(0);
-  // ponytail: poll the unread counters every 30 s instead of push notifications
+  const tick = useCallback(() => {
+    // one badge: Pro + Marketplace + Séjours messages
+    proApi.unreadCount().then(setUnread).catch(() => undefined);
+    hub.unreadNotifications().then(setNotifUnread).catch(() => undefined);
+  }, []);
+  // the socket pushes new messages instantly; polling every 30 s is the fallback
+  useChat(e => { if (e.type === "message") tick(); });
   useEffect(() => {
-    let alive = true;
-    const tick = () => {
-      mk.unreadCount().then(n => { if (alive) setUnread(n); }).catch(() => undefined);
-      st.stayUnread().then(n => { if (alive) setStayUnread(n); }).catch(() => undefined);
-      proApi.unreadCount().then(n => { if (alive) setProUnread(n); }).catch(() => undefined);
-      hub.unreadNotifications().then(n => { if (alive) setNotifUnread(n); }).catch(() => undefined);
-    };
     tick();
     const t = setInterval(() => { if (!document.hidden) tick(); }, 30_000);
-    return () => { alive = false; clearInterval(t); };
-  }, []);
+    return () => clearInterval(t);
+  }, [tick]);
   const logout = async () => {
     await hub.logout().catch(() => undefined);
     window.location.assign(base);
@@ -57,7 +53,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
   // The feed link must stay exact, otherwise it would also match every nested route.
   const isFeed = path === feed || path === `${feed}/`;
   const isMessages = path.startsWith(messages);
-  const isMarket = path.startsWith(market) && !isMessages;
+  const isMarket = path.startsWith(market);
   const isStay = path.startsWith(stay);
   // "/pro" is also a prefix of "/profil": require a path boundary.
   const isPro = path === pro || path.startsWith(`${pro}/`);
@@ -66,9 +62,9 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
   const navLinks = [
     { href: feed, label: "Fil d'actualité", short: "Fil", icon: <Newspaper size={18} aria-hidden />, active: isFeed, badge: 0, badgeLabel: "" },
     { href: market, label: "Marketplace", short: "Market", icon: <Store size={18} aria-hidden />, active: isMarket, badge: 0, badgeLabel: "" },
-    { href: pro, label: "Offre d'emploi", short: "Emplois", icon: <Briefcase size={18} aria-hidden />, active: isPro, badge: proUnread, badgeLabel: "messages d'offres d'emploi non lus" },
-    { href: stay, label: "Hébergement", short: "Logement", icon: <BedDouble size={18} aria-hidden />, active: isStay, badge: stayUnread, badgeLabel: "demandes de séjour" },
-    { href: messages, label: "Mes messages", short: "Messages", icon: <Mail size={18} aria-hidden />, active: isMessages, badge: unread, badgeLabel: "messages non lus" },
+    { href: pro, label: "Offre d'emploi", short: "Emplois", icon: <Briefcase size={18} aria-hidden />, active: isPro, badge: 0, badgeLabel: "" },
+    { href: stay, label: "Hébergement", short: "Logement", icon: <BedDouble size={18} aria-hidden />, active: isStay, badge: 0, badgeLabel: "" },
+    { href: messages, label: "Messages", short: "Messages", icon: <Mail size={18} aria-hidden />, active: isMessages, badge: unread, badgeLabel: "messages non lus" },
     { href: profile, label: "Mon profil", short: "Profil", icon: <User size={18} aria-hidden />, active: isProfile, badge: 0, badgeLabel: "" },
   ];
 
