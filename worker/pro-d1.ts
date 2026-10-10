@@ -337,3 +337,101 @@ export async function adminListJobs(d: D1Like): Promise<AdminJobView[]> {
   ).all<AdminJobView>();
   return results;
 }
+
+// ---- messaging --------------------------------------------------------------
+
+export interface ThreadSummary { id: number; job_id: number; job_title: string | null; other: Person; last_body: string | null; last_message_at: string; unread: number }
+export interface MessageView { id: number; sender_id: number; body: string; created_at: string; read_at: string | null }
+interface ThreadRow { id: number; member_a: number; member_b: number; job_id: number }
+
+/** Thread the member takes part in. Outsiders (admins included) get a 404: existence is not revealed. */
+async function participantThread(d: D1Like, member: MemberRow, threadId: number): Promise<ThreadRow> {
+  const t = await d.prepare("SELECT id, member_a, member_b, job_id FROM pro_threads WHERE id = ?").bind(threadId).first<ThreadRow>();
+  if (!t || (t.member_a !== member.id && t.member_b !== member.id)) throw new HubError("not_found", "Discussion introuvable");
+  return t;
+}
+
+export async function openThread(d: D1Like, me: MemberRow, input: { to: number; jobId?: number }, nowMs: number): Promise<{ id: number; created: boolean }> {
+  const { to } = input;
+  const jobId = input.jobId ?? 0;
+  if (to === me.id) throw new HubError("invalid", "Vous ne pouvez pas vous écrire à vous-même");
+  const target = await d.prepare(`SELECT m.id FROM hub_members m WHERE m.id = ? AND ${AUTHOR_OK}`).bind(to).first();
+  if (!target) throw new HubError("not_found", "Membre introuvable");
+  let jobStatus = "";
+  if (jobId > 0) {
+    const j = await d.prepare("SELECT member_id, status FROM pro_jobs WHERE id = ? AND status IN ('open','closed')").bind(jobId).first<{ member_id: number; status: string }>();
+    if (!j) throw new HubError("not_found", "Offre introuvable");
+    if (j.member_id !== to) throw new HubError("invalid", "Destinataire invalide pour cette offre");
+    jobStatus = j.status;
+  }
+  const [a, b] = me.id < to ? [me.id, to] : [to, me.id];
+  const existing = await d.prepare("SELECT id FROM pro_threads WHERE member_a = ? AND member_b = ? AND job_id = ?").bind(a, b, jobId).first<{ id: number }>();
+  if (existing) return { id: existing.id, created: false };
+  if (jobStatus === "closed") throw new HubError("invalid", "Cette offre est fermée");
+  if ((await recent(d, "pro_threads", "created_by", me.id, nowMs - HOUR_MS)) >= PRO_LIMITS.threadsPerHour) throw new HubError("rate_limited", "Trop de nouvelles discussions, réessayez plus tard");
+  const row = await d.prepare(
+    `INSERT INTO pro_threads (member_a, member_b, job_id, created_by, created_at, last_message_at) VALUES (?,?,?,?,?,?)
+     ON CONFLICT(member_a, member_b, job_id) DO UPDATE SET job_id = excluded.job_id RETURNING id`,
+  ).bind(a, b, jobId, me.id, iso(nowMs), iso(nowMs)).first<{ id: number }>();
+  return { id: row!.id, created: true };
+}
+
+export async function sendMessage(d: D1Like, me: MemberRow, threadId: number, rawBody: string, nowMs: number): Promise<{ id: number }> {
+  const t = await participantThread(d, me, threadId);
+  const body = cleanBody(rawBody, PRO_LIMITS.message, "Message");
+  const otherId = t.member_a === me.id ? t.member_b : t.member_a;
+  if (!(await d.prepare(`SELECT 1 AS ok FROM hub_members m WHERE m.id = ? AND ${AUTHOR_OK}`).bind(otherId).first())) throw new HubError("forbidden", "Ce membre n'est plus joignable");
+  if ((await recent(d, "pro_messages", "sender_id", me.id, nowMs - HOUR_MS)) >= PRO_LIMITS.messagesPerHour) throw new HubError("rate_limited", "Trop de messages, réessayez plus tard");
+  const row = await d.prepare("INSERT INTO pro_messages (thread_id, sender_id, body, created_at) VALUES (?,?,?,?) RETURNING id").bind(t.id, me.id, body, iso(nowMs)).first<{ id: number }>();
+  await d.prepare("UPDATE pro_threads SET last_message_at = ? WHERE id = ?").bind(iso(nowMs), t.id).run();
+  return { id: row!.id };
+}
+
+export async function listThreads(d: D1Like, memberId: number): Promise<ThreadSummary[]> {
+  const { results } = await d.prepare(
+    `SELECT t.id, t.job_id, t.last_message_at,
+       CASE WHEN j.status = 'hidden' THEN NULL ELSE j.title END AS job_title,
+       o.id AS other_id, o.display_name AS other_name, o.avatar_key AS other_avatar,
+       (SELECT body FROM pro_messages WHERE thread_id = t.id ORDER BY id DESC LIMIT 1) AS last_body,
+       (SELECT COUNT(*) FROM pro_messages WHERE thread_id = t.id AND sender_id <> ? AND read_at IS NULL) AS unread
+     FROM pro_threads t
+     JOIN hub_members o ON o.id = CASE WHEN t.member_a = ? THEN t.member_b ELSE t.member_a END
+     LEFT JOIN pro_jobs j ON j.id = t.job_id
+     WHERE (t.member_a = ? OR t.member_b = ?) AND ${memberOk("o")}
+       AND (t.created_by = ? OR EXISTS (SELECT 1 FROM pro_messages WHERE thread_id = t.id))
+     ORDER BY t.last_message_at DESC, t.id DESC LIMIT 100`,
+  ).bind(memberId, memberId, memberId, memberId, memberId).all<any>();
+  return results.map(r => ({
+    id: r.id, job_id: r.job_id, job_title: r.job_title ?? null,
+    other: { id: r.other_id, display_name: r.other_name, avatar_key: r.other_avatar },
+    last_body: r.last_body, last_message_at: r.last_message_at, unread: r.unread,
+  }));
+}
+
+export async function listMessages(d: D1Like, me: MemberRow, threadId: number, before: number | null = null) {
+  const t = await participantThread(d, me, threadId);
+  const { results } = await d.prepare(
+    "SELECT id, sender_id, body, created_at, read_at FROM pro_messages WHERE thread_id = ? AND (? IS NULL OR id < ?) ORDER BY id DESC LIMIT 51",
+  ).bind(threadId, before, before).all<MessageView>();
+  const page = results.slice(0, 50).reverse();
+  const otherId = t.member_a === me.id ? t.member_b : t.member_a;
+  const o = await d.prepare("SELECT id, display_name, avatar_key FROM hub_members WHERE id = ?").bind(otherId).first<Person>();
+  const j = t.job_id > 0
+    ? await d.prepare("SELECT id, title FROM pro_jobs WHERE id = ? AND status <> 'hidden'").bind(t.job_id).first<{ id: number; title: string }>()
+    : null;
+  return { messages: page, nextCursor: results.length > 50 ? page[0].id : null, other: o!, job: j ?? null };
+}
+
+export async function markThreadRead(d: D1Like, me: MemberRow, threadId: number, nowMs: number): Promise<void> {
+  await participantThread(d, me, threadId);
+  await d.prepare("UPDATE pro_messages SET read_at = ? WHERE thread_id = ? AND sender_id <> ? AND read_at IS NULL").bind(iso(nowMs), threadId, me.id).run();
+}
+
+export async function unreadTotal(d: D1Like, memberId: number): Promise<number> {
+  const r = await d.prepare(
+    `SELECT COUNT(*) AS n FROM pro_messages x JOIN pro_threads t ON t.id = x.thread_id
+     JOIN hub_members o ON o.id = CASE WHEN t.member_a = ? THEN t.member_b ELSE t.member_a END
+     WHERE (t.member_a = ? OR t.member_b = ?) AND x.sender_id <> ? AND x.read_at IS NULL AND ${memberOk("o")}`,
+  ).bind(memberId, memberId, memberId, memberId).first<{ n: number }>();
+  return r?.n ?? 0;
+}

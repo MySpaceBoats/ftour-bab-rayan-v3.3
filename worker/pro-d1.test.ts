@@ -322,3 +322,125 @@ describe("pro jobs: list", () => {
     expect((await pro.adminListJobs(d))[0]).toMatchObject({ id, title: "Offre douteuse", status: "hidden", poster: a.display_name });
   });
 });
+
+describe("pro messaging", () => {
+  it("opens one thread per pair and job; applying twice reuses it", async () => {
+    const a = await member("a@x.ma");
+    const b = await member("b@x.ma", "Youssef");
+    const { id: jobId } = await pro.createJob(d, a, job(), T0);
+    const direct = await pro.openThread(d, b, { to: a.id }, T0);
+    expect(direct.created).toBe(true);
+    expect(await pro.openThread(d, b, { to: a.id }, T0)).toEqual({ id: direct.id, created: false });
+    expect(await pro.openThread(d, a, { to: b.id }, T0)).toEqual({ id: direct.id, created: false }); // order of the pair does not matter
+    const apply = await pro.openThread(d, b, { to: a.id, jobId }, T0);
+    expect(apply.id).not.toBe(direct.id);
+    expect(await pro.openThread(d, b, { to: a.id, jobId }, T0)).toEqual({ id: apply.id, created: false });
+  });
+
+  it("refuses self, unknown, suspended, wrong-poster and hidden-job targets", async () => {
+    const a = await member("a@x.ma");
+    const b = await member("b@x.ma", "Youssef");
+    const c = await member("c@x.ma", "Sara");
+    await expect(pro.openThread(d, a, { to: a.id }, T0)).rejects.toMatchObject({ code: "invalid" });
+    await expect(pro.openThread(d, a, { to: 9999 }, T0)).rejects.toMatchObject({ code: "not_found" });
+    const { id: jobId } = await pro.createJob(d, a, job(), T0);
+    await expect(pro.openThread(d, c, { to: b.id, jobId }, T0)).rejects.toMatchObject({ code: "invalid" }); // job belongs to a, not b
+    await expect(pro.openThread(d, b, { to: a.id, jobId: 9999 }, T0)).rejects.toMatchObject({ code: "not_found" });
+    await pro.hideJob(d, jobId);
+    await expect(pro.openThread(d, b, { to: a.id, jobId }, T0)).rejects.toMatchObject({ code: "not_found" });
+    suspend(c.id);
+    await expect(pro.openThread(d, a, { to: c.id }, T0)).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("a new thread on a closed job is refused, an existing one continues", async () => {
+    const a = await member("a@x.ma");
+    const b = await member("b@x.ma", "Youssef");
+    const c = await member("c@x.ma", "Sara");
+    const { id: jobId } = await pro.createJob(d, a, job(), T0);
+    const t = await pro.openThread(d, b, { to: a.id, jobId }, T0);
+    await pro.setJobStatus(d, a, jobId, "closed", T0);
+    await expect(pro.openThread(d, c, { to: a.id, jobId }, T0)).rejects.toMatchObject({ code: "invalid" });
+    expect(await pro.openThread(d, b, { to: a.id, jobId }, T0)).toEqual({ id: t.id, created: false });
+    await expect(pro.sendMessage(d, b, t.id, "Toujours intéressé", T0)).resolves.toBeDefined();
+  });
+
+  it("only the two participants read and write; outsiders get not_found", async () => {
+    const a = await member("a@x.ma");
+    const b = await member("b@x.ma", "Youssef");
+    const c = await member("c@x.ma", "Sara");
+    const mod = await member("m@x.ma", "Admin", "moderator");
+    const t = await pro.openThread(d, b, { to: a.id }, T0);
+    await pro.sendMessage(d, b, t.id, "Bonjour", T0);
+    for (const outsider of [c, mod]) {
+      await expect(pro.listMessages(d, outsider, t.id)).rejects.toMatchObject({ code: "not_found" });
+      await expect(pro.sendMessage(d, outsider, t.id, "intrus", T0)).rejects.toMatchObject({ code: "not_found" });
+      await expect(pro.markThreadRead(d, outsider, t.id, T0)).rejects.toMatchObject({ code: "not_found" });
+    }
+    expect((await pro.listMessages(d, a, t.id)).messages.map(m => m.body)).toEqual(["Bonjour"]);
+  });
+
+  it("validates messages, limits to 30/h, and refuses writing to a suspended member", async () => {
+    const a = await member("a@x.ma");
+    const b = await member("b@x.ma", "Youssef");
+    const t = await pro.openThread(d, b, { to: a.id }, T0);
+    for (const body of ["", "   ", "x".repeat(1001)]) await expect(pro.sendMessage(d, b, t.id, body, T0)).rejects.toMatchObject({ code: "invalid" });
+    for (let i = 0; i < 30; i++) await pro.sendMessage(d, b, t.id, `m${i}`, T0);
+    await expect(pro.sendMessage(d, b, t.id, "trop", T0)).rejects.toMatchObject({ code: "rate_limited" });
+    suspend(a.id);
+    await expect(pro.sendMessage(d, b, t.id, "plus tard", T0 + HOUR + 1)).rejects.toMatchObject({ code: "forbidden" });
+  });
+
+  it("limits new threads to 20 per hour", async () => {
+    const me = await member("me@x.ma", "Moi");
+    for (let i = 0; i < 20; i++) { const o = await member(`o${i}@x.ma`, `O${i}`); await pro.openThread(d, me, { to: o.id }, T0); }
+    const extra = await member("extra@x.ma", "Extra");
+    await expect(pro.openThread(d, me, { to: extra.id }, T0)).rejects.toMatchObject({ code: "rate_limited" });
+  });
+
+  it("inbox: hides empty threads from the recipient, counts unread, clears them on read", async () => {
+    const a = await member("a@x.ma");
+    const b = await member("b@x.ma", "Youssef");
+    const { id: jobId } = await pro.createJob(d, a, job({ title: "Chef de projet" }), T0);
+    const t = await pro.openThread(d, b, { to: a.id, jobId }, T0);
+    expect(await pro.listThreads(d, a.id)).toEqual([]); // nothing written yet: invisible to the poster
+    expect(await pro.listThreads(d, b.id)).toHaveLength(1);
+    await pro.sendMessage(d, b, t.id, "Je postule", T0 + 1);
+    await pro.sendMessage(d, b, t.id, "Voici mon CV en lien", T0 + 2);
+    const inbox = await pro.listThreads(d, a.id);
+    expect(inbox[0]).toMatchObject({ id: t.id, job_title: "Chef de projet", last_body: "Voici mon CV en lien", unread: 2, other: { id: b.id } });
+    expect(await pro.unreadTotal(d, a.id)).toBe(2);
+    expect(await pro.unreadTotal(d, b.id)).toBe(0);
+    await pro.markThreadRead(d, a, t.id, T0 + 3);
+    expect(await pro.unreadTotal(d, a.id)).toBe(0);
+    const conv = await pro.listMessages(d, a, t.id);
+    expect(conv).toMatchObject({ other: { id: b.id }, job: { id: jobId, title: "Chef de projet" }, nextCursor: null });
+    expect(conv.messages.every(m => m.read_at !== null)).toBe(true);
+  });
+
+  it("inbox hides threads with suspended members and hidden-job titles", async () => {
+    const a = await member("a@x.ma");
+    const b = await member("b@x.ma", "Youssef");
+    const { id: jobId } = await pro.createJob(d, a, job(), T0);
+    const t = await pro.openThread(d, b, { to: a.id, jobId }, T0);
+    await pro.sendMessage(d, b, t.id, "Bonjour", T0);
+    await pro.hideJob(d, jobId);
+    expect((await pro.listThreads(d, a.id))[0].job_title).toBeNull();
+    suspend(b.id);
+    expect(await pro.listThreads(d, a.id)).toEqual([]);
+    expect(await pro.unreadTotal(d, a.id)).toBe(0);
+  });
+
+  it("paginates messages 50 at a time", async () => {
+    const a = await member("a@x.ma");
+    const b = await member("b@x.ma", "Youssef");
+    const t = await pro.openThread(d, b, { to: a.id }, T0);
+    for (let i = 0; i < 55; i++) sqlite.prepare("INSERT INTO pro_messages (thread_id, sender_id, body, created_at) VALUES (?,?,?,?)").run(t.id, b.id, `m${i}`, h.iso(T0 + i));
+    const first = await pro.listMessages(d, a, t.id);
+    expect(first.messages).toHaveLength(50);
+    expect(first.messages[49].body).toBe("m54");
+    expect(first.nextCursor).not.toBeNull();
+    const older = await pro.listMessages(d, a, t.id, first.nextCursor);
+    expect(older.messages.map(m => m.body)).toEqual(["m0", "m1", "m2", "m3", "m4"]);
+    expect(older.nextCursor).toBeNull();
+  });
+});
