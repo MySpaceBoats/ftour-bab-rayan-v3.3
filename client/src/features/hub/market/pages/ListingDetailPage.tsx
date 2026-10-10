@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { useI18n } from "@/i18n";
 import HubShell from "../../components/HubShell";
 import Avatar from "../../components/Avatar";
+import { ErrorPanel } from "../../components/StatePanel";
 import { useHubMember } from "../../useHubMember";
+import { HubApiError } from "../../api";
 import * as mk from "../market-api";
 import { CATEGORIES, CONDITIONS, label, price } from "../format";
 
@@ -19,21 +21,38 @@ export default function ListingDetailPage() {
   const listingId = Number(params?.id);
   const base = `/${lang}/benevole/espace/marketplace`;
   const [l, setL] = useState<mk.ListingDetail | null | undefined>(undefined);
+  const [loadError, setLoadError] = useState("");
   const [comments, setComments] = useState<mk.MkComment[]>([]);
+  const [commentsError, setCommentsError] = useState(false);
   const [draft, setDraft] = useState("");
   const [photo, setPhoto] = useState(0);
   const [posting, setPosting] = useState(false);
 
   const act = async (fn: () => Promise<unknown>) => { try { await fn(); } catch (e) { toast.error((e as Error).message); } };
-  const loadComments = useCallback(() => mk.listComments(listingId).then(setComments).catch(() => undefined), [listingId]);
+
+  // A deleted listing (404) is not an error: show the "no longer exists" message, not a retry button.
+  const loadListing = useCallback(() => {
+    setLoadError("");
+    return mk.getListing(listingId).then(setL).catch((e: unknown) => {
+      if (e instanceof HubApiError && e.status === 404) { setL(null); return; }
+      setLoadError(e instanceof Error ? e.message : "Impossible de charger cette annonce.");
+    });
+  }, [listingId]);
+
+  const loadComments = useCallback(() => {
+    setCommentsError(false);
+    return mk.listComments(listingId).then(setComments).catch(() => setCommentsError(true));
+  }, [listingId]);
 
   useEffect(() => {
     if (!me || !Number.isSafeInteger(listingId)) return;
-    mk.getListing(listingId).then(setL).catch(() => setL(null));
+    loadListing();
     loadComments();
-  }, [me, listingId, loadComments]);
+  }, [me, listingId, loadListing, loadComments]);
 
-  if (!me || l === undefined) return <div className="flex min-h-screen items-center justify-center bg-slate-100"><Loader2 className="animate-spin text-blue-700" /></div>;
+  if (!me) return <div className="flex min-h-screen items-center justify-center bg-slate-100"><Loader2 className="animate-spin text-blue-700" /></div>;
+  if (loadError) return <HubShell me={me}><ErrorPanel message={loadError} onRetry={loadListing} /></HubShell>;
+  if (l === undefined) return <div className="flex min-h-screen items-center justify-center bg-slate-100"><Loader2 className="animate-spin text-blue-700" /></div>;
   if (l === null) return (
     <HubShell me={me}><p className="rounded-xl bg-white p-8 text-center text-slate-600">Cette annonce n'existe plus. <Link href={base} className="text-blue-700 underline">Retour à la marketplace</Link></p></HubShell>
   );
@@ -95,6 +114,12 @@ export default function ListingDetailPage() {
 
       <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm" aria-label="Questions et commentaires">
         <h2 className="font-bold text-slate-900">Questions ({comments.length})</h2>
+        {commentsError && (
+          <p role="alert" className="text-sm text-red-700">
+            Impossible de charger les questions.{" "}
+            <button type="button" className="underline" onClick={loadComments}>Réessayer</button>
+          </p>
+        )}
         {comments.map(c => (
           <div key={c.id} className="flex items-start gap-2">
             <Avatar name={c.author.display_name} src={c.author.avatar} size={32} />

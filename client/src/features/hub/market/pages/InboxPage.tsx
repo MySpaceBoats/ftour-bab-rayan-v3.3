@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "wouter";
-import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useI18n } from "@/i18n";
 import HubShell from "../../components/HubShell";
 import Avatar from "../../components/Avatar";
+import { EmptyPanel, ErrorPanel, LoadingPanel } from "../../components/StatePanel";
 import { useHubMember } from "../../useHubMember";
 import * as mk from "../market-api";
 
@@ -13,21 +13,39 @@ export default function InboxPage() {
   const me = useHubMember();
   const base = `/${lang}/benevole/espace/marketplace`;
   const [threads, setThreads] = useState<mk.Thread[] | null>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (!me) return;
-    mk.listThreads().then(setThreads).catch(e => { toast.error((e as Error).message); setThreads([]); });
-  }, [me]);
+  const load = useCallback(async () => {
+    setStatus("loading");
+    setError("");
+    try {
+      setThreads(await mk.listThreads());
+      setStatus("ready");
+    } catch (e) {
+      setError((e as Error).message);
+      setStatus("error");
+    }
+  }, []);
+
+  useEffect(() => { if (me) load(); }, [me, load]);
 
   if (!me) return <div className="flex min-h-screen items-center justify-center bg-slate-100"><Loader2 className="animate-spin text-blue-700" /></div>;
 
   return (
     <HubShell me={me}>
       <h1 className="text-xl font-bold text-slate-900">Mes messages</h1>
-      {threads === null && <Loader2 className="mx-auto animate-spin text-blue-700" />}
-      {threads?.length === 0 && <p className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">Aucune discussion. Ouvrez une annonce et cliquez sur « Envoyer un message ».</p>}
+      {status === "loading" && <LoadingPanel label="Chargement des discussions…" />}
+      {status === "error" && <ErrorPanel message={error || "Impossible de charger vos discussions."} onRetry={load} />}
+      {status === "ready" && threads?.length === 0 && (
+        <EmptyPanel
+          title="Aucune discussion."
+          description="Ouvrez une annonce qui vous intéresse, puis cliquez sur « Envoyer un message »."
+          action={<Link href={base} className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800">Parcourir la marketplace</Link>}
+        />
+      )}
       <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        {threads?.map(t => (
+        {status === "ready" && threads?.map(t => (
           <li key={t.id}>
             <Link href={`${base}/messages/${t.id}`} className="flex items-center gap-3 p-3 hover:bg-slate-50">
               <Avatar name={t.other.display_name} src={t.other.avatar} size={44} />
