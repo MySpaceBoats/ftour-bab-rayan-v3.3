@@ -7,6 +7,13 @@
  */
 export const DEMO_DOMAIN = "demo.ftour.invalid";
 
+/**
+ * Marqueur apposé sur tout contenu de démonstration (profils, publications, annonces) : personne ne
+ * doit pouvoir confondre ces données avec de vrais bénévoles ou de vraies annonces.
+ */
+export const DEMO_LABEL = "🧪 Profil test";
+const demoText = (s: string) => `${DEMO_LABEL} — ${s}`;
+
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
 const ago = (minutes: number) => `strftime('%Y-%m-%dT%H:%M:%fZ','now','-${Math.max(0, Math.round(minutes))} minutes')`;
 const mail = (key: string) => `${key}@${DEMO_DOMAIN}`;
@@ -228,7 +235,7 @@ export function cleanupStatements(): string[] {
   ];
 }
 
-const postRef = (p: Post) => `(SELECT id FROM hub_posts WHERE member_id = ${mid(p.a)} AND body = ${q(p.body)})`;
+const postRef = (p: Post) => `(SELECT id FROM hub_posts WHERE member_id = ${mid(p.a)} AND body = ${q(demoText(p.body))})`;
 const listingRef = (key: string) => {
   const l = LISTINGS.find(x => x.key === key)!;
   return `(SELECT id FROM mk_listings WHERE member_id = ${mid(l.seller)} AND title = ${q(l.title)})`;
@@ -265,16 +272,18 @@ export function seedStatements(me?: string): string[] {
   out.push(`UPDATE t_ramadan_days SET registered_count = registered_count - (SELECT COUNT(*) FROM t_volunteers v WHERE v.day_id = t_ramadan_days.id AND v.email LIKE ${DOMAIN_LIKE});`);
 
   for (const p of PEOPLE) {
+    // the marker goes in display_name too: a bio is only visible on one's own profile page, whereas the
+    // name is shown on every post, listing and conversation, which is where confusion could happen.
     out.push(
-      `INSERT INTO hub_members (email, display_name, bio, role, status, created_at) VALUES (${q(mail(p.key))}, ${q(`${p.first} ${p.last[0]}.`)}, ${q(p.bio)}, ${q(p.role ?? "member")}, 'active', ${ago(80 * H)});`,
+      `INSERT INTO hub_members (email, display_name, bio, role, status, created_at) VALUES (${q(mail(p.key))}, ${q(`🧪 ${p.first} ${p.last[0]}. (profil test)`)}, ${q(`${DEMO_LABEL} — profil fictif créé pour la démonstration de l'espace bénévole. ${p.bio}`)}, ${q(p.role ?? "member")}, 'active', ${ago(80 * H)});`,
     );
   }
 
   for (const p of POSTS) {
-    out.push(`INSERT INTO hub_posts (member_id, body, kind, pinned, status, created_at) VALUES (${mid(p.a)}, ${q(p.body)}, 'post', 0, 'visible', ${ago(p.min)});`);
+    out.push(`INSERT INTO hub_posts (member_id, body, kind, pinned, status, created_at) VALUES (${mid(p.a)}, ${q(demoText(p.body))}, 'post', 0, 'visible', ${ago(p.min)});`);
   }
   for (const a of ANNOUNCEMENTS) {
-    out.push(`INSERT INTO hub_posts (member_id, body, kind, pinned, status, created_at) VALUES (${mid(a.a)}, ${q(a.body)}, 'announcement', 1, 'visible', ${ago(a.min)});`);
+    out.push(`INSERT INTO hub_posts (member_id, body, kind, pinned, status, created_at) VALUES (${mid(a.a)}, ${q(demoText(a.body))}, 'announcement', 1, 'visible', ${ago(a.min)});`);
   }
   for (const [pi, a, delay, text] of POST_COMMENTS) {
     const post = POSTS[pi];
@@ -298,7 +307,7 @@ export function seedStatements(me?: string): string[] {
   for (const l of LISTINGS) {
     const phone = l.phone ? q(`+2120000000${String(PEOPLE.findIndex(p => p.key === l.seller) + 1).padStart(2, "0")}`) : "NULL";
     out.push(
-      `INSERT INTO mk_listings (member_id, title, description, price, category, item_condition, city, status, contact_phone, contact_whatsapp, created_at, updated_at) VALUES (${mid(l.seller)}, ${q(l.title)}, ${q(l.description)}, ${l.price}, ${q(l.category)}, ${q(l.condition)}, ${q(l.city)}, ${q(l.status ?? "active")}, ${phone}, ${l.whatsapp ? 1 : 0}, ${ago(l.min)}, ${ago(l.min)});`,
+      `INSERT INTO mk_listings (member_id, title, description, price, category, item_condition, city, status, contact_phone, contact_whatsapp, created_at, updated_at) VALUES (${mid(l.seller)}, ${q(l.title)}, ${q(demoText(l.description))}, ${l.price}, ${q(l.category)}, ${q(l.condition)}, ${q(l.city)}, ${q(l.status ?? "active")}, ${phone}, ${l.whatsapp ? 1 : 0}, ${ago(l.min)}, ${ago(l.min)});`,
     );
   }
   // covers: position 0 is what the marketplace grid shows, the rest feed the detail carousel

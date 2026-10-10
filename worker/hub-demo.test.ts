@@ -6,7 +6,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
-import { DEMO_DOMAIN, cleanupSql, seedSql } from "../scripts/hub-demo/build";
+import { DEMO_DOMAIN, DEMO_LABEL, cleanupSql, seedSql } from "../scripts/hub-demo/build";
 
 // node:sqlite is still experimental, so it is absent from Vite's builtin list and must be
 // resolved at runtime instead of being statically imported (Vite would try to bundle it).
@@ -99,6 +99,31 @@ describe("hub demo seed", () => {
     }
     const onDisk = readdirSync(mediaDir).filter(f => f.endsWith(".jpg")).sort();
     expect(onDisk).toEqual([...new Set(keys.map(k => k.slice("demo/".length)))].sort());
+  });
+
+  it("marks every demo profile, post and listing as test data", () => {
+    const db = freshDb();
+    db.exec(seedSql());
+    const members = db.prepare("SELECT display_name, bio FROM hub_members").all() as { display_name: string; bio: string }[];
+    expect(members).toHaveLength(10);
+    for (const m of members) {
+      // le nom est le seul champ visible partout (fil, annonces, messagerie) : le marqueur doit y être
+      expect(m.display_name).toContain("profil test");
+      expect(m.bio).toContain(DEMO_LABEL);
+    }
+    const bodies = db.prepare("SELECT body FROM hub_posts").all() as { body: string }[];
+    expect(bodies).toHaveLength(17);
+    for (const b of bodies) expect(b.body.startsWith(DEMO_LABEL), b.body.slice(0, 40)).toBe(true);
+    const descriptions = db.prepare("SELECT description FROM mk_listings").all() as { description: string }[];
+    expect(descriptions).toHaveLength(10);
+    for (const d of descriptions) expect(d.description.startsWith(DEMO_LABEL)).toBe(true);
+
+    // un vrai membre (option --me) ne doit jamais porter le marqueur
+    const withMe = freshDb();
+    withMe.exec("INSERT INTO hub_members (email, display_name) VALUES ('moi@example.org','Moi');");
+    withMe.exec(seedSql("moi@example.org"));
+    const real = withMe.prepare("SELECT display_name FROM hub_members WHERE email = 'moi@example.org'").get() as { display_name: string };
+    expect(real.display_name).toBe("Moi");
   });
 
   it("leaves the public Ramadan capacity untouched", () => {
