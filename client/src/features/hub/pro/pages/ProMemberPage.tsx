@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { Link, useRoute } from "wouter";
+import { Link, useLocation, useRoute } from "wouter";
+import { toast } from "sonner";
 import { Briefcase, Loader2, MapPin } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n";
 import Avatar from "../../components/Avatar";
 import { useHubMember } from "../../useHubMember";
@@ -10,6 +12,7 @@ import ProLayout from "../ProLayout";
 export default function ProMemberPage() {
   const { lang } = useI18n();
   const me = useHubMember();
+  const [, setLocation] = useLocation();
   const [, params] = useRoute("/:lang/benevole/espace/pro/membre/:id");
   const memberId = Number(params?.id);
   const base = `/${lang}/benevole/espace/pro`;
@@ -41,6 +44,9 @@ export default function ProMemberPage() {
           {p.bio && <p className="whitespace-pre-wrap break-words text-sm text-slate-700">{p.bio}</p>}
           {p.skills.length > 0 && <ul className="flex flex-wrap gap-2">{p.skills.map(s => <li key={s} className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700">{s}</li>)}</ul>}
           {p.mine && <Link href={`${base}/profil`} className="inline-block text-sm text-blue-700 underline">Modifier mon profil pro</Link>}
+          {!p.mine && (
+            <Button className="bg-blue-700 hover:bg-blue-800" onClick={() => api.openThread({ to: p.member.id }).then(t => setLocation(`${base}/messages/${t.id}`)).catch(e => toast.error((e as Error).message))}>Écrire</Button>
+          )}
         </div>
       </div>
     </ProLayout>

@@ -45,3 +45,14 @@ export const updateJob = (id: number, f: JobForm) => call<{ ok: true }>("PUT", `
 export const setJobStatus = (id: number, status: "open" | "closed") => call<{ ok: true }>("POST", `pro/jobs/${id}/status`, { body: { status } });
 export const removeJob = (id: number) => call<{ ok: true }>("DELETE", `pro/jobs/${id}`);
 export const adminJobs = () => call<{ jobs: AdminJob[] }>("GET", "pro/admin/jobs", { admin: true }).then(r => r.jobs);
+
+export interface Thread { id: number; job_id: number; job_title: string | null; other: Person; last_body: string | null; last_message_at: string; unread: number }
+export interface Message { id: number; sender_id: number; body: string; created_at: string; read_at: string | null }
+export interface Conversation { messages: Message[]; nextCursor: number | null; other: Person; job: { id: number; title: string } | null }
+
+export const openThread = (p: { to: number; jobId?: number }) => call<{ id: number; created: boolean }>("POST", "pro/threads", { body: { to: p.to, ...(p.jobId ? { job_id: p.jobId } : {}) } });
+export const listThreads = () => call<{ threads: Thread[] }>("GET", "pro/threads").then(r => r.threads);
+export const getMessages = (threadId: number) => call<Conversation>("GET", `pro/threads/${threadId}/messages`);
+export const sendMessage = (threadId: number, body: string) => call<{ id: number }>("POST", `pro/threads/${threadId}/messages`, { body: { body } });
+export const markRead = (threadId: number) => call<{ ok: true }>("POST", `pro/threads/${threadId}/read`);
+export const unreadCount = () => call<{ count: number }>("GET", "pro/unread").then(r => r.count);

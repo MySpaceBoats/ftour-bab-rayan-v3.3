@@ -65,8 +65,14 @@ export default function ProJobDetailPage() {
               <Button variant="destructive" disabled={busy} onClick={() => window.confirm("Supprimer cette offre ?") && run(() => api.removeJob(job.id), () => setLocation(`${pro}/emplois`))}>Supprimer</Button>
             </>
           ) : (
-            // ponytail: native prompt for the report reason, same as post cards
-            <Button variant="ghost" size="sm" onClick={() => { const r = window.prompt("Motif du signalement ?"); if (r?.trim()) run(async () => { await api.report("job", job.id, r); toast.success("Merci, signalement envoyé."); }); }}><Flag size={16} className="mr-1.5" />Signaler</Button>
+            <>
+              {job.status === "open" && (
+                <Button className="bg-blue-700 hover:bg-blue-800" disabled={busy}
+                  onClick={() => run(async () => { const t = await api.openThread({ to: job.poster.id, jobId: job.id }); setLocation(`${pro}/messages/${t.id}?postuler=1`); })}>Postuler</Button>
+              )}
+              {/* ponytail: native prompt for the report reason, same as post cards */}
+              <Button variant="ghost" size="sm" onClick={() => { const r = window.prompt("Motif du signalement ?"); if (r?.trim()) run(async () => { await api.report("job", job.id, r); toast.success("Merci, signalement envoyé."); }); }}><Flag size={16} className="mr-1.5" />Signaler</Button>
+            </>
           )}
         </div>
       </article>
