@@ -56,3 +56,7 @@ export const getMessages = (threadId: number) => call<Conversation>("GET", `pro/
 export const sendMessage = (threadId: number, body: string) => call<{ id: number }>("POST", `pro/threads/${threadId}/messages`, { body: { body } });
 export const markRead = (threadId: number) => call<{ ok: true }>("POST", `pro/threads/${threadId}/read`);
 export const unreadCount = () => call<{ count: number }>("GET", "pro/unread").then(r => r.count);
+
+export type InboxSource = "pro" | "market" | "stay";
+export interface InboxItem { source: InboxSource; id: number; other: Person; context: string | null; last_body: string | null; last_message_at: string; unread: number }
+export const inbox = () => call<{ items: InboxItem[] }>("GET", "pro/inbox").then(r => r.items);
