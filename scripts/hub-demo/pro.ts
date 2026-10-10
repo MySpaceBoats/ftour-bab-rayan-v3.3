@@ -40,6 +40,16 @@ const POSTS: ProPost[] = [
   { k: "merci-annonce", a: "yasmine", h: 3, body: "Merci à celles et ceux qui ont partagé mon annonce. Déjà trois candidatures ! 🙌" },
 ];
 const post = (k: string) => POSTS.find(p => p.k === k)!;
+
+/** Real, freely licensed photos (media/, see CREDITS.md) on some Pro posts, bucket-relative keys like the Fil ones. */
+export const PRO_POST_MEDIA: Record<string, string[]> = {
+  "atelier-patisserie": ["photo-chebakia.jpg", "photo-kaab.jpg"],
+  cv: ["pro-bureau.jpg"],
+  "dernier-km": ["pro-livraison.jpg"],
+  recrute: ["pro-decoration.jpg"],
+  coordination: ["pro-reunion.jpg"],
+  "relation-client": ["photo-the-menthe.jpg"],
+};
 const POST_LIKES = [5, 4, 7, 3, 6, 5, 8, 4, 3, 5, 6, 4, 5, 7, 0, 3];
 
 /** [post key, author, minutes after the post, text] */
@@ -203,6 +213,9 @@ export function proSeed(meId?: string): string[] {
   }
   for (const p of POSTS) {
     out.push(`INSERT INTO pro_posts (member_id, body, link, status, created_at) VALUES (${mid(p.a)}, ${q(demoText(p.body))}, ${p.link ? q(p.link) : "NULL"}, 'visible', ${ago(p.h * H)});`);
+  }
+  for (const [key, files] of Object.entries(PRO_POST_MEDIA)) {
+    files.forEach((file, i) => out.push(`INSERT INTO pro_post_media (post_id, r2_key, position) VALUES (${postRef(post(key))}, ${q(`demo/${file}`)}, ${i});`));
   }
   for (const [pk, a, delay, text] of COMMENTS) {
     const p = post(pk);

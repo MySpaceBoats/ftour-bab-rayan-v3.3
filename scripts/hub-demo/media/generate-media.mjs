@@ -59,7 +59,10 @@ rmSync(TMP, { recursive: true, force: true });
 mkdirSync(TMP, { recursive: true });
 
 // Une page par visuel : Chrome ne sait capturer que la fenêtre, pas un élément précis.
-for (const item of ITEMS) {
+// Les autres visuels sont de vraies photos libres de droits (voir CREDITS.md) : ne jamais les écraser.
+const PLACEHOLDERS = new Set(["livres-1.jpg", "poussette-1.jpg", "robe-1.jpg", "robe-2.jpg", "djellaba-1.jpg", "stay-appart-oasis.jpg"]);
+const TODO = ITEMS.filter(i => PLACEHOLDERS.has(i.file));
+for (const item of TODO) {
   const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><style>
     html,body{margin:0;width:800px;height:600px;overflow:hidden}
     .tile{width:800px;height:600px;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -90,4 +93,4 @@ for (const item of ITEMS) {
 }
 
 rmSync(TMP, { recursive: true, force: true });
-console.log(`\n${ITEMS.length} visuels écrits dans ${HERE}`);
+console.log(`\n${TODO.length} visuels écrits dans ${HERE}`);

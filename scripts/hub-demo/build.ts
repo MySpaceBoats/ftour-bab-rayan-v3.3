@@ -6,7 +6,7 @@
  * Every demo row hangs off an email @demo.ftour.invalid (an address that cannot receive mail), so cleanup is exact.
  * The seed starts with the cleanup, so it can be re-run safely.
  */
-import { D, DEMO_DOMAIN, DEMO_LABEL, DOMAIN_LIKE, H, PEOPLE, ago, demoText, mail, mid, phoneOf, q, type Msg } from "./common";
+import { D, DEMO_DOMAIN, DEMO_LABEL, DOMAIN_LIKE, H, PEOPLE, ago, avatarKey, demoText, mail, mid, phoneOf, q, type Msg } from "./common";
 import { proCleanup, proSeed } from "./pro";
 import { stayCleanup, staySeed } from "./stay";
 
@@ -43,6 +43,20 @@ const POSTS: Post[] = [
   { k: "marketplace", a: "hajar", h: 1, body: "Nouveau : la marketplace est ouverte ! Si vous avez des objets à donner ou à vendre entre bénévoles, c'est par là 🛍️" },
 ];
 const post = (k: string) => POSTS.find(p => p.k === k)!;
+
+/** Real, freely licensed photos (scripts/hub-demo/media, see CREDITS.md) attached to some posts: 1 to 3 per post, in display order. */
+export const POST_MEDIA: Record<string, string[]> = {
+  "premier-soir": ["photo-harira.jpg", "photo-tajine.jpg"],
+  "astuce-chorba": ["photo-harira-maison.jpg"],
+  dattes: ["photo-dattes.jpg"],
+  lots50: ["photo-medjool.jpg"],
+  covoiturage: ["photo-casablanca.jpg"],
+  deco: ["photo-lanterne.jpg"],
+  msemen: ["photo-msemen.jpg", "photo-baghrir.jpg"],
+  bilan: ["photo-table-iftar.jpg", "photo-salade.jpg", "photo-chebakia.jpg"],
+  "bonne-nuit": ["photo-the-menthe.jpg"],
+  rangement: ["photo-kaab.jpg"],
+};
 
 /** [post key, author, minutes after the post, text] — a reply names the person it answers (@Prénom). */
 const POST_COMMENTS: [string, string, number, string][] = [
@@ -354,12 +368,15 @@ export function seedStatements(me?: string): string[] {
     // the marker goes in display_name too: a bio is only visible on one's own profile page, whereas the
     // name is shown on every post, listing and conversation, which is where confusion could happen.
     out.push(
-      `INSERT INTO hub_members (email, display_name, bio, role, status, created_at) VALUES (${q(mail(p.key))}, ${q(`🧪 ${p.first} ${p.last[0]}. (profil test)`)}, ${q(`${DEMO_LABEL} — profil fictif créé pour la démonstration de l'espace bénévole. ${p.bio}`)}, ${q(p.role ?? "member")}, 'active', ${ago(80 * H)});`,
+      `INSERT INTO hub_members (email, display_name, bio, avatar_key, role, status, created_at) VALUES (${q(mail(p.key))}, ${q(`🧪 ${p.first} ${p.last[0]}. (profil test)`)}, ${q(`${DEMO_LABEL} — profil fictif créé pour la démonstration de l'espace bénévole. ${p.bio}`)}, ${q(avatarKey(p.key))}, ${q(p.role ?? "member")}, 'active', ${ago(80 * H)});`,
     );
   }
 
   for (const p of POSTS) {
     out.push(`INSERT INTO hub_posts (member_id, body, kind, pinned, status, created_at) VALUES (${mid(p.a)}, ${q(demoText(p.body))}, 'post', 0, 'visible', ${ago(p.h * H)});`);
+  }
+  for (const [key, files] of Object.entries(POST_MEDIA)) {
+    files.forEach((file, i) => out.push(`INSERT INTO hub_post_media (post_id, r2_key, position) VALUES (${postRef(post(key))}, ${q(`${MEDIA_KEY_PREFIX}/${file}`)}, ${i});`));
   }
   for (const a of ANNOUNCEMENTS) {
     out.push(`INSERT INTO hub_posts (member_id, body, kind, pinned, status, created_at) VALUES (${mid(a.a)}, ${q(demoText(a.body))}, 'announcement', 1, 'visible', ${ago(a.h * H)});`);
