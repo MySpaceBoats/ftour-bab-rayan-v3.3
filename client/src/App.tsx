@@ -41,6 +41,14 @@ import StayDetailPage from "@/features/hub/stay/pages/StayDetailPage";
 import StayFormPage from "@/features/hub/stay/pages/StayFormPage";
 import StayRequestsPage from "@/features/hub/stay/pages/StayRequestsPage";
 import StayRequestPage from "@/features/hub/stay/pages/StayRequestPage";
+import ProFeedPage from "@/features/hub/pro/pages/ProFeedPage";
+import ProProfilePage from "@/features/hub/pro/pages/ProProfilePage";
+import ProMemberPage from "@/features/hub/pro/pages/ProMemberPage";
+import ProJobsPage from "@/features/hub/pro/pages/ProJobsPage";
+import ProJobDetailPage from "@/features/hub/pro/pages/ProJobDetailPage";
+import ProJobFormPage from "@/features/hub/pro/pages/ProJobFormPage";
+import ProInboxPage from "@/features/hub/pro/pages/ProInboxPage";
+import ProConversationPage from "@/features/hub/pro/pages/ProConversationPage";
 import GalerieValidationUpload from "@/features/gallery/pages/GalerieValidationUpload";
 
 // ============================================
@@ -355,6 +363,15 @@ function LocalizedRoutes() {
       <Route path="/:lang/benevole/espace/hebergement/:id/modifier" component={StayFormPage} />
       <Route path="/:lang/benevole/espace/hebergement/:id" component={StayDetailPage} />
       <Route path="/:lang/benevole/espace/hebergement" component={StayPage} />
+      <Route path="/:lang/benevole/espace/pro/messages/:threadId" component={ProConversationPage} />
+      <Route path="/:lang/benevole/espace/pro/messages" component={ProInboxPage} />
+      <Route path="/:lang/benevole/espace/pro/emplois/nouveau" component={ProJobFormPage} />
+      <Route path="/:lang/benevole/espace/pro/emplois/:id/modifier" component={ProJobFormPage} />
+      <Route path="/:lang/benevole/espace/pro/emplois/:id" component={ProJobDetailPage} />
+      <Route path="/:lang/benevole/espace/pro/emplois" component={ProJobsPage} />
+      <Route path="/:lang/benevole/espace/pro/membre/:id" component={ProMemberPage} />
+      <Route path="/:lang/benevole/espace/pro/profil" component={ProProfilePage} />
+      <Route path="/:lang/benevole/espace/pro" component={ProFeedPage} />
       <Route path="/:lang/benevole/espace/profil" component={HubProfilePage} />
       <Route path="/:lang/benevole/espace" component={HubPage} />
       <Route path="/:lang/evenement" component={Evenement} />

@@ -6,6 +6,7 @@ import RequireRole from "@/components/RequireRole";
 import * as hub from "../api";
 import MarketAdmin from "./MarketAdmin";
 import StayAdmin from "./StayAdmin";
+import ProAdmin from "./ProAdmin";
 
 export default function AdminHub() {
   const [reports, setReports] = useState<hub.Report[]>([]);
@@ -85,6 +86,7 @@ export default function AdminHub() {
       </section>
       <MarketAdmin />
       <StayAdmin />
+      <ProAdmin />
     </div>
     </RequireRole>
   );

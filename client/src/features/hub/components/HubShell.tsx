@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { BedDouble, Home, LogOut, Mail, Newspaper, Store, User } from "lucide-react";
+import { BedDouble, Briefcase, Home, LogOut, Mail, Newspaper, Store, User } from "lucide-react";
 import { useI18n } from "@/i18n";
 import {
   DropdownMenu,
@@ -14,6 +14,7 @@ import * as hub from "../api";
 import Avatar from "./Avatar";
 import * as mk from "../market/market-api";
 import * as st from "../stay/stay-api";
+import * as proApi from "../pro/pro-api";
 
 /** Dedicated app frame for the volunteer space: top bar, side columns (desktop), tab bar (mobile). */
 export default function HubShell({ me, right, children }: { me: hub.Member; right?: ReactNode; children: ReactNode }) {
@@ -25,14 +26,17 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
   const messages = `${market}/messages`;
   const profile = `${base}/profil`;
   const stay = `${base}/hebergement`;
+  const pro = `${base}/pro`;
   const [unread, setUnread] = useState(0);
   const [stayUnread, setStayUnread] = useState(0);
+  const [proUnread, setProUnread] = useState(0);
   // ponytail: poll the unread counters every 30 s instead of push notifications
   useEffect(() => {
     let alive = true;
     const tick = () => {
       mk.unreadCount().then(n => { if (alive) setUnread(n); }).catch(() => undefined);
       st.stayUnread().then(n => { if (alive) setStayUnread(n); }).catch(() => undefined);
+      proApi.unreadCount().then(n => { if (alive) setProUnread(n); }).catch(() => undefined);
     };
     tick();
     const t = setInterval(() => { if (!document.hidden) tick(); }, 30_000);
@@ -52,11 +56,14 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
   const isMessages = path.startsWith(messages);
   const isMarket = path.startsWith(market) && !isMessages;
   const isStay = path.startsWith(stay);
+  // "/pro" is also a prefix of "/profil": require a path boundary.
+  const isPro = path === pro || path.startsWith(`${pro}/`);
   const isProfile = path.startsWith(profile);
 
   const navLinks = [
     { href: feed, label: "Fil d'actualité", short: "Fil", icon: <Newspaper size={18} aria-hidden />, active: isFeed, badge: 0, badgeLabel: "" },
     { href: market, label: "Marketplace", short: "Market", icon: <Store size={18} aria-hidden />, active: isMarket, badge: 0, badgeLabel: "" },
+    { href: pro, label: "Pro", short: "Pro", icon: <Briefcase size={18} aria-hidden />, active: isPro, badge: proUnread, badgeLabel: "messages Pro non lus" },
     { href: stay, label: "Hébergement", short: "Logement", icon: <BedDouble size={18} aria-hidden />, active: isStay, badge: stayUnread, badgeLabel: "demandes de séjour" },
     { href: messages, label: "Mes messages", short: "Messages", icon: <Mail size={18} aria-hidden />, active: isMessages, badge: unread, badgeLabel: "messages non lus" },
     { href: profile, label: "Mon profil", short: "Profil", icon: <User size={18} aria-hidden />, active: isProfile, badge: 0, badgeLabel: "" },
@@ -138,7 +145,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
         {right && <aside className="hidden xl:block"><div className="sticky top-[72px] space-y-3">{right}</div></aside>}
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white text-xs text-slate-700 lg:hidden" aria-label="Navigation mobile">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-slate-200 bg-white text-xs text-slate-700 lg:hidden" aria-label="Navigation mobile">
         {navLinks.map(l => (
           <Link key={l.href} href={l.href} className={l.active ? activeTab : tab} aria-current={l.active ? "page" : undefined}>
             <span className="relative">
