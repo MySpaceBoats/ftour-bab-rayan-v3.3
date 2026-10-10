@@ -139,3 +139,7 @@ CREATE TABLE IF NOT EXISTS hub_notification_prefs (
   email INTEGER NOT NULL CHECK (email IN (0,1)),
   PRIMARY KEY (member_id, type)
 );
+
+-- Perf: every hub request checks the volunteer behind the session with lower(email) = ?. Without this index that is a full scan of
+-- t_volunteers per request (and per 30 s poll per open tab), which burns D1's row-read quota. Idempotent.
+CREATE INDEX IF NOT EXISTS idx_t_volunteers_lower_email ON t_volunteers(lower(email));
