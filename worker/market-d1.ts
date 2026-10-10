@@ -150,3 +150,83 @@ export async function getListing(d: D1Like, viewerId: number, id: number): Promi
     ...(mine ? { media_keys: keys } : {}),
   };
 }
+
+// ---- comments -------------------------------------------------------------
+
+export interface MkCommentView { id: number; listing_id: number; body: string; created_at: string; author: Seller }
+
+async function visibleListing(d: D1Like, id: number): Promise<void> {
+  const r = await d.prepare(`SELECT 1 AS ok FROM mk_listings l JOIN hub_members m ON m.id = l.member_id WHERE l.id = ? AND l.status IN ('active','sold') AND ${SELLER_OK}`).bind(id).first();
+  if (!r) throw new HubError("not_found", "Annonce introuvable");
+}
+
+export async function addListingComment(d: D1Like, member: MemberRow, listingId: number, rawBody: string, nowMs: number): Promise<{ id: number }> {
+  const body = cleanBody(rawBody, MK_LIMITS.comment, "Commentaire");
+  await visibleListing(d, listingId);
+  const n = await d.prepare("SELECT COUNT(*) AS n FROM mk_comments WHERE member_id = ? AND created_at > ?").bind(member.id, iso(nowMs - HOUR_MS)).first<{ n: number }>();
+  if ((n?.n ?? 0) >= MK_LIMITS.commentsPerHour) throw new HubError("rate_limited", "Trop de commentaires, réessayez plus tard");
+  const row = await d.prepare("INSERT INTO mk_comments (listing_id, member_id, body, created_at) VALUES (?,?,?,?) RETURNING id").bind(listingId, member.id, body, iso(nowMs)).first<{ id: number }>();
+  return { id: row!.id };
+}
+
+export async function listListingComments(d: D1Like, listingId: number): Promise<MkCommentView[]> {
+  await visibleListing(d, listingId);
+  const { results } = await d.prepare(
+    `SELECT c.id, c.listing_id, c.body, c.created_at, m.id AS author_id, m.display_name AS author_name, m.avatar_key AS author_avatar
+     FROM mk_comments c JOIN hub_members m ON m.id = c.member_id WHERE c.listing_id = ? AND c.status = 'visible' ORDER BY c.id ASC LIMIT 200`,
+  ).bind(listingId).all<any>();
+  return results.map(r => ({ id: r.id, listing_id: r.listing_id, body: r.body, created_at: r.created_at, author: { id: r.author_id, display_name: r.author_name, avatar_key: r.author_avatar } }));
+}
+
+export async function removeListingComment(d: D1Like, actor: MemberRow, commentId: number): Promise<void> {
+  const r = await d.prepare("SELECT member_id FROM mk_comments WHERE id = ? AND status = 'visible'").bind(commentId).first<{ member_id: number }>();
+  if (!r) throw new HubError("not_found", "Commentaire introuvable");
+  if (r.member_id !== actor.id && actor.role !== "moderator") throw new HubError("forbidden", "Action non autorisée");
+  await d.prepare("UPDATE mk_comments SET status = 'hidden' WHERE id = ?").bind(commentId).run();
+}
+
+// ---- reports / admin ------------------------------------------------------
+
+const MK_TABLE = { listing: "mk_listings", comment: "mk_comments" } as const;
+function mkTable(type: string): "mk_listings" | "mk_comments" {
+  if (!Object.hasOwn(MK_TABLE, type)) throw new HubError("invalid", "Type invalide");
+  return MK_TABLE[type as keyof typeof MK_TABLE];
+}
+
+export interface MkReportView { id: number; target_type: "listing" | "comment"; target_id: number; reason: string; created_at: string; reporter: string; body: string | null; target_status: string | null }
+export interface AdminListingView { id: number; title: string; price: number; status: string; seller: string; created_at: string }
+
+export async function reportMarket(d: D1Like, member: MemberRow, type: "listing" | "comment", id: number, rawReason: string): Promise<void> {
+  const t = mkTable(type);
+  const reason = cleanBody(rawReason, MK_LIMITS.reason, "Motif");
+  const visible = t === "mk_listings" ? "status IN ('active','sold')" : "status = 'visible'";
+  if (!(await d.prepare(`SELECT 1 AS ok FROM ${t} WHERE id = ? AND ${visible}`).bind(id).first())) throw new HubError("not_found", "Contenu introuvable");
+  await d.prepare("INSERT OR IGNORE INTO mk_reports (target_type, target_id, member_id, reason) VALUES (?,?,?,?)").bind(type, id, member.id, reason).run();
+}
+
+export async function listMarketReports(d: D1Like): Promise<MkReportView[]> {
+  const { results } = await d.prepare(
+    `SELECT r.id, r.target_type, r.target_id, r.reason, r.created_at, m.display_name AS reporter,
+       CASE r.target_type WHEN 'listing' THEN (SELECT title FROM mk_listings WHERE id = r.target_id) ELSE (SELECT body FROM mk_comments WHERE id = r.target_id) END AS body,
+       CASE r.target_type WHEN 'listing' THEN (SELECT status FROM mk_listings WHERE id = r.target_id) ELSE (SELECT status FROM mk_comments WHERE id = r.target_id) END AS target_status
+     FROM mk_reports r JOIN hub_members m ON m.id = r.member_id ORDER BY r.id DESC LIMIT 100`,
+  ).all<MkReportView>();
+  return results;
+}
+
+export async function dismissMarketReport(d: D1Like, id: number): Promise<void> {
+  await d.prepare("DELETE FROM mk_reports WHERE id = ?").bind(id).run();
+}
+
+export async function hideMarketContent(d: D1Like, type: "listing" | "comment", id: number): Promise<void> {
+  const t = mkTable(type);
+  if (!(await d.prepare(`SELECT 1 AS ok FROM ${t} WHERE id = ?`).bind(id).first())) throw new HubError("not_found", "Contenu introuvable");
+  await d.prepare(`UPDATE ${t} SET status = 'hidden' WHERE id = ?`).bind(id).run();
+}
+
+export async function adminListListings(d: D1Like): Promise<AdminListingView[]> {
+  const { results } = await d.prepare(
+    "SELECT l.id, l.title, l.price, l.status, m.display_name AS seller, l.created_at FROM mk_listings l JOIN hub_members m ON m.id = l.member_id ORDER BY l.id DESC LIMIT 100",
+  ).all<AdminListingView>();
+  return results;
+}

@@ -228,3 +228,68 @@ describe("listings read", () => {
     await expect(mk.getListing(d, a.id, 9999)).rejects.toMatchObject({ code: "not_found" });
   });
 });
+
+describe("listing comments", () => {
+  it("validate, order, count, rate-limit 30/h, soft delete by author or moderator", async () => {
+    const a = await member("a@x.ma"); const b = await member("b@x.ma", "Brahim");
+    const mod = await member("m@x.ma", "Mona", "moderator");
+    const { id } = await mk.createListing(d, a, base(), T0);
+    await expect(mk.addListingComment(d, b, id, " ", T0)).rejects.toMatchObject({ code: "invalid" });
+    await expect(mk.addListingComment(d, b, id, "x".repeat(501), T0)).rejects.toMatchObject({ code: "invalid" });
+    await expect(mk.addListingComment(d, b, 9999, "ok", T0)).rejects.toMatchObject({ code: "not_found" });
+    const c1 = await mk.addListingComment(d, b, id, "Dispo ?", T0 + 1);
+    await mk.addListingComment(d, a, id, "Oui", T0 + 2);
+    expect((await mk.listListingComments(d, id)).map(c => c.body)).toEqual(["Dispo ?", "Oui"]);
+    await expect(mk.removeListingComment(d, a, c1.id)).rejects.toMatchObject({ code: "forbidden" });
+    await mk.removeListingComment(d, b, c1.id);
+    expect((await mk.listListingComments(d, id)).map(c => c.body)).toEqual(["Oui"]);
+    const c3 = await mk.addListingComment(d, b, id, "spam", T0 + 3);
+    await mk.removeListingComment(d, mod, c3.id);
+    for (let i = 0; i < 28; i++) await mk.addListingComment(d, b, id, `c${i}`, T0 + 10 + i); // b already wrote 2 (one removed still counts) + 28 = 30
+    await expect(mk.addListingComment(d, b, id, "over", T0 + 100)).rejects.toMatchObject({ code: "rate_limited" });
+  });
+
+  it("not on hidden or invisible listings; listing the comments of a hidden listing is 404", async () => {
+    const a = await member("a@x.ma"); const b = await member("b@x.ma", "Brahim");
+    const { id } = await mk.createListing(d, a, base(), T0);
+    await mk.hideListing(d, id);
+    await expect(mk.addListingComment(d, b, id, "x", T0)).rejects.toMatchObject({ code: "not_found" });
+    await expect(mk.listListingComments(d, id)).rejects.toMatchObject({ code: "not_found" });
+  });
+});
+
+describe("market reports and admin", () => {
+  it("report once per reporter; target must be visible; reason validated; inherited keys rejected", async () => {
+    const a = await member("a@x.ma"); const b = await member("b@x.ma", "Brahim");
+    const { id } = await mk.createListing(d, a, base({ title: "Annonce louche" }), T0);
+    const c = await mk.addListingComment(d, a, id, "achetez ici", T0 + 1);
+    await expect(mk.reportMarket(d, b, "listing", id, "")).rejects.toMatchObject({ code: "invalid" });
+    await expect(mk.reportMarket(d, b, "listing", id, "x".repeat(301))).rejects.toMatchObject({ code: "invalid" });
+    await expect(mk.reportMarket(d, b, "listing", 9999, "spam")).rejects.toMatchObject({ code: "not_found" });
+    await expect(mk.reportMarket(d, b, "constructor" as any, 1, "spam")).rejects.toMatchObject({ code: "invalid" });
+    await mk.reportMarket(d, b, "listing", id, "arnaque");
+    await mk.reportMarket(d, b, "listing", id, "arnaque bis");
+    await mk.reportMarket(d, b, "comment", c.id, "pub");
+    const list = await mk.listMarketReports(d);
+    expect(list).toHaveLength(2);
+    expect(list.find(r => r.target_type === "listing")).toMatchObject({ target_id: id, reason: "arnaque", reporter: "Brahim B.", body: "Annonce louche", target_status: "active" });
+    expect(list.find(r => r.target_type === "comment")).toMatchObject({ body: "achetez ici", target_status: "visible" });
+  });
+
+  it("hideMarketContent hides listing or comment; dismiss deletes; adminListListings shows every status", async () => {
+    const a = await member("a@x.ma"); const b = await member("b@x.ma", "Brahim");
+    const l = (await mk.createListing(d, a, base({ title: "L1" }), T0)).id;
+    const c = await mk.addListingComment(d, b, l, "bof", T0 + 1);
+    await mk.reportMarket(d, a, "comment", c.id, "insulte");
+    await mk.hideMarketContent(d, "comment", c.id);
+    expect(await mk.listListingComments(d, l)).toEqual([]);
+    expect((await mk.listMarketReports(d))[0]).toMatchObject({ target_status: "hidden" });
+    await mk.dismissMarketReport(d, (await mk.listMarketReports(d))[0].id);
+    expect(await mk.listMarketReports(d)).toEqual([]);
+    await mk.hideMarketContent(d, "listing", l);
+    const all = await mk.adminListListings(d);
+    expect(all[0]).toMatchObject({ id: l, title: "L1", status: "hidden", seller: "Amina B." });
+    await expect(mk.hideMarketContent(d, "listing", 9999)).rejects.toMatchObject({ code: "not_found" });
+    await expect(mk.hideMarketContent(d, "constructor" as any, 1)).rejects.toMatchObject({ code: "invalid" });
+  });
+});
