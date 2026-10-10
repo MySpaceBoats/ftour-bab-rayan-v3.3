@@ -133,12 +133,12 @@ Plans:
 **Goal:** Le site principal reprend le design de https://ftour-bab-rayan-d1.pages.dev (tokens, typographie, composants, pages publiques), sans casser les flux existants; FR/EN/AR(RTL) et mobile vérifiés.
 **Requirements**: DSG-01, DSG-02, DSG-03
 **Depends on:** Phase 5
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans executed
 
 Plans:
 
 - [x] 06-01-PLAN.md — Palette gate script + mauve tokens (tracer: index.css, Navbar/Footer, worker email) then public & restaurant pages
-- [ ] 06-02-PLAN.md — Admin surfaces + server emails/previews, re-key palette-variants script, final gate + manual UAT
+- [x] 06-02-PLAN.md — Admin surfaces + server emails/previews, re-key palette-variants script, final gate + manual UAT
 
 ### Phase 7: Hébergement bénévoles façon Airbnb
 

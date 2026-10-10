@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 06
 current_phase_name: design-d1-sur-le-site-principal
-status: executing
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-10-10T14:34:40.437Z"
+status: verifying
+stopped_at: Completed 06-02-PLAN.md (manual UAT pending)
+last_updated: "2026-10-10T14:37:46.914Z"
 last_activity: 2026-10-10
 last_activity_desc: Phase 06 execution started
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-08-08)
 
 Phase: 06 (design-d1-sur-le-site-principal) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-10 — Phase 06 execution started
 
-Progress: [███░░░░░░░] 25%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [███░░░░░░░] 25%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 06 P01 | 20min | 3 tasks | 30 files |
+| Phase 06 P02 | 15min | 3 tasks | 21 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,7 @@ Recent decisions affecting current work:
 - [Research]: qrcode contract should throw consistently (tRPC-style) — decision confirmed in Phase 2
 - [Research]: Email subjects use canonical constants imported by impl + tests
 - [Phase ?]: Phase 06-01: luminance-matched d1 mauve (hue of d1, WCAG luminance of olive); rows 6-13 olive shades also remapped; PALETTE in scripts/palette-d1.mjs is single source
+- [Phase ?]: Phase 6: palette-variants script re-keyed on SLOTS (not retired), throws when MAP stale
 
 ### Pending Todos
 
@@ -98,6 +100,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-10-10T14:34:40.432Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-10-10T14:37:46.909Z
+Stopped at: Completed 06-02-PLAN.md (manual UAT pending)
 Resume file: None
