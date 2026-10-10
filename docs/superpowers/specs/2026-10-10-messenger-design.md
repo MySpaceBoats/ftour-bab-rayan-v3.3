@@ -15,22 +15,22 @@ Une messagerie de type Messenger dans l'espace bénévole. Chaque section (Pro, 
 - Les anciens endpoints (`market/threads`, `stay/requests`, leurs messages et unread) restent inchangés.
 
 ## 2. Interface
-- Page « Mes messages » à `/pro/messages` : deux volets sur desktop (liste / conversation), liste puis conversation sur mobile. Filtre Tout / Pro / Marketplace / Séjours.
+- Page « Mes messages » à `/espace/messages` (et `/espace/messages/:source/:id`) : deux volets sur desktop (liste / conversation), liste puis conversation sur mobile. Filtre Tout / Pro / Marketplace / Séjours.
 - Un composant de conversation unique avec un adaptateur par source : `list`, `send`, `read`. Les règles (limites, longueurs, 404 pour les non-participants) restent celles du module.
 - Séjour : le chat affiche un lien « Voir la demande » ; accepter/refuser reste sur la page de la demande.
-- Les anciennes pages de messages Marketplace et Hébergement redirigent vers la boîte (`/marketplace/messages` et `/marketplace/messages/:id` vers l'entrée correspondante).
-- La barre du hub : une entrée « Messages » avec une pastille unique (somme des non-lus), qui remplace « Mes messages » et les pastilles Pro/Séjour pour la messagerie.
+- Les anciennes URL `/pro/messages*` et `/marketplace/messages*` redirigent vers la boîte (vers l'entrée correspondante). Les pages Séjour (demandes, accepter/refuser, chat intégré) restent telles quelles : ce sont des pages de gestion, pas une boîte de messagerie.
+- La barre du hub : une entrée « Messages » avec une pastille unique (somme des non-lus, y compris les demandes de séjour en attente côté hôte), qui remplace « Mes messages » et les pastilles Pro/Séjour.
 - Chat direct : « Écrire » sur chaque fiche membre ouvre/crée un fil Pro direct (`job_id` 0). Un panneau « En ligne » liste les membres connectés avec « Écrire ».
 
 ## 3. Temps réel
 - Durable Object `HubChat` (SQLite, API hibernation), instance globale unique.
-- `GET /hub/ws` (upgrade WebSocket) : le Worker valide la session (jeton en paramètre de requête, les navigateurs ne peuvent pas poser d'en-tête) et un membre éligible non suspendu, puis transmet au Durable Object avec l'id du membre.
+- `GET /hub/ws` (upgrade WebSocket) : le Worker valide la session (jeton dans l'en-tête `Sec-WebSocket-Protocol` : `["hub", token]`, pas dans l'URL, car les navigateurs ne posent pas d'en-tête et les URL finissent dans les logs) et un membre éligible non suspendu, puis transmet au Durable Object avec l'id du membre.
 - Événements serveur → client : `presence_snapshot {online:[ids]}` à la connexion, `presence {id, online}` à chaque changement, `message {source, thread_id}` au destinataire, `typing {source, thread_id, from}`.
 - Événement client → serveur : `typing {to, source, thread_id}`. Le Durable Object ne relaie qu'au destinataire nommé, sans écrire en base.
 - Envoi : toujours par le REST du module (règles, limites, D1 source de vérité). Après l'insertion, le Worker notifie le Durable Object (`waitUntil`) qui pousse `message` aux sockets du destinataire. Le client recharge le fil concerné.
 - En ligne = au moins un socket ouvert. Fermeture ou erreur du dernier socket → hors ligne.
 - Repli : si le WebSocket est indisponible, le polling actuel (10 s conversation, 30 s non-lus) continue ; reconnexion avec délai croissant (1 s à 30 s).
-- Un jeton de session expiré ou révoqué ferme la connexion (4401) et le client ne se reconnecte pas.
+- Jeton invalide ou expiré : HTTP 401 avant l'upgrade. Le client réessaie avec délai croissant tant qu'un jeton existe ; le 401 d'une requête REST (`hub:unauthorized`) l'efface et arrête les tentatives.
 - Le Durable Object ne pousse rien au sujet d'un membre suspendu et ne le déclare pas en ligne.
 
 ## 4. Configuration
