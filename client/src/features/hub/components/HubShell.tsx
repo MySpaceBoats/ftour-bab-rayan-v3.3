@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { Home, LogOut, Mail, Newspaper, Store, User } from "lucide-react";
+import { BedDouble, Home, LogOut, Mail, Newspaper, Store, User } from "lucide-react";
 import { useI18n } from "@/i18n";
 import {
   DropdownMenu,
@@ -13,6 +13,7 @@ import {
 import * as hub from "../api";
 import Avatar from "./Avatar";
 import * as mk from "../market/market-api";
+import * as st from "../stay/stay-api";
 
 /** Dedicated app frame for the volunteer space: top bar, side columns (desktop), tab bar (mobile). */
 export default function HubShell({ me, right, children }: { me: hub.Member; right?: ReactNode; children: ReactNode }) {
@@ -23,11 +24,16 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
   const market = `${base}/marketplace`;
   const messages = `${market}/messages`;
   const profile = `${base}/profil`;
+  const stay = `${base}/hebergement`;
   const [unread, setUnread] = useState(0);
-  // ponytail: poll the unread counter every 30 s instead of push notifications
+  const [stayUnread, setStayUnread] = useState(0);
+  // ponytail: poll the unread counters every 30 s instead of push notifications
   useEffect(() => {
     let alive = true;
-    const tick = () => { mk.unreadCount().then(n => { if (alive) setUnread(n); }).catch(() => undefined); };
+    const tick = () => {
+      mk.unreadCount().then(n => { if (alive) setUnread(n); }).catch(() => undefined);
+      st.stayUnread().then(n => { if (alive) setStayUnread(n); }).catch(() => undefined);
+    };
     tick();
     const t = setInterval(() => { if (!document.hidden) tick(); }, 30_000);
     return () => { alive = false; clearInterval(t); };
@@ -45,13 +51,15 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
   const isFeed = path === feed || path === `${feed}/`;
   const isMessages = path.startsWith(messages);
   const isMarket = path.startsWith(market) && !isMessages;
+  const isStay = path.startsWith(stay);
   const isProfile = path.startsWith(profile);
 
   const navLinks = [
-    { href: feed, label: "Fil d'actualité", icon: <Newspaper size={18} aria-hidden />, active: isFeed },
-    { href: market, label: "Marketplace", icon: <Store size={18} aria-hidden />, active: isMarket },
-    { href: messages, label: "Mes messages", icon: <Mail size={18} aria-hidden />, active: isMessages, badge: unread },
-    { href: profile, label: "Mon profil", icon: <User size={18} aria-hidden />, active: isProfile },
+    { href: feed, label: "Fil d'actualité", short: "Fil", icon: <Newspaper size={18} aria-hidden />, active: isFeed, badge: 0, badgeLabel: "" },
+    { href: market, label: "Marketplace", short: "Market", icon: <Store size={18} aria-hidden />, active: isMarket, badge: 0, badgeLabel: "" },
+    { href: stay, label: "Hébergement", short: "Logement", icon: <BedDouble size={18} aria-hidden />, active: isStay, badge: stayUnread, badgeLabel: "demandes de séjour" },
+    { href: messages, label: "Mes messages", short: "Messages", icon: <Mail size={18} aria-hidden />, active: isMessages, badge: unread, badgeLabel: "messages non lus" },
+    { href: profile, label: "Mon profil", short: "Profil", icon: <User size={18} aria-hidden />, active: isProfile, badge: 0, badgeLabel: "" },
   ];
 
   return (
@@ -115,7 +123,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
                 <Link key={l.href} href={l.href} className={l.active ? activeLink : link} aria-current={l.active ? "page" : undefined}>
                   {l.icon} {l.label}
                   {!!l.badge && l.badge > 0 && (
-                    <span className="ml-auto rounded-full bg-blue-700 px-2 text-xs font-semibold text-white" aria-label={`${l.badge} messages non lus`}>{l.badge}</span>
+                    <span className="ml-auto rounded-full bg-blue-700 px-2 text-xs font-semibold text-white" aria-label={`${l.badge} ${l.badgeLabel}`}>{l.badge}</span>
                   )}
                 </Link>
               ))}
@@ -130,15 +138,15 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
         {right && <aside className="hidden xl:block"><div className="sticky top-[72px] space-y-3">{right}</div></aside>}
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-slate-200 bg-white text-xs text-slate-700 lg:hidden" aria-label="Navigation mobile">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white text-xs text-slate-700 lg:hidden" aria-label="Navigation mobile">
         {navLinks.map(l => (
           <Link key={l.href} href={l.href} className={l.active ? activeTab : tab} aria-current={l.active ? "page" : undefined}>
             <span className="relative">
               {l.icon}
               {!!l.badge && l.badge > 0 && <span className="absolute -right-2 -top-1 h-2.5 w-2.5 rounded-full bg-blue-600" aria-hidden />}
             </span>
-            {l.label === "Fil d'actualité" ? "Fil" : l.label === "Mes messages" ? "Messages" : l.label === "Mon profil" ? "Profil" : l.label}
-            {!!l.badge && l.badge > 0 && <span className="sr-only">{l.badge} messages non lus</span>}
+            {l.short}
+            {!!l.badge && l.badge > 0 && <span className="sr-only">{l.badge} {l.badgeLabel}</span>}
           </Link>
         ))}
       </nav>

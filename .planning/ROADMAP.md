@@ -143,10 +143,10 @@ Plans:
 ### Phase 7: Hébergement bénévoles façon Airbnb
 
 **Goal:** L'espace bénévole propose un module d'hébergement façon Airbnb (annonces, recherche/filtres, fiches, demandes/réservations, espace hôte, covoiturage, emails), navigation simple et fluide, tests hermétiques.
-**Requirements**: TBD
+**Requirements**: STAY-01 (annonces + photos + équipements), STAY-02 (recherche/filtres par dates), STAY-03 (demandes de séjour anti-chevauchement), STAY-04 (messagerie de demande + avis), STAY-05 (modération admin + tests hermétiques)
 **Depends on:** Phase 6
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 7 to break down)
+- [x] 07-01-PLAN.md — Module hébergement : schéma D1 `stay.sql`, data layer `stay-d1.ts`, routes REST `/hub/stay/*`, 5 pages espace bénévole, admin, 26 tests hermétiques

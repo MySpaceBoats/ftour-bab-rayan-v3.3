@@ -36,6 +36,11 @@ import ConversationPage from "@/features/hub/market/pages/ConversationPage";
 import ListingDetailPage from "@/features/hub/market/pages/ListingDetailPage";
 import ListingFormPage from "@/features/hub/market/pages/ListingFormPage";
 import HubProfilePage from "@/features/hub/pages/HubProfilePage";
+import StayPage from "@/features/hub/stay/pages/StayPage";
+import StayDetailPage from "@/features/hub/stay/pages/StayDetailPage";
+import StayFormPage from "@/features/hub/stay/pages/StayFormPage";
+import StayRequestsPage from "@/features/hub/stay/pages/StayRequestsPage";
+import StayRequestPage from "@/features/hub/stay/pages/StayRequestPage";
 import GalerieValidationUpload from "@/features/gallery/pages/GalerieValidationUpload";
 
 // ============================================
@@ -344,6 +349,12 @@ function LocalizedRoutes() {
       <Route path="/:lang/benevole/espace/marketplace/:id/modifier" component={ListingFormPage} />
       <Route path="/:lang/benevole/espace/marketplace/:id" component={ListingDetailPage} />
       <Route path="/:lang/benevole/espace/marketplace" component={MarketPage} />
+      <Route path="/:lang/benevole/espace/hebergement/nouveau" component={StayFormPage} />
+      <Route path="/:lang/benevole/espace/hebergement/demandes/:requestId" component={StayRequestPage} />
+      <Route path="/:lang/benevole/espace/hebergement/demandes" component={StayRequestsPage} />
+      <Route path="/:lang/benevole/espace/hebergement/:id/modifier" component={StayFormPage} />
+      <Route path="/:lang/benevole/espace/hebergement/:id" component={StayDetailPage} />
+      <Route path="/:lang/benevole/espace/hebergement" component={StayPage} />
       <Route path="/:lang/benevole/espace/profil" component={HubProfilePage} />
       <Route path="/:lang/benevole/espace" component={HubPage} />
       <Route path="/:lang/evenement" component={Evenement} />

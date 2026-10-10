@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import RequireRole from "@/components/RequireRole";
 import * as hub from "../api";
 import MarketAdmin from "./MarketAdmin";
+import StayAdmin from "./StayAdmin";
 
 export default function AdminHub() {
   const [reports, setReports] = useState<hub.Report[]>([]);
@@ -83,6 +84,7 @@ export default function AdminHub() {
         </div>
       </section>
       <MarketAdmin />
+      <StayAdmin />
     </div>
     </RequireRole>
   );

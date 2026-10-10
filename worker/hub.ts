@@ -7,6 +7,7 @@ import type { Env } from "./index";
 import * as H from "./hub-d1";
 import { id, readJson, str } from "./hub-http";
 import { handleMarketRoute } from "./market";
+import { handleStayRoute } from "./stay";
 
 export interface HubEnv extends MediaEnv { DB?: D1Like; RESEND_API_KEY?: string; EMAIL_PROVIDER_KEY?: string; PUBLIC_APP_URL?: string }
 export interface HubDeps {
@@ -190,6 +191,12 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     // ---- marketplace -------------------------------------------------------
     if (path.startsWith("market/")) {
       const r = await handleMarketRoute({ d, request, url, path: path.slice("market/".length), now, json, member, admin, sign });
+      if (r) return r;
+    }
+
+    // ---- hébergement (façon Airbnb) ----------------------------------------
+    if (path.startsWith("stay/")) {
+      const r = await handleStayRoute({ d, request, url, path: path.slice("stay/".length), now, json, member, admin, sign });
       if (r) return r;
     }
 
