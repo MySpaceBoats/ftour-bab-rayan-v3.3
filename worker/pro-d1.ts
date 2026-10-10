@@ -229,3 +229,111 @@ export async function hideContent(d: D1Like, rawType: string, id: number): Promi
   if (!(await d.prepare(`SELECT 1 AS ok FROM ${t} WHERE id = ?`).bind(id).first())) throw new HubError("not_found", "Contenu introuvable");
   await d.prepare(`UPDATE ${t} SET status = 'hidden' WHERE id = ?`).bind(id).run();
 }
+
+// ---- jobs -------------------------------------------------------------------
+
+export interface JobInput { title: string; company: string; city?: string; type: string; description: string; contact?: unknown }
+export interface JobCard { id: number; title: string; company: string; city: string; type: string; status: "open" | "closed"; created_at: string; poster: Person }
+export interface JobDetail extends JobCard { description: string; contact: string | null; updated_at: string; mine: boolean }
+export interface AdminJobView { id: number; title: string; company: string; status: string; poster: string; created_at: string }
+
+interface CleanJob { title: string; company: string; city: string; type: string; description: string; contact: string | null }
+function cleanJob(i: JobInput): CleanJob {
+  const title = cleanBody(i.title, PRO_LIMITS.jobTitle, "Titre");
+  const company = cleanBody(i.company, PRO_LIMITS.company, "Entreprise");
+  const description = cleanBody(i.description, PRO_LIMITS.jobDescription, "Description");
+  if (!(JOB_TYPES as readonly string[]).includes(i.type)) throw new HubError("invalid", "Type de contrat invalide");
+  const city = text(i.city, PRO_LIMITS.city, "Ville");
+  const contact = text(i.contact, PRO_LIMITS.contact, "Contact") || null;
+  return { title, company, city, type: i.type, description, contact };
+}
+
+export async function createJob(d: D1Like, member: MemberRow, input: JobInput, nowMs: number): Promise<{ id: number }> {
+  const c = cleanJob(input);
+  if ((await recent(d, "pro_jobs", "member_id", member.id, nowMs - DAY_MS)) >= PRO_LIMITS.jobsPerDay) throw new HubError("rate_limited", "Limite de 3 offres par jour atteinte");
+  const row = await d.prepare(
+    "INSERT INTO pro_jobs (member_id, title, company, city, type, description, contact, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?) RETURNING id",
+  ).bind(member.id, c.title, c.company, c.city, c.type, c.description, c.contact, iso(nowMs), iso(nowMs)).first<{ id: number }>();
+  return { id: row!.id };
+}
+
+async function ownedJob(d: D1Like, member: MemberRow, id: number): Promise<void> {
+  const r = await d.prepare("SELECT member_id, status FROM pro_jobs WHERE id = ?").bind(id).first<{ member_id: number; status: string }>();
+  if (!r || r.status === "hidden") throw new HubError("not_found", "Offre introuvable");
+  if (r.member_id !== member.id) throw new HubError("forbidden", "Action non autorisée");
+}
+
+export async function updateJob(d: D1Like, member: MemberRow, id: number, input: JobInput, nowMs: number): Promise<void> {
+  const c = cleanJob(input);
+  await ownedJob(d, member, id);
+  await d.prepare("UPDATE pro_jobs SET title=?, company=?, city=?, type=?, description=?, contact=?, updated_at=? WHERE id=?")
+    .bind(c.title, c.company, c.city, c.type, c.description, c.contact, iso(nowMs), id).run();
+}
+
+export async function setJobStatus(d: D1Like, member: MemberRow, id: number, status: "open" | "closed", nowMs: number): Promise<void> {
+  if (status !== "open" && status !== "closed") throw new HubError("invalid", "Statut invalide");
+  await ownedJob(d, member, id);
+  await d.prepare("UPDATE pro_jobs SET status = ?, updated_at = ? WHERE id = ?").bind(status, iso(nowMs), id).run();
+}
+
+/** Soft delete. With an actor: owner or moderator only. Without: admin (caller already authorised). */
+export async function hideJob(d: D1Like, id: number, actor?: MemberRow): Promise<void> {
+  const r = await d.prepare("SELECT member_id FROM pro_jobs WHERE id = ? AND status <> 'hidden'").bind(id).first<{ member_id: number }>();
+  if (!r) throw new HubError("not_found", "Offre introuvable");
+  if (actor && actor.id !== r.member_id && actor.role !== "moderator") throw new HubError("forbidden", "Action non autorisée");
+  await d.prepare("UPDATE pro_jobs SET status = 'hidden' WHERE id = ?").bind(id).run();
+}
+
+export async function listJobs(
+  d: D1Like, viewerId: number,
+  o: { cursor?: number | null; type?: string; city?: string; q?: string; mine?: boolean; limit?: number } = {},
+): Promise<{ jobs: JobCard[]; nextCursor: number | null }> {
+  const lim = Math.min(Math.max(Math.trunc(o.limit ?? 20) || 20, 1), 50);
+  const type = o.type || null;
+  if (type !== null && !(JOB_TYPES as readonly string[]).includes(type)) throw new HubError("invalid", "Type de contrat invalide");
+  const city = (o.city ?? "").trim() || null;
+  if (city !== null && city.length > PRO_LIMITS.city) throw new HubError("invalid", "Ville trop longue");
+  const q = (o.q ?? "").trim();
+  let pattern: string | null = null;
+  if (q) {
+    pattern = `%${q.replace(/[\\%_]/g, c => `\\${c}`)}%`;
+    if (new TextEncoder().encode(pattern).length > PRO_LIMITS.likePatternBytes) throw new HubError("invalid", "Recherche trop longue");
+  }
+  const cursor = o.cursor ?? null;
+  const mine = o.mine ? 1 : 0;
+  // public list: open jobs only; "mine" also shows the member's closed jobs
+  const { results } = await d.prepare(
+    `SELECT j.id, j.title, j.company, j.city, j.type, j.status, j.created_at, m.id AS poster_id, m.display_name AS poster_name, m.avatar_key AS poster_avatar
+     FROM pro_jobs j JOIN hub_members m ON m.id = j.member_id
+     WHERE ((? = 0 AND j.status = 'open') OR (? = 1 AND j.member_id = ? AND j.status IN ('open','closed'))) AND ${AUTHOR_OK}
+       AND (? IS NULL OR j.id < ?) AND (? IS NULL OR j.type = ?) AND (? IS NULL OR lower(j.city) = lower(?))
+       AND (? IS NULL OR j.title LIKE ? ESCAPE '\\' OR j.company LIKE ? ESCAPE '\\' OR j.description LIKE ? ESCAPE '\\')
+     ORDER BY j.id DESC LIMIT ?`,
+  ).bind(mine, mine, viewerId, cursor, cursor, type, type, city, city, pattern, pattern, pattern, pattern, lim + 1).all<any>();
+  const jobs: JobCard[] = results.slice(0, lim).map(r => ({
+    id: r.id, title: r.title, company: r.company, city: r.city, type: r.type, status: r.status, created_at: r.created_at,
+    poster: { id: r.poster_id, display_name: r.poster_name, avatar_key: r.poster_avatar },
+  }));
+  return { jobs, nextCursor: results.length > lim ? jobs[jobs.length - 1].id : null };
+}
+
+export async function getJob(d: D1Like, viewerId: number, id: number): Promise<JobDetail> {
+  const r = await d.prepare(
+    `SELECT j.*, m.id AS poster_id, m.display_name AS poster_name, m.avatar_key AS poster_avatar, COALESCE(pp.headline, '') AS poster_headline
+     FROM pro_jobs j JOIN hub_members m ON m.id = j.member_id LEFT JOIN pro_profiles pp ON pp.member_id = m.id
+     WHERE j.id = ? AND j.status IN ('open','closed') AND ${AUTHOR_OK}`,
+  ).bind(id).first<any>();
+  if (!r) throw new HubError("not_found", "Offre introuvable");
+  return {
+    id: r.id, title: r.title, company: r.company, city: r.city, type: r.type, status: r.status, created_at: r.created_at, updated_at: r.updated_at,
+    description: r.description, contact: r.contact ?? null, mine: r.member_id === viewerId,
+    poster: { id: r.poster_id, display_name: r.poster_name, avatar_key: r.poster_avatar, headline: r.poster_headline },
+  };
+}
+
+export async function adminListJobs(d: D1Like): Promise<AdminJobView[]> {
+  const { results } = await d.prepare(
+    "SELECT j.id, j.title, j.company, j.status, m.display_name AS poster, j.created_at FROM pro_jobs j JOIN hub_members m ON m.id = j.member_id ORDER BY j.id DESC LIMIT 100",
+  ).all<AdminJobView>();
+  return results;
+}

@@ -192,3 +192,133 @@ describe("pro reports", () => {
     await expect(pro.hideContent(d, "post", 999)).rejects.toMatchObject({ code: "not_found" });
   });
 });
+
+const job = (over: Partial<pro.JobInput> = {}): pro.JobInput => ({ title: "Développeur React", company: "Acme", city: "Casablanca", type: "cdi", description: "Nous recrutons.", contact: "rh@acme.ma", ...over });
+/** Insert a job directly (bypasses the daily rate limit) for list/search/pagination tests. */
+function rawJob(memberId: number, over: Record<string, unknown> = {}) {
+  const o = { title: "Poste", company: "Co", city: "", type: "cdi", description: "desc", status: "open", ...over };
+  return Number(sqlite.prepare("INSERT INTO pro_jobs (member_id,title,company,city,type,description,status) VALUES (?,?,?,?,?,?,?)")
+    .run(memberId, o.title, o.company, o.city, o.type, o.description, o.status).lastInsertRowid);
+}
+
+describe("pro jobs: write", () => {
+  it("creates a job and reads its detail (contact visible, mine flag)", async () => {
+    const a = await member("a@x.ma");
+    const b = await member("b@x.ma", "Youssef");
+    await pro.saveProfile(d, a, { headline: "RH" }, T0);
+    const { id } = await pro.createJob(d, a, job(), T0);
+    expect(await pro.getJob(d, a.id, id)).toMatchObject({ title: "Développeur React", company: "Acme", type: "cdi", status: "open", contact: "rh@acme.ma", mine: true, poster: { id: a.id, headline: "RH" } });
+    expect((await pro.getJob(d, b.id, id)).mine).toBe(false);
+  });
+
+  it("validates input", async () => {
+    const a = await member("a@x.ma");
+    const bad: Partial<pro.JobInput>[] = [
+      { title: "" }, { title: "x".repeat(81) }, { company: "" }, { company: "x".repeat(81) }, { city: "x".repeat(61) },
+      { type: "interim" }, { description: "" }, { description: "x".repeat(3001) }, { contact: "x".repeat(121) }, { contact: 5 as any },
+    ];
+    for (const over of bad) await expect(pro.createJob(d, a, job(over), T0)).rejects.toMatchObject({ code: "invalid" });
+  });
+
+  it("limits to 3 jobs per 24 h", async () => {
+    const a = await member("a@x.ma");
+    for (let i = 0; i < 3; i++) await pro.createJob(d, a, job(), T0);
+    await expect(pro.createJob(d, a, job(), T0)).rejects.toMatchObject({ code: "rate_limited" });
+    await expect(pro.createJob(d, a, job(), T0 + DAY + 1)).resolves.toBeDefined();
+  });
+
+  it("only the owner edits or closes; hidden jobs are gone", async () => {
+    const a = await member("a@x.ma");
+    const b = await member("b@x.ma", "Youssef");
+    const { id } = await pro.createJob(d, a, job(), T0);
+    await expect(pro.updateJob(d, b, id, job({ title: "Piraté" }), T0)).rejects.toMatchObject({ code: "forbidden" });
+    await expect(pro.setJobStatus(d, b, id, "closed", T0)).rejects.toMatchObject({ code: "forbidden" });
+    await expect(pro.setJobStatus(d, a, id, "hidden" as any, T0)).rejects.toMatchObject({ code: "invalid" });
+    await pro.updateJob(d, a, id, job({ title: "Lead React", contact: "" }), T0 + 1);
+    expect(await pro.getJob(d, a.id, id)).toMatchObject({ title: "Lead React", contact: null });
+    await pro.setJobStatus(d, a, id, "closed", T0 + 2);
+    expect((await pro.getJob(d, b.id, id)).status).toBe("closed");
+    await pro.setJobStatus(d, a, id, "open", T0 + 3);
+    await pro.hideJob(d, id, a);
+    await expect(pro.getJob(d, a.id, id)).rejects.toMatchObject({ code: "not_found" });
+    await expect(pro.updateJob(d, a, id, job(), T0)).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("hideJob: owner or moderator only; admin (no actor) always", async () => {
+    const a = await member("a@x.ma");
+    const b = await member("b@x.ma", "Youssef");
+    const mod = await member("m@x.ma", "Sara", "moderator");
+    const id1 = rawJob(a.id), id2 = rawJob(a.id), id3 = rawJob(a.id);
+    await expect(pro.hideJob(d, id1, b)).rejects.toMatchObject({ code: "forbidden" });
+    await pro.hideJob(d, id1, mod);
+    await pro.hideJob(d, id2, a);
+    await pro.hideJob(d, id3);
+    await expect(pro.hideJob(d, id3)).rejects.toMatchObject({ code: "not_found" });
+  });
+});
+
+describe("pro jobs: list", () => {
+  it("lists open jobs newest first; closed only under mine", async () => {
+    const a = await member("a@x.ma");
+    const b = await member("b@x.ma", "Youssef");
+    const open = rawJob(a.id, { title: "Ouverte" });
+    const closed = rawJob(a.id, { title: "Fermée", status: "closed" });
+    rawJob(a.id, { title: "Masquée", status: "hidden" });
+    expect((await pro.listJobs(d, b.id)).jobs.map(j => j.id)).toEqual([open]);
+    expect((await pro.listJobs(d, a.id, { mine: true })).jobs.map(j => j.id)).toEqual([closed, open]);
+    expect((await pro.listJobs(d, b.id, { mine: true })).jobs).toEqual([]);
+  });
+
+  it("filters by type and city (case-insensitive)", async () => {
+    const a = await member("a@x.ma");
+    const cdi = rawJob(a.id, { type: "cdi", city: "Rabat" });
+    const stage = rawJob(a.id, { type: "stage", city: "Casablanca" });
+    expect((await pro.listJobs(d, a.id, { type: "stage" })).jobs.map(j => j.id)).toEqual([stage]);
+    expect((await pro.listJobs(d, a.id, { city: "rabat" })).jobs.map(j => j.id)).toEqual([cdi]);
+    await expect(pro.listJobs(d, a.id, { type: "interim" })).rejects.toMatchObject({ code: "invalid" });
+  });
+
+  it("searches title, company and description; escapes % and _; rejects long queries", async () => {
+    const a = await member("a@x.ma");
+    const pct = rawJob(a.id, { title: "Bonus 100% garanti" });
+    rawJob(a.id, { title: "Développeur" });
+    const company = rawJob(a.id, { company: "Zebra Corp" });
+    const desc = rawJob(a.id, { description: "maîtrise de SQL exigée" });
+    expect((await pro.listJobs(d, a.id, { q: "%" })).jobs.map(j => j.id)).toEqual([pct]);
+    expect((await pro.listJobs(d, a.id, { q: "_" })).jobs).toEqual([]);
+    expect((await pro.listJobs(d, a.id, { q: "zebra" })).jobs.map(j => j.id)).toEqual([company]);
+    expect((await pro.listJobs(d, a.id, { q: "sql" })).jobs.map(j => j.id)).toEqual([desc]);
+    await expect(pro.listJobs(d, a.id, { q: "a".repeat(60) })).rejects.toMatchObject({ code: "invalid" });
+  });
+
+  it("paginates with a cursor", async () => {
+    const a = await member("a@x.ma");
+    const ids = [rawJob(a.id), rawJob(a.id), rawJob(a.id)];
+    const first = await pro.listJobs(d, a.id, { limit: 2 });
+    expect(first.jobs.map(j => j.id)).toEqual([ids[2], ids[1]]);
+    expect(first.nextCursor).toBe(ids[1]);
+    const second = await pro.listJobs(d, a.id, { cursor: first.nextCursor, limit: 2 });
+    expect(second.jobs.map(j => j.id)).toEqual([ids[0]]);
+    expect(second.nextCursor).toBeNull();
+  });
+
+  it("hides jobs of suspended posters", async () => {
+    const a = await member("a@x.ma");
+    const b = await member("b@x.ma", "Youssef");
+    const id = rawJob(a.id);
+    suspend(a.id);
+    expect((await pro.listJobs(d, b.id)).jobs).toEqual([]);
+    await expect(pro.getJob(d, b.id, id)).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("reports a job and lists it for admins; admin lists all jobs", async () => {
+    const a = await member("a@x.ma");
+    const b = await member("b@x.ma", "Youssef");
+    const id = rawJob(a.id, { title: "Offre douteuse" });
+    await pro.reportContent(d, b, "job", id, "arnaque");
+    expect((await pro.listReports(d))[0]).toMatchObject({ target_type: "job", body: "Offre douteuse", target_status: "open" });
+    await pro.hideContent(d, "job", id);
+    expect((await pro.listReports(d))[0].target_status).toBe("hidden");
+    expect((await pro.adminListJobs(d))[0]).toMatchObject({ id, title: "Offre douteuse", status: "hidden", poster: a.display_name });
+  });
+});
