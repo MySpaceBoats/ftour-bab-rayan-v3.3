@@ -1,14 +1,24 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "wouter";
-import { Home, LogOut, Newspaper, Store, User } from "lucide-react";
+import { Home, LogOut, Mail, Newspaper, Store, User } from "lucide-react";
 import { useI18n } from "@/i18n";
 import * as hub from "../api";
 import Avatar from "./Avatar";
+import * as mk from "../market/market-api";
 
 /** Dedicated app frame for the volunteer space: top bar, side columns (desktop), tab bar (mobile). */
 export default function HubShell({ me, right, children }: { me: hub.Member; right?: ReactNode; children: ReactNode }) {
   const { lang } = useI18n();
   const base = `/${lang}/benevole/espace`;
+  const [unread, setUnread] = useState(0);
+  // ponytail: poll the unread counter every 30 s instead of push notifications
+  useEffect(() => {
+    let alive = true;
+    const tick = () => { mk.unreadCount().then(n => { if (alive) setUnread(n); }).catch(() => undefined); };
+    tick();
+    const t = setInterval(() => { if (!document.hidden) tick(); }, 30_000);
+    return () => { alive = false; clearInterval(t); };
+  }, []);
   const logout = async () => {
     await hub.logout().catch(() => undefined);
     window.location.assign(base);
@@ -30,6 +40,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
             </summary>
             <div className="absolute right-0 mt-2 w-52 rounded-lg bg-white py-1 text-sm text-slate-800 shadow-lg ring-1 ring-slate-200">
               <Link href={`${base}/profil`} className="block px-4 py-2 hover:bg-slate-100">Mon profil</Link>
+              <Link href={`${base}/marketplace/messages`} className="block px-4 py-2 hover:bg-slate-100">Mes messages{unread > 0 ? ` (${unread})` : ""}</Link>
               <Link href={`/${lang}`} className="block px-4 py-2 hover:bg-slate-100">Retour au site</Link>
               <button type="button" onClick={logout} className="block w-full px-4 py-2 text-left hover:bg-slate-100">Se déconnecter</button>
             </div>
@@ -48,6 +59,10 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
             <nav className="rounded-xl border border-slate-200 bg-white p-2 shadow-sm" aria-label="Navigation de l'espace">
               <Link href={base} className={link}><Newspaper size={18} /> Fil d'actualité</Link>
               <Link href={`${base}/marketplace`} className={link}><Store size={18} /> Marketplace</Link>
+              <Link href={`${base}/marketplace/messages`} className={link}>
+                <Mail size={18} /> Mes messages
+                {unread > 0 && <span className="ml-auto rounded-full bg-blue-700 px-2 text-xs font-semibold text-white" aria-label={`${unread} messages non lus`}>{unread}</span>}
+              </Link>
               <Link href={`${base}/profil`} className={link}><User size={18} /> Mon profil</Link>
               <Link href={`/${lang}`} className={link}><Home size={18} /> Retour au site</Link>
               <button type="button" onClick={logout} className={`${link} w-full`}><LogOut size={18} /> Se déconnecter</button>
@@ -62,7 +77,10 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
 
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-slate-200 bg-white text-xs text-slate-700 lg:hidden" aria-label="Navigation mobile">
         <Link href={base} className="flex flex-col items-center gap-0.5 py-2"><Newspaper size={20} />Fil</Link>
-        <Link href={`${base}/marketplace`} className="flex flex-col items-center gap-0.5 py-2"><Store size={20} />Marketplace</Link>
+        <Link href={`${base}/marketplace`} className="relative flex flex-col items-center gap-0.5 py-2">
+          <Store size={20} />Marketplace
+          {unread > 0 && <span className="absolute right-6 top-1.5 h-2.5 w-2.5 rounded-full bg-blue-600" aria-label="Messages non lus" />}
+        </Link>
         <Link href={`${base}/profil`} className="flex flex-col items-center gap-0.5 py-2"><User size={20} />Profil</Link>
         <Link href={`/${lang}`} className="flex flex-col items-center gap-0.5 py-2"><Home size={20} />Site</Link>
       </nav>

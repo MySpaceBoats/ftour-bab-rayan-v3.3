@@ -34,3 +34,14 @@ export const adminListings = () => call<{ listings: AdminListing[] }>("GET", "ma
 export const adminMarketReports = () => call<{ reports: MkReport[] }>("GET", "market/admin/reports", { admin: true }).then(r => r.reports);
 export const adminMarketHide = (type: "listing" | "comment", id: number) => call<{ ok: true }>("POST", "market/admin/hide", { admin: true, body: { type, id } });
 export const adminMarketDismiss = (id: number) => call<{ ok: true }>("POST", `market/admin/reports/${id}/dismiss`, { admin: true });
+
+export interface Thread { id: number; listing_id: number; listing_title: string; listing_status: string; cover: string | null; other: Seller; last_body: string | null; last_message_at: string; unread: number }
+export interface Message { id: number; sender_id: number; body: string; created_at: string; read_at: string | null }
+
+export const openThread = (listingId: number) => call<{ id: number; created: boolean }>("POST", `market/listings/${listingId}/thread`);
+export const listThreads = () => call<{ threads: Thread[] }>("GET", "market/threads").then(r => r.threads);
+export const listMessages = (threadId: number, cursor?: number | null) =>
+  call<{ messages: Message[]; nextCursor: number | null; other: Seller; listing: { id: number; title: string; status: string } }>("GET", `market/threads/${threadId}/messages${cursor ? `?cursor=${cursor}` : ""}`);
+export const sendMessage = (threadId: number, body: string) => call<{ id: number }>("POST", `market/threads/${threadId}/messages`, { body: { body } });
+export const markRead = (threadId: number) => call<{ ok: true }>("POST", `market/threads/${threadId}/read`);
+export const unreadCount = () => call<{ count: number }>("GET", "market/unread").then(r => r.count);

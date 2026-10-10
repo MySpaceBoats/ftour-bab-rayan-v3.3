@@ -83,6 +83,9 @@ export default function ListingDetailPage() {
             <div className="flex flex-wrap gap-2">
               {l.contact && <a href={`tel:${l.contact.phone}`} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"><Phone size={16} /> Appeler</a>}
               {l.contact?.whatsapp && <a href={`https://wa.me/${digits}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"><MessageCircle size={16} /> WhatsApp</a>}
+              <Button className="bg-blue-700 hover:bg-blue-800" disabled={l.status === "sold"} onClick={() => act(async () => { const t = await mk.openThread(l.id); setLocation(`${base}/messages/${t.id}`); })}>
+                <MessageCircle size={16} className="mr-2" /> Envoyer un message
+              </Button>
               {/* ponytail: native prompt for the report reason; replace with a dialog if reports become frequent */}
               <Button variant="ghost" onClick={() => { const r = window.prompt("Motif du signalement ?"); if (r?.trim()) act(async () => { await mk.reportMarket("listing", l.id, r); toast.success("Merci, signalement envoyé."); }); }}><Flag size={16} className="mr-1" /> Signaler</Button>
             </div>
