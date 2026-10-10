@@ -42,6 +42,12 @@
 - [ ] **HYG-01**: No secret in git — `.env.production` with RESEND_API_KEY removed from tracking / gitignore enforced
 - [ ] **HYG-02**: No `test.skip` / `.skip` markers left behind
 
+### Design (DSG-01..03)
+
+- [ ] **DSG-01**: Main site (public pages, restaurant, boutique/goodies, feedback, elections, admin-v2, CMS page, transactional emails) shows the d1 "Sunset Mauve 7644C" hue where olive was; no legacy olive hex remains in `client/`, `server/`, `worker/`, `shared/`, `previews/`
+- [ ] **DSG-02**: The palette swap causes no WCAG contrast regression — every legacy→mauve mapping is luminance-matched and `node scripts/palette-d1.mjs` (mapping parity + index.css token pairs) exits 0
+- [ ] **DSG-03**: No flow regression — `pnpm build` exits 0, `pnpm test` / `pnpm check` no worse than baseline; `scripts/build-palette-variants.mjs` re-keyed on the shipped palette and fails loudly when stale
+
 ## v2 Requirements
 
 Deferred to future work (not part of this audit milestone unless requested).
@@ -83,10 +89,13 @@ Deferred to future work (not part of this audit milestone unless requested).
 | ADMIN-02 | Phase 4 | Pending |
 | HYG-01 | Phase 5 | Pending |
 | HYG-02 | All | Pending |
+| DSG-01 | Phase 6 | Pending |
+| DSG-02 | Phase 6 | Pending |
+| DSG-03 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 18 total
-- Mapped to phases: 18
+- v1 requirements: 21 total
+- Mapped to phases: 21
 - Unmapped: 0 ✓
 
 ---

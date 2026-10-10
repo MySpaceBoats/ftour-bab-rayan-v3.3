@@ -131,13 +131,14 @@ Plans:
 ### Phase 6: Design d1 sur le site principal
 
 **Goal:** Le site principal reprend le design de https://ftour-bab-rayan-d1.pages.dev (tokens, typographie, composants, pages publiques), sans casser les flux existants; FR/EN/AR(RTL) et mobile vérifiés.
-**Requirements**: TBD
+**Requirements**: DSG-01, DSG-02, DSG-03
 **Depends on:** Phase 5
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 6 to break down)
+- [ ] 06-01-PLAN.md — Palette gate script + mauve tokens (tracer: index.css, Navbar/Footer, worker email) then public & restaurant pages
+- [ ] 06-02-PLAN.md — Admin surfaces + server emails/previews, re-key palette-variants script, final gate + manual UAT
 
 ### Phase 7: Hébergement bénévoles façon Airbnb
 
