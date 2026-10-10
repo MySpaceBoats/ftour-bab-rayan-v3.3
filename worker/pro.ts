@@ -2,6 +2,7 @@
 import type { D1Like } from "./gallery-d1";
 import * as H from "./hub-d1";
 import * as P from "./pro-d1";
+import * as X from "./messenger-d1";
 import { id, readJson, str } from "./hub-http";
 
 export interface ProCtx {
@@ -159,9 +160,14 @@ export async function handlePro(c: ProCtx): Promise<Response | null> {
     await P.markThreadRead(d, me, id(m[1]), now());
     return json({ ok: true });
   }
+  if (match("GET", /^inbox$/)) {
+    const me = await member();
+    const items = await X.inbox(d, me.id);
+    return json({ items: await Promise.all(items.map(async i => ({ ...i, other: await who(i.other) }))) });
+  }
   if (match("GET", /^unread$/)) {
     const me = await member();
-    return json({ count: await P.unreadTotal(d, me.id) });
+    return json({ count: await X.unreadAll(d, me.id) });
   }
 
   return null;

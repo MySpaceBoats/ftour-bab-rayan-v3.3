@@ -214,3 +214,23 @@ describe("pro http: messaging", () => {
     expect((await call("POST", `/hub/pro/threads/${tid}/messages`, { token: a.session, body: { body: "" } })).status).toBe(400);
   });
 });
+
+describe("messenger inbox route", () => {
+  it("requires a session", async () => {
+    expect((await call("GET", "/hub/pro/inbox")).status).toBe(401);
+  });
+
+  it("merges sources and unread sums the three modules", async () => {
+    const a = await signIn("a@x.ma"), b = await signIn("b@x.ma", "Bilal");
+    const th = (await (await call("POST", "/hub/pro/threads", { token: a.session, body: { to: b.id } })).json()) as any;
+    await call("POST", `/hub/pro/threads/${th.id}/messages`, { token: b.session, body: { body: "salut" } });
+    const l = sqlite.prepare("INSERT INTO mk_listings (member_id,title,description,price,category,item_condition) VALUES (?,?,?,?,?,?)").run(b.id, "Vélo", "d", 10, "autre", "bon").lastInsertRowid;
+    const t = sqlite.prepare("INSERT INTO mk_threads (listing_id,buyer_id,seller_id,created_at,last_message_at) VALUES (?,?,?,?,?)").run(l, a.id, b.id, new Date(clock).toISOString(), new Date(clock + 1000).toISOString()).lastInsertRowid;
+    sqlite.prepare("INSERT INTO mk_messages (thread_id,sender_id,body,created_at) VALUES (?,?,?,?)").run(t, b.id, "vélo ok", new Date(clock + 1000).toISOString());
+
+    const res = (await (await call("GET", "/hub/pro/inbox", { token: a.session })).json()) as any;
+    expect(res.items.map((i: any) => i.source)).toEqual(["market", "pro"]);
+    expect(res.items[0]).toMatchObject({ context: "Vélo", last_body: "vélo ok", unread: 1, other: { id: b.id, display_name: expect.any(String) } });
+    expect(((await (await call("GET", "/hub/pro/unread", { token: a.session })).json()) as any).count).toBe(2);
+  });
+});
