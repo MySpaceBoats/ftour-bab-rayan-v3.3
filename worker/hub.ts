@@ -1,7 +1,7 @@
 /** REST handler for the volunteer hub. Mounted from worker/index.ts like handleMediaRequest. */
 import { insertPhoto, type D1Like } from "./gallery-d1";
 import { createR2Storage, objectKey, type MediaEnv } from "./media-r2";
-import { sendEmail } from "./email";
+import { escapeHtml, sendEmail } from "./email";
 import { createWorkerContext } from "./context";
 import type { Env } from "./index";
 import * as H from "./hub-d1";
@@ -82,6 +82,10 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       if (me.status !== "active") throw new H.HubError("forbidden", "Compte suspendu");
       return me;
     };
+    const rescueTarget = async (email: string): Promise<string | null> => {
+      const owner = await A.recoveryOwner(d, email);
+      return owner && (await H.isEligible(d, owner)) ? owner : null;
+    };
     const who = path.startsWith("volunteer/") ? volunteer : member;
     const admin = async () => {
       const u = await siteUser();
@@ -93,10 +97,12 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     // ---- session -----------------------------------------------------------
     if (match("POST", /^login$/)) {
       const email = emailField((await readJson(request)).email);
-      // same answer whether or not the email is eligible (no enumeration)
-      if ((await H.isEligible(d, email)) && (await H.canRequestLogin(d, email, now()))) {
+      // same answer whether or not the email is eligible (no enumeration). The link goes to the address typed:
+      // the registration email, or a verified recovery address (rescue login for the member who owns it).
+      const target = (await H.isEligible(d, email)) ? email : await rescueTarget(email);
+      if (target && (await H.canRequestLogin(d, target, now()))) {
         await background("login mail", async () => {
-          const token = await H.createLoginToken(d, email, now());
+          const token = await H.createLoginToken(d, target, now());
           const link = `${base}/fr/benevole/espace?token=${token}`;
           await sendMail(email, "Votre lien de connexion — Espace bénévole", `<p>Bonjour,</p><p>Voici votre lien de connexion à l'espace bénévole Ftour Bab Rayan (valable 15 minutes, usage unique) :</p><p><a href="${link}">Ouvrir l'espace bénévole</a></p><p>Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>`);
         });
@@ -112,7 +118,7 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     }
     if (match("GET", /^me\/security$/)) {
       const me = await member();
-      return json(await A.security(d, me.id));
+      return json(await A.security(d, me.id, now()));
     }
     if (match("PUT", /^me\/password$/)) {
       const me = await member();
@@ -120,6 +126,37 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       await A.setPassword(d, me, { current: str(b.current), password: str(b.password), keepSessionToken: (request.headers.get("authorization") ?? "").slice(7) }, now());
       await background("password notice", () => sendMail(me.email, "Votre mot de passe a été modifié — Espace bénévole", `<p>Bonjour,</p><p>Le mot de passe de votre espace bénévole Ftour Bab Rayan vient d'être modifié.</p><p>Si ce n'était pas vous, utilisez « Mot de passe oublié » sur la page de connexion ou contactez l'équipe.</p>`));
       return json({ ok: true });
+    }
+    if (match("PUT", /^me\/recovery$/)) {
+      const me = await member();
+      const email = emailField((await readJson(request)).email);
+      const token = await A.requestRecovery(d, me, email, now());
+      await background("recovery mail", () => sendMail(email, "Confirmez votre adresse de récupération — Espace bénévole", `<p>Bonjour,</p><p>Confirmez cette adresse comme adresse de récupération de votre espace bénévole Ftour Bab Rayan (lien valable 24 heures, usage unique) :</p><p><a href="${base}/fr/benevole/espace?recovery=${token}">Confirmer cette adresse</a></p><p>Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>`));
+      return json({ ok: true, pending: email });
+    }
+    if (match("DELETE", /^me\/recovery$/)) {
+      const me = await member();
+      await A.removeRecovery(d, me.id, now());
+      return json({ ok: true });
+    }
+    if (match("POST", /^recovery\/verify$/)) {
+      const r = await A.confirmRecovery(d, str((await readJson(request)).token), now());
+      await background("recovery notice", () => sendMail(r.primary_email, "Adresse de récupération ajoutée — Espace bénévole", `<p>Bonjour,</p><p>Adresse de récupération ajoutée : <strong>${escapeHtml(r.recovery_email)}</strong>.</p><p>Si ce n'était pas vous, contactez l'équipe.</p>`));
+      return json({ ok: true, recovery_email: r.recovery_email });
+    }
+    if (match("POST", /^password\/forgot$/)) {
+      const email = emailField((await readJson(request)).email);
+      const r = await A.requestReset(d, email, now());
+      if (r) {
+        await background("reset mail", () => sendMail(r.sendTo, "Réinitialisation de votre mot de passe — Espace bénévole", `<p>Bonjour,</p><p>Pour choisir un nouveau mot de passe pour votre espace bénévole Ftour Bab Rayan (lien valable 30 minutes, usage unique) :</p><p><a href="${base}/fr/benevole/espace?reset=${r.token}">Réinitialiser mon mot de passe</a></p><p>Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>`));
+      }
+      return json({ ok: true });
+    }
+    if (match("POST", /^password\/reset$/)) {
+      const b = await readJson(request);
+      const r = await A.resetPassword(d, str(b.token), str(b.password), now());
+      await background("reset notice", () => sendMail(r.email, "Votre mot de passe a été réinitialisé — Espace bénévole", `<p>Bonjour,</p><p>Le mot de passe de votre espace bénévole Ftour Bab Rayan vient d'être réinitialisé et vos autres sessions ont été déconnectées.</p><p>Si ce n'était pas vous, contactez l'équipe.</p>`));
+      return json({ session: r.session, member: r.member });
     }
     if (match("POST", /^verify$/)) {
       const token = str((await readJson(request)).token);

@@ -3,11 +3,14 @@
  * No HTTP imports: testable with a fake D1. Time is always passed in (nowMs).
  */
 import type { D1Like } from "./gallery-d1";
-import { HOUR_MS, HubError, createSession, isEligible, iso, sha256Hex, type MemberRow, type MemberView } from "./hub-d1";
+import { HOUR_MS, HubError, createSession, isEligible, iso, randomToken, sha256Hex, upsertMember, type MemberRow, type MemberView } from "./hub-d1";
 
 export const PBKDF2_ITERATIONS = 100_000; // Cloudflare Workers WebCrypto rejects more than 100000
 export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 128;
+export const RESET_TTL_MS = 30 * 60 * 1000;
+export const RECOVERY_TTL_MS = 24 * HOUR_MS;
+const TOKENS_PER_HOUR = 3;
 export const AUTH_LIMITS = { emailFailures: 5, emailWindowMs: 15 * 60 * 1000, ipFailures: 20, ipWindowMs: HOUR_MS };
 
 const HASH_RE = /^pbkdf2-sha256\$(\d+)\$([0-9a-f]{32})\$([0-9a-f]{64})$/;
@@ -64,11 +67,14 @@ const RATE_MSG = "Trop de tentatives, réessayez dans 15 minutes";
 
 // ---- password -------------------------------------------------------------
 
-export interface Security { has_password: boolean; recovery_email: string | null }
+export interface Security { has_password: boolean; recovery_email: string | null; recovery_pending: string | null }
 
-export async function security(d: D1Like, memberId: number): Promise<Security> {
+export async function security(d: D1Like, memberId: number, nowMs: number): Promise<Security> {
   const r = await d.prepare("SELECT password_hash, recovery_email FROM hub_credentials WHERE member_id = ?").bind(memberId).first<{ password_hash: string | null; recovery_email: string | null }>();
-  return { has_password: Boolean(r?.password_hash), recovery_email: r?.recovery_email ?? null };
+  const p = await d.prepare(
+    "SELECT email FROM hub_account_tokens WHERE member_id = ? AND purpose = 'recovery' AND used_at IS NULL AND expires_at > ? AND email <> COALESCE(?, '') ORDER BY created_at DESC LIMIT 1",
+  ).bind(memberId, iso(nowMs), r?.recovery_email ?? null).first<{ email: string }>();
+  return { has_password: Boolean(r?.password_hash), recovery_email: r?.recovery_email ?? null, recovery_pending: p?.email ?? null };
 }
 
 export async function loginWithPassword(d: D1Like, email: string, password: string, nowMs: number, ip: string | null): Promise<{ session: string; member: MemberView }> {
@@ -118,4 +124,98 @@ export async function setPassword(d: D1Like, member: MemberRow, input: { current
   }
   await storeHash(d, member.id, password, nowMs);
   await revokeSessions(d, member.id, nowMs, input.keepSessionToken);
+  await invalidateResetTokens(d, member.id, nowMs);
+}
+
+async function invalidateResetTokens(d: D1Like, memberId: number, nowMs: number): Promise<void> {
+  await d.prepare("UPDATE hub_account_tokens SET used_at = ? WHERE member_id = ? AND purpose = 'reset' AND used_at IS NULL").bind(iso(nowMs), memberId).run();
+}
+
+// ---- account tokens (reset / recovery) --------------------------------------
+
+type Purpose = "reset" | "recovery";
+
+async function createAccountToken(d: D1Like, memberId: number, purpose: Purpose, email: string, nowMs: number): Promise<string> {
+  const raw = randomToken();
+  await d.prepare("DELETE FROM hub_account_tokens WHERE expires_at < ?").bind(iso(nowMs - 24 * HOUR_MS)).run();
+  await d.prepare("INSERT INTO hub_account_tokens (token_hash, member_id, purpose, email, created_at, expires_at) VALUES (?,?,?,?,?,?)")
+    .bind(await sha256Hex(raw), memberId, purpose, email, iso(nowMs), iso(nowMs + (purpose === "reset" ? RESET_TTL_MS : RECOVERY_TTL_MS))).run();
+  return raw;
+}
+
+/** Single-use: one atomic UPDATE ... RETURNING. null when unknown, used or expired. */
+async function consumeAccountToken(d: D1Like, raw: string, purpose: Purpose, nowMs: number): Promise<{ member_id: number; email: string } | null> {
+  if (!/^[0-9a-f]{64}$/.test(raw)) return null;
+  return d.prepare("UPDATE hub_account_tokens SET used_at = ? WHERE token_hash = ? AND purpose = ? AND used_at IS NULL AND expires_at > ? RETURNING member_id, email")
+    .bind(iso(nowMs), await sha256Hex(raw), purpose, iso(nowMs)).first<{ member_id: number; email: string }>();
+}
+
+async function tokensSince(d: D1Like, purpose: Purpose, col: "email" | "member_id", val: string | number, nowMs: number): Promise<number> {
+  const r = await d.prepare(`SELECT COUNT(*) AS n FROM hub_account_tokens WHERE purpose = ? AND ${col} = ? AND created_at > ?`).bind(purpose, val, iso(nowMs - HOUR_MS)).first<{ n: number }>();
+  return r?.n ?? 0;
+}
+
+// ---- recovery address -------------------------------------------------------
+
+export async function requestRecovery(d: D1Like, member: MemberRow, email: string, nowMs: number): Promise<string> {
+  if (email === member.email) throw new HubError("invalid", "Choisissez une adresse différente de votre email d'inscription");
+  if ((await tokensSince(d, "recovery", "member_id", member.id, nowMs)) >= TOKENS_PER_HOUR) throw new HubError("rate_limited", "Trop de demandes, réessayez plus tard");
+  return createAccountToken(d, member.id, "recovery", email, nowMs);
+}
+
+export async function confirmRecovery(d: D1Like, raw: string, nowMs: number): Promise<{ recovery_email: string; primary_email: string }> {
+  const t = await consumeAccountToken(d, raw, "recovery", nowMs);
+  if (!t) throw new HubError("invalid", "Lien invalide ou expiré");
+  const taken = await d.prepare(
+    "SELECT 1 AS ok FROM hub_members WHERE email = ? AND id <> ? UNION ALL SELECT 1 FROM hub_credentials WHERE recovery_email = ? AND member_id <> ? LIMIT 1",
+  ).bind(t.email, t.member_id, t.email, t.member_id).first();
+  if (taken) throw new HubError("invalid", "Adresse déjà utilisée par un autre compte");
+  const owner = await d.prepare("SELECT email FROM hub_members WHERE id = ?").bind(t.member_id).first<{ email: string }>();
+  if (!owner) throw new HubError("invalid", "Lien invalide ou expiré");
+  await d.prepare("INSERT INTO hub_credentials (member_id, recovery_email, recovery_verified_at, updated_at) VALUES (?,?,?,?) ON CONFLICT(member_id) DO UPDATE SET recovery_email = excluded.recovery_email, recovery_verified_at = excluded.recovery_verified_at, updated_at = excluded.updated_at")
+    .bind(t.member_id, t.email, iso(nowMs), iso(nowMs)).run();
+  return { recovery_email: t.email, primary_email: owner.email };
+}
+
+export async function removeRecovery(d: D1Like, memberId: number, nowMs: number): Promise<void> {
+  await d.prepare("UPDATE hub_credentials SET recovery_email = NULL, recovery_verified_at = NULL, updated_at = ? WHERE member_id = ?").bind(iso(nowMs), memberId).run();
+  await d.prepare("UPDATE hub_account_tokens SET used_at = ? WHERE member_id = ? AND purpose = 'recovery' AND used_at IS NULL").bind(iso(nowMs), memberId).run();
+}
+
+/** Primary email of the active member whose verified recovery address is `email`, else null. */
+export async function recoveryOwner(d: D1Like, email: string): Promise<string | null> {
+  const r = await d.prepare("SELECT m.email AS email FROM hub_credentials c JOIN hub_members m ON m.id = c.member_id WHERE c.recovery_email = ? AND c.recovery_verified_at IS NOT NULL AND m.status = 'active'")
+    .bind(email).first<{ email: string }>();
+  return r?.email ?? null;
+}
+
+// ---- password reset ---------------------------------------------------------
+
+/** Silent (null) when the address is unknown, ineligible, suspended or over the per-address cap: callers answer the same. */
+export async function requestReset(d: D1Like, email: string, nowMs: number): Promise<{ token: string; sendTo: string } | null> {
+  let primary = email;
+  if (!(await isEligible(d, email))) {
+    const owner = await recoveryOwner(d, email);
+    if (!owner || !(await isEligible(d, owner))) return null;
+    primary = owner;
+  }
+  const member = await upsertMember(d, primary);
+  if (member.status !== "active") return null;
+  if ((await tokensSince(d, "reset", "email", email, nowMs)) >= TOKENS_PER_HOUR) return null;
+  return { token: await createAccountToken(d, member.id, "reset", email, nowMs), sendTo: email };
+}
+
+export async function resetPassword(d: D1Like, raw: string, password: string, nowMs: number): Promise<{ session: string; member: MemberView; email: string }> {
+  checkPassword(password); // before consuming: a too-short password must not burn the link
+  const t = await consumeAccountToken(d, raw, "reset", nowMs);
+  if (!t) throw new HubError("invalid", "Lien invalide ou expiré");
+  const member = await d.prepare("SELECT * FROM hub_members WHERE id = ?").bind(t.member_id).first<MemberRow>();
+  if (!member) throw new HubError("invalid", "Lien invalide ou expiré");
+  if (!(await isEligible(d, member.email))) throw new HubError("forbidden", "Accès réservé aux bénévoles confirmés");
+  if (member.status !== "active") throw new HubError("forbidden", "Compte suspendu");
+  await storeHash(d, member.id, password, nowMs);
+  await revokeSessions(d, member.id, nowMs);
+  await invalidateResetTokens(d, member.id, nowMs);
+  const s = await createSession(d, member, nowMs);
+  return { ...s, email: member.email };
 }

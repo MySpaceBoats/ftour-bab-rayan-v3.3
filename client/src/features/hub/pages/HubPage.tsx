@@ -9,11 +9,29 @@ import Composer from "../components/Composer";
 import PostCard from "../components/PostCard";
 import HubShell from "../components/HubShell";
 import Avatar from "../components/Avatar";
-import { PasswordTab } from "../components/HubLoginForms";
+import { PasswordTab, ResetPasswordForm } from "../components/HubLoginForms";
 import { EmptyPanel, ErrorPanel, LoadingPanel } from "../components/StatePanel";
 
 const EMAIL_KEY = "hub_login_email";
 const RESEND_COOLDOWN_S = 30;
+
+/** Logged-out screen frame: gradient background, white card, logo header. */
+function AuthFrame({ children }: { children: React.ReactNode }) {
+  return (
+    // Same light scope as HubShell: this screen has its own frame and is the first thing a
+    // volunteer sees, so the input and button must not inherit the app's cream foreground.
+    <div data-theme="light" className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 p-4 text-slate-900">
+      <div className="w-full max-w-md space-y-5 rounded-2xl bg-white p-8 shadow-2xl">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <img src="/logo-bab-rayan.svg" alt="" className="h-16 w-16" />
+          <h1 className="text-2xl font-bold text-slate-900">Espace bénévole</h1>
+          <p className="text-sm text-slate-600">Le coin des bénévoles Ftour Bab Rayan : partagez des photos, des nouvelles et des remerciements avec toute l'équipe.</p>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export default function HubPage() {
   const [me, setMe] = useState<hub.Member | null | undefined>(undefined); // undefined = loading
@@ -23,6 +41,7 @@ export default function HubPage() {
   const [cooldown, setCooldown] = useState(0);
   const [loginError, setLoginError] = useState<string | null>(null); // expired or already-used link
   const [notice, setNotice] = useState<string | null>(null); // e.g. session expired mid-visit
+  const [resetToken, setResetToken] = useState<string | null>(null);
   const [pinned, setPinned] = useState<hub.Post[]>([]);
   const [posts, setPosts] = useState<hub.Post[]>([]);
   const [next, setNext] = useState<number | null>(null);
@@ -83,10 +102,18 @@ export default function HubPage() {
     started.current = true;
     try { setEmail(localStorage.getItem(EMAIL_KEY) ?? ""); } catch { /* storage unavailable */ }
     (async () => {
-      const token = new URLSearchParams(window.location.search).get("token");
+      const qs = new URLSearchParams(window.location.search);
+      const token = qs.get("token");
+      const reset = qs.get("reset");
+      const recovery = qs.get("recovery");
+      if (token || reset || recovery) window.history.replaceState({}, "", window.location.pathname);
+      if (reset) setResetToken(reset);
+      if (recovery) {
+        try { await hub.verifyRecovery(recovery); toast.success("Adresse de récupération confirmée"); }
+        catch (e) { toast.error((e as Error).message); }
+      }
       try {
         if (token) {
-          window.history.replaceState({}, "", window.location.pathname);
           const r = await hub.verifyLogin(token);
           hub.setHubToken(r.session);
           setMe(r.member);
@@ -122,22 +149,25 @@ export default function HubPage() {
     }
   };
 
+  if (resetToken) {
+    return (
+      <AuthFrame>
+        <ResetPasswordForm
+          token={resetToken}
+          onCancel={() => setResetToken(null)}
+          onSession={r => { hub.setHubToken(r.session); setResetToken(null); setLoginError(null); setNotice(null); setMe(r.member); }}
+        />
+      </AuthFrame>
+    );
+  }
+
   if (me === undefined) {
     return <div className="flex min-h-screen items-center justify-center bg-slate-100"><Loader2 className="animate-spin text-blue-700" /></div>;
   }
 
   if (me === null) {
     return (
-      // Same light scope as HubShell: this screen has its own frame and is the first thing a
-      // volunteer sees, so the input and button must not inherit the app's cream foreground.
-      <div data-theme="light" className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 p-4 text-slate-900">
-        <div className="w-full max-w-md space-y-5 rounded-2xl bg-white p-8 shadow-2xl">
-          <div className="flex flex-col items-center gap-3 text-center">
-            <img src="/logo-bab-rayan.svg" alt="" className="h-16 w-16" />
-            <h1 className="text-2xl font-bold text-slate-900">Espace bénévole</h1>
-            <p className="text-sm text-slate-600">Le coin des bénévoles Ftour Bab Rayan : partagez des photos, des nouvelles et des remerciements avec toute l'équipe.</p>
-          </div>
-
+      <AuthFrame>
           {loginError && (
             <p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-900">{loginError}</p>
           )}
@@ -185,7 +215,7 @@ export default function HubPage() {
             ) : (
               <form onSubmit={sendLink} className="space-y-5">
                 <div className="space-y-1.5">
-                  <label htmlFor="hub-email" className="text-sm font-medium text-slate-700">Votre email d'inscription</label>
+                  <label htmlFor="hub-email" className="text-sm font-medium text-slate-700">Votre email d'inscription ou de récupération</label>
                   <Input
                     id="hub-email"
                     type="email"
@@ -218,8 +248,7 @@ export default function HubPage() {
               />
             </TabsContent>
           </Tabs>
-        </div>
-      </div>
+      </AuthFrame>
     );
   }
 

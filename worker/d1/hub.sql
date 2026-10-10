@@ -104,3 +104,16 @@ CREATE TABLE IF NOT EXISTS hub_auth_attempts (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_hub_auth_attempts ON hub_auth_attempts(key, created_at);
+
+-- Jetons à usage unique (réinitialisation de mot de passe 30 min, vérification d'adresse de récupération 24 h), stockés hachés. email = adresse où le lien a été envoyé
+CREATE TABLE IF NOT EXISTS hub_account_tokens (
+  token_hash TEXT PRIMARY KEY,
+  member_id INTEGER NOT NULL REFERENCES hub_members(id) ON DELETE CASCADE,
+  purpose TEXT NOT NULL CHECK (purpose IN ('reset','recovery')),
+  email TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  used_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_hub_account_tokens_email ON hub_account_tokens(email, purpose, created_at);
+CREATE INDEX IF NOT EXISTS idx_hub_account_tokens_member ON hub_account_tokens(member_id, purpose);

@@ -13,6 +13,8 @@ export default function AccountSettings() {
   const [pw, setPw] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
+  const [recEmail, setRecEmail] = useState("");
+  const [recBusy, setRecBusy] = useState(false);
 
   const refresh = useCallback(() => hub.getSecurity().then(setSec).catch(e => toast.error((e as Error).message)), []);
   useEffect(() => { refresh(); }, [refresh]);
@@ -28,6 +30,24 @@ export default function AccountSettings() {
       setCurrent(""); setPw(""); setConfirm("");
       await refresh();
     } catch (err) { toast.error((err as Error).message); } finally { setBusy(false); }
+  };
+
+  const sendRecovery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recEmail.trim()) return;
+    setRecBusy(true);
+    try {
+      await hub.requestRecovery(recEmail.trim());
+      toast.success("Lien de vérification envoyé. Consultez cette boîte mail.");
+      setRecEmail("");
+      await refresh();
+    } catch (err) { toast.error((err as Error).message); } finally { setRecBusy(false); }
+  };
+
+  const removeRecovery = async () => {
+    setRecBusy(true);
+    try { await hub.removeRecovery(); toast.success("Adresse de récupération retirée"); await refresh(); }
+    catch (err) { toast.error((err as Error).message); } finally { setRecBusy(false); }
   };
 
   return (
@@ -48,6 +68,27 @@ export default function AccountSettings() {
             {busy ? <Loader2 size={16} className="animate-spin" aria-hidden /> : sec.has_password ? "Changer le mot de passe" : "Définir le mot de passe"}
           </Button>
         </form>
+      )}
+      {sec && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-slate-800">Adresse de récupération</h3>
+          <p className="text-sm text-slate-600">Une seconde adresse email, vérifiée par lien, qui sert à réinitialiser votre mot de passe et à vous envoyer un lien de connexion de secours.</p>
+          {sec.recovery_email && (
+            <div className="flex items-center justify-between gap-2 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">
+              <span>Adresse vérifiée : <strong>{sec.recovery_email}</strong></span>
+              <Button type="button" variant="outline" size="sm" disabled={recBusy} onClick={removeRecovery}>Retirer</Button>
+            </div>
+          )}
+          {sec.recovery_pending && (
+            <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">En attente de confirmation : <strong>{sec.recovery_pending}</strong>. Consultez cette boîte mail.</p>
+          )}
+          <form onSubmit={sendRecovery} className="space-y-2">
+            <Input type="email" autoComplete="off" aria-label="Adresse de récupération" placeholder="adresse@exemple.com" value={recEmail} onChange={e => setRecEmail(e.target.value)} required />
+            <Button type="submit" variant="outline" disabled={recBusy || !recEmail.trim()}>
+              {recBusy ? <Loader2 size={16} className="animate-spin" aria-hidden /> : "Envoyer le lien de vérification"}
+            </Button>
+          </form>
+        </div>
       )}
     </section>
   );

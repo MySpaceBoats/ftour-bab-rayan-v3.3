@@ -49,9 +49,14 @@ export async function call<T>(method: string, path: string, opts: { body?: unkno
 export const requestLogin = (email: string) => call<{ ok: true }>("POST", "login", { body: { email } });
 export const verifyLogin = (token: string) => call<{ session: string; member: Member }>("POST", "verify", { body: { token } });
 export const loginWithPassword = (email: string, password: string) => call<{ session: string; member: Member }>("POST", "login/password", { body: { email, password } });
-export interface Security { has_password: boolean; recovery_email: string | null }
+export interface Security { has_password: boolean; recovery_email: string | null; recovery_pending: string | null }
 export const getSecurity = () => call<Security>("GET", "me/security");
 export const setPassword = (password: string, current?: string) => call<{ ok: true }>("PUT", "me/password", { body: { password, ...(current ? { current } : {}) } });
+export const requestRecovery = (email: string) => call<{ ok: true; pending: string }>("PUT", "me/recovery", { body: { email } });
+export const removeRecovery = () => call<{ ok: true }>("DELETE", "me/recovery");
+export const verifyRecovery = (token: string) => call<{ ok: true; recovery_email: string }>("POST", "recovery/verify", { body: { token } });
+export const forgotPassword = (email: string) => call<{ ok: true }>("POST", "password/forgot", { body: { email } });
+export const resetPassword = (token: string, password: string) => call<{ session: string; member: Member }>("POST", "password/reset", { body: { token, password } });
 export const getMe = () => call<{ member: Member }>("GET", "me").then(r => r.member);
 export const updateMe = (b: { display_name?: string; bio?: string; avatar_key?: string | null }) => call<{ member: Member }>("PUT", "me", { body: b }).then(r => r.member);
 export const logout = () => call<{ ok: true }>("POST", "logout").finally(() => setHubToken(null));
