@@ -33,7 +33,7 @@ function open() {
   let sock: WebSocket;
   try { sock = new WebSocket(url(), ["hub", token]); } catch { return; }
   ws = sock;
-  sock.onopen = () => { retry = 1000; connected = true; fire({ type: "presence_snapshot", online: [...online] }); };
+  sock.onopen = () => { retry = 1000; connected = true; fire({ type: "presence_snapshot", online: Array.from(online) }); };
   sock.onmessage = ev => {
     let e: ServerEvent;
     try { e = JSON.parse(String(ev.data)); } catch { return; }
