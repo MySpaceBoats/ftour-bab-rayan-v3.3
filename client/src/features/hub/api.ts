@@ -57,6 +57,14 @@ export const removeRecovery = () => call<{ ok: true }>("DELETE", "me/recovery");
 export const verifyRecovery = (token: string) => call<{ ok: true; recovery_email: string }>("POST", "recovery/verify", { body: { token } });
 export const forgotPassword = (email: string) => call<{ ok: true }>("POST", "password/forgot", { body: { email } });
 export const resetPassword = (token: string, password: string) => call<{ session: string; member: Member }>("POST", "password/reset", { body: { token, password } });
+export type NotifType = "like" | "comment" | "gallery" | "announcement" | "volunteer";
+export interface HubNotification { id: number; type: NotifType; title: string; body: string; link: string | null; created_at: string; read: boolean }
+export type NotifPrefs = Record<NotifType, boolean>;
+export const getNotifications = (cursor?: number | null) => call<{ notifications: HubNotification[]; nextCursor: number | null }>("GET", `notifications${cursor ? `?cursor=${cursor}` : ""}`);
+export const unreadNotifications = () => call<{ unread: number }>("GET", "notifications/unread").then(r => r.unread);
+export const markNotificationsRead = (ids?: number[]) => call<{ unread: number }>("POST", "notifications/read", { body: ids ? { ids } : {} }).then(r => r.unread);
+export const getNotifPrefs = () => call<{ prefs: NotifPrefs }>("GET", "notifications/prefs").then(r => r.prefs);
+export const setNotifPrefs = (prefs: Partial<NotifPrefs>) => call<{ prefs: NotifPrefs }>("PUT", "notifications/prefs", { body: prefs }).then(r => r.prefs);
 export const getMe = () => call<{ member: Member }>("GET", "me").then(r => r.member);
 export const updateMe = (b: { display_name?: string; bio?: string; avatar_key?: string | null }) => call<{ member: Member }>("PUT", "me", { body: b }).then(r => r.member);
 export const logout = () => call<{ ok: true }>("POST", "logout").finally(() => setHubToken(null));

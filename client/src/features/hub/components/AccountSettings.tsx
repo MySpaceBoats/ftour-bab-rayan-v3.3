@@ -3,9 +3,17 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import * as hub from "../api";
 
 const MIN = 8;
+const PREF_LABELS: [hub.NotifType, string][] = [
+  ["like", "J'aime sur mes publications"],
+  ["comment", "Commentaires sur mes publications"],
+  ["gallery", "Mes photos proposées à la galerie"],
+  ["announcement", "Annonces de l'équipe"],
+  ["volunteer", "Inscriptions et rappels bénévole"],
+];
 
 export default function AccountSettings() {
   const [sec, setSec] = useState<hub.Security | null>(null);
@@ -15,6 +23,16 @@ export default function AccountSettings() {
   const [busy, setBusy] = useState(false);
   const [recEmail, setRecEmail] = useState("");
   const [recBusy, setRecBusy] = useState(false);
+  const [prefs, setPrefs] = useState<hub.NotifPrefs | null>(null);
+
+  useEffect(() => { hub.getNotifPrefs().then(setPrefs).catch(e => toast.error((e as Error).message)); }, []);
+
+  // optimistic toggle, reverted on error
+  const togglePref = async (type: hub.NotifType, on: boolean) => {
+    setPrefs(p => (p ? { ...p, [type]: on } : p));
+    try { setPrefs(await hub.setNotifPrefs({ [type]: on })); }
+    catch (err) { setPrefs(p => (p ? { ...p, [type]: !on } : p)); toast.error((err as Error).message); }
+  };
 
   const refresh = useCallback(() => hub.getSecurity().then(setSec).catch(e => toast.error((e as Error).message)), []);
   useEffect(() => { refresh(); }, [refresh]);
@@ -88,6 +106,20 @@ export default function AccountSettings() {
               {recBusy ? <Loader2 size={16} className="animate-spin" aria-hidden /> : "Envoyer le lien de vérification"}
             </Button>
           </form>
+        </div>
+      )}
+      {prefs && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-slate-800">Notifications par email</h3>
+          <ul className="space-y-2">
+            {PREF_LABELS.map(([type, label]) => (
+              <li key={type} className="flex items-center justify-between gap-3 text-sm text-slate-700">
+                <label htmlFor={`pref-${type}`}>{label}</label>
+                <Switch id={`pref-${type}`} checked={prefs[type]} onCheckedChange={on => togglePref(type, on)} />
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-slate-500">Les notifications restent toujours visibles dans la cloche de l'espace ; ces réglages ne concernent que les emails.</p>
         </div>
       )}
     </section>

@@ -86,6 +86,39 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
   }
 }
 
+export type BatchEmail = { to: string; subject: string; html: string };
+
+/** Resend batch endpoint: up to 100 emails per call (no attachments), one individual `to` each. Never throws. */
+export async function sendEmailBatch(apiKey: string, emails: BatchEmail[]): Promise<{ sent: number; failed: number }> {
+  if (emails.length === 0) return { sent: 0, failed: 0 };
+  if (!apiKey) {
+    console.warn("[Email] RESEND_API_KEY/EMAIL_PROVIDER_KEY not configured, skipping batch");
+    return { sent: 0, failed: emails.length };
+  }
+  let sent = 0;
+  let failed = 0;
+  for (let i = 0; i < emails.length; i += 100) {
+    const chunk = emails.slice(i, i + 100);
+    try {
+      const response = await fetch(`${RESEND_API_URL}/batch`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify(chunk.map(e => ({ from: FROM_EMAIL, to: e.to, subject: e.subject, html: e.html, reply_to: REPLY_TO }))),
+      });
+      if (response.ok) sent += chunk.length;
+      else {
+        failed += chunk.length;
+        const data = await response.json().catch(() => ({})) as any;
+        console.error("[Email] Batch failed:", data?.message || data?.error?.message || response.status);
+      }
+    } catch (error) {
+      failed += chunk.length;
+      console.error("[Email] Batch error:", error);
+    }
+  }
+  return { sent, failed };
+}
+
 /**
  * Generate QR code URL using external service
  */

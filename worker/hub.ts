@@ -6,6 +6,7 @@ import { createWorkerContext } from "./context";
 import type { Env } from "./index";
 import * as H from "./hub-d1";
 import * as A from "./hub-auth-d1";
+import * as N from "./hub-notify";
 import { appBaseUrl, emailField, id, readJson, str } from "./hub-http";
 import { handleMarketRoute } from "./market";
 import { handleStayRoute } from "./stay";
@@ -15,6 +16,7 @@ export interface HubEnv extends MediaEnv { DB?: D1Like; RESEND_API_KEY?: string;
 export interface HubDeps {
   now?: () => number;
   sendMail?: (to: string, subject: string, html: string) => Promise<unknown>;
+  sendBatch?: (msgs: { to: string; subject: string; html: string }[]) => Promise<unknown>;
   waitUntil?: (p: Promise<unknown>) => void;
   adminUser?: (request: Request) => Promise<{ role: string; email?: string; isDemo?: boolean } | null>;
 }
@@ -57,6 +59,7 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       sendEmail({ to, subject, html, apiKey: env.RESEND_API_KEY || env.EMAIL_PROVIDER_KEY || "" }));
 
     const base = appBaseUrl(env);
+    const mailer: N.Mailer = { ...N.mailerFromEnv(env), ...(deps.sendBatch ? { sendBatch: deps.sendBatch } : {}) };
     // Best-effort side effect (mail): runs after the response when waitUntil exists, else awaited. Never throws.
     const background = (label: string, job: () => Promise<unknown>): Promise<unknown> | void => {
       const p = job().catch(e => console.error(`[hub] ${label} failed`, e));
@@ -182,6 +185,32 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       return json({ member: { ...view, avatar: await sign(view.avatar_key) } });
     }
 
+    // ---- notifications -----------------------------------------------------
+    if (match("GET", /^notifications$/)) {
+      const me = await member();
+      const c = url.searchParams.get("cursor");
+      return json(await N.listNotifications(d, me.id, c && /^\d+$/.test(c) ? Number(c) : null));
+    }
+    if (match("GET", /^notifications\/unread$/)) {
+      const me = await member();
+      return json({ unread: await N.unreadCount(d, me.id) });
+    }
+    if (match("POST", /^notifications\/read$/)) {
+      const me = await member();
+      const b = await readJson(request);
+      if (b.ids !== undefined && !Array.isArray(b.ids)) throw new H.HubError("invalid", "Identifiants invalides");
+      await N.markRead(d, me.id, Array.isArray(b.ids) ? b.ids.map(id) : null, now());
+      return json({ unread: await N.unreadCount(d, me.id) });
+    }
+    if (match("GET", /^notifications\/prefs$/)) {
+      const me = await member();
+      return json({ prefs: await N.getPrefs(d, me.id) });
+    }
+    if (match("PUT", /^notifications\/prefs$/)) {
+      const me = await member();
+      return json({ prefs: await N.setPrefs(d, me.id, await readJson(request)) });
+    }
+
     if ((m = match("GET", /^members\/(\d+)$/))) {
       await member();
       const view = await H.publicMember(d, id(m[1]));
@@ -211,7 +240,10 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     }
     if ((m = match("POST", /^posts\/(\d+)\/like$/))) {
       const me = await member();
-      return json(await H.toggleLike(d, me.id, id(m[1])));
+      const postId = id(m[1]);
+      const r = await H.toggleLike(d, me.id, postId);
+      if (r.liked) await background("notify like", () => N.onLike(d, mailer, me, postId, now()));
+      return json(r);
     }
     if ((m = match("GET", /^posts\/(\d+)\/comments$/))) {
       await member();
@@ -220,7 +252,11 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     }
     if ((m = match("POST", /^posts\/(\d+)\/comments$/))) {
       const me = await member();
-      return json(await H.addComment(d, me, id(m[1]), str((await readJson(request)).body), now()));
+      const postId = id(m[1]);
+      const text = str((await readJson(request)).body);
+      const r = await H.addComment(d, me, postId, text, now());
+      await background("notify comment", () => N.onComment(d, mailer, me, postId, r.id, text.trim(), now()));
+      return json(r);
     }
     if ((m = match("DELETE", /^comments\/(\d+)$/))) {
       await H.removeContent(d, await member(), "comment", id(m[1]));
@@ -282,7 +318,10 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     if (match("POST", /^admin\/posts$/)) {
       await admin();
       const b = await readJson(request);
-      return json(await H.postAnnouncement(d, { body: str(b.body), pinned: b.pinned === true }, now()));
+      const text = str(b.body);
+      const r = await H.postAnnouncement(d, { body: text, pinned: b.pinned === true }, now());
+      await background("notify announcement", () => N.onAnnouncement(d, mailer, r.id, text.trim(), now()));
+      return json(r);
     }
     if (match("POST", /^admin\/hide$/)) {
       await admin();

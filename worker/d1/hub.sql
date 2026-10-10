@@ -117,3 +117,25 @@ CREATE TABLE IF NOT EXISTS hub_account_tokens (
 );
 CREATE INDEX IF NOT EXISTS idx_hub_account_tokens_email ON hub_account_tokens(email, purpose, created_at);
 CREATE INDEX IF NOT EXISTS idx_hub_account_tokens_member ON hub_account_tokens(member_id, purpose);
+
+-- Notifications in-app (cloche). link = chemin applicatif sans préfixe de langue ; dedupe_key évite les doublons (like/unlike, relance cron)
+CREATE TABLE IF NOT EXISTS hub_notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  member_id INTEGER NOT NULL REFERENCES hub_members(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('like','comment','gallery','announcement','volunteer')),
+  title TEXT NOT NULL,
+  body TEXT NOT NULL DEFAULT '',
+  link TEXT,
+  dedupe_key TEXT UNIQUE,
+  created_at TEXT NOT NULL,
+  read_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_hub_notifications_member ON hub_notifications(member_id, read_at, id);
+
+-- Préférences d'envoi par email, par type (absence de ligne = valeur par défaut du code)
+CREATE TABLE IF NOT EXISTS hub_notification_prefs (
+  member_id INTEGER NOT NULL REFERENCES hub_members(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('like','comment','gallery','announcement','volunteer')),
+  email INTEGER NOT NULL CHECK (email IN (0,1)),
+  PRIMARY KEY (member_id, type)
+);

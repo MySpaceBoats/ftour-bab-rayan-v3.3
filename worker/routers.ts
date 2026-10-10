@@ -8,6 +8,7 @@ import superjson from "superjson";
 import type { WorkerContext, WorkerUser } from "./context";
 import { createSupabaseAdmin } from "./supabase";
 import * as galleryDb from "./gallery-d1";
+import * as hubNotify from "./hub-notify";
 import * as blogDb from "./blog-d1";
 import * as siteDb from "./site-d1";
 import * as electionDb from "./election-d1";
@@ -2101,6 +2102,18 @@ const GALLERY_MAX_BATCH = 10;
 
 const galleryOrigin = (ctx: WorkerContext) => new URL(ctx.req.url).origin;
 
+/** Best-effort Hub notification after an admin action: never throws, so the moderation/status update is never blocked. */
+async function notifyHub(
+  env: WorkerContext["env"],
+  run: (d: galleryDb.D1Like, mailer: hubNotify.Mailer) => Promise<unknown>,
+): Promise<void> {
+  try {
+    if (env.DB) await run(galleryDb.db(env), hubNotify.mailerFromEnv(env));
+  } catch (e) {
+    console.error("[hub-notify]", e);
+  }
+}
+
 function galleryMedia(ctx: WorkerContext) {
   if (!ctx.env.GALLERY_MEDIA)
     throw new TRPCError({
@@ -2402,6 +2415,7 @@ const galleryRouter = router({
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
       await galleryDb.setStatus(galleryDb.db(ctx.env), input.id, "published");
+      await notifyHub(ctx.env, (d, mailer) => hubNotify.galleryDecision(d, mailer, input.id, "published", Date.now()));
       return { success: true };
     }),
 
@@ -2416,6 +2430,7 @@ const galleryRouter = router({
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
       await galleryDb.setStatus(galleryDb.db(ctx.env), input.id, "rejected");
+      await notifyHub(ctx.env, (d, mailer) => hubNotify.galleryDecision(d, mailer, input.id, "rejected", Date.now()));
       return { success: true };
     }),
 
@@ -2438,6 +2453,10 @@ const galleryRouter = router({
         galleryOrigin(ctx)
       );
       if (!photo) throw new TRPCError({ code: "NOT_FOUND", message: "Photo introuvable" });
+      if (input.status === "published" || input.status === "rejected") {
+        const status = input.status;
+        await notifyHub(ctx.env, (d, mailer) => hubNotify.galleryDecision(d, mailer, id, status, Date.now()));
+      }
       return photo;
     }),
 
@@ -3570,6 +3589,10 @@ const volunteersRouter = router({
 
       if (error) {
         throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      }
+
+      if (input.status === "confirmed") {
+        await notifyHub(ctx.env, (d, mailer) => hubNotify.volunteerConfirmed(d, mailer, input.volunteerId, Date.now()));
       }
 
       return { success: true };

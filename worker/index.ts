@@ -11,6 +11,7 @@ import { DEFAULT_RAMADAN_TIMEZONE, getDateStringInTimeZone, getRamadanDay } from
 import { handleCashOrderRequest } from './cash-orders';
 import { handleMemberCardRequest } from './member-cards';
 import { sendEmail } from './email';
+import * as hubNotify from './hub-notify';
 
 export interface Env {
   SUPABASE_URL: string;
@@ -129,6 +130,17 @@ async function ensureRollingOpenDays(env: Env): Promise<void> {
 export default {
   async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
     await ensureRollingOpenDays(env);
+    // Volunteer reminders for the next Casablanca day. The cron fires at 23:05 UTC and Morocco is UTC+0 during
+    // Ramadan, UTC+1 otherwise, so +3 h always lands on the upcoming Casablanca day.
+    try {
+      if (env.DB) {
+        const tomorrow = getDateStringInTimeZone(new Date(Date.now() + 3 * 3600_000), DEFAULT_RAMADAN_TIMEZONE);
+        const n = await hubNotify.remindVolunteers(env.DB, hubNotify.mailerFromEnv(env), tomorrow, Date.now());
+        console.log(`[cron] hub reminders for ${tomorrow}: ${n}`);
+      }
+    } catch (e) {
+      console.error('[cron] hub reminders failed', e);
+    }
   },
 
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {

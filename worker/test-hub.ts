@@ -1,5 +1,6 @@
 /** Shared hermetic harness for hub route tests: in-memory SQLite as D1, fake mail, controllable clock. No network. */
 import { handleHubRequest, type HubDeps, type HubEnv } from "./hub";
+import type { BatchEmail } from "./email";
 import { GALLERY_SCHEMA, fakeD1, openDb } from "./test-d1";
 
 const CORS = { "Access-Control-Allow-Origin": "https://www.ftourbabrayan.ma" };
@@ -15,11 +16,13 @@ export function createHubHarness() {
   const d = fakeD1(sqlite);
   const env: HubEnv = { DB: d, JWT_SECRET: "test-secret", MEDIA_BASE_URL: "https://m.test", PUBLIC_APP_URL: "https://site.test" };
   const mails: { to: string; subject: string; html: string }[] = [];
+  const batches: BatchEmail[][] = [];
   const state = { clock: T0 };
 
   const deps = (): HubDeps => ({
     now: () => state.clock,
     sendMail: async (to, subject, html) => { mails.push({ to, subject, html }); },
+    sendBatch: async msgs => { batches.push(msgs); },
     adminUser: async req => {
       const site = req.headers.get("x-site");
       if (site) return { role: "user", email: site };
@@ -65,7 +68,7 @@ export function createHubHarness() {
   }
 
   return {
-    sqlite, d, env, mails, call, vol, signIn, lastLink,
+    sqlite, d, env, mails, batches, call, vol, signIn, lastLink,
     get clock() { return state.clock; },
     set clock(v: number) { state.clock = v; },
   };

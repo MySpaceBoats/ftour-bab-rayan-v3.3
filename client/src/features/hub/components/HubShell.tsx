@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import * as hub from "../api";
 import Avatar from "./Avatar";
+import NotificationBell from "./NotificationBell";
 import * as mk from "../market/market-api";
 import * as st from "../stay/stay-api";
 import * as proApi from "../pro/pro-api";
@@ -30,6 +31,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
   const [unread, setUnread] = useState(0);
   const [stayUnread, setStayUnread] = useState(0);
   const [proUnread, setProUnread] = useState(0);
+  const [notifUnread, setNotifUnread] = useState(0);
   // ponytail: poll the unread counters every 30 s instead of push notifications
   useEffect(() => {
     let alive = true;
@@ -37,6 +39,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
       mk.unreadCount().then(n => { if (alive) setUnread(n); }).catch(() => undefined);
       st.stayUnread().then(n => { if (alive) setStayUnread(n); }).catch(() => undefined);
       proApi.unreadCount().then(n => { if (alive) setProUnread(n); }).catch(() => undefined);
+      hub.unreadNotifications().then(n => { if (alive) setNotifUnread(n); }).catch(() => undefined);
     };
     tick();
     const t = setInterval(() => { if (!document.hidden) tick(); }, 30_000);
@@ -86,6 +89,8 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
             <img src="/logo-bab-rayan.svg" alt="" className="h-8 w-8 rounded bg-white p-0.5" />
             Espace bénévole
           </Link>
+          <div className="flex items-center gap-1">
+          <NotificationBell unread={notifUnread} onChange={setNotifUnread} />
           <DropdownMenu>
             <DropdownMenuTrigger
               aria-label={`Menu du compte de ${me.display_name}`}
@@ -114,6 +119,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </div>
       </header>
 
