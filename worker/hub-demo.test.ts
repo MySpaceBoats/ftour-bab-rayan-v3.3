@@ -8,10 +8,12 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 import { DEMO_DOMAIN, DEMO_LABEL, LISTING_MEDIA, POST_MEDIA, cleanupSql, seedSql } from "../scripts/hub-demo/build";
+import { MEETUP_MEDIA } from "../scripts/hub-demo/meetup";
 import { PRO_POST_MEDIA } from "../scripts/hub-demo/pro";
 import { STAY_MEDIA } from "../scripts/hub-demo/stay";
 import type { D1Like, D1Stmt } from "./gallery-d1";
 import * as H from "./hub-d1";
+import * as mt from "./meetup-d1";
 import * as mk from "./market-d1";
 import * as pro from "./pro-d1";
 import * as st from "./stay-d1";
@@ -480,6 +482,142 @@ describe("hub demo seed: Fil and Marketplace through the real data layer", () =>
   });
 });
 
+describe("hub demo seed: Meetup", () => {
+  it("populates every state of the meetup tab, coherent with the schema checks", () => {
+    const db = freshDb();
+    db.exec(seedSql()); // the schema CHECKs (lengths, categories, GLOB dates, ends_at > starts_at, capacity) ran on every insert
+    expect(count(db, "mt_meetups")).toBe(12);
+    expect(n(db, "SELECT COUNT(DISTINCT category) AS n FROM mt_meetups")).toBe(4);
+    expect(n(db, "SELECT COUNT(DISTINCT country) AS n FROM mt_meetups")).toBe(4);
+    expect(n(db, "SELECT COUNT(DISTINCT city) AS n FROM mt_meetups")).toBeGreaterThanOrEqual(8);
+    expect(n(db, "SELECT COUNT(*) AS n FROM mt_meetups WHERE status = 'cancelled' AND cancelled_at IS NOT NULL")).toBe(1);
+    expect(n(db, "SELECT COUNT(*) AS n FROM mt_meetups WHERE status = 'hidden'")).toBe(1);
+    expect(n(db, "SELECT COUNT(*) AS n FROM mt_meetups WHERE status = 'active' AND cancelled_at IS NOT NULL")).toBe(0);
+    // finished (past) and upcoming ones, relative to the day the seed runs
+    expect(n(db, "SELECT COUNT(*) AS n FROM mt_meetups WHERE ends_at < strftime('%Y-%m-%dT%H:%M','now','-1 day')")).toBe(3);
+    expect(n(db, "SELECT COUNT(*) AS n FROM mt_meetups WHERE status = 'active' AND starts_at > strftime('%Y-%m-%dT%H:%M','now','+1 day')")).toBe(7);
+    // exactly one full meetup with a waiting list; waiting lists only exist on full meetups; nobody overbooked
+    const stats = db.prepare(
+      `SELECT mt.title, mt.capacity,
+         (SELECT COUNT(*) FROM mt_participants p WHERE p.meetup_id = mt.id AND p.status = 'going') AS going,
+         (SELECT COUNT(*) FROM mt_participants p WHERE p.meetup_id = mt.id AND p.status = 'waitlist') AS waiting
+       FROM mt_meetups mt`,
+    ).all() as { title: string; capacity: number; going: number; waiting: number }[];
+    for (const m of stats) {
+      expect(m.going, m.title).toBeLessThanOrEqual(m.capacity);
+      if (m.waiting > 0) expect(m.going, `${m.title} : liste d'attente seulement si complet`).toBe(m.capacity);
+    }
+    expect(stats.filter(m => m.waiting > 0)).toHaveLength(1);
+    expect(stats.filter(m => m.waiting > 0)[0].waiting).toBe(3);
+    // organisers and participants are demo members, nobody joins their own meetup
+    expect(n(db, `SELECT COUNT(*) AS n FROM mt_meetups mt JOIN hub_members m ON m.id = mt.member_id WHERE m.email NOT LIKE ${DEMO_LIKE}`)).toBe(0);
+    expect(n(db, "SELECT COUNT(*) AS n FROM mt_participants p JOIN mt_meetups mt ON mt.id = p.meetup_id WHERE p.member_id = mt.member_id")).toBe(0);
+    expect(n(db, `SELECT COUNT(*) AS n FROM mt_participants p JOIN hub_members m ON m.id = p.member_id WHERE m.email NOT LIKE ${DEMO_LIKE}`)).toBe(0);
+    expect(n(db, "SELECT COUNT(DISTINCT member_id) AS n FROM mt_participants")).toBe(10);
+    expect(n(db, "SELECT COUNT(DISTINCT member_id) AS n FROM mt_meetups")).toBeGreaterThanOrEqual(7);
+    // every description carries the test marker (like every other tab)
+    const desc = db.prepare("SELECT description FROM mt_meetups").all() as { description: string }[];
+    for (const r of desc) expect(r.description.startsWith(DEMO_LABEL)).toBe(true);
+  });
+
+  it("only points to photos that exist on disk and will be uploaded", () => {
+    const db = freshDb();
+    db.exec(seedSql());
+    const mediaDir = new URL("../scripts/hub-demo/media/", import.meta.url);
+    const keys = (db.prepare("SELECT photo_key FROM mt_meetups WHERE photo_key IS NOT NULL").all() as { photo_key: string }[]).map(r => r.photo_key);
+    expect(keys.length).toBe(MEETUP_MEDIA.length);
+    expect(keys.length).toBeGreaterThanOrEqual(8);
+    expect(n(db, "SELECT COUNT(*) AS n FROM mt_meetups WHERE photo_key IS NULL")).toBeGreaterThanOrEqual(1); // the tab also has to show a card without photo
+    for (const key of keys) {
+      expect(key, key).toMatch(/^demo\/meetup-[a-z0-9-]+\.jpg$/);
+      expect(existsSync(new URL(key.slice("demo/".length), mediaDir)), `${key} absent de scripts/hub-demo/media/`).toBe(true);
+    }
+    expect(keys.map(k => k.slice("demo/".length)).sort()).toEqual([...MEETUP_MEDIA].sort());
+  });
+
+  it("serves the meetup tab through the real data layer, without any email", async () => {
+    const db = freshDb();
+    db.exec(seedSql());
+    const real = realMember(db);
+    const d = asD1(db);
+    const now = Date.now();
+    const out: unknown[] = [];
+
+    const upcoming = await mt.listMeetups(d, real.id, { limit: 50 }, now);
+    out.push(upcoming);
+    expect(upcoming.meetups).toHaveLength(7); // no finished, cancelled or hidden meetup in the search
+    expect(upcoming.meetups.every(m => m.status === "active" && !m.ended)).toBe(true);
+    expect(upcoming.meetups.map(m => m.starts_at)).toEqual([...upcoming.meetups.map(m => m.starts_at)].sort());
+    expect((await mt.listMeetups(d, real.id, { country: "France" }, now)).meetups).toHaveLength(2);
+    expect((await mt.listMeetups(d, real.id, { city: "marrakech" }, now)).meetups).toHaveLength(1);
+    expect((await mt.listMeetups(d, real.id, { category: "rencontre" }, now)).meetups.length).toBeGreaterThanOrEqual(3);
+    const places = await mt.listMeetupPlaces(d, now);
+    out.push(places);
+    expect(places.countries.map(c => c.country)).toEqual(["Belgique", "Canada", "France", "Maroc"]);
+
+    // the full workshop: no seat left, three people waiting; the waiting list is private to the organiser
+    const full = upcoming.meetups.find(m => m.title.includes("Atelier cuisine"))!;
+    expect(full.going_count).toBe(full.capacity);
+    expect(full.waitlist_count).toBe(3);
+    const asVisitor = await mt.getMeetup(d, real.id, full.id, now);
+    out.push(asVisitor);
+    expect(asVisitor.spots_left).toBe(0);
+    expect(asVisitor.waitlist).toEqual([]);
+    expect(asVisitor.description.startsWith(DEMO_LABEL)).toBe(true);
+    const nadia = demo(db, "nadia");
+    const asOrganizer = await mt.getMeetup(d, nadia.id, full.id, now);
+    out.push(asOrganizer);
+    expect(asOrganizer.mine).toBe(true);
+    expect(asOrganizer.waitlist).toHaveLength(3);
+    expect(asOrganizer.participants).toHaveLength(6);
+
+    // joining a full meetup lands on the waiting list; a seat freed by someone leaving goes to the first in line
+    expect((await mt.joinMeetup(d, real, full.id, now)).status).toBe("waitlist");
+    const omar = demo(db, "omar");
+    await mt.leaveMeetup(d, omar, full.id);
+    const after = await mt.getMeetup(d, nadia.id, full.id, now);
+    expect(after.going_count).toBe(6);
+    expect(after.participants.some(p => p.display_name.includes("Mehdi"))).toBe(true);
+    expect(after.waitlist).toHaveLength(3); // salma, reda, the real member
+    // joining one with seats left works, a finished one is refused
+    const paris = upcoming.meetups.find(m => m.city === "Paris")!;
+    expect((await mt.joinMeetup(d, real, paris.id, now)).status).toBe("going");
+    const past = (await mt.listMyMeetups(d, omar.id, "joined", now)).find(m => m.ended)!;
+    expect(past).toBeTruthy();
+    await expect(mt.joinMeetup(d, real, past.id, now)).rejects.toThrow();
+
+    // organiser's view: finished + cancelled ones are listed too; the hidden one is not readable
+    const karim = demo(db, "karim");
+    const organized = await mt.listMyMeetups(d, karim.id, "organized", now);
+    out.push(organized);
+    expect(organized.map(m => m.status).sort()).toEqual(["active", "cancelled"]);
+    expect(organized.some(m => m.ended)).toBe(true);
+    const hiddenId = (db.prepare("SELECT id FROM mt_meetups WHERE status = 'hidden'").get() as { id: number }).id;
+    await expect(mt.getMeetup(d, real.id, hiddenId, now)).rejects.toThrow();
+    const cancelledId = (db.prepare("SELECT id FROM mt_meetups WHERE status = 'cancelled'").get() as { id: number }).id;
+    expect((await mt.getMeetup(d, real.id, cancelledId, now)).status).toBe("cancelled");
+
+    const admin = await mt.adminListMeetups(d);
+    out.push(admin);
+    expect(admin).toHaveLength(12);
+    expect(JSON.stringify(out)).not.toMatch(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+    expect(JSON.stringify(out)).not.toContain(DEMO_DOMAIN);
+  });
+
+  it("gives the demo operator a seat, a waiting-list place and a past meetup, only when that member exists", async () => {
+    const email = "moi@example.org";
+    const db = freshDb();
+    const me = realMember(db, email);
+    db.exec(seedSql(email));
+    const mine = await mt.listMyMeetups(asD1(db), me.id, "joined", Date.now());
+    expect(mine.map(m => m.my_status).sort()).toEqual(["going", "going", "waitlist"]);
+    expect(mine.filter(m => m.ended)).toHaveLength(1);
+    const without = freshDb();
+    without.exec(seedSql("inconnu@example.org"));
+    expect(count(db, "mt_participants")).toBe(count(without, "mt_participants") + 3);
+  });
+});
+
 describe("hub demo seed: idempotence and cleanup", () => {
   it("can be re-run without duplicating anything", () => {
     const db = freshDb();
@@ -525,6 +663,9 @@ describe("hub demo seed: idempotence and cleanup", () => {
     db.exec(`INSERT INTO pro_threads (member_a, member_b, job_id, created_by, created_at, last_message_at) SELECT min(${me}, j.member_id), max(${me}, j.member_id), j.id, ${me}, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z' FROM pro_jobs j WHERE j.status = 'open' LIMIT 1;`);
     db.exec(`INSERT INTO pro_threads (member_a, member_b, job_id, created_by, created_at, last_message_at) SELECT min(${me}, m.id), max(${me}, m.id), 0, ${me}, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z' FROM hub_members m WHERE m.email LIKE ${DEMO_LIKE} LIMIT 1;`);
     db.exec(`INSERT INTO pro_messages (thread_id, sender_id, body, created_at) SELECT id, ${me}, 'Bonjour', '2026-01-01T00:00:00Z' FROM pro_threads WHERE created_by = ${me};`);
+    // Meetup: a real member signs up to a demo meetup
+    db.exec(`INSERT INTO mt_participants (meetup_id, member_id, status) SELECT id, ${me}, 'going' FROM mt_meetups WHERE status = 'active' AND starts_at > strftime('%Y-%m-%dT%H:%M','now') LIMIT 1;`);
+    expect(n(db, `SELECT COUNT(*) AS n FROM mt_participants WHERE member_id = ${me}`)).toBe(1);
     // sanity: the real member's interactions are really there
     expect(n(db, `SELECT COUNT(*) AS n FROM pro_threads WHERE created_by = ${me}`)).toBe(2);
     expect(n(db, `SELECT COUNT(*) AS n FROM st_reviews WHERE author_id = ${me}`)).toBe(1);
