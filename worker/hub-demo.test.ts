@@ -7,7 +7,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
-import { DEMO_DOMAIN, DEMO_LABEL, LISTING_MEDIA, POST_MEDIA, cleanupSql, seedSql } from "../scripts/hub-demo/build";
+import { DEMO_DOMAIN, DEMO_MARK, LISTING_MEDIA, POST_MEDIA, cleanupSql, seedSql } from "../scripts/hub-demo/build";
 import { MEETUP_MEDIA } from "../scripts/hub-demo/meetup";
 import { PRO_POST_MEDIA } from "../scripts/hub-demo/pro";
 import { STAY_MEDIA } from "../scripts/hub-demo/stay";
@@ -27,6 +27,8 @@ const { DatabaseSync } = createRequire(import.meta.url)("node:sqlite") as { Data
 // order matters: base tables, then the hub/marketplace/stay/pro tables, then the triggers that need them
 const SCHEMA = ["schema.generated.sql", "hub.sql", "marketplace.sql", "stay.sql", "pro.sql", "meetup.sql", "social.sql", "logic.sql"];
 const DEMO_LIKE = `'%@${DEMO_DOMAIN}'`;
+/** The long marker the seed used to put in front of every text; it must not come back. */
+const NO_OLD_PREFIX = /🧪|profil test/i;
 
 function freshDb(): SqliteDb {
   const db = new DatabaseSync(":memory:");
@@ -186,22 +188,26 @@ describe("hub demo seed: Fil and Marketplace", () => {
     expect(Object.keys(PRO_POST_MEDIA).length).toBeGreaterThanOrEqual(6);
   });
 
-  it("marks every demo profile, post and listing as test data", () => {
+  it("marks every demo member with one discreet suffix, without the old long prefix", () => {
     const db = freshDb();
     db.exec(seedSql());
+    expect(seedSql()).not.toMatch(NO_OLD_PREFIX);
+    expect(seedSql().split(DEMO_MARK)).toHaveLength(11); // exactly one marker per member, nowhere else
     const members = db.prepare("SELECT display_name, bio FROM hub_members").all() as { display_name: string; bio: string }[];
     expect(members).toHaveLength(10);
     for (const m of members) {
-      // le nom est le seul champ visible partout (fil, annonces, messagerie) : le marqueur doit y être
-      expect(m.display_name).toContain("profil test");
-      expect(m.bio).toContain(DEMO_LABEL);
+      // le nom est le seul champ visible partout (fil, annonces, messagerie) : le marqueur discret doit y être, une seule fois
+      expect(m.display_name.endsWith(` ${DEMO_MARK}`), m.display_name).toBe(true);
+      expect(m.display_name.split(DEMO_MARK)).toHaveLength(2);
+      expect(m.display_name.length).toBeLessThanOrEqual(30);
+      expect(m.bio).not.toMatch(NO_OLD_PREFIX);
     }
     const bodies = db.prepare("SELECT body FROM hub_posts").all() as { body: string }[];
     expect(bodies).toHaveLength(32);
-    for (const b of bodies) expect(b.body.startsWith(DEMO_LABEL), b.body.slice(0, 40)).toBe(true);
+    for (const b of bodies) expect(b.body, b.body.slice(0, 40)).not.toMatch(NO_OLD_PREFIX);
     const descriptions = db.prepare("SELECT description FROM mk_listings").all() as { description: string }[];
     expect(descriptions).toHaveLength(16);
-    for (const d of descriptions) expect(d.description.startsWith(DEMO_LABEL)).toBe(true);
+    for (const d of descriptions) expect(d.description).not.toMatch(NO_OLD_PREFIX);
 
     // un vrai membre (option --me) ne doit jamais porter le marqueur
     const withMe = freshDb();
@@ -277,7 +283,7 @@ describe("hub demo seed: Hébergement", () => {
     expect(detail.reviews).toHaveLength(2);
     expect(detail.amenities.length).toBeGreaterThanOrEqual(3);
     expect(detail.contact?.phone.startsWith("+2120")).toBe(true);
-    expect(detail.description.startsWith(DEMO_LABEL)).toBe(true);
+    expect(detail.description).not.toMatch(NO_OLD_PREFIX);
 
     // as a host: incoming requests; as a guest: sent requests, request detail and conversation
     const yasmine = demo(db, "yasmine");
@@ -347,7 +353,7 @@ describe("hub demo seed: Pro", () => {
       expect(skills.length, r.display_name).toBeGreaterThanOrEqual(3);
       expect(skills.length).toBeLessThanOrEqual(8);
       expect(skills.every(s => s.length <= 30)).toBe(true);
-      expect(r.headline!.startsWith(DEMO_LABEL), "headline marked").toBe(true);
+      expect(r.headline!, "headline unmarked").not.toMatch(NO_OLD_PREFIX);
       expect(r.company!).toMatch(/\(fictif|fictive\)/);
     }
     expect(n(db, "SELECT COUNT(*) AS n FROM pro_profiles WHERE open_to_work = 1")).toBeGreaterThanOrEqual(3);
@@ -384,7 +390,7 @@ describe("hub demo seed: Pro", () => {
     out.push(feed);
     expect(feed.posts).toHaveLength(16);
     expect(feed.posts.filter(p => p.link).length).toBeGreaterThanOrEqual(4);
-    expect(feed.posts.every(p => p.author.headline.startsWith(DEMO_LABEL))).toBe(true);
+    expect(feed.posts.every(p => !NO_OLD_PREFIX.test(p.author.headline))).toBe(true);
     const proPhotos = feed.posts.filter(p => p.media.length > 0);
     expect(proPhotos).toHaveLength(Object.keys(PRO_POST_MEDIA).length);
     expect(proPhotos.flatMap(p => p.media).every(k => /^demo\/[a-z0-9-]+\.jpg$/.test(k))).toBe(true);
@@ -515,9 +521,9 @@ describe("hub demo seed: Meetup", () => {
     expect(n(db, `SELECT COUNT(*) AS n FROM mt_participants p JOIN hub_members m ON m.id = p.member_id WHERE m.email NOT LIKE ${DEMO_LIKE}`)).toBe(0);
     expect(n(db, "SELECT COUNT(DISTINCT member_id) AS n FROM mt_participants")).toBe(10);
     expect(n(db, "SELECT COUNT(DISTINCT member_id) AS n FROM mt_meetups")).toBeGreaterThanOrEqual(7);
-    // every description carries the test marker (like every other tab)
+    // descriptions carry no long test prefix (the organiser's name holds the discreet marker)
     const desc = db.prepare("SELECT description FROM mt_meetups").all() as { description: string }[];
-    for (const r of desc) expect(r.description.startsWith(DEMO_LABEL)).toBe(true);
+    for (const r of desc) expect(r.description).not.toMatch(NO_OLD_PREFIX);
   });
 
   it("only points to photos that exist on disk and will be uploaded", () => {
@@ -563,7 +569,7 @@ describe("hub demo seed: Meetup", () => {
     out.push(asVisitor);
     expect(asVisitor.spots_left).toBe(0);
     expect(asVisitor.waitlist).toEqual([]);
-    expect(asVisitor.description.startsWith(DEMO_LABEL)).toBe(true);
+    expect(asVisitor.description).not.toMatch(NO_OLD_PREFIX);
     const nadia = demo(db, "nadia");
     const asOrganizer = await mt.getMeetup(d, nadia.id, full.id, now);
     out.push(asOrganizer);
@@ -730,7 +736,7 @@ describe("hub demo seed: personal conversations for the demo operator", () => {
     expect(count(withMe, "pro_threads")).toBe(7);
   });
 
-  it("marks stay and pro content as test data too", () => {
+  it("leaves stay and pro content free of the old long prefix", () => {
     const db = freshDb();
     db.exec(seedSql());
     for (const [sql, label] of [
@@ -741,7 +747,7 @@ describe("hub demo seed: personal conversations for the demo operator", () => {
     ] as const) {
       const rows = db.prepare(sql).all() as { t: string }[];
       expect(rows.length, label).toBeGreaterThan(0);
-      for (const r of rows) expect(r.t.startsWith(DEMO_LABEL), `${label}: ${r.t.slice(0, 40)}`).toBe(true);
+      for (const r of rows) expect(r.t, `${label}: ${r.t.slice(0, 40)}`).not.toMatch(NO_OLD_PREFIX);
     }
   });
 });

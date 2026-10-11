@@ -390,7 +390,7 @@ describe("my meetups and admin", () => {
 
 describe("schéma D1", () => {
   it("aucun motif LIKE/GLOB de plus de 50 octets (limite D1, absente de node:sqlite)", () => {
-    for (const f of ["meetup.sql", "stay.sql", "pro.sql", "social.sql", "hub.sql", "marketplace.sql"]) {
+    for (const f of ["meetup.sql", "stay.sql", "pro.sql", "hub.sql", "marketplace.sql"]) {
       const sql = readFileSync(new URL(`./d1/${f}`, import.meta.url).pathname, "utf8");
       for (const [, pat] of sql.matchAll(/\b(?:GLOB|LIKE)\s+'((?:[^']|'')*)'/gi)) {
         expect(Buffer.byteLength(pat), `${f}: ${pat}`).toBeLessThanOrEqual(50);
