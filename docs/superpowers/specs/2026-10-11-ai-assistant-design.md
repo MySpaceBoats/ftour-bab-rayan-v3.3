@@ -44,3 +44,10 @@ Deux chatbots alimentés par les modèles gratuits d'OpenRouter :
 ## 5. Déploiement
 - `wrangler secret put OPENROUTER_API_KEY` (prod et `--env staging`), `AI_MODELS` dans `wrangler.toml`.
 - Appliquer `worker/d1/ai.sql` sur D1 avant le déploiement : sans lui les routes IA renvoient 500, le reste du hub fonctionne.
+
+## Précisions issues du plan
+- Route publique : `POST /hub/ai/public` (même Worker et mêmes en-têtes CORS que le reste, plutôt que `/ai/public`).
+- « Problème avec… » liste les conversations de la boîte unifiée (chaque fil porte déjà son annonce, offre ou séjour). Une annonce ou offre sans conversation n'est pas sélectionnable en v1.
+- Réponse admin : ajoutée à la conversation du dossier (rôle `admin`) + notification cloche (type `announcement`, la table a un CHECK sur le type, pas de migration) ; pas de fil Pro avec un compte « équipe ». Tant que le dossier est ouvert, le bot ne répond plus et les messages du membre sont transmis à l'admin.
+- Interface : composant existant `AIChatBox` (Markdown via Streamdown, sans HTML brut) ; textes de la bulle publique dans un petit dictionnaire fr/en/ar local ; dans le hub, entrée « Assistant IA » dans le menu du compte + bouton flottant vers la page (pas de panneau).
+- Modèle par défaut : `openrouter/free` (routeur OpenRouter), surchargeable par `AI_MODELS`.
