@@ -24,7 +24,7 @@ export default function RelationBar({ memberId }: { memberId: number }) {
   const act = useCallback(async (fn: () => Promise<unknown>) => {
     const id = memberId;
     setBusy(true);
-    try { await fn(); }
+    try { await fn(); window.dispatchEvent(new Event("hub:friends-changed")); }
     catch (e) {
       if (idRef.current === id) { toast.error((e as Error).message); setBusy(false); }
       return;

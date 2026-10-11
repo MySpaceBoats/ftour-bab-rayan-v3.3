@@ -143,3 +143,6 @@ CREATE TABLE IF NOT EXISTS hub_notification_prefs (
 -- Perf: every hub request checks the volunteer behind the session with lower(email) = ?. Without this index that is a full scan of
 -- t_volunteers per request (and per 30 s poll per open tab), which burns D1's row-read quota. Idempotent.
 CREATE INDEX IF NOT EXISTS idx_t_volunteers_lower_email ON t_volunteers(lower(email));
+
+-- Feed filters (friends/following/favorites) drive from the small followed set via member_id.
+CREATE INDEX IF NOT EXISTS idx_hub_posts_member_feed ON hub_posts(member_id, status, pinned, id DESC);

@@ -273,6 +273,28 @@ describe("social http", () => {
   });
 });
 
+describe("social http: auth and third parties", () => {
+  it("401 on a mutating route without token", async () => {
+    expect((await call("POST", "/hub/social/follow", { body: { id: 1 } })).status).toBe(401);
+  });
+  it("a third party cannot accept someone else's request", async () => {
+    const { a, b, c } = await ids();
+    await post("friend/request", a.session, { id: b.id });
+    expect((await post("friend/accept", c.session, { id: a.id })).status).toBe(404);
+    const rel = (await (await call("GET", `/hub/social/relation/${b.id}`, { token: a.session })).json()) as any;
+    expect(rel.friendship).toBe("sent");
+  });
+  it("pendingCount and badge ignore suspended requesters", async () => {
+    const { a, b } = await ids();
+    await post("friend/request", a.session, { id: b.id });
+    expect(await S.pendingCount(env.DB, b.id)).toBe(1);
+    sqlite.prepare("UPDATE hub_members SET status = 'suspended' WHERE id = ?").run(a.id);
+    expect(await S.pendingCount(env.DB, b.id)).toBe(0);
+    const u = (await (await call("GET", "/hub/notifications/unread", { token: b.session })).json()) as any;
+    expect(u.friend_requests).toBe(0);
+  });
+});
+
 describe("feed scope", () => {
   const publish = (s: string, body: string) => call("POST", "/hub/posts", { token: s, body: { body } });
   const bodies = async (token: string, scope: string) => ((await (await call("GET", `/hub/feed?scope=${scope}`, { token })).json()) as any).posts.map((p: any) => p.body);
@@ -289,6 +311,12 @@ describe("feed scope", () => {
     expect(await bodies(a.session, "friends")).toEqual([]);
     await post("friend/request", b.session, { id: a.id }); await post("friend/accept", a.session, { id: b.id });
     expect(await bodies(a.session, "friends")).toEqual(["post de B"]);
+    // pinned announcement by a member the viewer neither follows nor befriends stays visible in every scope
+    expect((await call("POST", "/hub/admin/posts", { admin: "admin", body: { body: "Annonce", pinned: true } })).status).toBe(200);
+    for (const sc of ["following", "friends", "favorites"]) {
+      const f = (await (await call("GET", `/hub/feed?scope=${sc}`, { token: a.session })).json()) as any;
+      expect(f.pinned.map((p: any) => p.body)).toEqual(["Annonce"]);
+    }
     for (const bad of ["", "nope", "__proto__", "constructor"]) expect((await call("GET", `/hub/feed?scope=${bad}`, { token: a.session })).status).toBe(400);
     expect((await call("GET", "/hub/feed", { token: a.session })).status).toBe(200);
   });

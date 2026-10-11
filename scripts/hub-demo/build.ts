@@ -473,4 +473,4 @@ export function seedStatements(me?: string): string[] {
 
 const SEED_HEADER = "-- ATTENTION : worker/d1/social.sql doit être appliqué AVANT ce fichier (tables hub_friendships / hub_follows).\n";
 export const seedSql = (me?: string) => SEED_HEADER + seedStatements(me).join("\n") + "\n";
-export const cleanupSql = () => cleanupStatements().join("\n") + "\n";
+export const cleanupSql = () => SEED_HEADER + cleanupStatements().join("\n") + "\n";

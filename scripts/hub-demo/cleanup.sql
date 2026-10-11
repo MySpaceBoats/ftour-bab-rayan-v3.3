@@ -1,3 +1,4 @@
+-- ATTENTION : worker/d1/social.sql doit être appliqué AVANT ce fichier (tables hub_friendships / hub_follows).
 DELETE FROM hub_follows WHERE follower_id IN (SELECT id FROM hub_members WHERE email LIKE '%@demo.ftour.invalid') OR followee_id IN (SELECT id FROM hub_members WHERE email LIKE '%@demo.ftour.invalid');
 DELETE FROM hub_friendships WHERE requester_id IN (SELECT id FROM hub_members WHERE email LIKE '%@demo.ftour.invalid') OR addressee_id IN (SELECT id FROM hub_members WHERE email LIKE '%@demo.ftour.invalid');
 DELETE FROM mt_participants WHERE member_id IN (SELECT id FROM hub_members WHERE email LIKE '%@demo.ftour.invalid') OR meetup_id IN (SELECT id FROM mt_meetups WHERE member_id IN (SELECT id FROM hub_members WHERE email LIKE '%@demo.ftour.invalid'));

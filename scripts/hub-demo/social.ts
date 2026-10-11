@@ -4,7 +4,7 @@
  */
 import { ago, mid } from "./common";
 
-const H = 60;
+const MIN_PER_H = 60;
 /** [requester, addressee, hours ago]; accepted friendships also imply two follows (mutual). */
 const ACCEPTED: [string, string, number][] = [
   ["yasmine", "salma", 70], ["yasmine", "hajar", 68], ["salma", "hajar", 66], ["karim", "omar", 60],
@@ -32,13 +32,13 @@ export function socialCleanup(): string[] {
 export function socialSeed(): string[] {
   const out: string[] = [];
   const follow = (a: string, b: string, fav: boolean, h: number) =>
-    out.push(`INSERT INTO hub_follows (follower_id, followee_id, favorite, created_at) VALUES (${mid(a)}, ${mid(b)}, ${fav ? 1 : 0}, ${ago(h * H)});`);
+    out.push(`INSERT INTO hub_follows (follower_id, followee_id, favorite, created_at) VALUES (${mid(a)}, ${mid(b)}, ${fav ? 1 : 0}, ${ago(h * MIN_PER_H)});`);
   for (const [a, b, h] of ACCEPTED) {
-    out.push(`INSERT INTO hub_friendships (requester_id, addressee_id, status, created_at) VALUES (${mid(a)}, ${mid(b)}, 'accepted', ${ago(h * H)});`);
+    out.push(`INSERT INTO hub_friendships (requester_id, addressee_id, status, created_at) VALUES (${mid(a)}, ${mid(b)}, 'accepted', ${ago(h * MIN_PER_H)});`);
     follow(a, b, FAVORITES.has(`${a}>${b}`), h);
     follow(b, a, FAVORITES.has(`${b}>${a}`), h);
   }
-  for (const [a, b, h] of PENDING) out.push(`INSERT INTO hub_friendships (requester_id, addressee_id, status, created_at) VALUES (${mid(a)}, ${mid(b)}, 'pending', ${ago(h * H)});`);
+  for (const [a, b, h] of PENDING) out.push(`INSERT INTO hub_friendships (requester_id, addressee_id, status, created_at) VALUES (${mid(a)}, ${mid(b)}, 'pending', ${ago(h * MIN_PER_H)});`);
   for (const [a, b, fav, h] of FOLLOWS) follow(a, b, fav, h);
   return out;
 }

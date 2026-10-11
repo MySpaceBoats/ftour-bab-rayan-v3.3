@@ -193,12 +193,13 @@ export async function createPost(d: D1Like, member: MemberRow, input: { body: st
 
 export const FEED_SCOPES = ["all", "friends", "following", "favorites"] as const;
 export type FeedScope = (typeof FEED_SCOPES)[number];
-const FOLLOW = "AND EXISTS (SELECT 1 FROM hub_follows f WHERE f.follower_id = ? AND f.followee_id = p.member_id";
+// Driven from the small followed/friend set (IN subquery) so reads do not grow with total posts.
+const FOLLOWED = "AND p.member_id IN (SELECT followee_id FROM hub_follows WHERE follower_id = ?";
 const SCOPE_SQL: Record<FeedScope, string> = {
   all: "",
-  friends: "AND EXISTS (SELECT 1 FROM hub_friendships fr WHERE fr.status = 'accepted' AND ((fr.requester_id = ? AND fr.addressee_id = p.member_id) OR (fr.addressee_id = ? AND fr.requester_id = p.member_id)))",
-  following: `${FOLLOW})`,
-  favorites: `${FOLLOW} AND f.favorite = 1)`,
+  friends: "AND p.member_id IN (SELECT CASE WHEN requester_id = ? THEN addressee_id ELSE requester_id END FROM hub_friendships WHERE status = 'accepted' AND (requester_id = ? OR addressee_id = ?))",
+  following: `${FOLLOWED})`,
+  favorites: `${FOLLOWED} AND favorite = 1)`,
 };
 
 async function loadPosts(d: D1Like, viewerId: number, pinned: 0 | 1, cursor: number | null, limit: number, scope: FeedScope = "all"): Promise<PostView[]> {
@@ -207,10 +208,10 @@ async function loadPosts(d: D1Like, viewerId: number, pinned: 0 | 1, cursor: num
        (SELECT COUNT(*) FROM hub_likes l WHERE l.post_id = p.id) AS like_count,
        (SELECT COUNT(*) FROM hub_comments c WHERE c.post_id = p.id AND c.status = 'visible') AS comment_count,
        EXISTS(SELECT 1 FROM hub_likes l WHERE l.post_id = p.id AND l.member_id = ?) AS liked
-     FROM hub_posts p JOIN hub_members m ON m.id = p.member_id
+     FROM hub_posts p ${scope === "all" ? "" : "INDEXED BY idx_hub_posts_member_feed"} JOIN hub_members m ON m.id = p.member_id
      WHERE p.status = 'visible' AND p.pinned = ? AND (? IS NULL OR p.id < ?) ${SCOPE_SQL[scope]}
      ORDER BY p.id DESC LIMIT ?`,
-  ).bind(viewerId, pinned, cursor, cursor, ...(scope === "friends" ? [viewerId, viewerId] : scope === "all" ? [] : [viewerId]), limit).all<any>();
+  ).bind(viewerId, pinned, cursor, cursor, ...(scope === "friends" ? [viewerId, viewerId, viewerId] : scope === "all" ? [] : [viewerId]), limit).all<any>();
   const posts: PostView[] = results.map(r => ({
     id: r.id, body: r.body, kind: r.kind, pinned: Boolean(r.pinned), created_at: r.created_at,
     author: { id: r.author_id, display_name: r.author_name, avatar_key: r.author_avatar },

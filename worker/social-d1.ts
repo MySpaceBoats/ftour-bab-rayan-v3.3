@@ -134,6 +134,6 @@ export async function listRequests(d: D1Like, meId: number): Promise<{ received:
 }
 
 export async function pendingCount(d: D1Like, meId: number): Promise<number> {
-  const r = await d.prepare("SELECT COUNT(*) AS n FROM hub_friendships WHERE addressee_id = ? AND status = 'pending'").bind(meId).first<{ n: number }>();
+  const r = await d.prepare(`SELECT COUNT(*) AS n FROM hub_friendships fr JOIN hub_members m ON m.id = fr.requester_id WHERE fr.addressee_id = ? AND fr.status = 'pending' AND ${VISIBLE}`).bind(meId).first<{ n: number }>();
   return r?.n ?? 0;
 }
