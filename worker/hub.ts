@@ -13,7 +13,7 @@ import { handleStayRoute } from "./stay";
 import { handleMeetupRoute } from "./meetup";
 import { handlePro } from "./pro";
 import * as X from "./messenger-d1";
-import { handleAi } from "./ai";
+import { handleAi, SUPPORT_EMAIL as AI_SUPPORT_EMAIL } from "./ai";
 import type { FetchLike } from "./ai-core";
 
 export interface ChatNamespace { idFromName(n: string): unknown; get(id: unknown): { fetch(input: string, init?: RequestInit): Promise<Response> } }
@@ -404,6 +404,8 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       const r = await handleAi({
         d, request, url, path: path.slice("ai/".length), now, json, member, admin,
         ip: request.headers.get("cf-connecting-ip") ?? "unknown", env, fetchFn: deps.aiFetch ?? ((u, i) => fetch(u, i)),
+        baseUrl: base,
+        mailSupport: async (subject, html) => { await background("ai support mail", () => sendMail(AI_SUPPORT_EMAIL, subject, html)); },
       });
       if (r) return r;
     }

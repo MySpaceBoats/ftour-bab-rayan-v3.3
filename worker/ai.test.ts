@@ -145,6 +145,32 @@ describe("review fixes", () => {
   });
 });
 
+describe("support email", () => {
+  it("escalating by button emails support once (summary, member, case), not again while open", async () => {
+    const a = await h.signIn("a@x.ma");
+    h.aiFetch = reply("Litige <b>vélo</b>");
+    const c = (await (await h.call("POST", "/hub/ai/chat", { token: a.session, body: { message: "aide" } })).json()) as { conversation_id: number };
+    const before = h.mails.length;
+    await h.call("POST", "/hub/ai/escalate", { token: a.session, body: { conversation_id: c.conversation_id } });
+    expect(h.mails).toHaveLength(before + 1);
+    const m = h.mails[h.mails.length - 1];
+    expect(m.to).toBe("support@ftourbabrayan.ma");
+    expect(m.html).toContain("a@x.ma");
+    expect(m.html).toContain("Litige &lt;b&gt;vélo&lt;/b&gt;");
+    await h.call("POST", "/hub/ai/escalate", { token: a.session, body: { conversation_id: c.conversation_id } });
+    expect(h.mails).toHaveLength(before + 1);
+  });
+  it("a marker escalation also emails support", async () => {
+    const a = await h.signIn("a@x.ma");
+    h.aiFetch = reply("Je transmets. [ESCALADE]");
+    const before = h.mails.length;
+    const r = await h.call("POST", "/hub/ai/chat", { token: a.session, body: { message: "urgent" } });
+    expect(r.status).toBe(200);
+    expect(h.mails.filter(m => m.to === "support@ftourbabrayan.ma")).toHaveLength(1);
+    expect(h.mails.length).toBe(before + 1);
+  });
+});
+
 describe("admin cases", () => {
   it("403 for non-admin and demo, reply notifies the member and lands in the conversation, close hides it", async () => {
     const a = await h.signIn("a@x.ma");
@@ -161,7 +187,7 @@ describe("admin cases", () => {
     const conv = (await (await h.call("GET", `/hub/ai/conversations/${c.conversation_id}`, { token: a.session })).json()) as { messages: { role: string; body: string }[] };
     expect(conv.messages.at(-1)).toMatchObject({ role: "admin", body: "Bonjour, on s'en occupe." });
     const notifs = h.sqlite.prepare("SELECT title, link FROM hub_notifications WHERE member_id = ?").all(a.member.id) as { title: string; link: string }[];
-    expect(notifs.some(n => n.title === "Réponse de l'équipe" && n.link?.includes(`c=${c.conversation_id}`))).toBe(true);
+    expect(notifs.some(n => n.title === "Réponse de l'équipe" && n.link?.includes(`assistant=${c.conversation_id}`))).toBe(true);
 
     expect(((await (await h.call("GET", `/hub/ai/admin/cases/${id}`, { admin: "admin" })).json()) as { case: { messages: unknown[] } }).case.messages.length).toBeGreaterThan(1);
     expect((await h.call("POST", `/hub/ai/admin/cases/${id}/close`, { admin: "admin" })).status).toBe(200);

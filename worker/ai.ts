@@ -6,6 +6,7 @@ import * as A from "./ai-d1";
 import { AiUnavailable, clip, complete, fallbackSummary, parseModels, splitEscalation, type ChatMsg, type FetchLike } from "./ai-core";
 import { CONTEXT_PREFIX, FALLBACK_REPLY, MEMBER_PROMPT, PUBLIC_FALLBACK, PUBLIC_PROMPT, SUMMARY_PROMPT } from "./ai-prompts";
 import { id, readJson, str } from "./hub-http";
+import { escapeHtml } from "./email";
 
 export interface AiCtx {
   d: D1Like;
@@ -19,12 +20,17 @@ export interface AiCtx {
   ip: string;
   env: { OPENROUTER_API_KEY?: string; AI_MODELS?: string };
   fetchFn: FetchLike;
+  baseUrl: string;
+  /** Best-effort mail to the support inbox (never throws). */
+  mailSupport: (subject: string, html: string) => Promise<unknown>;
 }
+
+export const SUPPORT_EMAIL = "support@ftourbabrayan.ma";
 
 const UNAVAILABLE = { error: "ai_unavailable", message: "L'assistant est indisponible pour le moment, réessayez dans quelques minutes." };
 
 export async function handleAi(c: AiCtx): Promise<Response | null> {
-  const { d, request, url, path, now, json, member, admin, ip, env, fetchFn } = c;
+  const { d, request, url, path, now, json, member, admin, ip, env, fetchFn, baseUrl, mailSupport } = c;
   const match = (method: string, re: RegExp) => (request.method === method ? re.exec(path) : null);
   const models = parseModels(env.AI_MODELS);
   const ask = (messages: ChatMsg[]) => complete(fetchFn, env.OPENROUTER_API_KEY, models, messages);
@@ -83,7 +89,7 @@ export async function handleAi(c: AiCtx): Promise<Response | null> {
       const out = splitEscalation(await ask([{ role: "system", content: system }, ...hist.map(x => ({ role: x.role, content: x.body }))]));
       const replyText = out.reply || FALLBACK_REPLY;
       await A.addMessage(d, conv.id, "assistant", replyText, now());
-      if (out.escalate) await openCase(conv.id, me.id);
+      if (out.escalate) await openCase(conv.id, me);
       return json({ conversation_id: conv.id, reply: replyText, escalated: out.escalate, case_open: out.escalate });
     });
   }
@@ -93,7 +99,7 @@ export async function handleAi(c: AiCtx): Promise<Response | null> {
     const ex = await A.caseOf(d, conv.id);
     if (ex?.status === "open") return json({ case_id: ex.id }); // no summary call, no quota
     await A.hit(d, `m:${me.id}`, A.LIMITS.memberPerHour, H.HOUR_MS, now());
-    const r = await openCase(conv.id, me.id);
+    const r = await openCase(conv.id, me);
     return json({ case_id: r.id });
   }
 
@@ -116,7 +122,7 @@ export async function handleAi(c: AiCtx): Promise<Response | null> {
     const meta = await A.caseMeta(d, caseId);
     await A.addMessage(d, meta.conversation_id, "admin", body, now());
     // type "announcement": the only bell type that fits (hub_notifications has a CHECK on type, no migration for this feature)
-    await N.notify(d, meta.member_id, { type: "announcement", title: "Réponse de l'équipe", body: clip(body, 140), link: `/fr/benevole/espace/assistant?c=${meta.conversation_id}` }, now());
+    await N.notify(d, meta.member_id, { type: "announcement", title: "Réponse de l'équipe", body: clip(body, 140), link: `/fr/benevole/espace?assistant=${meta.conversation_id}` }, now());
     return json({ ok: true });
   }
   if ((m = match("POST", /^admin\/cases\/(\d+)\/close$/))) {
@@ -127,13 +133,20 @@ export async function handleAi(c: AiCtx): Promise<Response | null> {
 
   return null;
 
-  /** Summary by the model, or the last raw lines if no model answers. */
-  async function openCase(convId: number, memberId: number) {
+  /** Summary by the model (or the last raw lines), the case row, and one mail to support when the case is new. */
+  async function openCase(convId: number, me: H.MemberRow) {
     const msgs = await A.messages(d, convId);
     const lines = msgs.map(x => `${x.role === "user" ? "MEMBRE" : x.role === "admin" ? "ADMIN" : "ASSISTANT"}: ${x.body}`);
     let summary: string;
     try { summary = await ask([{ role: "system", content: SUMMARY_PROMPT }, { role: "user", content: clip(lines.join("\n"), A.LIMITS.ctxChars) }]); }
     catch { summary = fallbackSummary(lines); }
-    return A.createCase(d, convId, memberId, summary, now());
+    const r = await A.createCase(d, convId, me.id, summary, now());
+    if (r.created) {
+      await mailSupport(
+        `Assistant IA — dossier #${r.id} (${me.display_name})`,
+        `<p><b>${escapeHtml(me.display_name)}</b> (${escapeHtml(me.email)}) demande l'aide d'un administrateur.</p><p><b>Résumé</b></p><p style="white-space:pre-line">${escapeHtml(summary)}</p><p><a href="${baseUrl}/fr/admin/benevoles">Ouvrir « Dossiers IA » dans l'admin</a> (dossier #${r.id})</p>`,
+      );
+    }
+    return r;
   }
 }
