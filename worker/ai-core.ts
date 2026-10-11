@@ -4,12 +4,14 @@ export type FetchLike = (input: string, init: RequestInit) => Promise<Response>;
 export class AiUnavailable extends Error {}
 
 export const ESCALATE = "[ESCALADE]";
-export const DEFAULT_MODELS = "openrouter/free";
+// Chat models only: "openrouter/free" may route to a safety classifier (answers "User Safety: safe"). Order = priority.
+export const DEFAULT_MODELS = "google/gemma-4-31b-it:free,nvidia/nemotron-3-super-120b-a12b:free,google/gemma-4-26b-a4b-it:free";
 const URL = "https://openrouter.ai/api/v1/chat/completions";
 
 export const parseModels = (v?: string): string[] => {
-  const l = (v ?? DEFAULT_MODELS).split(",").map(s => s.trim()).filter(Boolean);
-  return l.length ? l : [DEFAULT_MODELS];
+  const split = (x: string) => x.split(",").map(s => s.trim()).filter(Boolean);
+  const l = split(v ?? DEFAULT_MODELS);
+  return l.length ? l : split(DEFAULT_MODELS);
 };
 
 /** First non-empty reply wins; 429/5xx/network/empty falls through to the next model. */

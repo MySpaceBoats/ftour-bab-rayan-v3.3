@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AiUnavailable, clip, complete, fallbackSummary, parseModels, splitEscalation, type FetchLike } from "./ai-core";
+import { AiUnavailable, DEFAULT_MODELS, clip, complete, fallbackSummary, parseModels, splitEscalation, type FetchLike } from "./ai-core";
 
 const ok = (content: string) => new Response(JSON.stringify({ choices: [{ message: { content } }] }), { status: 200 });
 const msgs = [{ role: "user" as const, content: "salut" }];
@@ -32,8 +32,9 @@ describe("complete", () => {
 describe("helpers", () => {
   it("parseModels splits, trims and defaults", () => {
     expect(parseModels(" a , b ,,")).toEqual(["a", "b"]);
-    expect(parseModels(undefined)).toEqual(["openrouter/free"]);
-    expect(parseModels("  ")).toEqual(["openrouter/free"]);
+    expect(parseModels(undefined)).toEqual(DEFAULT_MODELS.split(","));
+    expect(DEFAULT_MODELS).not.toMatch(/openrouter\/free|safety|guard/);
+    expect(parseModels("  ")).toEqual(DEFAULT_MODELS.split(","));
   });
   it("splitEscalation strips the marker", () => {
     expect(splitEscalation("Je transmets. [ESCALADE]")).toEqual({ reply: "Je transmets.", escalate: true });
