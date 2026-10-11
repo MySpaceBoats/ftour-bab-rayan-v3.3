@@ -150,6 +150,8 @@ import MenuProof from "@/features/menu/pages/MenuProof";
 import VolunteerProfilePage from "@/features/volunteer/pages/VolunteerProfile";
 
 import WhatsAppFloatingButton from "./components/WhatsAppFloatingButton";
+import PublicAssistant from "./features/ai/PublicAssistant";
+import AssistantPage from "./features/hub/assistant/AssistantPage";
 
 // ============================================
 // FTOUR BÉNÉVOLES — features/ftour
@@ -353,6 +355,7 @@ function LocalizedRoutes() {
       <Route path="/:lang/programme" component={Programme} />
       <Route path="/:lang/benevole" component={Benevole} />
       <Route path="/:lang/benevole/photos" component={BenevoleGalerieUpload} />
+      <Route path="/:lang/benevole/espace/assistant" component={AssistantPage} />
       <Route path="/:lang/benevole/espace/messages/:source/:id" component={MessengerPage} />
       <Route path="/:lang/benevole/espace/messages" component={MessengerPage} />
       <Route path="/:lang/benevole/espace/marketplace/messages/:threadId">{() => <RedirectMessages from="/:lang/benevole/espace/marketplace/messages" source="market" />}</Route>
@@ -566,6 +569,7 @@ function App() {
             <Toaster />
             <LocalizedRoutes />
             <WhatsAppFloatingButton />
+            <PublicAssistant />
           </TooltipProvider>
         </CartProvider>
       </ThemeProvider>

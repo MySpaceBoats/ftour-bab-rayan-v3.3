@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { BedDouble, Briefcase, CalendarDays, Home, LogOut, Mail, Newspaper, Store, User } from "lucide-react";
+import { BedDouble, Briefcase, CalendarDays, Home, LogOut, Mail, Newspaper, Sparkles, Store, User } from "lucide-react";
 import { useI18n } from "@/i18n";
 import {
   DropdownMenu,
@@ -24,6 +24,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
   const feed = base;
   const market = `${base}/marketplace`;
   const messages = `${base}/messages`;
+  const assistant = `${base}/assistant`;
   const profile = `${base}/profil`;
   const stay = `${base}/hebergement`;
   const meetup = `${base}/meetup`;
@@ -110,6 +111,9 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
+                <Link href={assistant} className="cursor-pointer">Assistant IA</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
                 <Link href={`/${lang}`} className="cursor-pointer">Retour au site</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -149,6 +153,12 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
 
         {right && <aside className="hidden xl:block"><div className="sticky top-[72px] space-y-3">{right}</div></aside>}
       </div>
+
+      {!path.startsWith(assistant) && (
+        <Link href={assistant} aria-label="Assistant IA" className="fixed bottom-20 right-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-blue-800 text-white shadow-lg hover:bg-blue-700 lg:bottom-5">
+          <Sparkles size={22} aria-hidden />
+        </Link>
+      )}
 
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-7 border-t border-slate-200 bg-white text-[11px] text-slate-700 lg:hidden" aria-label="Navigation mobile">
         {navLinks.map(l => (
