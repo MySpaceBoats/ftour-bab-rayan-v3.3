@@ -25,7 +25,7 @@ interface SqliteDb { exec(sql: string): void; prepare(sql: string): SqliteStatem
 const { DatabaseSync } = createRequire(import.meta.url)("node:sqlite") as { DatabaseSync: new (path: string) => SqliteDb };
 
 // order matters: base tables, then the hub/marketplace/stay/pro tables, then the triggers that need them
-const SCHEMA = ["schema.generated.sql", "hub.sql", "marketplace.sql", "stay.sql", "pro.sql", "meetup.sql", "logic.sql"];
+const SCHEMA = ["schema.generated.sql", "hub.sql", "marketplace.sql", "stay.sql", "pro.sql", "meetup.sql", "social.sql", "logic.sql"];
 const DEMO_LIKE = `'%@${DEMO_DOMAIN}'`;
 
 function freshDb(): SqliteDb {
