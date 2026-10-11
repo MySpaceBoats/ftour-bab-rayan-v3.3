@@ -12,6 +12,7 @@ import { handleCashOrderRequest } from './cash-orders';
 import { handleMemberCardRequest } from './member-cards';
 import { sendEmail } from './email';
 import * as hubNotify from './hub-notify';
+import * as aiD1 from './ai-d1';
 
 export interface Env {
   SUPABASE_URL: string;
@@ -145,6 +146,11 @@ export default {
       }
     } catch (e) {
       console.error('[cron] hub reminders failed', e);
+    }
+    try {
+      if (env.DB) await aiD1.purge(env.DB, Date.now());
+    } catch (e) {
+      console.error('[cron] ai purge failed', e);
     }
   },
 
