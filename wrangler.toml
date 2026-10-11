@@ -7,7 +7,7 @@ directory = "dist/public"
 
 # Assistant IA: free OpenRouter models, tried in order (secret OPENROUTER_API_KEY via `wrangler secret put`)
 [vars]
-AI_MODELS = "openrouter/free"
+AI_MODELS = "google/gemma-4-31b-it:free,nvidia/nemotron-3-super-120b-a12b:free,google/gemma-4-26b-a4b-it:free"
 
 [observability]
 [observability.logs]
@@ -43,7 +43,7 @@ new_sqlite_classes = ["HubChat"]
 name = "ftour-bab-rayan-staging"
 
 [env.staging.vars]
-AI_MODELS = "openrouter/free"
+AI_MODELS = "google/gemma-4-31b-it:free,nvidia/nemotron-3-super-120b-a12b:free,google/gemma-4-26b-a4b-it:free"
 
 [[env.staging.d1_databases]]
 binding = "DB"
