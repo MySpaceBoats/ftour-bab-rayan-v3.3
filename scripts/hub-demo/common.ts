@@ -12,6 +12,8 @@ export const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
 export const ago = (minutes: number) => `strftime('%Y-%m-%dT%H:%M:%fZ','now','-${Math.max(0, Math.round(minutes))} minutes')`;
 /** Calendar date (YYYY-MM-DD) relative to today, e.g. inDays(3) / inDays(-20). */
 export const inDays = (days: number) => `date('now','${days >= 0 ? "+" : "-"}${Math.abs(days)} days')`;
+/** Local wall-clock text (YYYY-MM-DDTHH:MM, no timezone) `days` from today at hh:mm, the format mt_meetups stores. */
+export const wall = (days: number, hhmm: string) => `(date('now','${days >= 0 ? "+" : "-"}${Math.abs(days)} days') || 'T${hhmm}')`;
 /** Illustrated avatar (media/avatar-<key>.png), key relative to the hub bucket like every other media key. */
 export const avatarKey = (key: string) => `demo/avatar-${key}.png`;
 export const mail = (key: string) => `${key}@${DEMO_DOMAIN}`;

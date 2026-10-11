@@ -1,5 +1,5 @@
 /**
- * Demo data for the volunteer hub (Fil + Marketplace) and its Hébergement / Pro sub-spaces: 10 fictional volunteers,
+ * Demo data for the volunteer hub (Fil + Marketplace) and its Hébergement / Pro / Meetup sub-spaces: 10 fictional volunteers,
  * a lively feed, listings, comments, likes, reports and private conversations. Pure SQL builder (no I/O),
  * tested in worker/hub-demo.test.ts.
  *
@@ -7,6 +7,7 @@
  * The seed starts with the cleanup, so it can be re-run safely.
  */
 import { D, DEMO_DOMAIN, DEMO_LABEL, DOMAIN_LIKE, H, PEOPLE, ago, avatarKey, demoText, mail, mid, phoneOf, q, type Msg } from "./common";
+import { meetupCleanup, meetupSeed } from "./meetup";
 import { proCleanup, proSeed } from "./pro";
 import { stayCleanup, staySeed } from "./stay";
 
@@ -306,6 +307,7 @@ const DMC = `(SELECT id FROM mk_comments WHERE member_id IN ${D} OR listing_id I
 /** Removes every demo row, and anything real members did on demo content. Order respects the foreign keys. */
 export function cleanupStatements(): string[] {
   return [
+    ...meetupCleanup(),
     ...stayCleanup(),
     ...proCleanup(),
     `DELETE FROM hub_reports WHERE member_id IN ${D} OR (target_type = 'post' AND target_id IN ${DP}) OR (target_type = 'comment' AND target_id IN ${DC});`,
@@ -429,6 +431,7 @@ export function seedStatements(me?: string): string[] {
 
   out.push(...staySeed(meId));
   out.push(...proSeed(meId));
+  out.push(...meetupSeed(meId));
   return out;
 }
 
