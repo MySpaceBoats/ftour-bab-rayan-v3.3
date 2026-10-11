@@ -13,10 +13,13 @@ import { handleStayRoute } from "./stay";
 import { handleMeetupRoute } from "./meetup";
 import { handlePro } from "./pro";
 import * as X from "./messenger-d1";
+import { handleAi } from "./ai";
+import type { FetchLike } from "./ai-core";
 
 export interface ChatNamespace { idFromName(n: string): unknown; get(id: unknown): { fetch(input: string, init?: RequestInit): Promise<Response> } }
-export interface HubEnv extends MediaEnv { DB?: D1Like; HUB_CHAT?: ChatNamespace; RESEND_API_KEY?: string; EMAIL_PROVIDER_KEY?: string; PUBLIC_APP_URL?: string }
+export interface HubEnv extends MediaEnv { DB?: D1Like; HUB_CHAT?: ChatNamespace; RESEND_API_KEY?: string; EMAIL_PROVIDER_KEY?: string; PUBLIC_APP_URL?: string; OPENROUTER_API_KEY?: string; AI_MODELS?: string }
 export interface HubDeps {
+  aiFetch?: FetchLike;
   now?: () => number;
   sendMail?: (to: string, subject: string, html: string) => Promise<unknown>;
   sendBatch?: (msgs: { to: string; subject: string; html: string }[]) => Promise<unknown>;
@@ -394,6 +397,15 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     if (path.startsWith("pro/")) {
       const r = await handlePro({ d, request, url, path: path.slice("pro/".length), now, json, member, admin, sign });
       if (r) { await pushAfterSend(r); return r; }
+    }
+
+    // ---- assistant IA ------------------------------------------------------
+    if (path.startsWith("ai/")) {
+      const r = await handleAi({
+        d, request, url, path: path.slice("ai/".length), now, json, member, admin,
+        ip: request.headers.get("cf-connecting-ip") ?? "unknown", env, fetchFn: deps.aiFetch ?? ((u, i) => fetch(u, i)),
+      });
+      if (r) return r;
     }
 
     return json({ error: "not_found", message: "Route inconnue" }, 404);

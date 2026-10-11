@@ -37,6 +37,8 @@ export interface Env {
   DB?: D1Like;
   /** Hub realtime chat (presence + push). Absent: /hub/ws answers 503 and the hub falls back to polling. */
   HUB_CHAT?: import('./hub').ChatNamespace;
+  OPENROUTER_API_KEY?: string;
+  AI_MODELS?: string;
   /** Overrides d1-tables.ts: comma list of Supabase tables served from D1, or "none" (instant rollback lever). */
   D1_TABLES?: string;
   /** Overrides d1-tables.ts R2_BUCKETS: Supabase Storage buckets served from R2, or "none". */

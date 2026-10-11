@@ -1,6 +1,7 @@
 /** Shared hermetic harness for hub route tests: in-memory SQLite as D1, fake mail, controllable clock. No network. */
 import { handleHubRequest, type HubDeps, type HubEnv } from "./hub";
 import type { BatchEmail } from "./email";
+import type { FetchLike } from "./ai-core";
 import { GALLERY_SCHEMA, fakeD1, openDb } from "./test-d1";
 
 const CORS = { "Access-Control-Allow-Origin": "https://www.ftourbabrayan.ma" };
@@ -14,13 +15,14 @@ export function createHubHarness() {
   sqlite.exec(GALLERY_SCHEMA);
   sqlite.exec("CREATE TABLE t_ramadan_days (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL, iftar_time TEXT);");
   const d = fakeD1(sqlite);
-  const env: HubEnv = { DB: d, JWT_SECRET: "test-secret", MEDIA_BASE_URL: "https://m.test", PUBLIC_APP_URL: "https://site.test" };
+  const env: HubEnv = { DB: d, JWT_SECRET: "test-secret", MEDIA_BASE_URL: "https://m.test", PUBLIC_APP_URL: "https://site.test", OPENROUTER_API_KEY: "k", AI_MODELS: "m1,m2" };
   const mails: { to: string; subject: string; html: string }[] = [];
   const batches: BatchEmail[][] = [];
-  const state = { clock: T0 };
+  const state = { clock: T0, aiFetch: (async () => new Response("{}", { status: 500 })) as FetchLike };
 
   const deps = (): HubDeps => ({
     now: () => state.clock,
+    aiFetch: (u, i) => state.aiFetch(u, i),
     sendMail: async (to, subject, html) => { mails.push({ to, subject, html }); },
     sendBatch: async msgs => { batches.push(msgs); },
     adminUser: async req => {
@@ -71,6 +73,7 @@ export function createHubHarness() {
     sqlite, d, env, mails, batches, call, vol, signIn, lastLink,
     get clock() { return state.clock; },
     set clock(v: number) { state.clock = v; },
+    set aiFetch(f: FetchLike) { state.aiFetch = f; },
   };
 }
 
