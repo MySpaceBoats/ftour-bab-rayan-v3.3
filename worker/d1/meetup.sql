@@ -10,9 +10,9 @@ CREATE TABLE IF NOT EXISTS mt_meetups (
   country TEXT NOT NULL CHECK (length(country) BETWEEN 1 AND 60),
   city TEXT NOT NULL CHECK (length(city) BETWEEN 1 AND 60),
   place TEXT NOT NULL CHECK (length(place) BETWEEN 1 AND 120),
-  -- heure locale du lieu, texte AAAA-MM-JJTHH:MM sans fuseau
-  starts_at TEXT NOT NULL CHECK (starts_at GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]'),
-  ends_at TEXT NOT NULL CHECK (ends_at GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]'),
+  -- heure locale du lieu, texte AAAA-MM-JJTHH:MM sans fuseau. D1 refuse les motifs GLOB/LIKE de plus de 50 octets: motif court + length().
+  starts_at TEXT NOT NULL CHECK (length(starts_at) = 16 AND starts_at GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T*'),
+  ends_at TEXT NOT NULL CHECK (length(ends_at) = 16 AND ends_at GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T*'),
   capacity INTEGER NOT NULL CHECK (capacity BETWEEN 1 AND 500),
   -- chemin dans le bucket logique "hub" (<memberId>/<uuid>.<ext>)
   photo_key TEXT,
