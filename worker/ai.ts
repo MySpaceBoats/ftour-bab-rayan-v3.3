@@ -4,7 +4,7 @@ import * as H from "./hub-d1";
 import * as N from "./hub-notify";
 import * as A from "./ai-d1";
 import { AiUnavailable, clip, complete, fallbackSummary, parseModels, splitEscalation, type ChatMsg, type FetchLike } from "./ai-core";
-import { CONTEXT_PREFIX, FALLBACK_REPLY, MEMBER_PROMPT, PUBLIC_PROMPT, SUMMARY_PROMPT } from "./ai-prompts";
+import { CONTEXT_PREFIX, FALLBACK_REPLY, MEMBER_PROMPT, PUBLIC_FALLBACK, PUBLIC_PROMPT, SUMMARY_PROMPT } from "./ai-prompts";
 import { id, readJson, str } from "./hub-http";
 
 export interface AiCtx {
@@ -48,7 +48,7 @@ export async function handleAi(c: AiCtx): Promise<Response | null> {
     if (!last || last.role !== "user" || last.content.trim().length < 1 || str((b.messages as { content?: unknown }[]).at(-1)?.content).length > A.LIMITS.userChars)
       throw new H.HubError("invalid", `Message invalide (1 à ${A.LIMITS.userChars} caractères)`);
     await A.hit(d, `ip:${ip}`, A.LIMITS.publicPerWindow, A.LIMITS.publicWindowMs, now());
-    return guard(async () => json({ reply: splitEscalation(await ask([{ role: "system", content: PUBLIC_PROMPT }, ...turns])).reply || FALLBACK_REPLY }));
+    return guard(async () => json({ reply: splitEscalation(await ask([{ role: "system", content: PUBLIC_PROMPT }, ...turns])).reply || PUBLIC_FALLBACK }));
   }
 
   // ---- member bot ----------------------------------------------------------------
@@ -90,6 +90,9 @@ export async function handleAi(c: AiCtx): Promise<Response | null> {
   if (match("POST", /^escalate$/)) {
     const me = await member();
     const conv = await A.getOwned(d, me.id, id((await readJson(request)).conversation_id));
+    const ex = await A.caseOf(d, conv.id);
+    if (ex?.status === "open") return json({ case_id: ex.id }); // no summary call, no quota
+    await A.hit(d, `m:${me.id}`, A.LIMITS.memberPerHour, H.HOUR_MS, now());
     const r = await openCase(conv.id, me.id);
     return json({ case_id: r.id });
   }

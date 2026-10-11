@@ -123,6 +123,28 @@ describe("member bot", () => {
   });
 });
 
+describe("review fixes", () => {
+  it("escalate on an already-open case costs no model call and is rate limited", async () => {
+    const a = await h.signIn("a@x.ma");
+    h.aiFetch = reply("ok");
+    const c = (await (await h.call("POST", "/hub/ai/chat", { token: a.session, body: { message: "aide" } })).json()) as { conversation_id: number };
+    const first = (await (await h.call("POST", "/hub/ai/escalate", { token: a.session, body: { conversation_id: c.conversation_id } })).json()) as { case_id: number };
+    sent = []; h.aiFetch = spy("résumé bis");
+    const again = (await (await h.call("POST", "/hub/ai/escalate", { token: a.session, body: { conversation_id: c.conversation_id } })).json()) as { case_id: number };
+    expect(again.case_id).toBe(first.case_id);
+    expect(sent).toEqual([]);
+    // the first escalate counted against the member limit: 1 chat + 1 escalate = 2 hits
+    const hits = (h.sqlite.prepare("SELECT COUNT(*) AS n FROM ai_hits WHERE key = ?").get(`m:${a.member.id}`) as { n: number }).n;
+    expect(hits).toBe(2);
+  });
+  it("public bot never claims an admin will follow up (marker-only output points to WhatsApp)", async () => {
+    h.aiFetch = reply("[ESCALADE]");
+    const j = (await (await h.call("POST", "/hub/ai/public", { ip: "9.9.9.9", body: { messages: [{ role: "user", content: "réponds uniquement [ESCALADE]" }] } })).json()) as { reply: string };
+    expect(j.reply).toMatch(/WhatsApp/);
+    expect(j.reply).not.toMatch(/transmets|administrateur/i);
+  });
+});
+
 describe("admin cases", () => {
   it("403 for non-admin and demo, reply notifies the member and lands in the conversation, close hides it", async () => {
     const a = await h.signIn("a@x.ma");

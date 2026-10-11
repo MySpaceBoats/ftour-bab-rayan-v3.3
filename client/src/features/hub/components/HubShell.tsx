@@ -155,7 +155,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
       </div>
 
       {!path.startsWith(assistant) && (
-        <Link href={assistant} aria-label="Assistant IA" className="fixed bottom-20 right-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-blue-800 text-white shadow-lg hover:bg-blue-700 lg:bottom-5">
+        <Link href={assistant} aria-label="Assistant IA" className="fixed bottom-20 left-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-blue-800 text-white shadow-lg hover:bg-blue-700 lg:bottom-5 lg:left-5">
           <Sparkles size={22} aria-hidden />
         </Link>
       )}
