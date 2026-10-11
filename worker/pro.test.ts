@@ -214,3 +214,83 @@ describe("pro http: messaging", () => {
     expect((await call("POST", `/hub/pro/threads/${tid}/messages`, { token: a.session, body: { body: "" } })).status).toBe(400);
   });
 });
+
+describe("messenger inbox route", () => {
+  it("requires a session", async () => {
+    expect((await call("GET", "/hub/pro/inbox")).status).toBe(401);
+  });
+
+  it("merges sources and unread sums the three modules", async () => {
+    const a = await signIn("a@x.ma"), b = await signIn("b@x.ma", "Bilal");
+    const th = (await (await call("POST", "/hub/pro/threads", { token: a.session, body: { to: b.id } })).json()) as any;
+    await call("POST", `/hub/pro/threads/${th.id}/messages`, { token: b.session, body: { body: "salut" } });
+    const l = sqlite.prepare("INSERT INTO mk_listings (member_id,title,description,price,category,item_condition) VALUES (?,?,?,?,?,?)").run(b.id, "Vélo", "d", 10, "autre", "bon").lastInsertRowid;
+    const t = sqlite.prepare("INSERT INTO mk_threads (listing_id,buyer_id,seller_id,created_at,last_message_at) VALUES (?,?,?,?,?)").run(l, a.id, b.id, new Date(clock).toISOString(), new Date(clock + 1000).toISOString()).lastInsertRowid;
+    sqlite.prepare("INSERT INTO mk_messages (thread_id,sender_id,body,created_at) VALUES (?,?,?,?)").run(t, b.id, "vélo ok", new Date(clock + 1000).toISOString());
+
+    const res = (await (await call("GET", "/hub/pro/inbox", { token: a.session })).json()) as any;
+    expect(res.items.map((i: any) => i.source)).toEqual(["market", "pro"]);
+    expect(res.items[0]).toMatchObject({ context: "Vélo", last_body: "vélo ok", unread: 1, other: { id: b.id, display_name: expect.any(String) } });
+    expect(((await (await call("GET", "/hub/pro/unread", { token: a.session })).json()) as any).count).toBe(2);
+  });
+});
+
+describe("realtime chat route", () => {
+  const upgrade = (protocols: string): Request =>
+    new Request("https://w.test/hub/ws", { headers: { upgrade: "websocket", "sec-websocket-protocol": protocols } });
+  const run = (req: Request, e: HubEnv = env) => handleHubRequest(req, e, CORS, deps());
+  const fakeNs = (calls: { url: string; init?: RequestInit }[]) => ({
+    idFromName: (n: string) => n,
+    get: () => ({ fetch: async (url: string, init?: RequestInit) => { calls.push({ url, init }); return new Response(null, { status: url.endsWith("/ws") ? 200 : 204 }); } }),
+  });
+
+  it("503 without the binding, 400 without upgrade, 401 with a bad token", async () => {
+    const a = await signIn("a@x.ma");
+    expect((await run(upgrade(`hub, ${a.session}`)))!.status).toBe(503);
+    const calls: any[] = [];
+    const e2 = { ...env, HUB_CHAT: fakeNs(calls) } as HubEnv;
+    expect((await run(new Request("https://w.test/hub/ws"), e2))!.status).toBe(400);
+    expect((await run(upgrade("hub, nope"), e2))!.status).toBe(401);
+    expect((await run(upgrade("hub"), e2))!.status).toBe(401);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("forwards a valid session to the Durable Object with the member id", async () => {
+    const a = await signIn("a@x.ma");
+    const calls: any[] = [];
+    const res = (await run(upgrade(`hub, ${a.session}`), { ...env, HUB_CHAT: fakeNs(calls) } as HubEnv))!;
+    expect(res.status).toBe(200);
+    expect(calls[0].url).toBe("https://hub-chat/ws");
+    expect(calls[0].init.headers["x-member-id"]).toBe(String(a.id));
+  });
+
+  it("suspending a member tells the Durable Object to drop their sockets", async () => {
+    const a = await signIn("a@x.ma");
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const e2 = { ...env, HUB_CHAT: fakeNs(calls) } as HubEnv;
+    const put = (status: string) => handleHubRequest(new Request(`https://w.test/hub/admin/members/${a.id}`, { method: "PUT", headers: { "x-admin": "admin", "content-type": "application/json" }, body: JSON.stringify({ status }) }), e2, CORS, deps());
+    expect((await put("active"))!.status).toBe(200);
+    expect(calls).toHaveLength(0);
+    expect((await put("suspended"))!.status).toBe(200);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe("https://hub-chat/kick");
+    expect(JSON.parse(calls[0].init!.body as string)).toEqual({ member: a.id });
+  });
+
+  it("pushes to the thread's other participant after a message, never on failure", async () => {
+    const a = await signIn("a@x.ma"), b = await signIn("b@x.ma", "Bilal");
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const e2 = { ...env, HUB_CHAT: fakeNs(calls) } as HubEnv;
+    const send = (token: string, tid: number, body: string) =>
+      handleHubRequest(new Request(`https://w.test/hub/pro/threads/${tid}/messages`, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ body }) }), e2, CORS, deps());
+    const th = (await (await call("POST", "/hub/pro/threads", { token: a.session, body: { to: b.id } })).json()) as any;
+
+    expect((await send(a.session, th.id, "coucou"))!.status).toBe(200);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe("https://hub-chat/notify");
+    expect(JSON.parse(calls[0].init!.body as string)).toEqual({ to: b.id, source: "pro", thread_id: th.id });
+
+    expect((await send(a.session, th.id, ""))!.status).toBe(400);
+    expect(calls).toHaveLength(1);
+  });
+});

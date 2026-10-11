@@ -5,6 +5,10 @@ compatibility_date = "2026-02-13"
 [assets]
 directory = "dist/public"
 
+# Assistant IA: free OpenRouter models, tried in order (secret OPENROUTER_API_KEY via `wrangler secret put`)
+[vars]
+AI_MODELS = "openrouter/free"
+
 [observability]
 [observability.logs]
 enabled = false
@@ -25,9 +29,21 @@ database_id = "46e15f77-73c9-415a-a50a-0067b54719eb"
 binding = "GALLERY_MEDIA"
 bucket_name = "ftour-bab-rayan-prod-media"
 
+# Hub realtime chat: one global Durable Object (presence + push)
+[[durable_objects.bindings]]
+name = "HUB_CHAT"
+class_name = "HubChat"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["HubChat"]
+
 # ---- Staging: gallery on D1 + R2 ----
 [env.staging]
 name = "ftour-bab-rayan-staging"
+
+[env.staging.vars]
+AI_MODELS = "openrouter/free"
 
 [[env.staging.d1_databases]]
 binding = "DB"
@@ -41,3 +57,11 @@ bucket_name = "ftour-bab-rayan-staging-media"
 # staging shares the Supabase project: never run the Ramadan-days cron there
 [env.staging.triggers]
 crons = []
+
+[[env.staging.durable_objects.bindings]]
+name = "HUB_CHAT"
+class_name = "HubChat"
+
+[[env.staging.migrations]]
+tag = "v1"
+new_sqlite_classes = ["HubChat"]
