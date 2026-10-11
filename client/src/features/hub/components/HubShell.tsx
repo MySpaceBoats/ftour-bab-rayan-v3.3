@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { BedDouble, Briefcase, CalendarDays, Home, LogOut, Mail, Newspaper, Sparkles, Store, User } from "lucide-react";
+import { BedDouble, Briefcase, CalendarDays, Home, LogOut, Mail, Newspaper, Store, User } from "lucide-react";
 import { useI18n } from "@/i18n";
 import {
   DropdownMenu,
@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import AssistantWidget from "../assistant/AssistantWidget";
 import * as hub from "../api";
 import Avatar from "./Avatar";
 import NotificationBell from "./NotificationBell";
@@ -24,11 +25,13 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
   const feed = base;
   const market = `${base}/marketplace`;
   const messages = `${base}/messages`;
-  const assistant = `${base}/assistant`;
   const profile = `${base}/profil`;
   const stay = `${base}/hebergement`;
   const meetup = `${base}/meetup`;
   const pro = `${base}/pro`;
+  // ?assistant=<conversation id> (bell notification link) opens the assistant on that conversation
+  const [aiConv] = useState(() => Number(new URLSearchParams(window.location.search).get("assistant")) || null);
+  const [aiOpen, setAiOpen] = useState(aiConv !== null);
   const [unread, setUnread] = useState(0);
   const [notifUnread, setNotifUnread] = useState(0);
   const tick = useCallback(() => {
@@ -110,9 +113,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
                   Mes messages{unread > 0 ? ` (${unread})` : ""}
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href={assistant} className="cursor-pointer">Assistant IA</Link>
-              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setAiOpen(true)} className="cursor-pointer">Assistant IA</DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={`/${lang}`} className="cursor-pointer">Retour au site</Link>
               </DropdownMenuItem>
@@ -154,11 +155,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
         {right && <aside className="hidden xl:block"><div className="sticky top-[72px] space-y-3">{right}</div></aside>}
       </div>
 
-      {!path.startsWith(assistant) && (
-        <Link href={assistant} aria-label="Assistant IA" className="fixed bottom-20 left-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-blue-800 text-white shadow-lg hover:bg-blue-700 lg:bottom-5 lg:left-5">
-          <Sparkles size={22} aria-hidden />
-        </Link>
-      )}
+      <AssistantWidget open={aiOpen} onOpenChange={setAiOpen} conversationId={aiConv} />
 
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-7 border-t border-slate-200 bg-white text-[11px] text-slate-700 lg:hidden" aria-label="Navigation mobile">
         {navLinks.map(l => (
