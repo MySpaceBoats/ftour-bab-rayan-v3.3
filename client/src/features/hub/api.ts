@@ -61,7 +61,7 @@ export type NotifType = "like" | "comment" | "gallery" | "announcement" | "volun
 export interface HubNotification { id: number; type: NotifType; title: string; body: string; link: string | null; created_at: string; read: boolean }
 export type NotifPrefs = Record<NotifType, boolean>;
 export const getNotifications = (cursor?: number | null) => call<{ notifications: HubNotification[]; nextCursor: number | null }>("GET", `notifications${cursor ? `?cursor=${cursor}` : ""}`);
-const unreadSummary = () => call<{ unread: number; friend_requests?: number }>("GET", "notifications/unread");
+export const unreadSummary = () => call<{ unread: number; friend_requests?: number }>("GET", "notifications/unread");
 export const unreadNotifications = () => unreadSummary().then(r => r.unread);
 export const pendingFriendRequests = () => unreadSummary().then(r => r.friend_requests ?? 0);
 export const markNotificationsRead = (ids?: number[]) => call<{ unread: number }>("POST", "notifications/read", { body: ids ? { ids } : {} }).then(r => r.unread);
@@ -70,7 +70,8 @@ export const setNotifPrefs = (prefs: Partial<NotifPrefs>) => call<{ prefs: Notif
 export const getMe = () => call<{ member: Member }>("GET", "me").then(r => r.member);
 export const updateMe = (b: { display_name?: string; bio?: string; avatar_key?: string | null }) => call<{ member: Member }>("PUT", "me", { body: b }).then(r => r.member);
 export const logout = () => call<{ ok: true }>("POST", "logout").finally(() => setHubToken(null));
-export const getFeed = (cursor: number | null, scope: "all" | "friends" | "following" | "favorites" = "all") => {
+export type FeedScope = "all" | "friends" | "following" | "favorites";
+export const getFeed = (cursor: number | null, scope: FeedScope = "all") => {
   const qs = new URLSearchParams();
   if (cursor) qs.set("cursor", String(cursor));
   if (scope !== "all") qs.set("scope", scope);

@@ -1,6 +1,6 @@
-import { call } from "../api";
+import { call, type FeedScope } from "../api";
 
-export type FeedScope = "all" | "friends" | "following" | "favorites";
+export type { FeedScope };
 export type Friendship = "none" | "sent" | "received" | "friends";
 export interface Relation { friendship: Friendship; following: boolean; favorite: boolean; friends_count: number; followers_count: number }
 export interface Person { id: number; display_name: string; avatar: string | null; favorite?: boolean }

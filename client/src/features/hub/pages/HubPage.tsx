@@ -11,7 +11,7 @@ import PostCard from "../components/PostCard";
 import HubShell from "../components/HubShell";
 import Avatar from "../components/Avatar";
 import { PasswordTab, ResetPasswordForm } from "../components/HubLoginForms";
-import type { FeedScope } from "../social/social-api";
+import type { FeedScope } from "../api";
 import { useI18n } from "@/i18n";
 import { EmptyPanel, ErrorPanel, LoadingPanel } from "../components/StatePanel";
 
@@ -77,14 +77,15 @@ export default function HubPage() {
     } else {
       setLoadingMore(true);
     }
+    const used = scope;
     try {
-      const used = scope;
       const f = await hub.getFeed(cursor, used);
       if (used !== scopeRef.current) return; // filter changed while loading: drop the stale page
       if (cursor === null) { setPinned(f.pinned); setPosts(f.posts); } else setPosts(p => [...p, ...f.posts]);
       setNext(f.nextCursor);
       setFeedStatus("ready");
     } catch (e) {
+      if (used !== scopeRef.current) return; // stale request for an old filter
       if (e instanceof hub.HubApiError && e.status === 401) {
         hub.setHubToken(null);
         setMe(null);
@@ -313,7 +314,7 @@ export default function HubPage() {
         </div>
       )}
       {feedStatus === "ready" && posts.map(p => <PostCard key={p.id} post={p} me={me} onChanged={() => load(null, { silent: true })} />)}
-      {feedStatus === "ready" && !hasContent && scope !== "all" && (
+      {feedStatus === "ready" && posts.length === 0 && scope !== "all" && (
         <EmptyPanel
           title="Aucune publication dans ce filtre."
           action={<Link href={`/${lang}/benevole/espace/amis`} className="text-sm text-blue-700 underline">Mes amis</Link>}

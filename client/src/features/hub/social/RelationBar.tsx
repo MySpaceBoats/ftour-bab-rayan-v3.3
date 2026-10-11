@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,25 +10,39 @@ export default function RelationBar({ memberId }: { memberId: number }) {
   const [rel, setRel] = useState<social.Relation | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const idRef = useRef(memberId);
+  idRef.current = memberId;
+
   useEffect(() => {
     let live = true;
     setRel(null);
+    setBusy(false);
     social.getRelation(memberId).then(r => { if (live) setRel(r); }).catch(e => { if (live) toast.error((e as Error).message); });
     return () => { live = false; };
   }, [memberId]);
 
   const act = useCallback(async (fn: () => Promise<unknown>) => {
+    const id = memberId;
     setBusy(true);
-    try { await fn(); setRel(await social.getRelation(memberId)); }
-    catch (e) { toast.error((e as Error).message); }
-    finally { setBusy(false); }
+    try { await fn(); }
+    catch (e) {
+      if (idRef.current === id) { toast.error((e as Error).message); setBusy(false); }
+      return;
+    }
+    try {
+      const r = await social.getRelation(id);
+      if (idRef.current === id) setRel(r);
+    } catch {
+      if (idRef.current === id) toast.error("Action effectuée, actualisez la page");
+    }
+    if (idRef.current === id) setBusy(false);
   }, [memberId]);
 
   if (!rel) return null;
   const friends = rel.friendship === "friends";
 
   return (
-    <div className="space-y-2" aria-label="Relation avec ce membre">
+    <div role="group" className="space-y-2" aria-label="Relation avec ce membre">
       <div className="flex flex-wrap gap-2">
         {rel.friendship === "none" && <Button className={`${BTN} bg-blue-700 hover:bg-blue-800`} disabled={busy} onClick={() => act(() => social.requestFriend(memberId))}>Ajouter en ami</Button>}
         {rel.friendship === "sent" && <Button variant="outline" className={BTN} disabled={busy} onClick={() => act(() => social.removeFriend(memberId))}>Demande envoyée · Annuler</Button>}
