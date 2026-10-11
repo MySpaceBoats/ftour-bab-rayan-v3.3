@@ -9,6 +9,7 @@
 import { D, DEMO_DOMAIN, DEMO_LABEL, DOMAIN_LIKE, H, PEOPLE, ago, avatarKey, demoText, mail, mid, phoneOf, q, type Msg } from "./common";
 import { meetupCleanup, meetupSeed } from "./meetup";
 import { proCleanup, proSeed } from "./pro";
+import { socialCleanup, socialSeed } from "./social";
 import { stayCleanup, staySeed } from "./stay";
 
 export { DEMO_DOMAIN, DEMO_LABEL };
@@ -340,6 +341,7 @@ const DMC = `(SELECT id FROM mk_comments WHERE member_id IN ${D} OR listing_id I
 /** Removes every demo row, and anything real members did on demo content. Order respects the foreign keys. */
 export function cleanupStatements(): string[] {
   return [
+    ...socialCleanup(),
     ...meetupCleanup(),
     ...stayCleanup(),
     ...proCleanup(),
@@ -465,8 +467,10 @@ export function seedStatements(me?: string): string[] {
   out.push(...staySeed(meId));
   out.push(...proSeed(meId));
   out.push(...meetupSeed(meId));
+  out.push(...socialSeed());
   return out;
 }
 
-export const seedSql = (me?: string) => seedStatements(me).join("\n") + "\n";
+const SEED_HEADER = "-- ATTENTION : worker/d1/social.sql doit être appliqué AVANT ce fichier (tables hub_friendships / hub_follows).\n";
+export const seedSql = (me?: string) => SEED_HEADER + seedStatements(me).join("\n") + "\n";
 export const cleanupSql = () => cleanupStatements().join("\n") + "\n";
