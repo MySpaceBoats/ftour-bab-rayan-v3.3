@@ -1,5 +1,5 @@
 /**
- * Hermetic check of the volunteer-hub demo seed (Fil, Marketplace, Hébergement, Pro). The generated SQL is replayed
+ * Hermetic check of the volunteer-hub demo seed (Fil, Marketplace, Hébergement, Pro, Meetup). The generated SQL is replayed
  * against the real D1 schema in an in-memory SQLite database, so a broken statement, a missing section or a leaky
  * cleanup fails here instead of halfway through a remote `wrangler d1 execute`. The real data-layer functions
  * (the ones the Worker routes call) are then run over the seeded database to prove the app can read and show it.
@@ -23,7 +23,7 @@ interface SqliteDb { exec(sql: string): void; prepare(sql: string): SqliteStatem
 const { DatabaseSync } = createRequire(import.meta.url)("node:sqlite") as { DatabaseSync: new (path: string) => SqliteDb };
 
 // order matters: base tables, then the hub/marketplace/stay/pro tables, then the triggers that need them
-const SCHEMA = ["schema.generated.sql", "hub.sql", "marketplace.sql", "stay.sql", "pro.sql", "logic.sql"];
+const SCHEMA = ["schema.generated.sql", "hub.sql", "marketplace.sql", "stay.sql", "pro.sql", "meetup.sql", "logic.sql"];
 const DEMO_LIKE = `'%@${DEMO_DOMAIN}'`;
 
 function freshDb(): SqliteDb {
@@ -53,6 +53,7 @@ const TABLES = [
   "mk_listings", "mk_listing_media", "mk_comments", "mk_reports", "mk_threads", "mk_messages",
   "st_listings", "st_listing_media", "st_requests", "st_request_messages", "st_reviews", "st_reports",
   "pro_profiles", "pro_posts", "pro_post_media", "pro_likes", "pro_comments", "pro_jobs", "pro_threads", "pro_messages", "pro_reports",
+  "mt_meetups", "mt_participants",
   "t_volunteers",
 ];
 const snapshot = (db: SqliteDb) => TABLES.map(t => [t, count(db, t)] as const);
@@ -167,8 +168,9 @@ describe("hub demo seed: Fil and Marketplace", () => {
     const keys = new Set<string>();
     for (const [table] of [["hub_post_media"], ["pro_post_media"], ["mk_listing_media"], ["st_listing_media"]])
       for (const r of db.prepare(`SELECT r2_key FROM ${table}`).all() as { r2_key: string }[]) keys.add(r.r2_key);
+    for (const r of db.prepare("SELECT photo_key FROM mt_meetups WHERE photo_key IS NOT NULL").all() as { photo_key: string }[]) keys.add(r.photo_key);
     for (const m of members) keys.add(m.avatar_key!);
-    expect(keys.size).toBeGreaterThanOrEqual(50);
+    expect(keys.size).toBeGreaterThanOrEqual(60);
     for (const key of keys) {
       expect(key, key).toMatch(/^demo\/[a-z0-9-]+\.(jpg|png)$/);
       expect(existsSync(new URL(key.slice("demo/".length), mediaDir)), `${key} absent de scripts/hub-demo/media/`).toBe(true);
