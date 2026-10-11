@@ -27,7 +27,7 @@ export interface HubDeps {
 // mirrors client ROUTE_ROLES for '/admin/benevoles' (ADMIN_BASE + admin_ops)
 const ADMIN_ROLES = new Set(["super_admin", "admin", "admin_ops"]);
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
-const STATUS: Record<H.HubErrorCode, number> = { unauthorized: 401, forbidden: 403, not_found: 404, invalid: 400, rate_limited: 429 };
+const STATUS: Record<H.HubErrorCode, number> = { unauthorized: 401, forbidden: 403, not_found: 404, invalid: 400, rate_limited: 429, conflict: 409 };
 const SIGN_TTL_S = 3600;
 
 export async function handleHubRequest(request: Request, env: HubEnv, cors: Record<string, string>, deps: HubDeps = {}): Promise<Response | null> {

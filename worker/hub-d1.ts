@@ -4,7 +4,7 @@
  */
 import type { D1Like } from "./gallery-d1";
 
-export type HubErrorCode = "unauthorized" | "forbidden" | "not_found" | "invalid" | "rate_limited";
+export type HubErrorCode = "unauthorized" | "forbidden" | "not_found" | "invalid" | "rate_limited" | "conflict";
 export class HubError extends Error {
   constructor(public code: HubErrorCode, message: string) { super(message); }
 }
