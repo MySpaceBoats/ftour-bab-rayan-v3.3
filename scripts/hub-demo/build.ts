@@ -6,12 +6,12 @@
  * Every demo row hangs off an email @demo.ftour.invalid (an address that cannot receive mail), so cleanup is exact.
  * The seed starts with the cleanup, so it can be re-run safely.
  */
-import { D, DEMO_DOMAIN, DEMO_LABEL, DOMAIN_LIKE, H, PEOPLE, ago, avatarKey, demoText, mail, mid, phoneOf, q, type Msg } from "./common";
+import { D, DEMO_DOMAIN, DEMO_MARK, DOMAIN_LIKE, H, PEOPLE, ago, avatarKey, demoName, mail, mid, phoneOf, q, type Msg } from "./common";
 import { meetupCleanup, meetupSeed } from "./meetup";
 import { proCleanup, proSeed } from "./pro";
 import { stayCleanup, staySeed } from "./stay";
 
-export { DEMO_DOMAIN, DEMO_LABEL };
+export { DEMO_DOMAIN, DEMO_MARK };
 
 interface Post { k: string; a: string; h: number; body: string }
 /** Chronological (oldest first): the feed is ordered by id, so insertion order is display order. `h` = hours ago. */
@@ -364,7 +364,7 @@ export function cleanupStatements(): string[] {
   ];
 }
 
-const postRef = (p: Post) => `(SELECT id FROM hub_posts WHERE member_id = ${mid(p.a)} AND body = ${q(demoText(p.body))})`;
+const postRef = (p: Post) => `(SELECT id FROM hub_posts WHERE member_id = ${mid(p.a)} AND body = ${q(p.body)})`;
 const listingRef = (key: string) => {
   const l = LISTINGS.find(x => x.key === key)!;
   return `(SELECT id FROM mk_listings WHERE member_id = ${mid(l.seller)} AND title = ${q(l.title)})`;
@@ -403,18 +403,18 @@ export function seedStatements(me?: string): string[] {
     // the marker goes in display_name too: a bio is only visible on one's own profile page, whereas the
     // name is shown on every post, listing and conversation, which is where confusion could happen.
     out.push(
-      `INSERT INTO hub_members (email, display_name, bio, avatar_key, role, status, created_at) VALUES (${q(mail(p.key))}, ${q(`🧪 ${p.first} ${p.last[0]}. (profil test)`)}, ${q(`${DEMO_LABEL} — profil fictif créé pour la démonstration de l'espace bénévole. ${p.bio}`)}, ${q(avatarKey(p.key))}, ${q(p.role ?? "member")}, 'active', ${ago(80 * H)});`,
+      `INSERT INTO hub_members (email, display_name, bio, avatar_key, role, status, created_at) VALUES (${q(mail(p.key))}, ${q(demoName(p))}, ${q(p.bio)}, ${q(avatarKey(p.key))}, ${q(p.role ?? "member")}, 'active', ${ago(80 * H)});`,
     );
   }
 
   for (const p of POSTS) {
-    out.push(`INSERT INTO hub_posts (member_id, body, kind, pinned, status, created_at) VALUES (${mid(p.a)}, ${q(demoText(p.body))}, 'post', 0, 'visible', ${ago(p.h * H)});`);
+    out.push(`INSERT INTO hub_posts (member_id, body, kind, pinned, status, created_at) VALUES (${mid(p.a)}, ${q(p.body)}, 'post', 0, 'visible', ${ago(p.h * H)});`);
   }
   for (const [key, files] of Object.entries(POST_MEDIA)) {
     files.forEach((file, i) => out.push(`INSERT INTO hub_post_media (post_id, r2_key, position) VALUES (${postRef(post(key))}, ${q(`${MEDIA_KEY_PREFIX}/${file}`)}, ${i});`));
   }
   for (const a of ANNOUNCEMENTS) {
-    out.push(`INSERT INTO hub_posts (member_id, body, kind, pinned, status, created_at) VALUES (${mid(a.a)}, ${q(demoText(a.body))}, 'announcement', 1, 'visible', ${ago(a.h * H)});`);
+    out.push(`INSERT INTO hub_posts (member_id, body, kind, pinned, status, created_at) VALUES (${mid(a.a)}, ${q(a.body)}, 'announcement', 1, 'visible', ${ago(a.h * H)});`);
   }
   for (const [pk, a, delay, text] of POST_COMMENTS) {
     const p = post(pk);
@@ -440,7 +440,7 @@ export function seedStatements(me?: string): string[] {
   for (const l of LISTINGS) {
     const phone = l.phone ? q(phoneOf(l.seller)) : "NULL";
     out.push(
-      `INSERT INTO mk_listings (member_id, title, description, price, category, item_condition, city, status, contact_phone, contact_whatsapp, created_at, updated_at) VALUES (${mid(l.seller)}, ${q(l.title)}, ${q(demoText(l.description))}, ${l.price}, ${q(l.category)}, ${q(l.condition)}, ${q(l.city)}, ${q(l.status ?? "active")}, ${phone}, ${l.whatsapp ? 1 : 0}, ${ago(l.min)}, ${ago(l.min)});`,
+      `INSERT INTO mk_listings (member_id, title, description, price, category, item_condition, city, status, contact_phone, contact_whatsapp, created_at, updated_at) VALUES (${mid(l.seller)}, ${q(l.title)}, ${q(l.description)}, ${l.price}, ${q(l.category)}, ${q(l.condition)}, ${q(l.city)}, ${q(l.status ?? "active")}, ${phone}, ${l.whatsapp ? 1 : 0}, ${ago(l.min)}, ${ago(l.min)});`,
     );
   }
   // covers: position 0 is what the marketplace grid shows, the rest feed the detail carousel

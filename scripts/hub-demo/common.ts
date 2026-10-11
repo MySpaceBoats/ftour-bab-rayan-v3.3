@@ -2,11 +2,12 @@
 export const DEMO_DOMAIN = "demo.ftour.invalid";
 
 /**
- * Marqueur apposé sur tout contenu de démonstration (profils, publications, annonces) : personne ne
- * doit pouvoir confondre ces données avec de vrais bénévoles ou de vraies annonces.
+ * Marqueur discret : un seul petit suffixe "· démo" sur le nom affiché de chaque membre de démo. Le nom
+ * est le seul champ visible partout (fil, annonces, offres, meetups, messagerie) ; les textes, eux,
+ * restent naturels. Le nettoyage, lui, repose uniquement sur le domaine technique @demo.ftour.invalid.
  */
-export const DEMO_LABEL = "🧪 Profil test";
-export const demoText = (s: string) => `${DEMO_LABEL} — ${s}`;
+export const DEMO_MARK = "· démo";
+export const demoName = (p: { first: string; last: string }) => `${p.first} ${p.last[0]}. ${DEMO_MARK}`;
 
 export const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
 export const ago = (minutes: number) => `strftime('%Y-%m-%dT%H:%M:%fZ','now','-${Math.max(0, Math.round(minutes))} minutes')`;

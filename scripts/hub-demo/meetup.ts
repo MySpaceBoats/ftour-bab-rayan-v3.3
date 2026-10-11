@@ -3,7 +3,7 @@
  * abroad. Dates are relative to the day the seed runs (past ones are finished, the others are upcoming), and the set
  * covers every state of the tab: finished, full with a waiting list, cancelled, hidden by the moderation.
  */
-import { D, ago, demoText, mid, q, wall } from "./common";
+import { D, ago, mid, q, wall } from "./common";
 
 type Category = "sortie" | "evenement" | "rencontre" | "autre";
 interface Meetup {
@@ -77,7 +77,7 @@ export function meetupSeed(meId?: string): string[] {
   for (const m of MEETUPS) {
     const cancelledAt = m.status === "cancelled" ? ago(m.ageDays * DAY - 2 * DAY) : "NULL";
     out.push(
-      `INSERT INTO mt_meetups (member_id, title, category, description, country, city, place, starts_at, ends_at, capacity, photo_key, status, cancelled_at, created_at, updated_at) VALUES (${mid(m.org)}, ${q(m.title)}, ${q(m.category)}, ${q(demoText(m.description))}, ${q(m.country)}, ${q(m.city)}, ${q(m.place)}, ${wall(...m.start)}, ${wall(...m.end)}, ${m.capacity}, ${m.photo ? q(`demo/${m.photo}`) : "NULL"}, ${q(m.status ?? "active")}, ${cancelledAt}, ${ago(m.ageDays * DAY)}, ${ago(m.ageDays * DAY)});`,
+      `INSERT INTO mt_meetups (member_id, title, category, description, country, city, place, starts_at, ends_at, capacity, photo_key, status, cancelled_at, created_at, updated_at) VALUES (${mid(m.org)}, ${q(m.title)}, ${q(m.category)}, ${q(m.description)}, ${q(m.country)}, ${q(m.city)}, ${q(m.place)}, ${wall(...m.start)}, ${wall(...m.end)}, ${m.capacity}, ${m.photo ? q(`demo/${m.photo}`) : "NULL"}, ${q(m.status ?? "active")}, ${cancelledAt}, ${ago(m.ageDays * DAY)}, ${ago(m.ageDays * DAY)});`,
     );
   }
   // sign-ups in arrival order (the id is the waiting-list order), spread over the days after the meetup was created
