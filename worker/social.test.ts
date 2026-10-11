@@ -238,3 +238,58 @@ describe("social data: fix round 1", () => {
     await expect(S.follow(env.DB, a.id, a.id, clock)).rejects.toMatchObject({ code: "not_found" });
   });
 });
+
+const post = (path: string, token: string, body: unknown) => call("POST", `/hub/social/${path}`, { token, body });
+
+describe("social http", () => {
+  it("needs a session; unknown route is JSON 404; bad ids are 400", async () => {
+    expect((await call("GET", "/hub/social/friends")).status).toBe(401);
+    const { a } = await ids();
+    const r = await call("GET", "/hub/social/nope", { token: a.session });
+    expect(r.status).toBe(404); expect(await r.json()).toMatchObject({ error: "not_found" });
+    expect((await post("friend/request", a.session, { id: "x" })).status).toBe(400);
+    expect((await call("GET", "/hub/social/relation/abc", { token: a.session })).status).toBe(404);
+  });
+  it("friend flow over HTTP, conflict is 409, no email leaks", async () => {
+    const { a, b } = await ids();
+    expect((await post("friend/request", a.session, { id: b.id })).status).toBe(200);
+    expect((await post("friend/request", a.session, { id: b.id })).status).toBe(409);
+    const unread = (await (await call("GET", "/hub/notifications/unread", { token: b.session })).json()) as any;
+    expect(unread.friend_requests).toBe(1);
+    expect((await post("friend/accept", b.session, { id: a.id })).status).toBe(200);
+    const rel = (await (await call("GET", `/hub/social/relation/${b.id}`, { token: a.session })).json()) as any;
+    expect(rel).toMatchObject({ friendship: "friends", following: true });
+    const list = await (await call("GET", "/hub/social/friends", { token: a.session })).text();
+    expect(list).toContain("Brahim"); expect(list).not.toContain("@");
+    expect((await call("DELETE", `/hub/social/follow/${b.id}`, { token: a.session })).status).toBe(409);
+    expect((await call("DELETE", `/hub/social/friend/${b.id}`, { token: a.session })).status).toBe(200);
+  });
+  it("favorite requires a follow (409), then works", async () => {
+    const { a, b } = await ids();
+    expect((await post("favorite", a.session, { id: b.id, on: true })).status).toBe(409);
+    await post("follow", a.session, { id: b.id });
+    expect((await post("favorite", a.session, { id: b.id, on: true })).status).toBe(200);
+    expect((await post("favorite", a.session, { id: b.id, on: "yes" })).status).toBe(400);
+  });
+});
+
+describe("feed scope", () => {
+  const publish = (s: string, body: string) => call("POST", "/hub/posts", { token: s, body: { body } });
+  const bodies = async (token: string, scope: string) => ((await (await call("GET", `/hub/feed?scope=${scope}`, { token })).json()) as any).posts.map((p: any) => p.body);
+  it("filters friends / following / favorites, keeps pinned, rejects unknown scope", async () => {
+    const { a, b, c } = await ids();
+    await publish(b.session, "post de B"); await publish(c.session, "post de C");
+    expect((await bodies(a.session, "all")).sort()).toEqual(["post de B", "post de C"]);
+    expect(await bodies(a.session, "following")).toEqual([]);
+    await post("follow", a.session, { id: c.id });
+    expect(await bodies(a.session, "following")).toEqual(["post de C"]);
+    expect(await bodies(a.session, "favorites")).toEqual([]);
+    await post("favorite", a.session, { id: c.id, on: true });
+    expect(await bodies(a.session, "favorites")).toEqual(["post de C"]);
+    expect(await bodies(a.session, "friends")).toEqual([]);
+    await post("friend/request", b.session, { id: a.id }); await post("friend/accept", a.session, { id: b.id });
+    expect(await bodies(a.session, "friends")).toEqual(["post de B"]);
+    for (const bad of ["", "nope", "__proto__", "constructor"]) expect((await call("GET", `/hub/feed?scope=${bad}`, { token: a.session })).status).toBe(400);
+    expect((await call("GET", "/hub/feed", { token: a.session })).status).toBe(200);
+  });
+});

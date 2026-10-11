@@ -191,16 +191,26 @@ export async function createPost(d: D1Like, member: MemberRow, input: { body: st
   return { id: row!.id };
 }
 
-async function loadPosts(d: D1Like, viewerId: number, pinned: 0 | 1, cursor: number | null, limit: number): Promise<PostView[]> {
+export const FEED_SCOPES = ["all", "friends", "following", "favorites"] as const;
+export type FeedScope = (typeof FEED_SCOPES)[number];
+const FOLLOW = "AND EXISTS (SELECT 1 FROM hub_follows f WHERE f.follower_id = ? AND f.followee_id = p.member_id";
+const SCOPE_SQL: Record<FeedScope, string> = {
+  all: "",
+  friends: "AND EXISTS (SELECT 1 FROM hub_friendships fr WHERE fr.status = 'accepted' AND ((fr.requester_id = ? AND fr.addressee_id = p.member_id) OR (fr.addressee_id = ? AND fr.requester_id = p.member_id)))",
+  following: `${FOLLOW})`,
+  favorites: `${FOLLOW} AND f.favorite = 1)`,
+};
+
+async function loadPosts(d: D1Like, viewerId: number, pinned: 0 | 1, cursor: number | null, limit: number, scope: FeedScope = "all"): Promise<PostView[]> {
   const { results } = await d.prepare(
     `SELECT p.id, p.body, p.kind, p.pinned, p.created_at, m.id AS author_id, m.display_name AS author_name, m.avatar_key AS author_avatar,
        (SELECT COUNT(*) FROM hub_likes l WHERE l.post_id = p.id) AS like_count,
        (SELECT COUNT(*) FROM hub_comments c WHERE c.post_id = p.id AND c.status = 'visible') AS comment_count,
        EXISTS(SELECT 1 FROM hub_likes l WHERE l.post_id = p.id AND l.member_id = ?) AS liked
      FROM hub_posts p JOIN hub_members m ON m.id = p.member_id
-     WHERE p.status = 'visible' AND p.pinned = ? AND (? IS NULL OR p.id < ?)
+     WHERE p.status = 'visible' AND p.pinned = ? AND (? IS NULL OR p.id < ?) ${SCOPE_SQL[scope]}
      ORDER BY p.id DESC LIMIT ?`,
-  ).bind(viewerId, pinned, cursor, cursor, limit).all<any>();
+  ).bind(viewerId, pinned, cursor, cursor, ...(scope === "friends" ? [viewerId, viewerId] : scope === "all" ? [] : [viewerId]), limit).all<any>();
   const posts: PostView[] = results.map(r => ({
     id: r.id, body: r.body, kind: r.kind, pinned: Boolean(r.pinned), created_at: r.created_at,
     author: { id: r.author_id, display_name: r.author_name, avatar_key: r.author_avatar },
@@ -214,10 +224,10 @@ async function loadPosts(d: D1Like, viewerId: number, pinned: 0 | 1, cursor: num
   return posts;
 }
 
-export async function feed(d: D1Like, viewerId: number, cursor: number | null = null, limit = 20) {
+export async function feed(d: D1Like, viewerId: number, cursor: number | null = null, limit = 20, scope: FeedScope = "all") {
   const lim = Math.min(Math.max(Math.trunc(limit) || 20, 1), 50);
   const pinned = cursor == null ? await loadPosts(d, viewerId, 1, null, 5) : [];
-  const rows = await loadPosts(d, viewerId, 0, cursor, lim + 1);
+  const rows = await loadPosts(d, viewerId, 0, cursor, lim + 1, scope);
   const posts = rows.slice(0, lim);
   return { pinned, posts, nextCursor: rows.length > lim ? posts[posts.length - 1].id : null };
 }
