@@ -7,7 +7,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
-import { DEMO_DOMAIN, DEMO_LABEL, LISTING_MEDIA, POST_MEDIA, cleanupSql, seedSql } from "../scripts/hub-demo/build";
+import { DEMO_DOMAIN, LISTING_MEDIA, POST_MEDIA, cleanupSql, seedSql } from "../scripts/hub-demo/build";
 import { PRO_POST_MEDIA } from "../scripts/hub-demo/pro";
 import { STAY_MEDIA } from "../scripts/hub-demo/stay";
 import type { D1Like, D1Stmt } from "./gallery-d1";
@@ -67,6 +67,9 @@ function realMember(db: SqliteDb, email = REAL): H.MemberRow {
 }
 const memberRow = (db: SqliteDb, email: string) => db.prepare("SELECT * FROM hub_members WHERE email = ?").get(email) as H.MemberRow;
 const demo = (db: SqliteDb, key: string) => memberRow(db, `${key}@${DEMO_DOMAIN}`);
+
+/** Visible demo text must look like real content: no "test" marker. The only tag is the internal @demo.ftour.invalid email. */
+const NO_MARKER = /🧪|profil test/i;
 
 describe("hub demo seed: Fil and Marketplace", () => {
   it("creates ten fictional volunteers that can actually sign in", () => {
@@ -182,22 +185,24 @@ describe("hub demo seed: Fil and Marketplace", () => {
     expect(Object.keys(PRO_POST_MEDIA).length).toBeGreaterThanOrEqual(6);
   });
 
-  it("marks every demo profile, post and listing as test data", () => {
+  it("shows no test marker on profiles, posts and listings; tags members by internal email only", () => {
     const db = freshDb();
     db.exec(seedSql());
-    const members = db.prepare("SELECT display_name, bio FROM hub_members").all() as { display_name: string; bio: string }[];
+    const members = db.prepare("SELECT display_name, bio, email FROM hub_members").all() as { display_name: string; bio: string; email: string }[];
     expect(members).toHaveLength(10);
     for (const m of members) {
-      // le nom est le seul champ visible partout (fil, annonces, messagerie) : le marqueur doit y être
-      expect(m.display_name).toContain("profil test");
-      expect(m.bio).toContain(DEMO_LABEL);
+      // aucun marqueur visible : le tag est interne (email @demo.ftour.invalid)
+      expect(m.email.endsWith(`@${DEMO_DOMAIN}`)).toBe(true);
+      expect(m.display_name).toMatch(/^\S+ \S.{2,}$/); // prénom + nom de famille complet, pas une initiale
+      expect(m.display_name).not.toMatch(NO_MARKER);
+      expect(m.bio).not.toMatch(NO_MARKER);
     }
     const bodies = db.prepare("SELECT body FROM hub_posts").all() as { body: string }[];
     expect(bodies).toHaveLength(28);
-    for (const b of bodies) expect(b.body.startsWith(DEMO_LABEL), b.body.slice(0, 40)).toBe(true);
+    for (const b of bodies) expect(b.body, b.body.slice(0, 40)).not.toMatch(NO_MARKER);
     const descriptions = db.prepare("SELECT description FROM mk_listings").all() as { description: string }[];
     expect(descriptions).toHaveLength(14);
-    for (const d of descriptions) expect(d.description.startsWith(DEMO_LABEL)).toBe(true);
+    for (const d of descriptions) expect(d.description).not.toMatch(NO_MARKER);
 
     // un vrai membre (option --me) ne doit jamais porter le marqueur
     const withMe = freshDb();
@@ -273,7 +278,7 @@ describe("hub demo seed: Hébergement", () => {
     expect(detail.reviews).toHaveLength(2);
     expect(detail.amenities.length).toBeGreaterThanOrEqual(3);
     expect(detail.contact?.phone.startsWith("+2120")).toBe(true);
-    expect(detail.description.startsWith(DEMO_LABEL)).toBe(true);
+    expect(detail.description).not.toMatch(NO_MARKER);
 
     // as a host: incoming requests; as a guest: sent requests, request detail and conversation
     const yasmine = demo(db, "yasmine");
@@ -343,7 +348,7 @@ describe("hub demo seed: Pro", () => {
       expect(skills.length, r.display_name).toBeGreaterThanOrEqual(3);
       expect(skills.length).toBeLessThanOrEqual(8);
       expect(skills.every(s => s.length <= 30)).toBe(true);
-      expect(r.headline!.startsWith(DEMO_LABEL), "headline marked").toBe(true);
+      expect(r.headline!, "headline").not.toMatch(NO_MARKER);
       expect(r.company!).toMatch(/\(fictif|fictive\)/);
     }
     expect(n(db, "SELECT COUNT(*) AS n FROM pro_profiles WHERE open_to_work = 1")).toBeGreaterThanOrEqual(3);
@@ -380,7 +385,7 @@ describe("hub demo seed: Pro", () => {
     out.push(feed);
     expect(feed.posts).toHaveLength(16);
     expect(feed.posts.filter(p => p.link).length).toBeGreaterThanOrEqual(4);
-    expect(feed.posts.every(p => p.author.headline.startsWith(DEMO_LABEL))).toBe(true);
+    expect(feed.posts.every(p => !NO_MARKER.test(p.author.headline))).toBe(true);
     const proPhotos = feed.posts.filter(p => p.media.length > 0);
     expect(proPhotos).toHaveLength(Object.keys(PRO_POST_MEDIA).length);
     expect(proPhotos.flatMap(p => p.media).every(k => /^demo\/[a-z0-9-]+\.jpg$/.test(k))).toBe(true);
@@ -587,7 +592,7 @@ describe("hub demo seed: personal conversations for the demo operator", () => {
     expect(count(withMe, "pro_threads")).toBe(6);
   });
 
-  it("marks stay and pro content as test data too", () => {
+  it("shows no test marker on stay and pro content", () => {
     const db = freshDb();
     db.exec(seedSql());
     for (const [sql, label] of [
@@ -598,7 +603,7 @@ describe("hub demo seed: personal conversations for the demo operator", () => {
     ] as const) {
       const rows = db.prepare(sql).all() as { t: string }[];
       expect(rows.length, label).toBeGreaterThan(0);
-      for (const r of rows) expect(r.t.startsWith(DEMO_LABEL), `${label}: ${r.t.slice(0, 40)}`).toBe(true);
+      for (const r of rows) expect(r.t, `${label}: ${r.t.slice(0, 40)}`).not.toMatch(NO_MARKER);
     }
   });
 });
