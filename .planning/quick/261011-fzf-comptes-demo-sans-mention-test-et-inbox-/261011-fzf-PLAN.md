@@ -1,0 +1,7 @@
+# Quick 261011-fzf: marquage discret des comptes de démo
+
+Remplacer le préfixe long "🧪 Profil test — " (DEMO_LABEL / demoText() dans scripts/hub-demo/common.ts) sur toutes les bios, publications, annonces, offres, meetups et headlines de démo par un marquage discret et cohérent: un seul petit marqueur par membre de démo, visible partout où son nom apparaît, dérivé côté serveur du domaine @demo.ftour.invalid (pas de donnée client). Choisir le plus simple et robuste (ex. petit suffixe "· démo" ajouté au nom affiché dans le seed, ou drapeau serveur rendu en pastille). Les textes ne doivent plus contenir le préfixe long.
+La clé technique de nettoyage (emails @demo.ftour.invalid, mail()) reste inchangée.
+Mettre à jour worker/hub-demo.test.ts (assertions sur l'ancien préfixe -> marqueur discret présent, ancien préfixe absent), régénérer seed.sql/cleanup.sql (`npx tsx scripts/hub-demo/generate.ts`).
+Hors scope: "agir en tant que" / redirection des messageries (refusé par le contrôle de permissions, à rediscuter).
+Contraintes: travailler dans un worktree de main (`git worktree add ../ftour-bab-rayan-cp main`, symlink node_modules pour vitest puis le retirer, supprimer le worktree à la fin); staging de chemins explicites; commit `feat(quick-261011-fzf): ...` + Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>; aucune commande wrangler distante; pnpm check = 21 erreurs TS; 27 échecs de tests préexistants, aucun nouveau; limite D1: motifs LIKE/GLOB <= 50 octets.
