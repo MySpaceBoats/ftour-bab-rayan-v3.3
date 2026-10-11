@@ -89,7 +89,7 @@ describe("hub demo seed: Fil and Marketplace", () => {
     const db = freshDb();
     db.exec(seedSql());
     // fil d'actualité: ~25 posts by all ten authors, nested replies, uneven likes
-    expect(n(db, "SELECT COUNT(*) AS n FROM hub_posts WHERE kind = 'post' AND pinned = 0 AND status = 'visible'")).toBe(26);
+    expect(n(db, "SELECT COUNT(*) AS n FROM hub_posts WHERE kind = 'post' AND pinned = 0 AND status = 'visible'")).toBe(30);
     expect(n(db, "SELECT COUNT(DISTINCT member_id) AS n FROM hub_posts WHERE kind = 'post'")).toBe(10);
     expect(n(db, "SELECT COUNT(*) AS n FROM hub_comments WHERE status = 'visible'")).toBeGreaterThanOrEqual(60);
     expect(n(db, "SELECT COUNT(*) AS n FROM hub_comments WHERE body LIKE '@%'")).toBeGreaterThanOrEqual(10);
@@ -102,14 +102,14 @@ describe("hub demo seed: Fil and Marketplace", () => {
     expect(n(db, "SELECT COUNT(*) AS n FROM hub_reports WHERE target_type = 'comment'")).toBe(1);
     expect(n(db, "SELECT COUNT(*) AS n FROM mk_reports")).toBe(1);
     // marketplace: les sept catégories, un vendu, un don gratuit, une annonce douteuse
-    expect(n(db, "SELECT COUNT(*) AS n FROM mk_listings")).toBe(14);
+    expect(n(db, "SELECT COUNT(*) AS n FROM mk_listings")).toBe(16);
     expect(n(db, "SELECT COUNT(DISTINCT category) AS n FROM mk_listings")).toBe(7);
     expect(n(db, "SELECT COUNT(*) AS n FROM mk_listings WHERE status = 'sold'")).toBeGreaterThanOrEqual(1);
     expect(n(db, "SELECT COUNT(*) AS n FROM mk_listings WHERE price = 0")).toBe(1);
     expect(n(db, "SELECT COUNT(*) AS n FROM mk_listings WHERE contact_phone IS NOT NULL")).toBeGreaterThanOrEqual(3);
     expect(n(db, "SELECT COUNT(*) AS n FROM mk_comments")).toBeGreaterThanOrEqual(20);
     // messagerie: 7 conversations de 3 à 8 messages, dont une sur une annonce vendue et des non-lus
-    expect(n(db, "SELECT COUNT(*) AS n FROM mk_threads")).toBe(7);
+    expect(n(db, "SELECT COUNT(*) AS n FROM mk_threads")).toBe(8);
     const perThread = db.prepare("SELECT COUNT(*) AS c FROM mk_messages GROUP BY thread_id").all() as { c: number }[];
     for (const t of perThread) { expect(t.c).toBeGreaterThanOrEqual(3); expect(t.c).toBeLessThanOrEqual(8); }
     expect(n(db, "SELECT COUNT(*) AS n FROM mk_messages WHERE read_at IS NULL")).toBeGreaterThanOrEqual(3);
@@ -129,7 +129,7 @@ describe("hub demo seed: Fil and Marketplace", () => {
            COALESCE(SUM(CASE WHEN m.position = 0 THEN 1 ELSE 0 END), 0) AS covers
          FROM ${table} l LEFT JOIN ${media} m ON m.listing_id = l.id GROUP BY l.id`,
       ).all() as { id: number; title: string; photos: number; covers: number }[];
-      expect(perListing).toHaveLength(table === "mk_listings" ? 14 : 8);
+      expect(perListing).toHaveLength(table === "mk_listings" ? 16 : 8);
       for (const l of perListing) {
         expect(l.photos, `${l.title} : au moins une photo`).toBeGreaterThanOrEqual(1);
         expect(l.covers, `${l.title} : exactement une couverture (position 0)`).toBe(1);
@@ -195,10 +195,10 @@ describe("hub demo seed: Fil and Marketplace", () => {
       expect(m.bio).toContain(DEMO_LABEL);
     }
     const bodies = db.prepare("SELECT body FROM hub_posts").all() as { body: string }[];
-    expect(bodies).toHaveLength(28);
+    expect(bodies).toHaveLength(32);
     for (const b of bodies) expect(b.body.startsWith(DEMO_LABEL), b.body.slice(0, 40)).toBe(true);
     const descriptions = db.prepare("SELECT description FROM mk_listings").all() as { description: string }[];
-    expect(descriptions).toHaveLength(14);
+    expect(descriptions).toHaveLength(16);
     for (const d of descriptions) expect(d.description.startsWith(DEMO_LABEL)).toBe(true);
 
     // un vrai membre (option --me) ne doit jamais porter le marqueur
@@ -316,15 +316,15 @@ describe("hub demo seed: Pro", () => {
     expect(count(db, "pro_comments")).toBeGreaterThanOrEqual(35);
     expect(count(db, "pro_likes")).toBeGreaterThanOrEqual(60);
     expect(n(db, "SELECT COUNT(*) AS n FROM pro_comments WHERE body LIKE '@%'")).toBeGreaterThanOrEqual(5);
-    expect(count(db, "pro_jobs")).toBe(8);
+    expect(count(db, "pro_jobs")).toBe(10);
     expect(n(db, "SELECT COUNT(DISTINCT type) AS n FROM pro_jobs")).toBe(5);
-    expect(n(db, "SELECT COUNT(*) AS n FROM pro_jobs WHERE status = 'open'")).toBe(6);
+    expect(n(db, "SELECT COUNT(*) AS n FROM pro_jobs WHERE status = 'open'")).toBe(8);
     expect(n(db, "SELECT COUNT(*) AS n FROM pro_jobs WHERE status = 'closed'")).toBe(2);
-    expect(count(db, "pro_threads")).toBe(5);
-    expect(n(db, "SELECT COUNT(*) AS n FROM pro_threads WHERE job_id > 0")).toBe(3);
+    expect(count(db, "pro_threads")).toBe(6);
+    expect(n(db, "SELECT COUNT(*) AS n FROM pro_threads WHERE job_id > 0")).toBe(4);
     expect(n(db, "SELECT COUNT(*) AS n FROM pro_threads WHERE job_id = 0")).toBe(2);
     const perThread = db.prepare("SELECT COUNT(*) AS c FROM pro_messages GROUP BY thread_id").all() as { c: number }[];
-    expect(perThread).toHaveLength(5);
+    expect(perThread).toHaveLength(6);
     for (const t of perThread) { expect(t.c).toBeGreaterThanOrEqual(3); expect(t.c).toBeLessThanOrEqual(7); }
     expect(n(db, "SELECT COUNT(*) AS n FROM pro_messages WHERE read_at IS NULL")).toBeGreaterThanOrEqual(3);
     expect(count(db, "pro_reports")).toBe(2);
@@ -362,7 +362,7 @@ describe("hub demo seed: Pro", () => {
       expect(pro.cleanLink(l)).toBe(l);
     }
     const contacts = (db.prepare("SELECT contact FROM pro_jobs").all() as { contact: string }[]).map(r => r.contact);
-    expect(contacts).toHaveLength(8);
+    expect(contacts).toHaveLength(10);
     for (const c of contacts) expect(c, c).toMatch(/^\+2120000000\d\d$/);
     // no http(s) link anywhere else in the demo text, and no real-looking social or company domain
     const all = [
@@ -404,7 +404,7 @@ describe("hub demo seed: Pro", () => {
 
     const jobs = await pro.listJobs(d, real.id, { limit: 50 });
     out.push(jobs);
-    expect(jobs.jobs).toHaveLength(6);
+    expect(jobs.jobs).toHaveLength(8);
     for (const j of jobs.jobs) {
       const jd = await pro.getJob(d, real.id, j.id);
       out.push(jd);
@@ -412,7 +412,7 @@ describe("hub demo seed: Pro", () => {
     }
     expect((await pro.listJobs(d, demo(db, "omar").id, { mine: true })).jobs.map(j => j.status)).toEqual(["closed"]);
     expect((await pro.listJobs(d, real.id, { type: "stage" })).jobs).toHaveLength(1);
-    expect(await pro.adminListJobs(d)).toHaveLength(8);
+    expect(await pro.adminListJobs(d)).toHaveLength(10);
 
     // private conversations as a participant
     const imane = demo(db, "imane");
@@ -451,7 +451,7 @@ describe("hub demo seed: Fil and Marketplace through the real data layer", () =>
     const feed = await H.feed(d, real.id, null, 50);
     out.push(feed);
     expect(feed.pinned.length).toBeGreaterThanOrEqual(2);
-    expect(feed.posts).toHaveLength(26);
+    expect(feed.posts).toHaveLength(30);
     const withComments = feed.posts.find(p => p.comment_count >= 4)!;
     out.push(await H.listComments(d, withComments.id));
     expect(feed.posts.some(p => p.like_count === 0)).toBe(true);
@@ -463,7 +463,7 @@ describe("hub demo seed: Fil and Marketplace through the real data layer", () =>
 
     const all = await mk.listListings(d, real.id, { limit: 50 });
     out.push(all);
-    expect(all.listings).toHaveLength(14);
+    expect(all.listings).toHaveLength(16);
     expect(all.listings.every(l => l.cover?.startsWith("demo/"))).toBe(true);
     for (const cat of mk.MK_CATEGORIES) expect((await mk.listListings(d, real.id, { category: cat })).listings.length, cat).toBeGreaterThanOrEqual(1);
     const scooter = all.listings.find(l => l.title.includes("Scooter"))!;
@@ -580,13 +580,13 @@ describe("hub demo seed: personal conversations for the demo operator", () => {
     const without = freshDb();
     without.exec(seedSql());
     expect(snapshot(unknown)).toEqual(snapshot(without));
-    expect(count(without, "mk_threads")).toBe(7);
+    expect(count(without, "mk_threads")).toBe(8);
     expect(count(without, "st_requests")).toBe(11);
-    expect(count(without, "pro_threads")).toBe(5);
+    expect(count(without, "pro_threads")).toBe(6);
     // 3 marketplace + 1 stay + 1 pro on top of the demo ones
-    expect(count(withMe, "mk_threads")).toBe(10);
+    expect(count(withMe, "mk_threads")).toBe(11);
     expect(count(withMe, "st_requests")).toBe(12);
-    expect(count(withMe, "pro_threads")).toBe(6);
+    expect(count(withMe, "pro_threads")).toBe(7);
   });
 
   it("marks stay and pro content as test data too", () => {
