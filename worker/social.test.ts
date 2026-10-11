@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import * as S from "./social-d1";import { createRequire } from "node:module";
+import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import type { D1Like, D1Stmt } from "./gallery-d1";
+import * as S from "./social-d1";
 import { handleHubRequest, type HubDeps, type HubEnv } from "./hub";
 
 const { DatabaseSync } = createRequire(import.meta.url)("node:sqlite") as typeof import("node:sqlite");
@@ -149,5 +150,91 @@ describe("social data: follow and favorite", () => {
     expect(await S.pendingCount(env.DB, a.id)).toBe(1);
     expect(JSON.stringify(r)).not.toContain("@");
     expect((await S.listFriends(env.DB, a.id, null)).people).toEqual([]);
+  });
+});
+
+describe("social data: fix round 1", () => {
+  const seed = (n: number, prefix: string) => {
+    const out: number[] = [];
+    for (let i = 0; i < n; i++) {
+      const r = sqlite.prepare("INSERT INTO hub_members (email, display_name) VALUES (?,?) RETURNING id").get(`${prefix}${i}@x.ma`, `${prefix}${i}`) as { id: number };
+      sqlite.prepare("INSERT INTO t_volunteers (first_name,last_name,email,status) VALUES ('O','X',?, 'confirmed')").run(`${prefix}${i}@x.ma`);
+      out.push(r.id);
+    }
+    return out;
+  };
+  it("concurrent crossed requests: one row, no raw error", async () => {
+    const { a, b } = await ids();
+    const res = await Promise.allSettled([S.requestFriend(env.DB, a.id, b.id, clock), S.requestFriend(env.DB, b.id, a.id, clock)]);
+    for (const r of res) if (r.status === "rejected") expect(r.reason).toMatchObject({ code: "conflict" });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM hub_friendships").get()).toEqual({ n: 1 });
+  });
+  it("unique pair index rejects a reverse row; lost race resolves to friends", async () => {
+    const { a, b } = await ids();
+    sqlite.prepare("INSERT INTO hub_friendships (requester_id, addressee_id, created_at) VALUES (?,?,?)").run(a.id, b.id, "x");
+    expect(() => sqlite.prepare("INSERT INTO hub_friendships (requester_id, addressee_id, created_at) VALUES (?,?,?)").run(b.id, a.id, "x")).toThrow();
+    // simulate losing the race: friendshipRow sees nothing on first read, then the row appears before INSERT
+    sqlite.prepare("DELETE FROM hub_friendships").run();
+    let first = true;
+    const racy: typeof env.DB = { ...env.DB, prepare: sql => {
+      const st = env.DB.prepare(sql);
+      if (first && sql.startsWith("SELECT requester_id, status FROM hub_friendships")) {
+        first = false;
+        return { ...st, bind: (...v: unknown[]) => ({ ...st.bind(...v), first: async () => { sqlite.prepare("INSERT INTO hub_friendships (requester_id, addressee_id, created_at) VALUES (?,?,?)").run(a.id, b.id, "x"); return null; } }) } as any;
+      }
+      return st;
+    } };
+    expect(await S.requestFriend(racy, b.id, a.id, clock)).toEqual({ friendship: "friends" });
+    expect(sqlite.prepare("SELECT status FROM hub_friendships").get()).toEqual({ status: "accepted" });
+  });
+  it("accept is atomic: follows only when accepted", async () => {
+    const { a, b } = await ids();
+    await S.requestFriend(env.DB, a.id, b.id, clock);
+    await S.acceptFriend(env.DB, b.id, a.id, clock);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM hub_follows").get()).toEqual({ n: 2 });
+    await expect(S.acceptFriend(env.DB, b.id, a.id, clock)).rejects.toMatchObject({ code: "not_found" });
+  });
+  it("50 pending cap", async () => {
+    const { a } = await ids();
+    const o = seed(51, "p");
+    for (const id of o.slice(0, 50)) sqlite.prepare("INSERT INTO hub_friendships (requester_id, addressee_id, created_at) VALUES (?,?,?)").run(a.id, id, "2020-01-01T00:00:00.000Z");
+    await expect(S.requestFriend(env.DB, a.id, o[50], clock)).rejects.toMatchObject({ code: "rate_limited" });
+  });
+  it("200 following cap; follow idempotent at the cap", async () => {
+    const { a } = await ids();
+    const o = seed(201, "f");
+    for (const id of o.slice(0, 200)) sqlite.prepare("INSERT INTO hub_follows (follower_id, followee_id, created_at) VALUES (?,?,?)").run(a.id, id, "x");
+    await expect(S.follow(env.DB, a.id, o[200], clock)).rejects.toMatchObject({ code: "rate_limited" });
+    await S.follow(env.DB, a.id, o[0], clock);
+  });
+  it("invisible members are absent from every list", async () => {
+    const { a, b, c } = await ids();
+    await S.requestFriend(env.DB, a.id, b.id, clock); await S.acceptFriend(env.DB, b.id, a.id, clock);
+    await S.requestFriend(env.DB, a.id, c.id, clock); await S.requestFriend(env.DB, c.id, a.id, clock);
+    const d = seed(1, "s")[0];
+    await S.requestFriend(env.DB, d, a.id, clock);
+    sqlite.prepare("UPDATE hub_members SET status = 'suspended' WHERE id IN (?, ?)").run(b.id, d);
+    sqlite.prepare("UPDATE t_volunteers SET status = 'cancelled' WHERE email = 'c@x.ma'").run();
+    expect((await S.listFriends(env.DB, a.id, null)).people).toEqual([]);
+    expect((await S.listFollowing(env.DB, a.id, null)).people).toEqual([]);
+    const r = await S.listRequests(env.DB, a.id);
+    expect(r.received).toEqual([]); expect(r.sent).toEqual([]);
+  });
+  it("nextCursor pagination", async () => {
+    const { a } = await ids();
+    const o = seed(51, "g");
+    for (const id of o) sqlite.prepare("INSERT INTO hub_follows (follower_id, followee_id, created_at) VALUES (?,?,?)").run(a.id, id, "x");
+    const p1 = await S.listFollowing(env.DB, a.id, null);
+    expect(p1.people).toHaveLength(50); expect(p1.nextCursor).toBe(p1.people[49].id);
+    const p2 = await S.listFollowing(env.DB, a.id, p1.nextCursor);
+    expect(p2.people.map(p => p.id)).toEqual([o[50]]); expect(p2.nextCursor).toBeNull();
+  });
+  it("favorite off and self-follow", async () => {
+    const { a, b } = await ids();
+    await S.follow(env.DB, a.id, b.id, clock);
+    await S.setFavorite(env.DB, a.id, b.id, true);
+    await S.setFavorite(env.DB, a.id, b.id, false);
+    expect((await S.relation(env.DB, a.id, b.id)).favorite).toBe(false);
+    await expect(S.follow(env.DB, a.id, a.id, clock)).rejects.toMatchObject({ code: "not_found" });
   });
 });

@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS hub_friendships (
   PRIMARY KEY (requester_id, addressee_id),
   CHECK (requester_id <> addressee_id)
 );
+CREATE UNIQUE INDEX IF NOT EXISTS uq_hub_friendships_pair ON hub_friendships(min(requester_id,addressee_id), max(requester_id,addressee_id));
 CREATE INDEX IF NOT EXISTS idx_hub_friendships_addressee ON hub_friendships(addressee_id, status);
 
 CREATE TABLE IF NOT EXISTS hub_follows (

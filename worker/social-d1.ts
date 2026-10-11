@@ -32,31 +32,44 @@ export async function relation(d: D1Like, meId: number, targetId: number): Promi
   return { friendship, following: fo != null, favorite: fo?.favorite === 1, friends_count: fc?.n ?? 0, followers_count: ec?.n ?? 0 };
 }
 
-const mutualFollow = (d: D1Like, a: number, b: number, nowMs: number) => d.batch([
-  d.prepare("INSERT OR IGNORE INTO hub_follows (follower_id, followee_id, created_at) VALUES (?,?,?)").bind(a, b, iso(nowMs)),
-  d.prepare("INSERT OR IGNORE INTO hub_follows (follower_id, followee_id, created_at) VALUES (?,?,?)").bind(b, a, iso(nowMs)),
-]);
-
 export async function acceptFriend(d: D1Like, meId: number, fromId: number, nowMs: number): Promise<void> {
   await visibleTarget(d, meId, fromId);
-  const r = await d.prepare("UPDATE hub_friendships SET status = 'accepted' WHERE requester_id = ? AND addressee_id = ? AND status = 'pending' RETURNING 1 AS ok").bind(fromId, meId).first();
-  if (!r) throw new HubError("not_found", "Demande introuvable");
-  await mutualFollow(d, meId, fromId, nowMs);
+  const p = await d.prepare("SELECT 1 AS ok FROM hub_friendships WHERE requester_id = ? AND addressee_id = ? AND status = 'pending'").bind(fromId, meId).first();
+  if (!p) throw new HubError("not_found", "Demande introuvable");
+  const follow = (a: number, b: number) => d.prepare(
+    "INSERT OR IGNORE INTO hub_follows (follower_id, followee_id, created_at) SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM hub_friendships WHERE requester_id = ? AND addressee_id = ? AND status = 'accepted')",
+  ).bind(a, b, iso(nowMs), fromId, meId);
+  await d.batch([
+    d.prepare("UPDATE hub_friendships SET status = 'accepted' WHERE requester_id = ? AND addressee_id = ? AND status = 'pending'").bind(fromId, meId),
+    follow(meId, fromId),
+    follow(fromId, meId),
+  ]);
 }
 
 export async function requestFriend(d: D1Like, meId: number, targetId: number, nowMs: number): Promise<{ friendship: Friendship }> {
   await visibleTarget(d, meId, targetId);
-  const ex = await friendshipRow(d, meId, targetId);
-  if (ex) {
+  const resolveExisting = async (): Promise<{ friendship: Friendship } | null> => {
+    const ex = await friendshipRow(d, meId, targetId);
+    if (!ex) return null;
     if (ex.status === "accepted") throw new HubError("conflict", "Vous êtes déjà amis");
     if (ex.requester_id === meId) throw new HubError("conflict", "Demande déjà envoyée");
     await acceptFriend(d, meId, targetId, nowMs); // crossed request
     return { friendship: "friends" };
-  }
+  };
+  const done = await resolveExisting();
+  if (done) return done;
   const recent = await d.prepare("SELECT COUNT(*) AS n FROM hub_friendships WHERE requester_id = ? AND created_at > ?").bind(meId, iso(nowMs - HOUR_MS)).first<{ n: number }>();
   const pending = await d.prepare("SELECT COUNT(*) AS n FROM hub_friendships WHERE requester_id = ? AND status = 'pending'").bind(meId).first<{ n: number }>();
+  // ponytail: cancelled requests don't count toward the hourly cap (request+cancel loop bypasses it; 50-pending cap still applies). Add a tombstone/counter if notifications are added.
   if ((recent?.n ?? 0) >= SOCIAL_LIMITS.requestsPerHour || (pending?.n ?? 0) >= SOCIAL_LIMITS.pendingSent) throw new HubError("rate_limited", "Trop de demandes d'ami, réessayez plus tard");
-  await d.prepare("INSERT INTO hub_friendships (requester_id, addressee_id, created_at) VALUES (?,?,?)").bind(meId, targetId, iso(nowMs)).run();
+  try {
+    await d.prepare("INSERT INTO hub_friendships (requester_id, addressee_id, created_at) VALUES (?,?,?)").bind(meId, targetId, iso(nowMs)).run();
+  } catch (e) {
+    // lost a race against the unique pair index: re-read and apply the existing-row rules
+    const again = await resolveExisting();
+    if (again) return again;
+    throw e;
+  }
   return { friendship: "sent" };
 }
 
@@ -73,6 +86,7 @@ export async function removeFriend(d: D1Like, meId: number, otherId: number): Pr
 
 export async function follow(d: D1Like, meId: number, targetId: number, nowMs: number): Promise<void> {
   await visibleTarget(d, meId, targetId);
+  if (await d.prepare("SELECT 1 AS ok FROM hub_follows WHERE follower_id = ? AND followee_id = ?").bind(meId, targetId).first()) return;
   const n = await d.prepare("SELECT COUNT(*) AS n FROM hub_follows WHERE follower_id = ?").bind(meId).first<{ n: number }>();
   if ((n?.n ?? 0) >= SOCIAL_LIMITS.following) throw new HubError("rate_limited", "Limite d'abonnements atteinte");
   await d.prepare("INSERT OR IGNORE INTO hub_follows (follower_id, followee_id, created_at) VALUES (?,?,?)").bind(meId, targetId, iso(nowMs)).run();
