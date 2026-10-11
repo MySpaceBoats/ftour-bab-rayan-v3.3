@@ -3,7 +3,7 @@
  * likes, job offers (phone-only contact), application / private conversations and a couple of reports.
  * Links all point to exemple.invalid (a reserved TLD: they can never resolve to a real site).
  */
-import { D, H, PEOPLE, ago, demoText, mid, phoneOf, q, type Msg } from "./common";
+import { D, H, PEOPLE, ago, mid, phoneOf, q, type Msg } from "./common";
 
 interface Profile { headline: string; company: string; skills: string[]; open: boolean }
 /** The marker prefixes the visible headline (same approach as display_name); company names carry "(fictif)". */
@@ -184,7 +184,7 @@ export function proCleanup(): string[] {
   ];
 }
 
-const postRef = (p: ProPost) => `(SELECT id FROM pro_posts WHERE member_id = ${mid(p.a)} AND body = ${q(demoText(p.body))})`;
+const postRef = (p: ProPost) => `(SELECT id FROM pro_posts WHERE member_id = ${mid(p.a)} AND body = ${q(p.body)})`;
 const jobRef = (j: Job) => `(SELECT id FROM pro_jobs WHERE member_id = ${mid(j.poster)} AND title = ${q(j.title)})`;
 
 function pushThread(out: string[], creator: string, other: string, jobKey: string | null, msgs: Msg[], guard: string) {
@@ -208,11 +208,11 @@ export function proSeed(meId?: string): string[] {
   for (const p of PEOPLE) {
     const pr = PROFILES[p.key];
     out.push(
-      `INSERT INTO pro_profiles (member_id, headline, company, city, skills, open_to_work, updated_at) VALUES (${mid(p.key)}, ${q(demoText(pr.headline))}, ${q(pr.company)}, ${q(p.city)}, ${q(JSON.stringify(pr.skills))}, ${pr.open ? 1 : 0}, ${ago(60 * H)});`,
+      `INSERT INTO pro_profiles (member_id, headline, company, city, skills, open_to_work, updated_at) VALUES (${mid(p.key)}, ${q(pr.headline)}, ${q(pr.company)}, ${q(p.city)}, ${q(JSON.stringify(pr.skills))}, ${pr.open ? 1 : 0}, ${ago(60 * H)});`,
     );
   }
   for (const p of POSTS) {
-    out.push(`INSERT INTO pro_posts (member_id, body, link, status, created_at) VALUES (${mid(p.a)}, ${q(demoText(p.body))}, ${p.link ? q(p.link) : "NULL"}, 'visible', ${ago(p.h * H)});`);
+    out.push(`INSERT INTO pro_posts (member_id, body, link, status, created_at) VALUES (${mid(p.a)}, ${q(p.body)}, ${p.link ? q(p.link) : "NULL"}, 'visible', ${ago(p.h * H)});`);
   }
   for (const [key, files] of Object.entries(PRO_POST_MEDIA)) {
     files.forEach((file, i) => out.push(`INSERT INTO pro_post_media (post_id, r2_key, position) VALUES (${postRef(post(key))}, ${q(`demo/${file}`)}, ${i});`));
@@ -231,7 +231,7 @@ export function proSeed(meId?: string): string[] {
   });
   for (const j of JOBS) {
     out.push(
-      `INSERT INTO pro_jobs (member_id, title, company, city, type, description, contact, status, created_at, updated_at) VALUES (${mid(j.poster)}, ${q(j.title)}, ${q(j.company)}, ${q(j.city)}, ${q(j.type)}, ${q(demoText(j.description))}, ${q(phoneOf(j.poster))}, ${q(j.status)}, ${ago(j.h * H)}, ${ago(j.h * H)});`,
+      `INSERT INTO pro_jobs (member_id, title, company, city, type, description, contact, status, created_at, updated_at) VALUES (${mid(j.poster)}, ${q(j.title)}, ${q(j.company)}, ${q(j.city)}, ${q(j.type)}, ${q(j.description)}, ${q(phoneOf(j.poster))}, ${q(j.status)}, ${ago(j.h * H)}, ${ago(j.h * H)});`,
     );
   }
   for (const [creator, other, jobKey, msgs] of THREADS) pushThread(out, mid(creator), mid(other), jobKey, msgs, "1");

@@ -2,7 +2,7 @@
  * Demo data for the Hébergement tab (st_* tables): rooms and beds offered between volunteers, stay requests in
  * every state, their conversations, and reviews. Dates are relative to the day the seed runs.
  */
-import { D, ago, demoText, inDays, mid, phoneOf, q } from "./common";
+import { D, ago, inDays, mid, phoneOf, q } from "./common";
 
 interface StayListing {
   key: string; host: string; title: string; kind: string; city: string; area: string; capacity: number; rooms: number;
@@ -146,7 +146,7 @@ export function staySeed(meId?: string): string[] {
   for (const s of STAYS) {
     const created = s.ageDays * 24 * 60;
     out.push(
-      `INSERT INTO st_listings (member_id, title, description, kind, city, area, capacity, rooms, price_type, price, amenities, available_from, available_to, status, contact_phone, contact_whatsapp, created_at, updated_at) VALUES (${mid(s.host)}, ${q(s.title)}, ${q(demoText(s.description))}, ${q(s.kind)}, ${q(s.city)}, ${q(s.area)}, ${s.capacity}, ${s.rooms}, ${q(s.priceType)}, ${s.price}, ${q(JSON.stringify(s.amenities))}, ${s.from === null ? "NULL" : inDays(s.from)}, ${s.to === null ? "NULL" : inDays(s.to)}, ${q(s.status ?? "active")}, ${q(phoneOf(s.host))}, ${s.whatsapp ? 1 : 0}, ${ago(created)}, ${ago(created)});`,
+      `INSERT INTO st_listings (member_id, title, description, kind, city, area, capacity, rooms, price_type, price, amenities, available_from, available_to, status, contact_phone, contact_whatsapp, created_at, updated_at) VALUES (${mid(s.host)}, ${q(s.title)}, ${q(s.description)}, ${q(s.kind)}, ${q(s.city)}, ${q(s.area)}, ${s.capacity}, ${s.rooms}, ${q(s.priceType)}, ${s.price}, ${q(JSON.stringify(s.amenities))}, ${s.from === null ? "NULL" : inDays(s.from)}, ${s.to === null ? "NULL" : inDays(s.to)}, ${q(s.status ?? "active")}, ${q(phoneOf(s.host))}, ${s.whatsapp ? 1 : 0}, ${ago(created)}, ${ago(created)});`,
     );
   }
   for (const s of STAYS) s.media.forEach((f, i) => out.push(`INSERT INTO st_listing_media (listing_id, r2_key, position) VALUES (${stayRef(s.key)}, ${q(`demo/${f}`)}, ${i});`));

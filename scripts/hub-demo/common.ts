@@ -1,12 +1,7 @@
 /** Shared helpers and the ten fictional volunteers, used by the Fil/Marketplace (build.ts), Hébergement (stay.ts) and Pro (pro.ts) demo seeds. */
 export const DEMO_DOMAIN = "demo.ftour.invalid";
 
-/**
- * Marqueur apposé sur tout contenu de démonstration (profils, publications, annonces) : personne ne
- * doit pouvoir confondre ces données avec de vrais bénévoles ou de vraies annonces.
- */
-export const DEMO_LABEL = "🧪 Profil test";
-export const demoText = (s: string) => `${DEMO_LABEL} — ${s}`;
+/** Le seul marqueur de données de démo est l'adresse @demo.ftour.invalid (interne : jamais affichée aux bénévoles, utilisée par le nettoyage). */
 
 export const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
 export const ago = (minutes: number) => `strftime('%Y-%m-%dT%H:%M:%fZ','now','-${Math.max(0, Math.round(minutes))} minutes')`;
