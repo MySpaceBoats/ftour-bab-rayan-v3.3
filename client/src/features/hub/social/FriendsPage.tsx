@@ -34,6 +34,8 @@ export default function FriendsPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
   const seq = useRef(0);
+  const tabRef = useRef<Tab>(tab);
+  tabRef.current = tab;
   const base = `/${lang}/benevole/espace`;
 
   useEffect(() => {
@@ -62,7 +64,10 @@ export default function FriendsPage() {
         setPeople(r.people); setCursor(r.nextCursor);
       }
     } catch (e) {
-      if (id === seq.current) setError((e as Error).message || "Chargement impossible");
+      if (id === seq.current) {
+        if (silent) toast.error((e as Error).message || "Actualisation impossible");
+        else setError((e as Error).message || "Chargement impossible");
+      }
     } finally {
       if (id === seq.current) setLoading(false);
     }
@@ -90,12 +95,14 @@ export default function FriendsPage() {
 
   const act = async (p: Person, fn: () => Promise<unknown>, opts: { badge?: boolean; ok?: string } = {}) => {
     if (busy != null) return;
+    const t = tab;
     setBusy(p.id);
     try {
       await fn();
       if (opts.ok) toast.success(opts.ok);
       if (opts.badge) window.dispatchEvent(new Event("hub:friends-changed"));
-      await load(tab, true);
+      // the new tab's data must win: skip the reload if the user switched tabs mid-action
+      if (tabRef.current === t) await load(t, true);
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(null); }
   };
 
@@ -128,7 +135,7 @@ export default function FriendsPage() {
           <Button size="sm" variant="outline" className={btn} disabled={busy != null} onClick={() => act(p, () => social.declineFriend(p.id), { badge: true })}>Refuser</Button>
         </>))}
         {section("Envoyées", sent, p => row(p,
-          <Button size="sm" variant="outline" className={btn} disabled={busy != null} onClick={() => act(p, () => social.declineFriend(p.id), { badge: true })}>Annuler</Button>))}
+          <Button size="sm" variant="outline" className={btn} disabled={busy != null} onClick={() => act(p, () => social.removeFriend(p.id), { badge: true })}>Annuler</Button>))}
       </div>
     );
   } else if (people.length === 0) body = <Empty text={EMPTY[tab]} />;
