@@ -42,6 +42,11 @@ const POSTS: Post[] = [
   { k: "bonne-nuit", a: "nadia", h: 3, body: "Bonne nuit à tous, repos bien mérité. Demain on est de retour 💪" },
   { k: "pieds", a: "imane", h: 2, body: "Merci pour vos réponses d'hier ! J'ai fait ma première soirée complète, j'ai mal aux pieds mais le cœur léger 😊" },
   { k: "marketplace", a: "hajar", h: 1, body: "Nouveau : la marketplace est ouverte ! Si vous avez des objets à donner ou à vendre entre bénévoles, c'est par là 🛍️" },
+  // fractional hours: these four come after everything above, in display order
+  { k: "meetup-lancement", a: "salma", h: 0.9, body: "Nouveau : l'onglet Meetup est ouvert ! Randonnées, cafés, ateliers et rencontres entre bénévoles, au Maroc comme à l'étranger. Proposez les vôtres, ou inscrivez-vous à une sortie près de chez vous 🌍" },
+  { k: "meetup-ourika", a: "imane", h: 0.7, body: "Retour de la randonnée dans la vallée de l'Ourika : quelle journée ! Merci à Nadia pour l'organisation, et à tous ceux qui ont porté le pique-nique 🥾" },
+  { k: "meetup-atelier", a: "nadia", h: 0.5, body: "L'atelier msemen et tajine à Marrakech est complet en moins d'une journée ! J'ai ouvert une liste d'attente, et on en refera un si vous êtes nombreux 🍲" },
+  { k: "meetup-plage", a: "omar", h: 0.3, body: "Un nettoyage de plage à Aïn Diab se prépare. Gants et sacs fournis, petit-déjeuner partagé à la fin. Les détails sont dans l'onglet Meetup 🏖️" },
 ];
 const post = (k: string) => POSTS.find(p => p.k === k)!;
 
@@ -57,6 +62,9 @@ export const POST_MEDIA: Record<string, string[]> = {
   bilan: ["photo-table-iftar.jpg", "photo-salade.jpg", "photo-chebakia.jpg"],
   "bonne-nuit": ["photo-the-menthe.jpg"],
   rangement: ["photo-kaab.jpg"],
+  "meetup-ourika": ["meetup-randonnee-ourika.jpg"],
+  "meetup-atelier": ["meetup-atelier-cuisine.jpg"],
+  "meetup-plage": ["meetup-plage-propre.jpg"],
 };
 
 /** [post key, author, minutes after the post, text] — a reply names the person it answers (@Prénom). */
@@ -129,10 +137,21 @@ const POST_COMMENTS: [string, string, number, string][] = [
   ["marketplace", "karim", 10, "Super idée, je vais en parler autour de moi."],
   ["marketplace", "salma", 25, "J'ai déjà mis en vente mes livres de cuisine 😄"],
   ["marketplace", "yasmine", 45, "Vélo de ma fille posté, merci Hajar !"],
+  ["meetup-lancement", "karim", 8, "Super idée ! Je propose un café à Rabat bientôt."],
+  ["meetup-lancement", "yasmine", 20, "Je regarde ce qui se passe à Bruxelles, merci Salma 🌍"],
+  ["meetup-lancement", "hajar", 35, "@Karim bonne idée, on s'inscrit dès que tu publies."],
+  ["meetup-ourika", "nadia", 6, "Merci à vous d'être venus, quel beau groupe ! 🥰"],
+  ["meetup-ourika", "omar", 18, "Les cascades étaient superbes, on remet ça au printemps ?"],
+  ["meetup-ourika", "imane", 30, "@Omar avec grand plaisir !"],
+  ["meetup-atelier", "mehdi", 5, "Dommage, je suis sur la liste d'attente 😅"],
+  ["meetup-atelier", "nadia", 12, "@Mehdi si quelqu'un se désiste, tu passes devant !"],
+  ["meetup-atelier", "reda", 20, "Pareil, j'espère une place !"],
+  ["meetup-plage", "salma", 4, "Je m'inscris tout de suite, merci Omar."],
+  ["meetup-plage", "yasmine", 10, "J'amène des gants en plus pour les enfants."],
 ];
 
 /** Likes per post, deliberately uneven (same order as POSTS). The spam post has none. */
-const LIKE_COUNTS = [7, 5, 3, 6, 2, 9, 4, 8, 1, 5, 3, 6, 7, 2, 4, 10, 3, 6, 5, 8, 0, 4, 2, 7, 3, 9].map(n => Math.min(n, PEOPLE.length - 1));
+const LIKE_COUNTS = [7, 5, 3, 6, 2, 9, 4, 8, 1, 5, 3, 6, 7, 2, 4, 10, 3, 6, 5, 8, 0, 4, 2, 7, 3, 9, 8, 6, 5, 4].map(n => Math.min(n, PEOPLE.length - 1));
 
 /** [post key, reporter, reason] — one harmless-looking spam post to show the moderation queue */
 const POST_REPORT: [string, string, string] = ["spam", "salma", "Publicité sans rapport avec le bénévolat"];
@@ -165,6 +184,8 @@ const LISTINGS: Listing[] = [
   { key: "tablette", seller: "yasmine", min: 12 * H, title: "Tablette Android 10 pouces", description: "Écran sans rayure, batterie correcte, housse incluse. Réinitialisée, prête à servir.", price: 700, category: "high-tech", condition: "correct", city: "Casablanca", phone: false, whatsapp: false },
   { key: "tapis", seller: "hajar", min: 9 * H, title: "Tapis berbère 2 x 3 m", description: "Tapis en laine tissé main, motifs géométriques. Très belle pièce.", price: 900, category: "maison", condition: "bon", city: "Fès", phone: true, whatsapp: true },
   { key: "iphone", seller: "anas", min: 5 * H, title: "iPhone 15 Pro NEUF 500 MAD !!!", description: "Urgent, contactez-moi.", price: 500, category: "high-tech", condition: "neuf", city: "Casablanca", phone: false, whatsapp: false },
+  { key: "the", seller: "nadia", min: 3 * H, title: "Service à thé marocain (théière, plateau, 6 verres)", description: "Théière en laiton, plateau rond et six verres décorés. Peu utilisé, très bon état, parfait pour recevoir.", price: 180, category: "maison", condition: "bon", city: "Marrakech", phone: true, whatsapp: true },
+  { key: "cartable", seller: "omar", min: 2 * H, title: "Cartable et fournitures scolaires (primaire)", description: "Cartable à roulettes, trousse complète et cahiers neufs, pour un enfant de CE1 à CM2. Propre, sans déchirure.", price: 90, category: "enfants", condition: "bon", city: "Casablanca", phone: false, whatsapp: false },
 ];
 
 /**
@@ -187,6 +208,8 @@ export const LISTING_MEDIA: Record<string, string[]> = {
   tablette: ["tablette-1.jpg"],
   tapis: ["tapis-1.jpg"],
   iphone: ["iphone-1.jpg"],
+  the: ["photo-the-menthe.jpg"],
+  cartable: ["cartable-1.jpg"],
 };
 export const MEDIA_KEY_PREFIX = "demo";
 
@@ -218,6 +241,10 @@ const LISTING_COMMENTS: [string, string, number, string][] = [
   ["tapis", "hajar", 80, "2,10 x 3 m."],
   ["iphone", "salma", 30, "Ça sent l'arnaque, je signale."],
   ["iphone", "imane", 55, "Pour 500 MAD, c'est impossible."],
+  ["the", "salma", 20, "Les verres sont tous identiques ? Je cherche un service pour la salle des bénévoles."],
+  ["the", "nadia", 45, "@Salma oui, six verres du même modèle, avec la même gravure."],
+  ["cartable", "imane", 15, "Il convient à quel niveau ? Ma petite sœur entre en CM1."],
+  ["cartable", "omar", 40, "@Imane c'est parfait pour du CE1 au CM2."],
 ];
 
 const LISTING_REPORT: [string, string, string] = ["iphone", "yasmine", "Prix irréaliste, probable arnaque"];
@@ -268,6 +295,12 @@ const THREADS: [string, string, Msg[]][] = [
     ["s", 6 * H, "C'est déjà le prix du neuf en promo, je ne peux pas descendre plus bas.", true],
     ["b", 5 * H, "D'accord, je le prends. Tu es là samedi au service ?", false],
     ["s", 4 * H, "Oui, je serai en cuisine. Je l'apporte et on se retrouve à l'accueil.", false],
+  ]],
+  ["the", "imane", [
+    ["b", 2 * H, "Bonjour Nadia, le service à thé est toujours disponible ?", true],
+    ["s", 100, "Oui ! Il est prêt à partir, je l'ai emballé dans du papier bulle.", true],
+    ["b", 90, "Je peux le récupérer jeudi au service, et le payer en espèces ?", true],
+    ["s", 60, "Avec plaisir, jeudi c'est parfait. Je mets un petit sachet de thé avec 😊", false],
   ]],
   ["cafe", "salma", [
     ["b", 12 * H, "Bonjour Karim, ta machine à café m'intéresse pour la salle des bénévoles.", true],

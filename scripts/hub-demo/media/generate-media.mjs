@@ -7,7 +7,7 @@
  * soit jamais confondu avec une vraie annonce.
  *
  * Usage : node scripts/hub-demo/media/generate-media.mjs [préfixe]
- *   sans argument : régénère les anciens visuels illustrés ; avec un préfixe (ex. meetup-) : uniquement les fichiers qui commencent par lui.
+ *   sans argument : régénère les anciens visuels illustrés ; avec un préfixe (ex. meetup-, ou plusieurs séparés par des virgules) : uniquement les fichiers qui commencent par lui.
  *   CHROME_BIN=/chemin/vers/chrome pour forcer le binaire (défaut : Chrome macOS).
  */
 import { execFileSync } from "node:child_process";
@@ -57,6 +57,12 @@ const ITEMS = [
   { file: "meetup-medina-fes.jpg", emoji: "📸", title: "Marche et photos dans la médina de Fès", from: "#fce7f3", to: "#f9a8d4" },
   { file: "meetup-diaspora-montreal.jpg", emoji: "🍁", title: "Rencontre de la diaspora, Montréal", from: "#fee2e2", to: "#fecaca" },
   { file: "meetup-velo-corniche.jpg", emoji: "🚴", title: "Sortie vélo sur la corniche de Rabat", from: "#dbeafe", to: "#93c5fd" },
+  { file: "cartable-1.jpg", emoji: "🎒", title: "Cartable et fournitures scolaires", from: "#dbeafe", to: "#bfdbfe" },
+  { file: "stay-chambre-maarif-2.jpg", emoji: "🖥️", title: "Chambre près du Maârif : le coin bureau", from: "#e0e7ff", to: "#c7d2fe" },
+  { file: "stay-maison-gueliz-2.jpg", emoji: "🌿", title: "Maison de Guéliz : le patio ombragé", from: "#d1fae5", to: "#a7f3d0" },
+  { file: "stay-appart-fes-2.jpg", emoji: "🛋️", title: "Appartement de Fès : le salon lumineux", from: "#fce7f3", to: "#fbcfe8" },
+  { file: "stay-studio-agdal-2.jpg", emoji: "🍳", title: "Studio d'Agdal : la kitchenette équipée", from: "#ffedd5", to: "#fed7aa" },
+  { file: "pro-atelier-stock.jpg", emoji: "📊", title: "Atelier gestion de stock sur tableur", from: "#dcfce7", to: "#bbf7d0" },
 ];
 
 for (const [bin, hint] of [[CHROME, "CHROME_BIN=/chemin/vers/chrome"], [SIPS, "sips est fourni par macOS (conversion JPEG)"]]) {
@@ -72,10 +78,10 @@ mkdirSync(TMP, { recursive: true });
 // Une page par visuel : Chrome ne sait capturer que la fenêtre, pas un élément précis.
 // Les autres visuels sont de vraies photos libres de droits (voir CREDITS.md) : ne jamais les écraser.
 const PLACEHOLDERS = new Set(["livres-1.jpg", "poussette-1.jpg", "robe-1.jpg", "robe-2.jpg", "djellaba-1.jpg", "stay-appart-oasis.jpg"]);
-// Optional argument: only (re)generate the files whose name starts with it, e.g. `node generate-media.mjs meetup-`
+// Optional argument: only (re)generate the files whose name starts with it, e.g. `node generate-media.mjs meetup-` or `meetup-,stay-` (comma-separated)
 // (the new tiles below the older ones are listed by prefix so existing images are never rewritten by accident).
 const ONLY = process.argv[2];
-const TODO = ITEMS.filter(i => (ONLY ? i.file.startsWith(ONLY) : PLACEHOLDERS.has(i.file)));
+const TODO = ITEMS.filter(i => (ONLY ? ONLY.split(",").some(p => i.file.startsWith(p)) : PLACEHOLDERS.has(i.file)));
 for (const item of TODO) {
   const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><style>
     html,body{margin:0;width:800px;height:600px;overflow:hidden}
