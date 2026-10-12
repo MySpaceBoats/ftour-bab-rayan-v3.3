@@ -3,6 +3,8 @@ import type { D1Like } from "./gallery-d1";
 import { GALLERY_SCHEMA, fakeD1, openDb, type Sqlite } from "./test-d1";
 import * as h from "./hub-d1";
 import * as pro from "./pro-d1";
+import { createHubHarness } from "./test-hub";
+
 
 const T0 = Date.parse("2026-10-12T12:00:00.000Z");
 let sqlite: Sqlite;
@@ -46,5 +48,29 @@ describe("videos stay out of photos and gallery", () => {
     await h.createPost(d, a, { body: "film", mediaPaths: [`${a.id}/f.mp4`] }, T0 + 1);
     expect((await h.memberPhotos(d, a.id)).map(p => p.path)).toEqual([`${a.id}/p.jpg`]);
     await expect(h.proposeToGallery(d, a, `${a.id}/f.mp4`, T0 + 2, async () => "g1")).rejects.toMatchObject({ code: "invalid" });
+  });
+});
+
+
+describe("hub routes", () => {
+  it("signs a video upload, publishes it alone in the Fil and the Pro feed, and serves a signed URL", async () => {
+    const h = createHubHarness();
+    const a = await h.signIn("a@x.ma");
+    const up = await h.call("POST", "/hub/media", { token: a.session, body: { contentType: "video/mp4" } });
+    expect(up.status).toBe(200);
+    const { path, uploadUrl } = (await up.json()) as { path: string; uploadUrl: string };
+    expect(path).toMatch(new RegExp(`^${a.member.id}/[0-9a-f-]{36}\\.mp4$`));
+    expect(uploadUrl).toContain(`/media-upload/private/hub/${path}?exp=`);
+    expect((await h.call("POST", "/hub/media", { token: a.session, body: { contentType: "video/x-msvideo" } })).status).toBe(400);
+
+    expect((await h.call("POST", "/hub/posts", { token: a.session, body: { body: "film", media: [path] } })).status).toBe(200);
+    expect((await h.call("POST", "/hub/pro/posts", { token: a.session, body: { body: "film pro", media: [path] } })).status).toBe(200);
+    const img = ((await (await h.call("POST", "/hub/media", { token: a.session, body: { contentType: "image/jpeg" } })).json()) as { path: string }).path;
+    expect((await h.call("POST", "/hub/posts", { token: a.session, body: { body: "mix", media: [path, img] } })).status).toBe(400);
+
+    const feed = (await (await h.call("GET", "/hub/feed", { token: a.session })).json()) as { posts: { media: string[] }[] };
+    expect(feed.posts[0].media[0]).toMatch(/\.mp4\?exp=/);
+    const proFeed = (await (await h.call("GET", "/hub/pro/feed", { token: a.session })).json()) as { posts: { media: string[] }[] };
+    expect(proFeed.posts[0].media[0]).toMatch(/\.mp4\?exp=/);
   });
 });

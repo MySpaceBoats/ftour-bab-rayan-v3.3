@@ -30,6 +30,7 @@ export interface HubDeps {
 // mirrors client ROUTE_ROLES for '/admin/benevoles' (ADMIN_BASE + admin_ops)
 const ADMIN_ROLES = new Set(["super_admin", "admin", "admin_ops"]);
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
+const VIDEO_EXT: Record<string, string> = { "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov" };
 const STATUS: Record<H.HubErrorCode, number> = { unauthorized: 401, forbidden: 403, not_found: 404, invalid: 400, rate_limited: 429 };
 const SIGN_TTL_S = 3600;
 
@@ -288,8 +289,9 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     // ---- media / report ----------------------------------------------------
     if (match("POST", /^(?:volunteer\/)?media$/)) {
       const me = await who();
-      const ext = EXT[str((await readJson(request)).contentType)];
-      if (!ext) throw new H.HubError("invalid", "Format d'image non supporté (jpeg, png, webp, gif)");
+      const ct = str((await readJson(request)).contentType);
+      const ext = EXT[ct] ?? VIDEO_EXT[ct];
+      if (!ext) throw new H.HubError("invalid", "Format non supporté (photos jpeg, png, webp, gif ; vidéos mp4, webm, mov)");
       await H.recordUpload(d, me.id, now());
       const p = `${me.id}/${crypto.randomUUID()}.${ext}`;
       const r = await storage.createSignedUploadUrl(p);
