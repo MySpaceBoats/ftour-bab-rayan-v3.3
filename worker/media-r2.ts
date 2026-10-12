@@ -74,7 +74,10 @@ export function createR2Storage(env: MediaEnv, now: () => number = Date.now) {
     async createSignedUrl(path: string, expiresIn: number) {
       if (!env.JWT_SECRET) return fail("JWT_SECRET missing: cannot sign media URLs");
       const key = objectKey(bucket, path);
-      const exp = Math.floor(now() / 1000) + expiresIn;
+      const nowS = Math.floor(now() / 1000);
+      // hub media: one URL per image per window, so the browser reuses its cached copy instead of refetching on every page.
+      // The expiry lands between expiresIn and 2*expiresIn from now. Other buckets (payment proofs...) keep an exact expiry.
+      const exp = bucket === "hub" ? (Math.floor(nowS / expiresIn) + 2) * expiresIn : nowS + expiresIn;
       const sig = await signMedia(env.JWT_SECRET, "get", key, exp);
       return { data: { signedUrl: `${originOf(env)}/media-signed/${encKey(key)}?exp=${exp}&sig=${sig}` }, error: null };
     },
@@ -128,6 +131,8 @@ export async function handleMediaRequest(request: Request, env: MediaEnv, cors: 
 
   if (route === "/media-signed/" && request.method === "GET") {
     if (!(await verifyMedia(secret, "get", key, exp, sig, now))) return new Response("Forbidden", { status: 403, headers: cors });
+    // private hub media (photos, videos) can sit in the browser cache for an hour; other private buckets never
+    const signedCache = key.startsWith("private/hub/") ? "private, max-age=3600" : "private, no-store";
     const range = /^bytes=(\d*)-(\d*)$/.exec((request.headers.get("range") ?? "").trim());
     if (range && (range[1] || range[2]) && env.GALLERY_MEDIA.head) {
       const head = await env.GALLERY_MEDIA.head(key);
@@ -141,7 +146,7 @@ export async function handleMediaRequest(request: Request, env: MediaEnv, cors: 
       return new Response(part.body, {
         status: 206,
         headers: {
-          ...cors, "Content-Type": part.httpMetadata?.contentType ?? "application/octet-stream", "Cache-Control": "private, no-store", ETag: part.httpEtag,
+          ...cors, "Content-Type": part.httpMetadata?.contentType ?? "application/octet-stream", "Cache-Control": signedCache, ETag: part.httpEtag,
           "Accept-Ranges": "bytes", "Content-Range": `bytes ${start}-${end}/${size}`, "Content-Length": String(end - start + 1),
         },
       });
@@ -149,7 +154,7 @@ export async function handleMediaRequest(request: Request, env: MediaEnv, cors: 
     const obj = await env.GALLERY_MEDIA.get(key);
     if (!obj) return notFound();
     return new Response(obj.body, {
-      headers: { ...cors, "Content-Type": obj.httpMetadata?.contentType ?? "application/octet-stream", "Cache-Control": "private, no-store", ETag: obj.httpEtag, "Accept-Ranges": "bytes" },
+      headers: { ...cors, "Content-Type": obj.httpMetadata?.contentType ?? "application/octet-stream", "Cache-Control": signedCache, ETag: obj.httpEtag, "Accept-Ranges": "bytes" },
     });
   }
 
