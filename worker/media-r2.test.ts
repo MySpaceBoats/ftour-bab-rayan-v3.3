@@ -178,3 +178,39 @@ describe("media-r2 video", () => {
     });
   });
 });
+
+describe("hub media is browser-cacheable and its signed URLs are stable", () => {
+  const hubUrl = async (path: string, at: number) => (await createR2Storage(env, () => at).from("hub").createSignedUrl(path, 3600)).data!.signedUrl;
+  const fetchAt = async (url: string, at: number, init?: RequestInit) => {
+    const u = new URL(url);
+    return handleMediaRequest(req(u.pathname + u.search, init), env, {}, at);
+  };
+
+  it("returns the same URL for the same image within a window, a different one next window", async () => {
+    const a = await hubUrl("1/a.jpg", T);
+    expect(await hubUrl("1/a.jpg", T + 10_000)).toBe(a);
+    expect(await hubUrl("1/a.jpg", T + 1_800_000)).toBe(a);
+    expect(await hubUrl("1/b.jpg", T)).not.toBe(a);
+    expect(await hubUrl("1/a.jpg", T + 3_700_000)).not.toBe(a);
+  });
+  it("is valid for at least the requested hour and at most two, whatever the moment", async () => {
+    await env.GALLERY_MEDIA.put("private/hub/1/a.jpg", new Uint8Array([1]), { httpMetadata: { contentType: "image/jpeg" } });
+    for (const offset of [0, 1, 599, 1800, 3599, 3600, 5000]) {
+      const at = T + offset * 1000;
+      const url = await hubUrl("1/a.jpg", at);
+      expect((await fetchAt(url, at + 3599 * 1000))!.status, `valid 1h after +${offset}s`).toBe(200);
+      expect((await fetchAt(url, at + 7201 * 1000))!.status, `expired 2h after +${offset}s`).toBe(403);
+    }
+  });
+  it("serves hub media with a one hour private browser cache, also for ranges; other private buckets stay no-store", async () => {
+    await env.GALLERY_MEDIA.put("private/hub/1/v.mp4", new Uint8Array([0, 1, 2, 3]), { httpMetadata: { contentType: "video/mp4" } });
+    const url = await hubUrl("1/v.mp4", T);
+    expect((await fetchAt(url, T + 1000))!.headers.get("cache-control")).toBe("private, max-age=3600");
+    const part = await fetchAt(url, T + 1000, { headers: { range: "bytes=1-2" } });
+    expect(part!.status).toBe(206);
+    expect(part!.headers.get("cache-control")).toBe("private, max-age=3600");
+    await env.GALLERY_MEDIA.put("private/reservation-payment-proofs/r/1.png", new Uint8Array([1]), { httpMetadata: { contentType: "image/png" } });
+    const proof = (await createR2Storage(env, () => T).from("reservation-payment-proofs").createSignedUrl("r/1.png", 3600)).data!.signedUrl;
+    expect((await fetchAt(proof, T + 1000))!.headers.get("cache-control")).toBe("private, no-store");
+  });
+});
