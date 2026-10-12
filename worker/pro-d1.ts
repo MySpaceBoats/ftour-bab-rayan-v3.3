@@ -3,7 +3,7 @@
  * No HTTP / Supabase imports: testable with a fake D1. Time is always passed in (nowMs).
  */
 import type { D1Like } from "./gallery-d1";
-import { HOUR_MS, HubError, cleanBody, iso, isOwnPath, type MemberRow } from "./hub-d1";
+import { HOUR_MS, HubError, cleanBody, iso, isOwnPath, checkMedia, type MemberRow } from "./hub-d1";
 import { normalizePhone } from "./market-d1";
 
 export const JOB_TYPES = ["cdi", "cdd", "stage", "freelance", "benevolat"] as const;
@@ -114,7 +114,7 @@ export async function createPost(d: D1Like, member: MemberRow, input: { body: st
   const body = cleanBody(input.body, PRO_LIMITS.post, "Message");
   const link = cleanLink(input.link);
   const media = input.mediaPaths ?? [];
-  if (media.length > PRO_LIMITS.media || !media.every(p => isOwnPath(member.id, p))) throw new HubError("invalid", "Photos invalides (4 max)");
+  checkMedia(member.id, media, PRO_LIMITS.media);
   if ((await recent(d, "pro_posts", "member_id", member.id, nowMs - HOUR_MS)) >= PRO_LIMITS.postsPerHour) throw new HubError("rate_limited", "Trop de publications, réessayez plus tard");
   // ponytail: post then media are two statements (not atomic); a failed media insert leaves a text-only post
   const row = await d.prepare("INSERT INTO pro_posts (member_id, body, link, created_at) VALUES (?,?,?,?) RETURNING id").bind(member.id, body, link, iso(nowMs)).first<{ id: number }>();
