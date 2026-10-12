@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useI18n } from "@/i18n";
 import * as hub from "../api";
 import Avatar from "./Avatar";
+import MediaGrid from "./MediaGrid";
 
 const ago = (iso: string) => {
   const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
@@ -29,7 +30,6 @@ export default function PostCard({ post, me, onChanged }: { post: hub.Post; me: 
   const [draft, setDraft] = useState("");
   const canDelete = post.author.id === me.id || me.role === "moderator";
   const commentCount = comments ? comments.length : post.comment_count;
-  const photos = post.media.filter((u): u is string => !!u);
 
   const act = async (fn: () => Promise<unknown>) => {
     try { await fn(); } catch (e) { toast.error((e as Error).message); }
@@ -66,13 +66,7 @@ export default function PostCard({ post, me, onChanged }: { post: hub.Post; me: 
 
       <p className="whitespace-pre-wrap break-words px-4 pb-3 text-[15px] text-slate-900">{post.body}</p>
 
-      {photos.length > 0 && (
-        <div className={`grid gap-0.5 ${photos.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
-          {photos.map((u, i) => (
-            <img key={u} src={u} alt="" loading="lazy" className={`w-full object-cover ${photos.length === 1 ? "max-h-[28rem]" : "aspect-square"} ${photos.length === 3 && i === 0 ? "col-span-2 !aspect-video" : ""}`} />
-          ))}
-        </div>
-      )}
+      <MediaGrid media={post.media} wideFirstOfThree />
 
       {(likes > 0 || commentCount > 0) && (
         <div className="flex items-center justify-between px-4 pt-3 text-sm text-slate-500">

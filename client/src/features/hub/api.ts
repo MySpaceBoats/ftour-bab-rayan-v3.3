@@ -1,4 +1,5 @@
 import { getStoredSession } from "@/_core/authSession";
+import { MAX_VIDEO_BYTES } from "./media";
 
 // The static site and the Worker live on different origins: the hub token travels in an Authorization header (no cookie).
 const apiBase = (import.meta.env.VITE_API_URL as string | undefined) || "/api/trpc";
@@ -79,14 +80,17 @@ export const report = (type: "post" | "comment", id: number, reason: string) => 
 
 /** Uploads one image to R2 through a signed URL; returns the bucket-relative path to send with the post. */
 export const uploadImage = (file: File): Promise<string> => upload(file, false);
+/** Photos and videos (the composers). */
+export const uploadMedia = (file: File): Promise<string> => upload(file, false);
 /** Same upload with the Supabase site session (volunteer "Mes photos" tab). */
 export const uploadSiteImage = (file: File): Promise<string> => upload(file, true);
 
 async function upload(file: File, site: boolean): Promise<string> {
-  if (file.size > MAX_IMAGE_BYTES) throw new HubApiError(0, "too_large", "Image trop lourde (8 Mo max).");
+  const video = file.type.startsWith("video/");
+  if (file.size > (video ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES)) throw new HubApiError(0, "too_large", video ? "Vidéo trop lourde (50 Mo max)." : "Image trop lourde (8 Mo max).");
   const { path, uploadUrl } = await call<{ path: string; uploadUrl: string }>("POST", site ? "volunteer/media" : "media", { body: { contentType: file.type }, admin: site });
   const res = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
-  if (!res.ok) throw new HubApiError(res.status, "upload", "Envoi de la photo impossible.");
+  if (!res.ok) throw new HubApiError(res.status, "upload", "Envoi du fichier impossible.");
   return path;
 }
 
