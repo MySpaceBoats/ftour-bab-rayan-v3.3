@@ -96,7 +96,7 @@ export async function updateProfile(d: D1Like, member: MemberRow, input: { displ
   const avatar = input.avatar_key === undefined ? member.avatar_key : input.avatar_key;
   if (name.length < 1 || name.length > LIMITS.name) throw new HubError("invalid", "Nom invalide (1 à 40 caractères)");
   if (bio.length > LIMITS.bio) throw new HubError("invalid", "Bio trop longue (300 caractères max)");
-  if (avatar != null && !isOwnPath(member.id, avatar)) throw new HubError("invalid", "Photo invalide");
+  if (avatar != null && !isOwnImage(member.id, avatar)) throw new HubError("invalid", "Photo invalide");
   const row = await d.prepare("UPDATE hub_members SET display_name = ?, bio = ?, avatar_key = ? WHERE id = ? RETURNING *")
     .bind(name, bio, avatar, member.id).first<MemberRow>();
   return memberView(row!);
@@ -106,6 +106,9 @@ export async function updateProfile(d: D1Like, member: MemberRow, input: { displ
 export function isOwnPath(memberId: number, path: string): boolean {
   return typeof path === "string" && !path.includes("..") && /^\d+\/[\w.\-]+$/.test(path) && path.startsWith(`${memberId}/`);
 }
+
+/** Photos only (listings, avatars, meetup covers): the member's own path, and never a video. */
+export const isOwnImage = (memberId: number, path: string): boolean => isOwnPath(memberId, path) && !isVideoKey(path);
 
 /** A post carries 0..maxImages images, OR exactly one video and nothing else. Every path must be the member's own. */
 export function checkMedia(memberId: number, media: string[], maxImages: number): void {

@@ -131,6 +131,15 @@ describe("media-r2 video", () => {
     expect(store.size).toBe(0);
   });
 
+  it("only the private hub bucket takes videos: a video key elsewhere (public bucket) is refused", async () => {
+    const { signedUrl } = (await createR2Storage(env, () => T).from("manager-candidates").createSignedUploadUrl("u/1.mp4")).data!;
+    const u = new URL(signedUrl);
+    const body = new Uint8Array([1, 2, 3]);
+    const res = await handleMediaRequest(req(u.pathname + u.search, { method: "PUT", body, headers: { "content-type": "video/mp4", "content-length": "3" } }), env, {}, T + 1000);
+    expect(res!.status).toBe(415);
+    expect(store.size).toBe(0);
+  });
+
   describe("range requests", () => {
     const get = async (range?: string) => {
       await env.GALLERY_MEDIA.put("private/hub/1/v.mp4", new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]), { httpMetadata: { contentType: "video/mp4" } });

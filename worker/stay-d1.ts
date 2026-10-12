@@ -3,7 +3,7 @@
  * No HTTP / Supabase imports: testable with a fake D1. Time is always passed in (nowMs).
  */
 import type { D1Like } from "./gallery-d1";
-import { HOUR_MS, HubError, cleanBody, iso, isOwnPath, type MemberRow } from "./hub-d1";
+import { HOUR_MS, HubError, cleanBody, iso, isOwnImage, type MemberRow } from "./hub-d1";
 import { normalizePhone } from "./market-d1";
 
 export const ST_KINDS = ["chambre", "studio", "appartement", "maison", "canape", "tente"] as const;
@@ -134,7 +134,7 @@ function cleanListing(member: MemberRow, i: StayListingInput): CleanListing {
   const whatsapp = i.whatsapp === true && phone !== null;
   if (whatsapp && !phone!.startsWith("+")) throw new HubError("invalid", "Pour WhatsApp, saisissez le numéro au format international (+212…)");
   const media = i.mediaPaths ?? [];
-  if (media.length > ST_LIMITS.photos || !media.every(p => isOwnPath(member.id, p))) throw new HubError("invalid", `Photos invalides (${ST_LIMITS.photos} max)`);
+  if (media.length > ST_LIMITS.photos || !media.every(p => isOwnImage(member.id, p))) throw new HubError("invalid", `Photos invalides (${ST_LIMITS.photos} max)`);
   return { title, description, kind: i.kind, city, area, capacity, rooms, priceType: i.priceType, price, amenities, availableFrom, availableTo, phone, whatsapp, media };
 }
 

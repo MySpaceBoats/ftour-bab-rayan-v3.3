@@ -1,8 +1,12 @@
+import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { D1Like } from "./gallery-d1";
 import { GALLERY_SCHEMA, fakeD1, openDb, type Sqlite } from "./test-d1";
 import * as h from "./hub-d1";
 import * as pro from "./pro-d1";
+import * as market from "./market-d1";
+import * as stay from "./stay-d1";
+import * as meetup from "./meetup-d1";
 import { createHubHarness } from "./test-hub";
 
 
@@ -72,5 +76,24 @@ describe("hub routes", () => {
     expect(feed.posts[0].media[0]).toMatch(/\.mp4\?exp=/);
     const proFeed = (await (await h.call("GET", "/hub/pro/feed", { token: a.session })).json()) as { posts: { media: string[] }[] };
     expect(proFeed.posts[0].media[0]).toMatch(/\.mp4\?exp=/);
+  });
+});
+
+describe("videos are only for the Fil and Pro feeds", () => {
+  it("market, stay, meetup and avatar accept an image path but refuse a video path", async () => {
+    sqlite.exec(readFileSync(new URL("./d1/meetup.sql", import.meta.url), "utf8"));
+    const a = await member("a@x.ma");
+    const img = `${a.id}/p.jpg`, vid = `${a.id}/f.mp4`;
+    const listing = (m: string) => market.createListing(d, a, { title: "Vélo enfant", description: "Bon état, petites roues", price: 100, category: "autre", condition: "bon", mediaPaths: [m] }, T0);
+    const room = (m: string) => stay.createListing(d, a, { title: "Studio Rabat", description: "Studio calme près du tram", kind: "studio", city: "Rabat", capacity: 2, rooms: 1, priceType: "gratuit", price: 0, mediaPaths: [m] }, T0 + 1);
+    const outing = (m: string) => meetup.createMeetup(d, a, { title: "Randonnée", category: "sortie", description: "Une sortie sympa", country: "Maroc", city: "Rabat", place: "Gare", startsAt: "2026-10-20T10:00", endsAt: "2026-10-20T12:00", capacity: 10, photo: m }, T0 + 2);
+    await expect(listing(img)).resolves.toBeTruthy();
+    await expect(room(img)).resolves.toBeTruthy();
+    await expect(outing(img)).resolves.toBeTruthy();
+    await expect(h.updateProfile(d, a, { avatar_key: img })).resolves.toBeTruthy();
+    await expect(listing(vid)).rejects.toMatchObject({ code: "invalid" });
+    await expect(room(vid)).rejects.toMatchObject({ code: "invalid" });
+    await expect(outing(vid)).rejects.toMatchObject({ code: "invalid" });
+    await expect(h.updateProfile(d, a, { avatar_key: vid })).rejects.toMatchObject({ code: "invalid" });
   });
 });

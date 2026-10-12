@@ -157,7 +157,8 @@ export async function handleMediaRequest(request: Request, env: MediaEnv, cors: 
     if (!(await verifyMedia(secret, "put", key, exp, sig, now))) return new Response("Forbidden", { status: 403, headers: cors });
     const type = (request.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
     const declared = Number(request.headers.get("content-length") ?? 0);
-    if (isVideoKey(key)) {
+    // videos live in the private hub bucket only: never in a public bucket, where any signed key could otherwise host 50 MB files
+    if (isVideoKey(key) && key.startsWith("private/hub/")) {
       if (type !== VIDEO_TYPES[extOf(key)]) return new Response("Unsupported media type", { status: 415, headers: cors });
       // streamed to R2 (never buffered): the declared length must be present and bounded, R2 enforces that the body matches it
       if (!(declared > 0) || declared > MAX_VIDEO_BYTES || !request.body) return new Response("Invalid size", { status: 413, headers: cors });
