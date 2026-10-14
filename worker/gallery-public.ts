@@ -1,6 +1,7 @@
 /** Anonymous gallery upload (photos land as drafts for admin moderation): payload validation and a per-IP hourly quota. */
 import { TRPCError } from "@trpc/server";
 import type { D1Like } from "./gallery-d1";
+import { getSession } from "./hub-d1";
 
 export const PUBLIC_PER_HOUR = 30;
 export const MAX_FILE_BYTES = 8 * 1024 * 1024;
@@ -38,4 +39,10 @@ export async function checkPublicQuota(d: D1Like, ip: string, incoming: number):
     .bind(ip)
     .first<{ n: number }>();
   if ((r?.n ?? 0) + incoming > PUBLIC_PER_HOUR) throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Trop de photos envoyées. Réessayez plus tard." });
+}
+
+/** A connected volunteer (valid hub session, still a confirmed volunteer) publishes straight away; anyone else lands as a draft for admin moderation. */
+export async function resolveUploader(d: D1Like, hubToken: string | null, ip: string, nowMs: number): Promise<{ status: "published" | "draft"; uploadedBy: string }> {
+  const member = hubToken ? await getSession(d, hubToken, nowMs) : null;
+  return member ? { status: "published", uploadedBy: `member:${member.id}` } : { status: "draft", uploadedBy: ip };
 }

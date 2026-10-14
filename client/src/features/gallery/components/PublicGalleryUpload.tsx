@@ -63,6 +63,7 @@ export default function PublicGalleryUpload({ onClose, defaultYear }: Props) {
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [done, setDone] = useState(false);
+  const [published, setPublished] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const albums = trpc.public.galleryAlbums.useQuery();
@@ -89,7 +90,8 @@ export default function PublicGalleryUpload({ onClose, defaultYear }: Props) {
   }, [yearAlbums, selectedYear, defaultYear]);
 
   const upload = trpc.gallery.publicUpload.useMutation({
-    onSuccess: () => setDone(true),
+    // the Worker also returns `published` (the Node router types only expose `count`)
+    onSuccess: r => { setPublished(Boolean((r as { published?: boolean }).published)); setDone(true); },
     onError: e => toast.error(e.message),
   });
 
@@ -175,7 +177,9 @@ export default function PublicGalleryUpload({ onClose, defaultYear }: Props) {
         <div>
           <p className="text-lg font-semibold">Photos reçues, merci !</p>
           <p className="text-sm text-muted-foreground mt-1">
-            Vos photos seront visibles après validation par notre équipe.
+            {published
+              ? "Vos photos sont publiées."
+              : "Vos photos seront visibles après validation par notre équipe."}
           </p>
         </div>
         <div className="flex gap-3">

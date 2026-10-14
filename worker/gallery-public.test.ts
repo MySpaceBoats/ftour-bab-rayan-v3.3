@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { GALLERY_SCHEMA, fakeD1, openDb } from "./test-d1";
-import { checkPublicQuota, decodePublicPhoto, PUBLIC_PER_HOUR } from "./gallery-public";
+import { checkPublicQuota, decodePublicPhoto, PUBLIC_PER_HOUR, resolveUploader } from "./gallery-public";
+import { createSession, upsertMember } from "./hub-d1";
 
 const b64 = (bytes: number[], pad = 0) => btoa(String.fromCharCode(...bytes) + "\0".repeat(pad));
 const JPEG = [0xff, 0xd8, 0xff, 0xe0];
@@ -62,5 +63,34 @@ describe("checkPublicQuota", () => {
     seed(sqlite, "1.1.1.1", PUBLIC_PER_HOUR, "old");
     seed(sqlite, "2.2.2.2", PUBLIC_PER_HOUR);
     await expect(checkPublicQuota(d, "1.1.1.1", 5)).resolves.toBeUndefined();
+  });
+});
+
+describe("resolveUploader", () => {
+  const NOW = Date.parse("2026-10-14T12:00:00.000Z");
+  const setup = async (volStatus = "confirmed") => {
+    const sqlite = openDb();
+    sqlite.exec(GALLERY_SCHEMA);
+    const d = fakeD1(sqlite);
+    sqlite.prepare("INSERT INTO t_volunteers (first_name,last_name,email,status) VALUES ('A','B','amina@x.ma',?)").run(volStatus);
+    const member = await upsertMember(d, "amina@x.ma");
+    const { session } = await createSession(d, member, NOW);
+    return { sqlite, d, member, session };
+  };
+  it("publishes directly for a connected volunteer and records the member", async () => {
+    const { d, member, session } = await setup();
+    expect(await resolveUploader(d, session, "1.2.3.4", NOW)).toEqual({ status: "published", uploadedBy: `member:${member.id}` });
+  });
+  it("keeps anonymous visitors as drafts, recorded by IP", async () => {
+    const { d } = await setup();
+    expect(await resolveUploader(d, null, "1.2.3.4", NOW)).toEqual({ status: "draft", uploadedBy: "1.2.3.4" });
+  });
+  it("treats an unknown or forged token as anonymous", async () => {
+    const { d } = await setup();
+    expect(await resolveUploader(d, "f".repeat(64), "1.2.3.4", NOW)).toEqual({ status: "draft", uploadedBy: "1.2.3.4" });
+  });
+  it("treats a member whose volunteer registration is no longer confirmed as anonymous", async () => {
+    const { d, session } = await setup("cancelled");
+    expect((await resolveUploader(d, session, "1.2.3.4", NOW)).status).toBe("draft");
   });
 });

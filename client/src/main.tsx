@@ -14,6 +14,7 @@ import {
   setStoredSession,
 } from "./_core/authSession";
 import { isDemoAccessEnabled } from "./_core/demoAccess";
+import { getHubToken } from "./features/hub/api";
 import { I18nProvider } from "./i18n";
 import "./index.css";
 
@@ -91,31 +92,38 @@ queryClient.getMutationCache().subscribe(event => {
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/trpc';
 
+async function authHeaders(): Promise<Record<string, string>> {
+  const session = getStoredSession();
+  const demoAccess = isDemoAccessEnabled();
+
+  if (!session) {
+    return demoAccess ? { "x-demo-access": "1" } : {};
+  }
+
+  let accessToken = session.accessToken;
+  if (isSessionExpiringSoon(session.expiresAt)) {
+    accessToken = (await refreshAccessToken(session.refreshToken)) ?? '';
+  }
+
+  if (!accessToken) {
+    return demoAccess ? { "x-demo-access": "1" } : {};
+  }
+
+  return demoAccess
+    ? { Authorization: `Bearer ${accessToken}`, "x-demo-access": "1" }
+    : { Authorization: `Bearer ${accessToken}` };
+}
+
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
       url: API_URL,
       transformer: superjson,
       async headers() {
-        const session = getStoredSession();
-        const demoAccess = isDemoAccessEnabled();
-
-        if (!session) {
-          return demoAccess ? { "x-demo-access": "1" } : {};
-        }
-
-        let accessToken = session.accessToken;
-        if (isSessionExpiringSoon(session.expiresAt)) {
-          accessToken = (await refreshAccessToken(session.refreshToken)) ?? '';
-        }
-
-        if (!accessToken) {
-          return demoAccess ? { "x-demo-access": "1" } : {};
-        }
-
-        return demoAccess
-          ? { Authorization: `Bearer ${accessToken}`, "x-demo-access": "1" }
-          : { Authorization: `Bearer ${accessToken}` };
+        const h = await authHeaders();
+        // lets the Worker recognise a connected volunteer (gallery photos from members are published directly)
+        const hub = getHubToken();
+        return hub ? { ...h, "x-hub-token": hub } : h;
       },
       fetch(input, init) {
         return globalThis.fetch(input, {
