@@ -151,6 +151,7 @@ import MenuProof from "@/features/menu/pages/MenuProof";
 import VolunteerProfilePage from "@/features/volunteer/pages/VolunteerProfile";
 
 import WhatsAppFloatingButton from "./components/WhatsAppFloatingButton";
+import PublicAssistant from "./features/ai/PublicAssistant";
 
 // ============================================
 // FTOUR BÉNÉVOLES — features/ftour
@@ -568,6 +569,7 @@ function App() {
             <Toaster />
             <LocalizedRoutes />
             <WhatsAppFloatingButton />
+            <PublicAssistant />
           </TooltipProvider>
         </CartProvider>
       </ThemeProvider>

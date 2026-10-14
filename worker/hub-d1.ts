@@ -3,6 +3,7 @@
  * Time is always passed in (nowMs): the Worker freezes Date at module load.
  */
 import type { D1Like } from "./gallery-d1";
+import { isVideoKey } from "./media-r2";
 
 export type HubErrorCode = "unauthorized" | "forbidden" | "not_found" | "invalid" | "rate_limited" | "conflict";
 export class HubError extends Error {
@@ -95,7 +96,7 @@ export async function updateProfile(d: D1Like, member: MemberRow, input: { displ
   const avatar = input.avatar_key === undefined ? member.avatar_key : input.avatar_key;
   if (name.length < 1 || name.length > LIMITS.name) throw new HubError("invalid", "Nom invalide (1 à 40 caractères)");
   if (bio.length > LIMITS.bio) throw new HubError("invalid", "Bio trop longue (300 caractères max)");
-  if (avatar != null && !isOwnPath(member.id, avatar)) throw new HubError("invalid", "Photo invalide");
+  if (avatar != null && !isOwnImage(member.id, avatar)) throw new HubError("invalid", "Photo invalide");
   const row = await d.prepare("UPDATE hub_members SET display_name = ?, bio = ?, avatar_key = ? WHERE id = ? RETURNING *")
     .bind(name, bio, avatar, member.id).first<MemberRow>();
   return memberView(row!);
@@ -104,6 +105,17 @@ export async function updateProfile(d: D1Like, member: MemberRow, input: { displ
 /** A bucket-relative media path must be "<memberId>/<file>" with no traversal. */
 export function isOwnPath(memberId: number, path: string): boolean {
   return typeof path === "string" && !path.includes("..") && /^\d+\/[\w.\-]+$/.test(path) && path.startsWith(`${memberId}/`);
+}
+
+/** Photos only (listings, avatars, meetup covers): the member's own path, and never a video. */
+export const isOwnImage = (memberId: number, path: string): boolean => isOwnPath(memberId, path) && !isVideoKey(path);
+
+/** A post carries 0..maxImages images, OR exactly one video and nothing else. Every path must be the member's own. */
+export function checkMedia(memberId: number, media: string[], maxImages: number): void {
+  if (!media.every(p => isOwnPath(memberId, p))) throw new HubError("invalid", "Médias invalides");
+  const videos = media.filter(isVideoKey).length;
+  if (videos > 0 && media.length > 1) throw new HubError("invalid", "Une vidéo se publie seule (sans autre média)");
+  if (videos === 0 && media.length > maxImages) throw new HubError("invalid", `Photos invalides (${maxImages} max)`);
 }
 
 // ---- member photos ------------------------------------------------------
@@ -127,7 +139,8 @@ export async function memberPhotos(d: D1Like, memberId: number): Promise<PhotoVi
      FROM hub_post_media pm JOIN hub_posts p ON p.id = pm.post_id
      LEFT JOIN hub_gallery_proposals gp ON gp.r2_key = pm.r2_key
      LEFT JOIN gallery_photos g ON g.id = gp.gallery_photo_id
-     WHERE p.member_id = ? AND p.status = 'visible' ORDER BY p.id DESC, pm.position ASC LIMIT 200`,
+     WHERE p.member_id = ? AND p.status = 'visible' AND pm.r2_key NOT LIKE '%.mp4' AND pm.r2_key NOT LIKE '%.webm' AND pm.r2_key NOT LIKE '%.mov'
+     ORDER BY p.id DESC, pm.position ASC LIMIT 200`,
   ).bind(memberId).all<PhotoView>();
   return results;
 }
@@ -137,7 +150,7 @@ export async function memberPhotos(d: D1Like, memberId: number): Promise<PhotoVi
  * returns the new gallery photo id. One proposal per photo (PRIMARY KEY claim, released if publish fails).
  */
 export async function proposeToGallery(d: D1Like, member: MemberRow, path: string, nowMs: number, publish: (caption: string) => Promise<string>): Promise<{ gallery_photo_id: string }> {
-  if (!isOwnPath(member.id, path)) throw new HubError("invalid", "Photo invalide");
+  if (!isOwnPath(member.id, path) || isVideoKey(path)) throw new HubError("invalid", "Photo invalide");
   const post = await d.prepare(
     "SELECT p.body FROM hub_post_media pm JOIN hub_posts p ON p.id = pm.post_id WHERE pm.r2_key = ? AND p.member_id = ? AND p.status = 'visible' LIMIT 1",
   ).bind(path, member.id).first<{ body: string }>();
@@ -183,7 +196,7 @@ export async function recordUpload(d: D1Like, memberId: number, nowMs: number): 
 export async function createPost(d: D1Like, member: MemberRow, input: { body: string; mediaPaths?: string[] }, nowMs: number): Promise<{ id: number }> {
   const body = cleanBody(input.body, LIMITS.post, "Message");
   const media = input.mediaPaths ?? [];
-  if (media.length > LIMITS.media || !media.every(p => isOwnPath(member.id, p))) throw new HubError("invalid", "Photos invalides (4 max)");
+  checkMedia(member.id, media, LIMITS.media);
   if ((await countSince(d, "hub_posts", member.id, nowMs)) >= LIMITS.postsPerHour) throw new HubError("rate_limited", "Trop de publications, réessayez plus tard");
   // ponytail: post then media are two statements (not atomic); a failed media insert leaves a text-only post
   const row = await d.prepare("INSERT INTO hub_posts (member_id, body, created_at) VALUES (?,?,?) RETURNING id").bind(member.id, body, iso(nowMs)).first<{ id: number }>();
@@ -309,7 +322,7 @@ export async function hideContent(d: D1Like, type: "post" | "comment", id: numbe
   await d.prepare(`UPDATE ${t} SET status = 'hidden' WHERE id = ?`).bind(id).run();
 }
 
-async function teamMemberId(d: D1Like): Promise<number> {
+export async function teamMemberId(d: D1Like): Promise<number> {
   const row = await d.prepare("INSERT INTO hub_members (email, display_name, role) VALUES (?, 'Équipe Ftour', 'moderator') ON CONFLICT(email) DO UPDATE SET email = excluded.email RETURNING id")
     .bind(TEAM_EMAIL).first<{ id: number }>();
   return row!.id;

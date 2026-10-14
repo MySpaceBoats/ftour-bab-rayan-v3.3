@@ -5,6 +5,10 @@ compatibility_date = "2026-02-13"
 [assets]
 directory = "dist/public"
 
+# Assistant IA: free OpenRouter models, tried in order (secret OPENROUTER_API_KEY via `wrangler secret put`)
+[vars]
+AI_MODELS = "openrouter/free"
+
 [observability]
 [observability.logs]
 enabled = false
@@ -37,6 +41,9 @@ new_sqlite_classes = ["HubChat"]
 # ---- Staging: gallery on D1 + R2 ----
 [env.staging]
 name = "ftour-bab-rayan-staging"
+
+[env.staging.vars]
+AI_MODELS = "openrouter/free"
 
 [[env.staging.d1_databases]]
 binding = "DB"

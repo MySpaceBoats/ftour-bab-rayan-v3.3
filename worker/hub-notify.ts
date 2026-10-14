@@ -108,7 +108,7 @@ function notificationEmail(baseUrl: string, n: NotifInput): Omit<BatchEmail, "to
 }
 
 /** Records every notification, then sends ONE batch of emails for the newly recorded ones. Returns the number recorded. */
-async function deliverTo(d: D1Like, mailer: Mailer, items: { memberId: number; n: NotifInput }[], nowMs: number): Promise<number> {
+export async function deliverTo(d: D1Like, mailer: Mailer, items: { memberId: number; n: NotifInput }[], nowMs: number): Promise<number> {
   let inserted = 0;
   const emails: BatchEmail[] = [];
   for (const { memberId, n } of items) {

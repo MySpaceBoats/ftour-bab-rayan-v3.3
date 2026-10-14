@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useI18n } from "@/i18n";
 import type * as hub from "../../api";
 import Avatar from "../../components/Avatar";
+import MediaGrid from "../../components/MediaGrid";
 import * as api from "../pro-api";
 import { ago } from "../format";
 
@@ -22,7 +23,6 @@ export default function ProPostCard({ post, me, onChanged }: { post: api.ProPost
   const [draft, setDraft] = useState("");
   const canDelete = post.author.id === me.id || me.role === "moderator";
   const commentCount = comments ? comments.length : post.comment_count;
-  const photos = post.media.filter((u): u is string => !!u);
   const profile = `/${lang}/benevole/espace/pro/membre/${post.author.id}`;
 
   const act = async (fn: () => Promise<unknown>) => { try { await fn(); } catch (e) { toast.error((e as Error).message); } };
@@ -49,11 +49,7 @@ export default function ProPostCard({ post, me, onChanged }: { post: api.ProPost
           <ExternalLink size={16} className="shrink-0" /><span className="truncate">{host(post.link)}</span>
         </a>
       )}
-      {photos.length > 0 && (
-        <div className={`grid gap-0.5 ${photos.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
-          {photos.map(u => <img key={u} src={u} alt="" loading="lazy" className={`w-full object-cover ${photos.length === 1 ? "max-h-[28rem]" : "aspect-square"}`} />)}
-        </div>
-      )}
+      <MediaGrid media={post.media} />
 
       {(likes > 0 || commentCount > 0) && (
         <div className="flex items-center justify-between px-4 pt-3 text-sm text-slate-500">

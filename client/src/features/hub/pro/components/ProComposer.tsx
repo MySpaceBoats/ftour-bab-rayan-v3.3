@@ -4,6 +4,7 @@ import { ImagePlus, Link2, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { VIDEO_TYPES, pickMedia } from "../../media";
 import * as hub from "../../api";
 import Avatar from "../../components/Avatar";
 import * as api from "../pro-api";
@@ -22,9 +23,10 @@ export default function ProComposer({ me, onPosted }: { me: hub.Member; onPosted
 
   const pick = (list: FileList | null) => {
     if (!list) return;
-    const all = [...files, ...Array.from(list)].filter(f => f.type.startsWith("image/"));
-    if (all.length > MAX_PHOTOS) toast.info("4 photos maximum");
-    setFiles(all.slice(0, MAX_PHOTOS));
+    const r = pickMedia(files, Array.from(list), MAX_PHOTOS);
+    if (r.error) toast.error(r.error);
+    else if (r.info) toast.info(r.info);
+    setFiles(r.files);
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -32,7 +34,7 @@ export default function ProComposer({ me, onPosted }: { me: hub.Member; onPosted
     if (!body.trim() || busy) return;
     setBusy(true);
     try {
-      const media = await Promise.all(files.map(hub.uploadImage));
+      const media = await Promise.all(files.map(hub.uploadMedia));
       await api.createPost({ body, link: link.trim(), media });
       setBody(""); setLink(""); setShowLink(false); setFiles([]);
       onPosted();
@@ -50,17 +52,19 @@ export default function ProComposer({ me, onPosted }: { me: hub.Member; onPosted
       {files.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           {files.map((f, i) => (
-            <div key={f.name + i} className="relative h-20 w-20">
-              <img src={previews[i]} alt="" className="h-20 w-20 rounded-lg object-cover" />
-              <button type="button" aria-label="Retirer la photo" className="absolute -right-1 -top-1 rounded-full bg-black/70 p-0.5 text-white" onClick={() => setFiles(files.filter((_, j) => j !== i))}><X size={14} /></button>
+            <div key={f.name + i} className="relative h-20">
+              {f.type.startsWith("video/")
+                ? <video src={previews[i]} muted playsInline className="h-20 w-28 rounded-lg bg-black object-cover" />
+                : <img src={previews[i]} alt="" className="h-20 w-20 rounded-lg object-cover" />}
+              <button type="button" aria-label="Retirer le média" className="absolute -right-1 -top-1 rounded-full bg-black/70 p-0.5 text-white" onClick={() => setFiles(files.filter((_, j) => j !== i))}><X size={14} /></button>
             </div>
           ))}
         </div>
       )}
       <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3">
         <div className="flex gap-1">
-          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden onChange={e => pick(e.target.files)} />
-          <Button type="button" variant="ghost" size="sm" disabled={files.length >= MAX_PHOTOS} onClick={() => fileRef.current?.click()}><ImagePlus size={18} className="mr-1.5" />Photo</Button>
+          <input ref={fileRef} type="file" accept={`image/jpeg,image/png,image/webp,image/gif,${VIDEO_TYPES.join(",")}`} multiple hidden onChange={e => pick(e.target.files)} />
+          <Button type="button" variant="ghost" size="sm" disabled={files.length >= MAX_PHOTOS || files.some(f => f.type.startsWith("video/"))} onClick={() => fileRef.current?.click()}><ImagePlus size={18} className="mr-1.5" />Photo / vidéo</Button>
           <Button type="button" variant="ghost" size="sm" aria-pressed={showLink} onClick={() => setShowLink(!showLink)}><Link2 size={18} className="mr-1.5" />Lien</Button>
         </div>
         <Button type="button" className="bg-blue-700 hover:bg-blue-800" onClick={submit} disabled={busy || !body.trim()}>

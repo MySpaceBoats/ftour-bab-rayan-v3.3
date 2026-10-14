@@ -1,4 +1,5 @@
 import { getStoredSession } from "@/_core/authSession";
+import { MAX_VIDEO_BYTES } from "./media";
 
 // The static site and the Worker live on different origins: the hub token travels in an Authorization header (no cookie).
 const apiBase = (import.meta.env.VITE_API_URL as string | undefined) || "/api/trpc";
@@ -88,14 +89,17 @@ export const report = (type: "post" | "comment", id: number, reason: string) => 
 
 /** Uploads one image to R2 through a signed URL; returns the bucket-relative path to send with the post. */
 export const uploadImage = (file: File): Promise<string> => upload(file, false);
+/** Photos and videos (the composers). */
+export const uploadMedia = (file: File): Promise<string> => upload(file, false);
 /** Same upload with the Supabase site session (volunteer "Mes photos" tab). */
 export const uploadSiteImage = (file: File): Promise<string> => upload(file, true);
 
 async function upload(file: File, site: boolean): Promise<string> {
-  if (file.size > MAX_IMAGE_BYTES) throw new HubApiError(0, "too_large", "Image trop lourde (8 Mo max).");
+  const video = file.type.startsWith("video/");
+  if (file.size > (video ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES)) throw new HubApiError(0, "too_large", video ? "Vidéo trop lourde (50 Mo max)." : "Image trop lourde (8 Mo max).");
   const { path, uploadUrl } = await call<{ path: string; uploadUrl: string }>("POST", site ? "volunteer/media" : "media", { body: { contentType: file.type }, admin: site });
   const res = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
-  if (!res.ok) throw new HubApiError(res.status, "upload", "Envoi de la photo impossible.");
+  if (!res.ok) throw new HubApiError(res.status, "upload", "Envoi du fichier impossible.");
   return path;
 }
 
@@ -109,6 +113,13 @@ export const getMember = (id: number) => call<{ member: Member; photos: Photo[] 
 export const adminReports = () => call<{ reports: Report[] }>("GET", "admin/reports", { admin: true }).then(r => r.reports);
 export const adminDismiss = (id: number) => call<{ ok: true }>("POST", `admin/reports/${id}/dismiss`, { admin: true });
 export const adminHide = (type: "post" | "comment", id: number) => call<{ ok: true }>("POST", "admin/hide", { admin: true, body: { type, id } });
+export interface ModerationItem {
+  id: number; target_type: "post" | "comment"; target_id: number; rule: string | null; confidence: number | null; reason: string | null;
+  action: "hidden" | "flagged" | "restored" | "error"; created_at: string; reviewed_at: string | null; author: string; excerpt: string | null;
+}
+export const adminModeration = (filter: "review" | "all") => call<{ items: ModerationItem[] }>("GET", `admin/moderation?filter=${filter}`, { admin: true }).then(r => r.items);
+export const adminModerationRestore = (id: number) => call<{ ok: true }>("POST", `admin/moderation/${id}/restore`, { admin: true });
+export const adminModerationConfirm = (id: number) => call<{ ok: true }>("POST", `admin/moderation/${id}/confirm`, { admin: true });
 export const adminAnnounce = (body: string, pinned: boolean) => call<{ id: number }>("POST", "admin/posts", { admin: true, body: { body, pinned } });
 export const adminMembers = () => call<{ members: AdminMember[] }>("GET", "admin/members", { admin: true }).then(r => r.members);
 export const adminUpdateMember = (id: number, b: { status?: "active" | "suspended"; role?: "member" | "moderator" }) => call<{ ok: true }>("PUT", `admin/members/${id}`, { admin: true, body: b });

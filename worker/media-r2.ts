@@ -12,6 +12,10 @@ import type { R2Like } from "./gallery-d1";
 export const PUBLIC_BUCKETS = new Set(["images", "manager-candidates", "product-images", "Formulaire", "RIB", "Images siteweb"]);
 export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const UPLOAD_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+export const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+export const VIDEO_TYPES: Record<string, string> = { mp4: "video/mp4", webm: "video/webm", mov: "video/quicktime" };
+const extOf = (key: string) => /\.([a-z0-9]+)$/i.exec(key)?.[1].toLowerCase() ?? "";
+export const isVideoKey = (key: string) => Object.hasOwn(VIDEO_TYPES, extOf(key));
 // www.ftourbabrayan.ma is a different deployment (static site): media must be served from the Worker itself.
 export const DEFAULT_MEDIA_BASE = "https://ftour-bab-rayan-v2.reda-sebbani-43b.workers.dev";
 
@@ -70,7 +74,10 @@ export function createR2Storage(env: MediaEnv, now: () => number = Date.now) {
     async createSignedUrl(path: string, expiresIn: number) {
       if (!env.JWT_SECRET) return fail("JWT_SECRET missing: cannot sign media URLs");
       const key = objectKey(bucket, path);
-      const exp = Math.floor(now() / 1000) + expiresIn;
+      const nowS = Math.floor(now() / 1000);
+      // hub media: one URL per image per window, so the browser reuses its cached copy instead of refetching on every page.
+      // The expiry lands between expiresIn and 2*expiresIn from now. Other buckets (payment proofs...) keep an exact expiry.
+      const exp = bucket === "hub" ? (Math.floor(nowS / expiresIn) + 2) * expiresIn : nowS + expiresIn;
       const sig = await signMedia(env.JWT_SECRET, "get", key, exp);
       return { data: { signedUrl: `${originOf(env)}/media-signed/${encKey(key)}?exp=${exp}&sig=${sig}` }, error: null };
     },
@@ -124,18 +131,46 @@ export async function handleMediaRequest(request: Request, env: MediaEnv, cors: 
 
   if (route === "/media-signed/" && request.method === "GET") {
     if (!(await verifyMedia(secret, "get", key, exp, sig, now))) return new Response("Forbidden", { status: 403, headers: cors });
+    // private hub media (photos, videos) can sit in the browser cache for an hour; other private buckets never
+    const signedCache = key.startsWith("private/hub/") ? "private, max-age=3600" : "private, no-store";
+    const range = /^bytes=(\d*)-(\d*)$/.exec((request.headers.get("range") ?? "").trim());
+    if (range && (range[1] || range[2]) && env.GALLERY_MEDIA.head) {
+      const head = await env.GALLERY_MEDIA.head(key);
+      if (!head) return notFound();
+      const size = head.size;
+      const start = range[1] === "" ? Math.max(0, size - Number(range[2])) : Number(range[1]);
+      const end = range[1] === "" || range[2] === "" ? size - 1 : Math.min(Number(range[2]), size - 1);
+      if (size === 0 || start >= size || start > end) return new Response(null, { status: 416, headers: { ...cors, "Content-Range": `bytes */${size}` } });
+      const part = await env.GALLERY_MEDIA.get(key, { range: { offset: start, length: end - start + 1 } });
+      if (!part) return notFound();
+      return new Response(part.body, {
+        status: 206,
+        headers: {
+          ...cors, "Content-Type": part.httpMetadata?.contentType ?? "application/octet-stream", "Cache-Control": signedCache, ETag: part.httpEtag,
+          "Accept-Ranges": "bytes", "Content-Range": `bytes ${start}-${end}/${size}`, "Content-Length": String(end - start + 1),
+        },
+      });
+    }
     const obj = await env.GALLERY_MEDIA.get(key);
     if (!obj) return notFound();
     return new Response(obj.body, {
-      headers: { ...cors, "Content-Type": obj.httpMetadata?.contentType ?? "application/octet-stream", "Cache-Control": "private, no-store", ETag: obj.httpEtag },
+      headers: { ...cors, "Content-Type": obj.httpMetadata?.contentType ?? "application/octet-stream", "Cache-Control": signedCache, ETag: obj.httpEtag, "Accept-Ranges": "bytes" },
     });
   }
 
   if (route === "/media-upload/" && request.method === "PUT") {
     if (!(await verifyMedia(secret, "put", key, exp, sig, now))) return new Response("Forbidden", { status: 403, headers: cors });
     const type = (request.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
-    if (!UPLOAD_TYPES.has(type)) return new Response("Unsupported media type", { status: 415, headers: cors });
     const declared = Number(request.headers.get("content-length") ?? 0);
+    // videos live in the private hub bucket only: never in a public bucket, where any signed key could otherwise host 50 MB files
+    if (isVideoKey(key) && key.startsWith("private/hub/")) {
+      if (type !== VIDEO_TYPES[extOf(key)]) return new Response("Unsupported media type", { status: 415, headers: cors });
+      // streamed to R2 (never buffered): the declared length must be present and bounded, R2 enforces that the body matches it
+      if (!(declared > 0) || declared > MAX_VIDEO_BYTES || !request.body) return new Response("Invalid size", { status: 413, headers: cors });
+      await env.GALLERY_MEDIA.put(key, request.body, { httpMetadata: { contentType: type } });
+      return new Response(JSON.stringify({ Key: key }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+    if (!UPLOAD_TYPES.has(type)) return new Response("Unsupported media type", { status: 415, headers: cors });
     if (declared > MAX_UPLOAD_BYTES) return new Response("Payload too large", { status: 413, headers: cors });
     const bytes = await request.arrayBuffer();
     if (bytes.byteLength === 0 || bytes.byteLength > MAX_UPLOAD_BYTES) return new Response("Invalid size", { status: 413, headers: cors });

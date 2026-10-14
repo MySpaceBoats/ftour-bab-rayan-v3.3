@@ -12,6 +12,7 @@ import { handleCashOrderRequest } from './cash-orders';
 import { handleMemberCardRequest } from './member-cards';
 import { sendEmail } from './email';
 import * as hubNotify from './hub-notify';
+import * as aiD1 from './ai-d1';
 
 export interface Env {
   SUPABASE_URL: string;
@@ -37,6 +38,9 @@ export interface Env {
   DB?: D1Like;
   /** Hub realtime chat (presence + push). Absent: /hub/ws answers 503 and the hub falls back to polling. */
   HUB_CHAT?: import('./hub').ChatNamespace;
+  OPENROUTER_API_KEY?: string;
+  AI_MODELS?: string;
+  MODERATION_ADMIN_EMAIL?: string;
   /** Overrides d1-tables.ts: comma list of Supabase tables served from D1, or "none" (instant rollback lever). */
   D1_TABLES?: string;
   /** Overrides d1-tables.ts R2_BUCKETS: Supabase Storage buckets served from R2, or "none". */
@@ -143,6 +147,11 @@ export default {
       }
     } catch (e) {
       console.error('[cron] hub reminders failed', e);
+    }
+    try {
+      if (env.DB) await aiD1.purge(env.DB, Date.now());
+    } catch (e) {
+      console.error('[cron] ai purge failed', e);
     }
   },
 
