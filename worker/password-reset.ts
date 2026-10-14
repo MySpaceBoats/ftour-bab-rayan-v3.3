@@ -6,6 +6,9 @@ const LANGS = ["fr", "en", "ar", "amz"];
 
 interface ResetEnv { PUBLIC_APP_URL?: string; RESEND_API_KEY?: string; EMAIL_PROVIDER_KEY?: string }
 
+export interface ResetCopy { subject: string; intro: string }
+const RESET_COPY: ResetCopy = { subject: "Réinitialisation de votre mot de passe", intro: "Pour choisir un nouveau mot de passe, cliquez sur ce lien :" };
+
 /** Never reveals whether the address has an account: unknown address and mail failure both resolve silently (logged). */
 export async function requestPasswordReset(
   supabase: SupabaseClient,
@@ -13,6 +16,7 @@ export async function requestPasswordReset(
   email: string,
   lang: string,
   send: typeof sendEmail = sendEmail,
+  copy: ResetCopy = RESET_COPY,
 ): Promise<void> {
   const { data, error } = await supabase.auth.admin.generateLink({ type: "recovery", email });
   const hash = data?.properties?.hashed_token;
@@ -22,8 +26,8 @@ export async function requestPasswordReset(
   try {
     await send({
       to: email,
-      subject: "Réinitialisation de votre mot de passe",
-      html: `<p>Bonjour,</p><p>Pour choisir un nouveau mot de passe, cliquez sur ce lien :</p><p><a href="${escapeHtml(url)}">${escapeHtml(url)}</a></p><p style="color:#64748b;font-size:12px">Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>`,
+      subject: copy.subject,
+      html: `<p>Bonjour,</p><p>${escapeHtml(copy.intro)}</p><p><a href="${escapeHtml(url)}">${escapeHtml(url)}</a></p><p style="color:#64748b;font-size:12px">Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>`,
       apiKey: env.RESEND_API_KEY || env.EMAIL_PROVIDER_KEY || "",
     });
   } catch (err) {
