@@ -47,12 +47,13 @@ CREATE TABLE IF NOT EXISTS hub_moderation (
   reason TEXT,
   action TEXT NOT NULL CHECK (action IN ('hidden','flagged','restored','error')),
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-  restored_at TEXT,
-  restored_by INTEGER REFERENCES hub_members(id),
+  reviewed_at TEXT,
+  restored_by TEXT,
   UNIQUE (target_type, target_id)
 );
 ```
 
+- `reviewed_at` : posé quand un admin a traité la ligne (restaurée, confirmée ou ignorée). `restored_by` : e-mail de l'admin (les admins du site sont des comptes Supabase, pas des `hub_members`).
 - `UNIQUE(target_type, target_id)` garantit une analyse par contenu et empêche de réanalyser un contenu restauré.
 - Les tables `hub_posts` et `hub_comments` ne changent pas. Le statut `hidden` existant est réutilisé.
 - Les motifs `CHECK … GLOB` de plus de 50 octets sont refusés par D1 : aucun n'est utilisé ici.
@@ -83,27 +84,27 @@ Branchement dans `worker/hub.ts` : après `createPost` et `addComment`, un `back
 Déclenchées quand un contenu est masqué ; un simple signalement ne notifie que l'admin.
 
 **Auteur :**
-- Notification dans l'espace (cloche), de type `moderation`.
+- Notification dans l'espace (cloche), de type `announcement` (type existant : aucun changement de schéma, car `hub_notifications` et `hub_notification_prefs` contraignent `type` par un `CHECK`).
 - Mail via `hub-notify` (Resend).
-- Message dans la messagerie, envoyé par le compte « Équipe Ftour » (`ensureTeamMember`, `role = 'moderator'`) via un fil Pro direct.
+- Message dans la messagerie, envoyé par le compte « Équipe Ftour » dans un fil Pro direct, écrit directement en base (`pro_threads` / `pro_messages`) car `openThread`/`sendMessage` exigent des membres bénévoles confirmés, ce que le compte Équipe n'est pas. Le fil est en lecture seule pour le membre (une réponse est refusée par `sendMessage`) : le message indique l'adresse de contact.
 - Contenu : règle violée (titre et description), raison, extrait masqué, et comment contester (répondre au message ou écrire à `support@ftourbabrayan.ma`).
 
 **Administrateur :**
 - Mail à `MODERATION_ADMIN_EMAIL` (variable Worker, par défaut `support@ftourbabrayan.ma`).
 - Pour chaque `hub_members` avec `role = 'moderator'` (hors compte Équipe) : notification dans l'espace et message de l'Équipe Ftour dans la messagerie, avec extrait, auteur, règle et lien vers l'écran de modération.
 
-`NOTIF_TYPES` reçoit la valeur `moderation` (mail activé par défaut dans `EMAIL_DEFAULTS`). La contrainte éventuelle sur le type dans `hub_notifications` est étendue par une migration idempotente.
+Pour que le fil Équipe soit visible dans la messagerie du membre, un nouveau prédicat SQL `viewOk` (`pro-d1.ts`) remplace `memberOk` uniquement dans les lectures de la boîte de réception (`listThreads`, `listMessages`, `unreadTotal`, et les deux filtres de `messenger-d1.ts`). Il accepte en plus le compte Équipe actif. Les écritures (`openThread`, `sendMessage`) gardent `memberOk` : personne ne peut écrire à l'Équipe.
 
 Un échec d'un canal (mail, messagerie, cloche) ne bloque pas les autres et est journalisé ; le masquage reste acquis.
 
 ## 6. Écran admin
 Dans `client/src/features/hub/admin/AdminHub.tsx`, nouvel onglet « Modération IA » :
-- Liste paginée des décisions : date, auteur, extrait, règle, confiance, statut (`hidden`, `flagged`, `restored`, `error`).
-- **Restaurer** : `status = 'visible'`, ligne passée à `restored` (`restored_by`, `restored_at`), notification à l'auteur.
-- **Confirmer** : laisse le contenu masqué et retire la ligne des « à revoir ».
+- Liste des 100 dernières décisions (filtre « à revoir » ou « toutes ») : date, auteur, extrait, règle, confiance, statut (`hidden`, `flagged`, `restored`, `error`).
+- **Restaurer** : sur un contenu masqué, `status = 'visible'`, ligne passée à `restored` (`restored_by`, `reviewed_at`), notification à l'auteur ; sur un contenu signalé, simple clôture de la ligne (`restored`), sans notification.
+- **Confirmer** : sur un contenu masqué, clôt la ligne (`reviewed_at`) ; sur un contenu signalé, masque le contenu (`action = 'hidden'`) et notifie l'auteur et les admins comme un masquage automatique.
 
 Routes dans `hub.ts`, réservées aux admins (403 sinon) :
-- `GET admin/moderation?status=&cursor=`
+- `GET admin/moderation?filter=review|all`
 - `POST admin/moderation/restore` `{ id }`
 - `POST admin/moderation/confirm` `{ id }`
 
@@ -128,7 +129,7 @@ Faux D1 (`test-d1.ts`) et faux `fetch` du modèle, comme les tests du Hub.
 3. Déployer le worker puis Pages depuis une branche issue de `main`.
 
 ## Hypothèses à vérifier au début du plan
-- Le compte « Équipe Ftour » peut ouvrir un fil Pro avec un membre (`memberOk` dans `pro-d1.ts`). Sinon : message envoyé via une autre voie à définir dans le plan.
+- ~~Le compte Équipe peut ouvrir un fil Pro~~ : vérifié, c'est faux (`memberOk` exige un bénévole confirmé). Résolu par l'écriture directe et `viewOk` (section 5).
 - Les administrateurs de l'espace sont des `hub_members` avec `role = 'moderator'`. Si l'admin est un compte Supabase séparé, il ne reçoit que le mail.
-- La table `hub_notifications` contraint ou non la valeur de `type`.
+- ~~`hub_notifications` contraint `type`~~ : vérifié, oui (`CHECK`). Résolu en réutilisant `announcement` (section 5).
 - Les modèles `:free` renvoient du JSON exploitable avec cette invite ; sinon le prompt est ajusté, les seuils restent inchangés.
