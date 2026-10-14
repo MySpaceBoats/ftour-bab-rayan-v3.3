@@ -16,7 +16,7 @@ import * as donationsDb from "./donations-d1";
 import { sendEmail, generateGalleryUploadValidationEmail } from "./email";
 import { notifySupport } from "./support-notify";
 import { completePasswordReset, requestPasswordReset } from "./password-reset";
-import { checkPublicQuota, decodePublicPhoto } from "./gallery-public";
+import { checkPublicQuota, decodePublicPhoto, resolveUploader } from "./gallery-public";
 import * as XLSX from "xlsx";
 import {
   addDaysToDateString,
@@ -2219,6 +2219,7 @@ const galleryRouter = router({
       const ip = ctx.req.headers.get("cf-connecting-ip") ?? ctx.req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 
       await checkPublicQuota(d1, ip, input.photos.length);
+      const who = await resolveUploader(d1, ctx.req.headers.get("x-hub-token"), ip, Date.now());
       // Validate everything before writing anything.
       const decoded = input.photos.map(photo => ({ photo, ...decodePublicPhoto(photo) }));
 
@@ -2236,11 +2237,11 @@ const galleryRouter = router({
               albumId: photo.albumId,
               sortOrder: 0,
               isFeatured: false,
-              status: "draft",
+              status: who.status,
               storagePath: key,
               sizeBytes: buffer.length,
               mimeType: photo.fileType,
-              uploadedBy: ip,
+              uploadedBy: who.uploadedBy,
               validationEmail: null,
               validationToken: null,
               validated: false,
@@ -2254,8 +2255,8 @@ const galleryRouter = router({
         count++;
       }
 
-      await notifySupport(ctx.env, { kind: "photos", title: "Photos envoyées à la galerie (public)", lines: [["Photos", count], ["Statut", "en attente de modération"]] });
-      return { count };
+      await notifySupport(ctx.env, { kind: "photos", title: "Photos envoyées à la galerie (public)", lines: [["Photos", count], ["Statut", who.status === "published" ? "publiée (membre bénévole)" : "en attente de modération"]] });
+      return { count, published: who.status === "published" };
     }),
 
   uploadPhotos: protectedProcedure
