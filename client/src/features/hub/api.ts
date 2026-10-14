@@ -104,6 +104,13 @@ export const getMember = (id: number) => call<{ member: Member; photos: Photo[] 
 export const adminReports = () => call<{ reports: Report[] }>("GET", "admin/reports", { admin: true }).then(r => r.reports);
 export const adminDismiss = (id: number) => call<{ ok: true }>("POST", `admin/reports/${id}/dismiss`, { admin: true });
 export const adminHide = (type: "post" | "comment", id: number) => call<{ ok: true }>("POST", "admin/hide", { admin: true, body: { type, id } });
+export interface ModerationItem {
+  id: number; target_type: "post" | "comment"; target_id: number; rule: string | null; confidence: number | null; reason: string | null;
+  action: "hidden" | "flagged" | "restored" | "error"; created_at: string; reviewed_at: string | null; author: string; excerpt: string | null;
+}
+export const adminModeration = (filter: "review" | "all") => call<{ items: ModerationItem[] }>("GET", `admin/moderation?filter=${filter}`, { admin: true }).then(r => r.items);
+export const adminModerationRestore = (id: number) => call<{ ok: true }>("POST", `admin/moderation/${id}/restore`, { admin: true });
+export const adminModerationConfirm = (id: number) => call<{ ok: true }>("POST", `admin/moderation/${id}/confirm`, { admin: true });
 export const adminAnnounce = (body: string, pinned: boolean) => call<{ id: number }>("POST", "admin/posts", { admin: true, body: { body, pinned } });
 export const adminMembers = () => call<{ members: AdminMember[] }>("GET", "admin/members", { admin: true }).then(r => r.members);
 export const adminUpdateMember = (id: number, b: { status?: "active" | "suspended"; role?: "member" | "moderator" }) => call<{ ok: true }>("PUT", `admin/members/${id}`, { admin: true, body: b });
