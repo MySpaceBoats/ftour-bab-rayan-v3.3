@@ -34,6 +34,22 @@ class_name = "HubChat"
 tag = "v1"
 new_sqlite_classes = ["HubChat"]
 
+# Superassistant admin: Cloudflare Container (terminal git/node/pnpm). Image publique tirée par Cloudflare : pas de Docker local.
+# Garder la version alignée sur @cloudflare/sandbox (package.json). pnpm est installé au premier usage (worker/superassistant-tools.ts).
+[[containers]]
+class_name = "Sandbox"
+image = "docker.io/cloudflare/sandbox:0.7.0"
+instance_type = "standard-1"
+max_instances = 1
+
+[[durable_objects.bindings]]
+name = "Sandbox"
+class_name = "Sandbox"
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Sandbox"]
+
 # ---- Staging: gallery on D1 + R2 ----
 [env.staging]
 name = "ftour-bab-rayan-staging"

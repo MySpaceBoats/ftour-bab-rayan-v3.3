@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import AdminSidebar from './AdminSidebar';
 import AdminTopbar from './AdminTopbar';
 import AdminCommandPalette from './AdminCommandPalette';
+import AdminSuperAssistant from './AdminSuperAssistant';
 import { ROUTE_TO_NAV_ID, ROUTE_TO_TITLE } from './adminRouteMap';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
@@ -131,6 +132,7 @@ export default function AdminFrame({
           </main>
         </div>
         <AdminCommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
+        {user.role === 'super_admin' && <AdminSuperAssistant page={title} />}
       </div>
     </AdminShellContext.Provider>
   );
