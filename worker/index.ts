@@ -38,6 +38,7 @@ export interface Env {
   DB?: D1Like;
   /** Hub realtime chat (presence + push). Absent: /hub/ws answers 503 and the hub falls back to polling. */
   HUB_CHAT?: import('./hub').ChatNamespace;
+  SUPPORT_NOTIFY_EMAIL?: string;
   OPENROUTER_API_KEY?: string;
   AI_MODELS?: string;
   MODERATION_ADMIN_EMAIL?: string;
