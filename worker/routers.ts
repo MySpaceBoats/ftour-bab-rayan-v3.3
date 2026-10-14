@@ -27,6 +27,11 @@ import {
 // Initialize tRPC
 const t = initTRPC.context<WorkerContext>().create({
   transformer: superjson,
+  // Never expose stack traces (internal paths) to API clients.
+  errorFormatter({ shape }) {
+    const { stack: _stack, ...data } = shape.data;
+    return { ...shape, data };
+  },
 });
 
 export const router = t.router;
