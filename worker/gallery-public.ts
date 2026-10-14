@@ -17,17 +17,18 @@ const kindOf = (b: Uint8Array): "jpg" | "png" | "webp" | null => {
 
 /** The bytes must really be the image type announced: a renamed HTML or script file is refused. */
 export function decodePublicPhoto(photo: { fileType: string; fileData: string }): { ext: string; buffer: Uint8Array } {
-  const ext = EXT[photo.fileType];
-  if (!ext) throw bad("Format non supporté. JPEG, PNG, WebP uniquement.");
+  if (!EXT[photo.fileType]) throw bad("Format non supporté. JPEG, PNG, WebP uniquement.");
   let buffer: Uint8Array;
   try {
     buffer = Uint8Array.from(atob(photo.fileData.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, "")), c => c.charCodeAt(0));
   } catch {
     throw bad("Contenu de fichier invalide.");
   }
-  if (kindOf(buffer) !== ext) throw bad("Contenu de fichier invalide.");
+  // The client re-encodes WebP to JPEG but keeps the announced type: the real bytes decide the extension.
+  const real = kindOf(buffer);
+  if (!real) throw bad("Contenu de fichier invalide.");
   if (buffer.length > MAX_FILE_BYTES) throw bad("Fichier trop volumineux (max 8MB).");
-  return { ext, buffer };
+  return { ext: real, buffer };
 }
 
 /** Counts this IP's uploads over the last hour (uploaded_by holds the IP for anonymous uploads). */

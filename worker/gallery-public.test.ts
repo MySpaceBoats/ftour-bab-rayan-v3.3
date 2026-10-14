@@ -24,8 +24,9 @@ describe("decodePublicPhoto", () => {
   it("rejects a file whose bytes do not match an image (fake extension)", () => {
     expect(() => decodePublicPhoto(photo({ fileData: btoa("<html>pas une image</html>") }))).toThrow(/invalide/);
   });
-  it("rejects a declared PNG that is really a JPEG", () => {
-    expect(() => decodePublicPhoto(photo({ fileType: "image/png" }))).toThrow(/invalide/);
+  it("trusts the real bytes over the declared type (client re-encodes WebP to JPEG)", () => {
+    expect(decodePublicPhoto(photo({ fileType: "image/webp" })).ext).toBe("jpg");
+    expect(decodePublicPhoto(photo({ fileType: "image/png" })).ext).toBe("jpg");
   });
   it("rejects invalid base64 with a clean error", () => {
     expect(() => decodePublicPhoto(photo({ fileData: "%%%not base64%%%" }))).toThrow(/invalide/);
