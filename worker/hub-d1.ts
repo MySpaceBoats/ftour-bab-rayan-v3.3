@@ -51,7 +51,7 @@ export async function createLoginToken(d: D1Like, email: string, nowMs: number):
   return raw;
 }
 
-export async function upsertMember(d: D1Like, email: string): Promise<MemberRow> {
+export async function upsertMember(d: D1Like, email: string, onCreated?: (m: MemberRow) => void): Promise<MemberRow> {
   const e = normEmail(email);
   const existing = await d.prepare("SELECT * FROM hub_members WHERE email = ?").bind(e).first<MemberRow>();
   if (existing) return existing;
@@ -59,15 +59,16 @@ export async function upsertMember(d: D1Like, email: string): Promise<MemberRow>
   const name = v ? `${v.first_name} ${String(v.last_name ?? "").charAt(0)}.`.trim() : e.split("@")[0];
   const row = await d.prepare("INSERT INTO hub_members (email, display_name) VALUES (?,?) ON CONFLICT(email) DO UPDATE SET email = excluded.email RETURNING *")
     .bind(e, name.slice(0, LIMITS.name)).first<MemberRow>();
+  onCreated?.(row!);
   return row!;
 }
 
-export async function openSession(d: D1Like, loginToken: string, nowMs: number): Promise<{ session: string; member: MemberView }> {
+export async function openSession(d: D1Like, loginToken: string, nowMs: number, onCreated?: (m: MemberRow) => void): Promise<{ session: string; member: MemberView }> {
   const used = await d.prepare("UPDATE hub_login_tokens SET used_at = ? WHERE token_hash = ? AND used_at IS NULL AND expires_at > ? RETURNING email")
     .bind(iso(nowMs), await sha256Hex(loginToken), iso(nowMs)).first<{ email: string }>();
   if (!used) throw new HubError("unauthorized", "Lien invalide ou expiré");
   if (!(await isEligible(d, used.email))) throw new HubError("forbidden", "Accès réservé aux bénévoles confirmés");
-  const member = await upsertMember(d, used.email);
+  const member = await upsertMember(d, used.email, onCreated);
   if (member.status !== "active") throw new HubError("forbidden", "Compte suspendu");
   return createSession(d, member, nowMs);
 }

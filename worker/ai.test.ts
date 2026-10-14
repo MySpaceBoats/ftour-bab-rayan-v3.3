@@ -166,8 +166,9 @@ describe("support email", () => {
     const before = h.mails.length;
     const r = await h.call("POST", "/hub/ai/chat", { token: a.session, body: { message: "urgent" } });
     expect(r.status).toBe(200);
-    expect(h.mails.filter(m => m.to === "support@ftourbabrayan.ma")).toHaveLength(1);
-    expect(h.mails.length).toBe(before + 1);
+    // the new-conversation notice, then the escalation itself
+    expect(h.mails.slice(before).filter(m => m.to === "support@ftourbabrayan.ma")).toHaveLength(2);
+    expect(h.mails.length).toBe(before + 2);
   });
 });
 

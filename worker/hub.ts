@@ -17,6 +17,7 @@ import { handlePro } from "./pro";
 import * as X from "./messenger-d1";
 import { handleAi, SUPPORT_EMAIL as AI_SUPPORT_EMAIL } from "./ai";
 import type { FetchLike } from "./ai-core";
+import { notifySupport } from "./support-notify";
 import { confirmItem, listModeration, moderate, restoreItem } from "./moderation";
 import { notifyModeration, notifyRestored } from "./moderation-notify";
 
@@ -199,7 +200,13 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     }
     if (match("POST", /^verify$/)) {
       const token = str((await readJson(request)).token);
-      return json(await H.openSession(d, token, now()));
+      let created: H.MemberRow | null = null;
+      const session = await H.openSession(d, token, now(), m => { created = m; });
+      if (created) {
+        const c = created as H.MemberRow;
+        await background("support: new member", () => notifySupport(env, { kind: "hub-signup", title: "Nouvel inscrit sur la Community Space", lines: [["Nom", c.display_name], ["Email", c.email]] }, o => sendMail(o.to, o.subject, o.html)));
+      }
+      return json(session);
     }
     if (match("POST", /^logout$/)) {
       const a = request.headers.get("authorization") ?? "";
