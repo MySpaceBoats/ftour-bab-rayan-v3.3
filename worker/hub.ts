@@ -15,9 +15,11 @@ import { handlePro } from "./pro";
 import * as X from "./messenger-d1";
 import { handleAi, SUPPORT_EMAIL as AI_SUPPORT_EMAIL } from "./ai";
 import type { FetchLike } from "./ai-core";
+import { confirmItem, listModeration, moderate, restoreItem } from "./moderation";
+import { notifyModeration, notifyRestored } from "./moderation-notify";
 
 export interface ChatNamespace { idFromName(n: string): unknown; get(id: unknown): { fetch(input: string, init?: RequestInit): Promise<Response> } }
-export interface HubEnv extends MediaEnv { DB?: D1Like; HUB_CHAT?: ChatNamespace; RESEND_API_KEY?: string; EMAIL_PROVIDER_KEY?: string; PUBLIC_APP_URL?: string; OPENROUTER_API_KEY?: string; AI_MODELS?: string }
+export interface HubEnv extends MediaEnv { DB?: D1Like; HUB_CHAT?: ChatNamespace; RESEND_API_KEY?: string; EMAIL_PROVIDER_KEY?: string; PUBLIC_APP_URL?: string; OPENROUTER_API_KEY?: string; AI_MODELS?: string; MODERATION_ADMIN_EMAIL?: string }
 export interface HubDeps {
   aiFetch?: FetchLike;
   now?: () => number;
@@ -73,6 +75,14 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       if (deps.waitUntil) deps.waitUntil(p);
       else return p;
     };
+    // AI moderation of the feed: runs after the response (waitUntil) and never blocks or fails the request.
+    const moderateAfter = (type: "post" | "comment", targetId: number) => background(`moderate ${type}`, () => moderate(d, {
+      fetch: deps.aiFetch ?? ((u, i) => fetch(u, i)),
+      apiKey: env.OPENROUTER_API_KEY,
+      models: env.AI_MODELS,
+      nowMs: now(),
+      notify: e => notifyModeration(d, { mailer, adminEmail: env.MODERATION_ADMIN_EMAIL || AI_SUPPORT_EMAIL }, e, now()),
+    }, type, targetId));
 
     // Realtime push: after a message was stored, tell the Durable Object who to wake up. Best effort, never fails the request.
     const SENT = /^pro\/threads\/(\d+)\/messages$|^market\/threads\/(\d+)\/messages$|^stay\/requests\/(\d+)\/messages$/;
@@ -116,6 +126,7 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     const admin = async () => {
       const u = await siteUser();
       if (!u || u.isDemo || !ADMIN_ROLES.has(u.role)) throw new H.HubError("forbidden", "Réservé aux administrateurs");
+      return u;
     };
 
     let m: RegExpExecArray | null;
@@ -255,7 +266,9 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       const me = await who();
       const b = await readJson(request);
       const media = Array.isArray(b.media) ? b.media.filter((x): x is string => typeof x === "string") : [];
-      return json(await H.createPost(d, me, { body: str(b.body), mediaPaths: media }, now()));
+      const created = await H.createPost(d, me, { body: str(b.body), mediaPaths: media }, now());
+      await moderateAfter("post", created.id);
+      return json(created);
     }
     if ((m = match("DELETE", /^posts\/(\d+)$/))) {
       await H.removeContent(d, await member(), "post", id(m[1]));
@@ -279,6 +292,7 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       const text = str((await readJson(request)).body);
       const r = await H.addComment(d, me, postId, text, now());
       await background("notify comment", () => N.onComment(d, mailer, me, postId, r.id, text.trim(), now()));
+      await moderateAfter("comment", r.id);
       return json(r);
     }
     if ((m = match("DELETE", /^comments\/(\d+)$/))) {
@@ -351,6 +365,25 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       await admin();
       const b = await readJson(request);
       await H.hideContent(d, b.type as "post" | "comment", id(b.id));
+      return json({ ok: true });
+    }
+    // ---- admin: AI moderation review --------------------------------------
+    if (match("GET", /^admin\/moderation$/)) {
+      await admin();
+      return json({ items: await listModeration(d, url.searchParams.get("filter") === "all" ? "all" : "review") });
+    }
+    if ((m = match("POST", /^admin\/moderation\/(\d+)\/restore$/))) {
+      const u = await admin();
+      const r = await restoreItem(d, id(m[1]), (u as { email?: string }).email ?? "admin", now());
+      if (!r) throw new H.HubError("not_found", "Décision introuvable");
+      if (r.wasHidden) await background("notify restored", () => notifyRestored(d, { mailer, adminEmail: env.MODERATION_ADMIN_EMAIL || AI_SUPPORT_EMAIL }, r.event, now()));
+      return json({ ok: true });
+    }
+    if ((m = match("POST", /^admin\/moderation\/(\d+)\/confirm$/))) {
+      await admin();
+      const r = await confirmItem(d, id(m[1]), now());
+      if (!r) throw new H.HubError("not_found", "Décision introuvable");
+      if (r.newlyHidden) await background("notify confirmed", () => notifyModeration(d, { mailer, adminEmail: env.MODERATION_ADMIN_EMAIL || AI_SUPPORT_EMAIL }, r.event, now()));
       return json({ ok: true });
     }
     if (match("GET", /^admin\/members$/)) { await admin(); return json({ members: await H.listMembers(d) }); }

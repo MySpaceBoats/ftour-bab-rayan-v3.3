@@ -40,6 +40,7 @@ export interface Env {
   HUB_CHAT?: import('./hub').ChatNamespace;
   OPENROUTER_API_KEY?: string;
   AI_MODELS?: string;
+  MODERATION_ADMIN_EMAIL?: string;
   /** Overrides d1-tables.ts: comma list of Supabase tables served from D1, or "none" (instant rollback lever). */
   D1_TABLES?: string;
   /** Overrides d1-tables.ts R2_BUCKETS: Supabase Storage buckets served from R2, or "none". */

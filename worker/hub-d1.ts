@@ -311,7 +311,7 @@ export async function hideContent(d: D1Like, type: "post" | "comment", id: numbe
   await d.prepare(`UPDATE ${t} SET status = 'hidden' WHERE id = ?`).bind(id).run();
 }
 
-async function teamMemberId(d: D1Like): Promise<number> {
+export async function teamMemberId(d: D1Like): Promise<number> {
   const row = await d.prepare("INSERT INTO hub_members (email, display_name, role) VALUES (?, 'Équipe Ftour', 'moderator') ON CONFLICT(email) DO UPDATE SET email = excluded.email RETURNING id")
     .bind(TEAM_EMAIL).first<{ id: number }>();
   return row!.id;

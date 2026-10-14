@@ -23,7 +23,7 @@ async function lastStayMessages(d: D1Like, ids: number[]): Promise<Map<number, {
 
 async function eligibleSet(d: D1Like, ids: number[]): Promise<Set<number>> {
   if (!ids.length) return new Set();
-  const { results } = await d.prepare(`SELECT m.id FROM hub_members m WHERE m.id IN (${marks(ids.length)}) AND ${P.memberOk("m")}`).bind(...ids).all<{ id: number }>();
+  const { results } = await d.prepare(`SELECT m.id FROM hub_members m WHERE m.id IN (${marks(ids.length)}) AND ${P.viewOk("m")}`).bind(...ids).all<{ id: number }>();
   return new Set(results.map(r => r.id));
 }
 
@@ -49,7 +49,7 @@ export async function inbox(d: D1Like, memberId: number): Promise<InboxItem[]> {
 
 /** Unread counts that agree with the inbox: conversations with a suspended/ineligible member never count. */
 export async function unreadAll(d: D1Like, memberId: number): Promise<number> {
-  const ok = P.memberOk("o");
+  const ok = P.viewOk("o");
   const [a, mk, st] = await Promise.all([
     P.unreadTotal(d, memberId),
     d.prepare(

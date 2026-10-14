@@ -59,6 +59,7 @@ export default function Composer({ me, onPosted }: { me: hub.Member; onPosted: (
           className="min-h-[3rem] flex-1 resize-none rounded-2xl border-0 bg-slate-100 focus-visible:ring-2"
         />
       </div>
+      <p className="mt-2 pl-[52px] text-xs text-slate-500">Les contenus sont analysés automatiquement.</p>
       {files.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2 pl-[52px]">
           {files.map((f, i) => (
