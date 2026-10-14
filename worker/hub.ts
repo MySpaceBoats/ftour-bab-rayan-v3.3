@@ -15,9 +15,11 @@ import { handlePro } from "./pro";
 import * as X from "./messenger-d1";
 import { handleAi, SUPPORT_EMAIL as AI_SUPPORT_EMAIL } from "./ai";
 import type { FetchLike } from "./ai-core";
+import { moderate } from "./moderation";
+import { notifyModeration } from "./moderation-notify";
 
 export interface ChatNamespace { idFromName(n: string): unknown; get(id: unknown): { fetch(input: string, init?: RequestInit): Promise<Response> } }
-export interface HubEnv extends MediaEnv { DB?: D1Like; HUB_CHAT?: ChatNamespace; RESEND_API_KEY?: string; EMAIL_PROVIDER_KEY?: string; PUBLIC_APP_URL?: string; OPENROUTER_API_KEY?: string; AI_MODELS?: string }
+export interface HubEnv extends MediaEnv { DB?: D1Like; HUB_CHAT?: ChatNamespace; RESEND_API_KEY?: string; EMAIL_PROVIDER_KEY?: string; PUBLIC_APP_URL?: string; OPENROUTER_API_KEY?: string; AI_MODELS?: string; MODERATION_ADMIN_EMAIL?: string }
 export interface HubDeps {
   aiFetch?: FetchLike;
   now?: () => number;
@@ -73,6 +75,14 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       if (deps.waitUntil) deps.waitUntil(p);
       else return p;
     };
+    // AI moderation of the feed: runs after the response (waitUntil) and never blocks or fails the request.
+    const moderateAfter = (type: "post" | "comment", targetId: number) => background(`moderate ${type}`, () => moderate(d, {
+      fetch: deps.aiFetch ?? ((u, i) => fetch(u, i)),
+      apiKey: env.OPENROUTER_API_KEY,
+      models: env.AI_MODELS,
+      nowMs: now(),
+      notify: e => notifyModeration(d, { mailer, adminEmail: env.MODERATION_ADMIN_EMAIL || AI_SUPPORT_EMAIL }, e, now()),
+    }, type, targetId));
 
     // Realtime push: after a message was stored, tell the Durable Object who to wake up. Best effort, never fails the request.
     const SENT = /^pro\/threads\/(\d+)\/messages$|^market\/threads\/(\d+)\/messages$|^stay\/requests\/(\d+)\/messages$/;
@@ -255,7 +265,9 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       const me = await who();
       const b = await readJson(request);
       const media = Array.isArray(b.media) ? b.media.filter((x): x is string => typeof x === "string") : [];
-      return json(await H.createPost(d, me, { body: str(b.body), mediaPaths: media }, now()));
+      const created = await H.createPost(d, me, { body: str(b.body), mediaPaths: media }, now());
+      await moderateAfter("post", created.id);
+      return json(created);
     }
     if ((m = match("DELETE", /^posts\/(\d+)$/))) {
       await H.removeContent(d, await member(), "post", id(m[1]));
@@ -279,6 +291,7 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       const text = str((await readJson(request)).body);
       const r = await H.addComment(d, me, postId, text, now());
       await background("notify comment", () => N.onComment(d, mailer, me, postId, r.id, text.trim(), now()));
+      await moderateAfter("comment", r.id);
       return json(r);
     }
     if ((m = match("DELETE", /^comments\/(\d+)$/))) {
