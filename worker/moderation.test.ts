@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { moderate, type ModerationEvent } from "./moderation";
 import { createHubHarness, type HubHarness } from "./test-hub";
 import type { FetchLike } from "./ai-core";
@@ -118,4 +118,35 @@ describe("moderate", () => {
     expect(sent.match(/<\/contenu>/g)).toHaveLength(1);
     expect(sent).toContain("مرحبا 😀");
   });
+
+  it("C1: content the author deletes during the analysis gets no row and no notification", async () => {
+    const { postId, token } = await post();
+    let notified = 0;
+    const racing: FetchLike = async () => {
+      await h.call("DELETE", `/hub/posts/${postId}`, { token });
+      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(bad) } }] }));
+    };
+    expect(await moderate(h.d, deps(racing, { notify: async () => { notified++; } }), "post", postId)).toBe("skipped");
+    expect(rows()).toHaveLength(0);
+    expect(notified).toBe(0);
+  });
+
+  it("I1: if recording the decision fails, the content is not left hidden", async () => {
+    const { postId } = await post();
+    const broken = { ...h.d, prepare: (sql: string) => { if (sql.includes("INSERT INTO hub_moderation")) throw new Error("d1 down"); return h.d.prepare(sql); } };
+    await expect(moderate(broken as any, deps(model(bad)), "post", postId)).rejects.toThrow();
+    expect(status("hub_posts", postId)).toBe("visible");
+  });
+
+  it("I2: no second pass once the first one burnt the time budget", async () => {
+    const { postId } = await post();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const calls = { n: 0 };
+      const slow: FetchLike = async () => { calls.n++; vi.setSystemTime(Date.now() + 26_000); return new Response("{}", { status: 500 }); };
+      expect(await moderate(h.d, deps(slow), "post", postId)).toBe("error");
+      expect(calls.n).toBe(2); // one pass x 2 models, not 4
+    } finally { vi.useRealTimers(); }
+  });
 });
+

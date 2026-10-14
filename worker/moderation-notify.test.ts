@@ -94,3 +94,14 @@ describe("systemMessage", () => {
     expect(h.sqlite.prepare("SELECT COUNT(*) AS n FROM pro_messages").get()).toEqual({ n: 2 });
   });
 });
+
+describe("I6: lookups failing", () => {
+  it("a failing Équipe lookup still lets bell and admin mail through", async () => {
+    const { author } = await world();
+    const broken = { ...h.d, prepare: (sql: string) => { if (sql.includes("INSERT INTO hub_members")) throw new Error("d1 down"); return h.d.prepare(sql); } };
+    await notifyModeration(broken as any, mk(), event(author.member.id), h.clock);
+    expect(await bell(author.session)).toHaveLength(1);
+    expect(subjects().some(m => m.to === "admin@x.ma")).toBe(true);
+  });
+});
+

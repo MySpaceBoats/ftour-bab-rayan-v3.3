@@ -13,6 +13,7 @@ export interface ModerationDeps { fetch: FetchLike; apiKey?: string; models?: st
 
 export const TABLE = { post: "hub_posts", comment: "hub_comments" } as const;
 const EXCERPT = 200;
+const RETRY_BUDGET_MS = 10_000;
 
 async function record(d: D1Like, type: Target, targetId: number, memberId: number, v: Verdict | null, action: "hidden" | "flagged" | "error", nowMs: number): Promise<number | null> {
   const r = await d.prepare(
@@ -33,16 +34,29 @@ export async function moderate(d: D1Like, deps: ModerationDeps, type: Target, ta
   if (!row) return "skipped";
 
   let verdict: Verdict | null = null;
-  for (let pass = 0; pass < 2 && !verdict; pass++) {
+  const started = Date.now();
+  // waitUntil gives the Worker ~30s after the response: no second pass once the first one used most of it.
+  for (let pass = 0; pass < 2 && !verdict && (pass === 0 || Date.now() - started < RETRY_BUDGET_MS); pass++) {
     try { verdict = await analyse(deps.fetch, deps.apiKey, deps.models, row.body); } catch (e) { console.error("[moderation] model failed", e); }
   }
+  const stillVisible = async () => !!(await d.prepare(`SELECT 1 AS ok FROM ${TABLE[type]} WHERE id = ? AND status = 'visible'`).bind(targetId).first());
   if (!verdict) { await record(d, type, targetId, row.member_id, null, "error", deps.nowMs); return "error"; }
 
   const decision = decide(verdict);
   if (decision === "none") return "none";
-  const id = await record(d, type, targetId, row.member_id, verdict, decision, deps.nowMs);
+  // The model took seconds: the author may have deleted the content meanwhile. Write only if it is still visible.
+  if (decision === "hidden") {
+    const hid = await d.prepare(`UPDATE ${TABLE[type]} SET status = 'hidden' WHERE id = ? AND status = 'visible' RETURNING id`).bind(targetId).first();
+    if (!hid) return "skipped"; // deleted meanwhile, or hidden by a simultaneous analysis
+  } else if (!(await stillVisible())) return "skipped";
+  let id: number | null;
+  try {
+    id = await record(d, type, targetId, row.member_id, verdict, decision, deps.nowMs);
+  } catch (e) {
+    if (decision === "hidden") await d.prepare(`UPDATE ${TABLE[type]} SET status = 'visible' WHERE id = ?`).bind(targetId).run();
+    throw e; // never leave content hidden without a journal line
+  }
   if (id === null) return "skipped"; // lost the race against a simultaneous analysis
-  if (decision === "hidden") await d.prepare(`UPDATE ${TABLE[type]} SET status = 'hidden' WHERE id = ?`).bind(targetId).run();
   try {
     await deps.notify?.({ id, type, targetId, memberId: row.member_id, rule: verdict.rule!, reason: verdict.reason, confidence: verdict.confidence, excerpt: row.body.slice(0, EXCERPT), action: decision });
   } catch (e) { console.error("[moderation] notify failed", e); }
@@ -61,7 +75,7 @@ export async function listModeration(d: D1Like, filter: "review" | "all"): Promi
          WHEN 'post' THEN (SELECT substr(body, 1, ${EXCERPT}) FROM hub_posts WHERE id = mo.target_id)
          ELSE (SELECT substr(body, 1, ${EXCERPT}) FROM hub_comments WHERE id = mo.target_id) END AS excerpt
      FROM hub_moderation mo JOIN hub_members m ON m.id = mo.member_id
-     WHERE (? = 'all' OR (mo.action IN ('hidden','flagged') AND mo.reviewed_at IS NULL))
+     WHERE (? = 'all' OR (mo.action IN ('hidden','flagged','error') AND mo.reviewed_at IS NULL))
      ORDER BY mo.id DESC LIMIT 100`,
   ).bind(filter).all<ModerationRow>();
   return results;
@@ -83,8 +97,10 @@ export async function restoreItem(d: D1Like, id: number, by: string, nowMs: numb
   if (!e) return null;
   if (e.rawAction !== "hidden" && e.rawAction !== "flagged") throw new HubError("invalid", "Rien à restaurer");
   const wasHidden = e.rawAction === "hidden";
+  // Claim the line first: a second admin (or a concurrent confirm) finds it already closed and stops here.
+  const claimed = await d.prepare("UPDATE hub_moderation SET action = 'restored', reviewed_at = ?, restored_by = ? WHERE id = ? AND action = ? RETURNING id").bind(iso(nowMs), by, id, e.rawAction).first();
+  if (!claimed) throw new HubError("invalid", "Déjà traité");
   if (wasHidden) await d.prepare(`UPDATE ${TABLE[e.type]} SET status = 'visible' WHERE id = ?`).bind(e.targetId).run();
-  await d.prepare("UPDATE hub_moderation SET action = 'restored', reviewed_at = ?, restored_by = ? WHERE id = ?").bind(iso(nowMs), by, id).run();
   return { event: e, wasHidden };
 }
 
@@ -92,13 +108,11 @@ export async function restoreItem(d: D1Like, id: number, by: string, nowMs: numb
 export async function confirmItem(d: D1Like, id: number, nowMs: number): Promise<{ event: ModerationEvent; newlyHidden: boolean } | null> {
   const e = await loadEvent(d, id);
   if (!e) return null;
-  if (e.rawAction !== "hidden" && e.rawAction !== "flagged") throw new HubError("invalid", "Rien à confirmer");
-  const newlyHidden = e.rawAction === "flagged";
-  if (newlyHidden) {
-    await d.prepare(`UPDATE ${TABLE[e.type]} SET status = 'hidden' WHERE id = ?`).bind(e.targetId).run();
-    await d.prepare("UPDATE hub_moderation SET action = 'hidden', reviewed_at = ? WHERE id = ?").bind(iso(nowMs), id).run();
-  } else {
-    await d.prepare("UPDATE hub_moderation SET reviewed_at = ? WHERE id = ?").bind(iso(nowMs), id).run();
-  }
+  if (e.rawAction !== "hidden" && e.rawAction !== "flagged" && e.rawAction !== "error") throw new HubError("invalid", "Rien à confirmer");
+  const flagged = e.rawAction === "flagged";
+  const claimed = await d.prepare("UPDATE hub_moderation SET action = ?, reviewed_at = ? WHERE id = ? AND action = ? AND reviewed_at IS NULL RETURNING id").bind(flagged ? "hidden" : e.rawAction, iso(nowMs), id, e.rawAction).first();
+  if (!claimed) throw new HubError("invalid", "Déjà traité");
+  // Only tell the author when the content was really still visible (they may have deleted it meanwhile).
+  const newlyHidden = flagged && !!(await d.prepare(`UPDATE ${TABLE[e.type]} SET status = 'hidden' WHERE id = ? AND status = 'visible' RETURNING id`).bind(e.targetId).first());
   return { event: e, newlyHidden };
 }

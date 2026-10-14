@@ -122,4 +122,34 @@ describe("admin moderation routes", () => {
   it("returns 404 for an unknown item", async () => {
     expect((await h.call("POST", "/hub/admin/moderation/9999/restore", { admin: "admin" })).status).toBe(404);
   });
+
+  it("I3: errors appear in the review queue and can be dismissed", async () => {
+    h.aiFetch = async () => new Response("{}", { status: 503 });
+    const a = await h.signIn("a@x.ma");
+    await h.call("POST", "/hub/posts", { token: a.session, body: { body: "Bonjour" } });
+    const items = ((await (await h.call("GET", "/hub/admin/moderation?filter=review", { admin: "admin" })).json()) as any).items;
+    expect(items).toEqual([expect.objectContaining({ action: "error" })]);
+    expect((await h.call("POST", `/hub/admin/moderation/${items[0].id}/confirm`, { admin: "admin" })).status).toBe(200);
+    expect(((await (await h.call("GET", "/hub/admin/moderation?filter=review", { admin: "admin" })).json()) as any).items).toHaveLength(0);
+  });
+
+  it("I5: a second restore of the same item is refused and sends no second message", async () => {
+    const { a, modId } = await hiddenPost();
+    expect((await h.call("POST", `/hub/admin/moderation/${modId}/restore`, { admin: "admin" })).status).toBe(200);
+    expect((await h.call("POST", `/hub/admin/moderation/${modId}/restore`, { admin: "admin" })).status).toBeGreaterThanOrEqual(400);
+    const msgs = h.sqlite.prepare("SELECT COUNT(*) AS n FROM pro_messages WHERE body LIKE '%rétablie%'").get() as any;
+    expect(msgs.n).toBe(1);
+    void a;
+  });
+
+  it("I4: confirming a flagged item the author deleted meanwhile does not tell the author it was masked", async () => {
+    h.aiFetch = verdict({ ...bad, confidence: 0.6 });
+    const a = await h.signIn("a@x.ma");
+    const { id: postId } = (await (await h.call("POST", "/hub/posts", { token: a.session, body: { body: "limite" } })).json()) as any;
+    const modId = (h.sqlite.prepare("SELECT id FROM hub_moderation WHERE target_id = ?").get(postId) as any).id as number;
+    await h.call("DELETE", `/hub/posts/${postId}`, { token: a.session });
+    await h.call("POST", `/hub/admin/moderation/${modId}/confirm`, { admin: "admin" });
+    expect((await bell(a.session)).some(n => n.title === "Votre publication a été masquée")).toBe(false);
+  });
 });
+

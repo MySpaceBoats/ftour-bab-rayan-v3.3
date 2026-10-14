@@ -46,6 +46,11 @@ export default function ModerationAdmin() {
               </div>
               {i.reason && <p className="text-slate-600">{i.reason}</p>}
               {i.excerpt && <p className="whitespace-pre-line rounded bg-slate-50 p-2 text-xs">{i.excerpt}</p>}
+              {i.action === "error" && !i.reviewed_at && (
+                <div className="pt-1">
+                  <Button size="sm" variant="outline" disabled={busy} onClick={() => run(() => hub.adminModerationConfirm(i.id), "Classé")}>Classer</Button>
+                </div>
+              )}
               {(i.action === "hidden" || i.action === "flagged") && !i.reviewed_at && (
                 <div className="flex gap-2 pt-1">
                   <Button size="sm" variant="outline" disabled={busy} onClick={() => run(() => hub.adminModerationRestore(i.id), i.action === "hidden" ? "Contenu restauré" : "Signalement ignoré")}>

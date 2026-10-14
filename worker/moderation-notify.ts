@@ -39,21 +39,24 @@ const ruleLine = (e: Pick<ModerationEvent, "rule" | "reason">) => {
 
 export async function notifyModeration(d: D1Like, deps: NotifyDeps, e: ModerationEvent, nowMs: number): Promise<void> {
   const w = WORD[e.type];
-  const team = await teamMemberId(d);
+  // Lookups are channels too: a failing one must not silence the others (bell, mail, admin mail).
+  let team: number | null = null;
+  let mods: number[] = [];
+  await attempt("team lookup", async () => { team = await teamMemberId(d); });
+  await attempt("moderators lookup", async () => { mods = await moderators(d); });
   const link = "/benevole/espace";
-  const mods = await moderators(d);
 
   if (e.action === "hidden") {
     const n: NotifInput = { type: "announcement", title: `${w.article} ${w.noun} a été ${w.masked}`, body: ruleLine(e), link, dedupeKey: `mod:${e.id}:author` };
     await attempt("author bell+mail", () => deliverTo(d, deps.mailer, [{ memberId: e.memberId, n }], nowMs));
-    await attempt("author message", () => systemMessage(d, team, e.memberId,
+    if (team !== null) await attempt("author message", () => systemMessage(d, team!, e.memberId,
       `Bonjour, votre ${w.noun} a été ${w.masked} automatiquement car ce contenu ne respecte pas la ${ruleLine(e)}\n\nExtrait : « ${e.excerpt} »\n\nSi vous pensez qu'il s'agit d'une erreur, écrivez à ${deps.adminEmail}. Les contenus de l'espace sont analysés automatiquement.`, nowMs));
   }
 
   const adminTitle = e.action === "hidden" ? `Modération IA : ${w.noun} ${w.masked}` : `Modération IA : ${w.noun} à vérifier`;
   const adminBody = `${ruleLine(e)} (confiance ${Math.round(e.confidence * 100)} %). Extrait : « ${e.excerpt} »`;
   await attempt("moderators bell+mail", () => deliverTo(d, deps.mailer, mods.map(id => ({ memberId: id, n: { type: "announcement" as const, title: adminTitle, body: adminBody, link: "/admin/hub", dedupeKey: `mod:${e.id}:m${id}` } })), nowMs));
-  for (const id of mods) await attempt(`moderator ${id} message`, () => systemMessage(d, team, id, `${adminTitle}\n${adminBody}`, nowMs));
+  if (team !== null) for (const id of mods) await attempt(`moderator ${id} message`, () => systemMessage(d, team!, id, `${adminTitle}\n${adminBody}`, nowMs));
   await attempt("admin mail", () => deps.mailer.sendBatch([{
     to: deps.adminEmail, subject: adminTitle,
     html: `<p><strong>${escapeHtml(adminTitle)}</strong></p><p>${escapeHtml(adminBody)}</p><p><a href="${escapeHtml(`${deps.mailer.baseUrl}/admin/hub`)}">Ouvrir l'écran de modération</a></p>`,
@@ -62,8 +65,9 @@ export async function notifyModeration(d: D1Like, deps: NotifyDeps, e: Moderatio
 
 export async function notifyRestored(d: D1Like, deps: NotifyDeps, e: Pick<ModerationEvent, "id" | "type" | "memberId" | "excerpt">, nowMs: number): Promise<void> {
   const w = WORD[e.type];
-  const team = await teamMemberId(d);
+  let team: number | null = null;
+  await attempt("team lookup", async () => { team = await teamMemberId(d); });
   const title = `${w.article} ${w.noun} a été ${w.restored}`;
   await attempt("author bell+mail", () => deliverTo(d, deps.mailer, [{ memberId: e.memberId, n: { type: "announcement", title, body: "Un administrateur a vérifié et rétabli votre contenu.", link: "/benevole/espace", dedupeKey: `mod:${e.id}:restored` } }], nowMs));
-  await attempt("author message", () => systemMessage(d, team, e.memberId, `Bonjour, ${title.toLowerCase()} : un administrateur a vérifié votre contenu et l'a rétabli. Désolé pour la gêne.\n\nExtrait : « ${e.excerpt} »`, nowMs));
+  if (team !== null) await attempt("author message", () => systemMessage(d, team!, e.memberId, `Bonjour, ${title.toLowerCase()} : un administrateur a vérifié votre contenu et l'a rétabli. Désolé pour la gêne.\n\nExtrait : « ${e.excerpt} »`, nowMs));
 }
