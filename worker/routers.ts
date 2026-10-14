@@ -10398,8 +10398,9 @@ function mapTeamMember(row: any) {
 }
 
 const teamRouter = router({
+  // edition omitted = every edition (the page groups them client-side)
   listPublic: publicProcedure
-    .input(z.object({ edition: z.number().int().min(1).default(12) }))
+    .input(z.object({ edition: z.number().int().min(1).optional() }).default({}))
     .query(async ({ ctx, input }) => {
       const data = await siteDb.listTeam(galleryDb.db(ctx.env), {
         edition: input.edition,
