@@ -51,7 +51,8 @@ export default function HubPage() {
   const [busy, setBusy] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [loginError, setLoginError] = useState<string | null>(null); // expired or already-used link
-  const [loginTab, setLoginTab] = useState("lien");
+  const [loginTab, setLoginTab] = useState("connexion");
+  const [method, setMethod] = useState<"link" | "password">("link");
   const [notice, setNotice] = useState<string | null>(null); // e.g. session expired mid-visit
   const [resetToken, setResetToken] = useState<string | null>(null);
   const [pinned, setPinned] = useState<hub.Post[]>([]);
@@ -195,12 +196,13 @@ export default function HubPage() {
           )}
 
           <Tabs value={loginTab} onValueChange={setLoginTab} className="gap-4">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="lien">Lien par email</TabsTrigger>
-              <TabsTrigger value="motdepasse">Mot de passe</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="connexion">Se connecter</TabsTrigger>
               <TabsTrigger value="creer">Créer un compte</TabsTrigger>
             </TabsList>
-            <TabsContent value="lien">
+            <TabsContent value="connexion" className="space-y-4">
+            {method === "link" ? (
+            <>
             {sent ? (
               <div className="space-y-4">
                 <div role="status" className="flex items-start gap-3 rounded-lg bg-emerald-50 p-4 text-sm text-emerald-900">
@@ -254,6 +256,24 @@ export default function HubPage() {
                 <p id="hub-email-hint" className="text-center text-xs text-slate-500">Un lien sécurisé, valable 15 minutes, vous est envoyé par email.</p>
               </form>
             )}
+            </>
+            ) : (
+              <PasswordTab
+                initialEmail={email}
+                onSession={r => {
+                  try { localStorage.setItem(EMAIL_KEY, r.email); } catch { /* storage unavailable */ }
+                  hub.setHubToken(r.session);
+                  setLoginError(null);
+                  setNotice(null);
+                  setMe(r.member);
+                }}
+              />
+            )}
+            {!sent && (
+              <button type="button" className="block w-full text-center text-sm text-blue-700 underline" onClick={() => setMethod(method === "link" ? "password" : "link")}>
+                {method === "link" ? "Se connecter avec un mot de passe" : "Recevoir un lien de connexion par email"}
+              </button>
+            )}
             </TabsContent>
             <TabsContent value="creer">
               <div className="space-y-4 text-sm text-slate-700">
@@ -266,22 +286,10 @@ export default function HubPage() {
                 <Button asChild className="h-11 w-full bg-blue-700 hover:bg-blue-800">
                   <a href={VOLUNTEER_FORM_URL}>S'inscrire comme bénévole</a>
                 </Button>
-                <button type="button" className="block w-full text-center text-xs text-blue-700 underline" onClick={() => setLoginTab("lien")}>
+                <button type="button" className="block w-full text-center text-xs text-blue-700 underline" onClick={() => { setMethod("link"); setLoginTab("connexion"); }}>
                   Mon inscription est déjà confirmée : recevoir mon lien
                 </button>
               </div>
-            </TabsContent>
-            <TabsContent value="motdepasse">
-              <PasswordTab
-                initialEmail={email}
-                onSession={r => {
-                  try { localStorage.setItem(EMAIL_KEY, r.email); } catch { /* storage unavailable */ }
-                  hub.setHubToken(r.session);
-                  setLoginError(null);
-                  setNotice(null);
-                  setMe(r.member);
-                }}
-              />
             </TabsContent>
           </Tabs>
       </AuthFrame>
