@@ -7,6 +7,7 @@ import { AiUnavailable, clip, complete, fallbackSummary, parseModels, splitEscal
 import { CONTEXT_PREFIX, FALLBACK_REPLY, MEMBER_PROMPT, PUBLIC_FALLBACK, PUBLIC_PROMPT, SUMMARY_PROMPT } from "./ai-prompts";
 import { id, readJson, str } from "./hub-http";
 import { escapeHtml } from "./email";
+import { renderSupport } from "./support-notify";
 
 export interface AiCtx {
   d: D1Like;
@@ -54,6 +55,10 @@ export async function handleAi(c: AiCtx): Promise<Response | null> {
     if (!last || last.role !== "user" || last.content.trim().length < 1 || str((b.messages as { content?: unknown }[]).at(-1)?.content).length > A.LIMITS.userChars)
       throw new H.HubError("invalid", `Message invalide (1 à ${A.LIMITS.userChars} caractères)`);
     await A.hit(d, `ip:${ip}`, A.LIMITS.publicPerWindow, A.LIMITS.publicWindowMs, now());
+    if (turns.length === 1) {
+      const note = renderSupport({ kind: "chatbot", title: "Chatbot : nouvelle conversation (visiteur)", lines: [["Premier message", clip(last.content, 300)]] });
+      await mailSupport(note.subject, note.html);
+    }
     return guard(async () => json({ reply: splitEscalation(await ask([{ role: "system", content: PUBLIC_PROMPT }, ...turns])).reply || PUBLIC_FALLBACK }));
   }
 
@@ -76,6 +81,9 @@ export async function handleAi(c: AiCtx): Promise<Response | null> {
     else {
       const ref = b.source === undefined || b.source === null ? null : A.isSource(b.source) ? { source: b.source, id: id(b.item_id) } : (() => { throw new H.HubError("invalid", "Source invalide"); })();
       conv = await A.getOwned(d, me.id, await A.openConversation(d, me, ref, now()));
+      // one mail per conversation: sent when it opens, not at every message
+      const note = renderSupport({ kind: "chatbot", title: "Chatbot : nouvelle conversation (membre)", lines: [["Membre", `${me.display_name} <${me.email}>`], ["Premier message", clip(text, 300)]] });
+      await mailSupport(note.subject, note.html);
     }
     await A.hit(d, `m:${me.id}`, A.LIMITS.memberPerHour, H.HOUR_MS, now());
     await A.addMessage(d, conv.id, "user", text, now());

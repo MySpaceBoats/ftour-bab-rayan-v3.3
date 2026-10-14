@@ -3,7 +3,7 @@
  * likes, job offers (phone-only contact), application / private conversations and a couple of reports.
  * Links all point to exemple.invalid (a reserved TLD: they can never resolve to a real site).
  */
-import { D, H, PEOPLE, ago, demoText, mid, phoneOf, q, type Msg } from "./common";
+import { D, H, PEOPLE, ago, mid, phoneOf, q, type Msg } from "./common";
 
 interface Profile { headline: string; company: string; skills: string[]; open: boolean }
 /** The marker prefixes the visible headline (same approach as display_name); company names carry "(fictif)". */
@@ -49,6 +49,9 @@ export const PRO_POST_MEDIA: Record<string, string[]> = {
   recrute: ["pro-decoration.jpg"],
   coordination: ["pro-reunion.jpg"],
   "relation-client": ["photo-the-menthe.jpg"],
+  stage: ["pro-bureau.jpg"],
+  livraison: ["pro-livraison.jpg"],
+  "atelier-stock": ["pro-atelier-stock.jpg"],
 };
 const POST_LIKES = [5, 4, 7, 3, 6, 5, 8, 4, 3, 5, 6, 4, 5, 7, 0, 3];
 
@@ -93,6 +96,8 @@ const COMMENTS: [string, string, number, string][] = [
   ["atelier-stock", "omar", 65, "@Imane oui, il en reste trois."],
   ["spam", "salma", 12, "C'est une arnaque classique, merci de ne pas poster ça."],
   ["merci-annonce", "karim", 10, "Bravo Yasmine !"],
+  ["stage", "reda", 100, "Bon courage Mehdi ! Pour un entretien de stage, prépare deux ou trois exemples chiffrés de ce que tu as organisé."],
+  ["livraison", "omar", 75, "@Reda je te mets en contact avec un traiteur du quartier, ils cherchent un livreur pour le week-end."],
 ];
 
 interface Job { k: string; poster: string; h: number; title: string; company: string; city: string; type: string; status: "open" | "closed"; description: string }
@@ -113,6 +118,10 @@ const JOBS: Job[] = [
     description: "Refonte d'un site vitrine d'une dizaine de pages pour une petite structure, avec un hébergement existant. Vous livrez un site simple à maintenir, avec un back-office de base. Budget à discuter selon votre expérience, contact téléphonique en priorité." },
   { k: "faux-job", poster: "anas", h: 7, title: "Gagnez gros : assistant(e) à domicile", company: "Entreprise Exemple (fictive)", city: "Casablanca", type: "freelance", status: "open",
     description: "Travaillez depuis chez vous, 5000 DH par jour garantis, aucune expérience demandée. Contactez-moi vite pour plus de détails." },
+  { k: "photographe", poster: "salma", h: 5, title: "Photographe pour un événement associatif, mission d'une journée", company: "Association Exemple (fictive)", city: "Casablanca", type: "freelance", status: "open",
+    description: "Nous cherchons une personne à l'aise avec un appareil photo pour couvrir une journée de rencontre entre bénévoles : portraits, ambiance, moments clés. Livraison d'une sélection retouchée sous une semaine. Défraiement et repas prévus, contact téléphonique en priorité." },
+  { k: "aide-cuisine", poster: "nadia", h: 4, title: "Aide-cuisinier(ère) pour cuisine collective, saison d'automne", company: "Pâtisserie Exemple (fictive)", city: "Marrakech", type: "cdd", status: "open",
+    description: "Notre cuisine prépare des plats pour des repas collectifs deux jours par semaine. Vous aidez à éplucher, assembler et dresser, sans expérience requise : nous formons sur place. Idéal pour un lycéen ou un étudiant disponible le week-end." },
 ];
 const job = (k: string) => JOBS.find(j => j.k === k)!;
 
@@ -153,6 +162,12 @@ const THREADS: [string, string, string | null, Msg[]][] = [
     ["o", 76 * H, "Merci Reda, je viens de la fermer, le poste est pourvu. Je vous garde en tête pour la prochaine.", true],
     ["a", 74 * H, "Pas de souci, merci d'avoir répondu.", true],
   ]],
+  ["anas", "nadia", "aide-cuisine", [
+    ["a", 3 * H, "Bonjour Nadia, votre offre d'aide en cuisine collective m'intéresse. Je suis disponible le week-end.", true],
+    ["o", 150, "Bonjour Anas ! Tu as déjà travaillé en cuisine ?", true],
+    ["a", 2 * H, "Seulement pour le service de l'Iftar avec les bénévoles, mais j'apprends vite.", true],
+    ["o", 1 * H, "Ça me suffit. Viens samedi matin pour un essai de deux heures, on verra si ça te plaît.", false],
+  ]],
 ];
 
 /** The person running the demo applies to the volunteer-animator offer: two unread answers. */
@@ -184,7 +199,7 @@ export function proCleanup(): string[] {
   ];
 }
 
-const postRef = (p: ProPost) => `(SELECT id FROM pro_posts WHERE member_id = ${mid(p.a)} AND body = ${q(demoText(p.body))})`;
+const postRef = (p: ProPost) => `(SELECT id FROM pro_posts WHERE member_id = ${mid(p.a)} AND body = ${q(p.body)})`;
 const jobRef = (j: Job) => `(SELECT id FROM pro_jobs WHERE member_id = ${mid(j.poster)} AND title = ${q(j.title)})`;
 
 function pushThread(out: string[], creator: string, other: string, jobKey: string | null, msgs: Msg[], guard: string) {
@@ -208,11 +223,11 @@ export function proSeed(meId?: string): string[] {
   for (const p of PEOPLE) {
     const pr = PROFILES[p.key];
     out.push(
-      `INSERT INTO pro_profiles (member_id, headline, company, city, skills, open_to_work, updated_at) VALUES (${mid(p.key)}, ${q(demoText(pr.headline))}, ${q(pr.company)}, ${q(p.city)}, ${q(JSON.stringify(pr.skills))}, ${pr.open ? 1 : 0}, ${ago(60 * H)});`,
+      `INSERT INTO pro_profiles (member_id, headline, company, city, skills, open_to_work, updated_at) VALUES (${mid(p.key)}, ${q(pr.headline)}, ${q(pr.company)}, ${q(p.city)}, ${q(JSON.stringify(pr.skills))}, ${pr.open ? 1 : 0}, ${ago(60 * H)});`,
     );
   }
   for (const p of POSTS) {
-    out.push(`INSERT INTO pro_posts (member_id, body, link, status, created_at) VALUES (${mid(p.a)}, ${q(demoText(p.body))}, ${p.link ? q(p.link) : "NULL"}, 'visible', ${ago(p.h * H)});`);
+    out.push(`INSERT INTO pro_posts (member_id, body, link, status, created_at) VALUES (${mid(p.a)}, ${q(p.body)}, ${p.link ? q(p.link) : "NULL"}, 'visible', ${ago(p.h * H)});`);
   }
   for (const [key, files] of Object.entries(PRO_POST_MEDIA)) {
     files.forEach((file, i) => out.push(`INSERT INTO pro_post_media (post_id, r2_key, position) VALUES (${postRef(post(key))}, ${q(`demo/${file}`)}, ${i});`));
@@ -231,7 +246,7 @@ export function proSeed(meId?: string): string[] {
   });
   for (const j of JOBS) {
     out.push(
-      `INSERT INTO pro_jobs (member_id, title, company, city, type, description, contact, status, created_at, updated_at) VALUES (${mid(j.poster)}, ${q(j.title)}, ${q(j.company)}, ${q(j.city)}, ${q(j.type)}, ${q(demoText(j.description))}, ${q(phoneOf(j.poster))}, ${q(j.status)}, ${ago(j.h * H)}, ${ago(j.h * H)});`,
+      `INSERT INTO pro_jobs (member_id, title, company, city, type, description, contact, status, created_at, updated_at) VALUES (${mid(j.poster)}, ${q(j.title)}, ${q(j.company)}, ${q(j.city)}, ${q(j.type)}, ${q(j.description)}, ${q(phoneOf(j.poster))}, ${q(j.status)}, ${ago(j.h * H)}, ${ago(j.h * H)});`,
     );
   }
   for (const [creator, other, jobKey, msgs] of THREADS) pushThread(out, mid(creator), mid(other), jobKey, msgs, "1");

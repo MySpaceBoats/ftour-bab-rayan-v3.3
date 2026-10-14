@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "wouter";
 import { toast } from "sonner";
 import { Loader2, MailCheck, Pin } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,9 +11,18 @@ import PostCard from "../components/PostCard";
 import HubShell from "../components/HubShell";
 import Avatar from "../components/Avatar";
 import { PasswordTab, ResetPasswordForm } from "../components/HubLoginForms";
+import type { FeedScope } from "../api";
+import { useI18n } from "@/i18n";
 import { EmptyPanel, ErrorPanel, LoadingPanel } from "../components/StatePanel";
 
 const EMAIL_KEY = "hub_login_email";
+const SCOPE_KEY = "hub.feedScope";
+const SCOPES: { id: FeedScope; label: string }[] = [
+  { id: "all", label: "Tous" }, { id: "friends", label: "Amis" }, { id: "following", label: "Abonnements" }, { id: "favorites", label: "Favoris" },
+];
+const readScope = (): FeedScope => {
+  try { const v = localStorage.getItem(SCOPE_KEY); return SCOPES.some(s => s.id === v) ? (v as FeedScope) : "all"; } catch { return "all"; }
+};
 const RESEND_COOLDOWN_S = 30;
 
 /** Logged-out screen frame: gradient background, white card, logo header. */
@@ -48,6 +58,10 @@ export default function HubPage() {
   const [feedStatus, setFeedStatus] = useState<"loading" | "ready" | "error">("loading");
   const [feedError, setFeedError] = useState("");
   const [loadingMore, setLoadingMore] = useState(false);
+  const { lang } = useI18n();
+  const [scope, setScope] = useState<FeedScope>(readScope);
+  const scopeRef = useRef(scope);
+  scopeRef.current = scope;
   const started = useRef(false); // StrictMode runs effects twice: the magic link is single-use
   const hasContentRef = useRef(false); // read inside load() without making it a dependency
   hasContentRef.current = posts.length > 0 || pinned.length > 0;
@@ -63,12 +77,15 @@ export default function HubPage() {
     } else {
       setLoadingMore(true);
     }
+    const used = scope;
     try {
-      const f = await hub.getFeed(cursor);
+      const f = await hub.getFeed(cursor, used);
+      if (used !== scopeRef.current) return; // filter changed while loading: drop the stale page
       if (cursor === null) { setPinned(f.pinned); setPosts(f.posts); } else setPosts(p => [...p, ...f.posts]);
       setNext(f.nextCursor);
       setFeedStatus("ready");
     } catch (e) {
+      if (used !== scopeRef.current) return; // stale request for an old filter
       if (e instanceof hub.HubApiError && e.status === 401) {
         hub.setHubToken(null);
         setMe(null);
@@ -83,7 +100,7 @@ export default function HubPage() {
     } finally {
       if (cursor !== null) setLoadingMore(false);
     }
-  }, []);
+  }, [scope]);
 
   useEffect(() => {
     const onUnauthorized = () => { setMe(null); setSent(false); setNotice("Votre session a expiré. Demandez un nouveau lien de connexion."); };
@@ -278,6 +295,17 @@ export default function HubPage() {
   return (
     <HubShell me={me} right={right}>
       <Composer me={me} onPosted={() => load(null, { silent: true })} />
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrer le fil">
+        {SCOPES.map(s => (
+          <button
+            key={s.id}
+            type="button"
+            aria-pressed={scope === s.id}
+            onClick={() => { try { localStorage.setItem(SCOPE_KEY, s.id); } catch { /* storage unavailable */ } setScope(s.id); }}
+            className={`min-h-10 rounded-full px-4 text-sm font-medium ${scope === s.id ? "bg-blue-700 text-white" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}
+          >{s.label}</button>
+        ))}
+      </div>
       {feedStatus === "loading" && <LoadingPanel label="Chargement du fil…" />}
       {feedStatus === "error" && <ErrorPanel message={feedError || "Impossible de charger le fil."} onRetry={() => load()} />}
       {feedStatus === "ready" && pinned.length > 0 && (
@@ -286,7 +314,13 @@ export default function HubPage() {
         </div>
       )}
       {feedStatus === "ready" && posts.map(p => <PostCard key={p.id} post={p} me={me} onChanged={() => load(null, { silent: true })} />)}
-      {feedStatus === "ready" && !hasContent && (
+      {feedStatus === "ready" && posts.length === 0 && scope !== "all" && (
+        <EmptyPanel
+          title="Aucune publication dans ce filtre."
+          action={<Link href={`/${lang}/benevole/espace/amis`} className="text-sm text-blue-700 underline">Mes amis</Link>}
+        />
+      )}
+      {feedStatus === "ready" && !hasContent && scope === "all" && (
         <EmptyPanel
           title="Aucune publication pour l'instant."
           description="Lancez la conversation : une photo de votre dernière soirée, une question à l'équipe, un merci…"

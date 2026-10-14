@@ -5,7 +5,7 @@
 import type { D1Like } from "./gallery-d1";
 import { isVideoKey } from "./media-r2";
 
-export type HubErrorCode = "unauthorized" | "forbidden" | "not_found" | "invalid" | "rate_limited";
+export type HubErrorCode = "unauthorized" | "forbidden" | "not_found" | "invalid" | "rate_limited" | "conflict";
 export class HubError extends Error {
   constructor(public code: HubErrorCode, message: string) { super(message); }
 }
@@ -51,7 +51,7 @@ export async function createLoginToken(d: D1Like, email: string, nowMs: number):
   return raw;
 }
 
-export async function upsertMember(d: D1Like, email: string): Promise<MemberRow> {
+export async function upsertMember(d: D1Like, email: string, onCreated?: (m: MemberRow) => void): Promise<MemberRow> {
   const e = normEmail(email);
   const existing = await d.prepare("SELECT * FROM hub_members WHERE email = ?").bind(e).first<MemberRow>();
   if (existing) return existing;
@@ -59,15 +59,16 @@ export async function upsertMember(d: D1Like, email: string): Promise<MemberRow>
   const name = v ? `${v.first_name} ${String(v.last_name ?? "").charAt(0)}.`.trim() : e.split("@")[0];
   const row = await d.prepare("INSERT INTO hub_members (email, display_name) VALUES (?,?) ON CONFLICT(email) DO UPDATE SET email = excluded.email RETURNING *")
     .bind(e, name.slice(0, LIMITS.name)).first<MemberRow>();
+  onCreated?.(row!);
   return row!;
 }
 
-export async function openSession(d: D1Like, loginToken: string, nowMs: number): Promise<{ session: string; member: MemberView }> {
+export async function openSession(d: D1Like, loginToken: string, nowMs: number, onCreated?: (m: MemberRow) => void): Promise<{ session: string; member: MemberView }> {
   const used = await d.prepare("UPDATE hub_login_tokens SET used_at = ? WHERE token_hash = ? AND used_at IS NULL AND expires_at > ? RETURNING email")
     .bind(iso(nowMs), await sha256Hex(loginToken), iso(nowMs)).first<{ email: string }>();
   if (!used) throw new HubError("unauthorized", "Lien invalide ou expiré");
   if (!(await isEligible(d, used.email))) throw new HubError("forbidden", "Accès réservé aux bénévoles confirmés");
-  const member = await upsertMember(d, used.email);
+  const member = await upsertMember(d, used.email, onCreated);
   if (member.status !== "active") throw new HubError("forbidden", "Compte suspendu");
   return createSession(d, member, nowMs);
 }
@@ -204,16 +205,27 @@ export async function createPost(d: D1Like, member: MemberRow, input: { body: st
   return { id: row!.id };
 }
 
-async function loadPosts(d: D1Like, viewerId: number, pinned: 0 | 1, cursor: number | null, limit: number): Promise<PostView[]> {
+export const FEED_SCOPES = ["all", "friends", "following", "favorites"] as const;
+export type FeedScope = (typeof FEED_SCOPES)[number];
+// Driven from the small followed/friend set (IN subquery) so reads do not grow with total posts.
+const FOLLOWED = "AND p.member_id IN (SELECT followee_id FROM hub_follows WHERE follower_id = ?";
+const SCOPE_SQL: Record<FeedScope, string> = {
+  all: "",
+  friends: "AND p.member_id IN (SELECT CASE WHEN requester_id = ? THEN addressee_id ELSE requester_id END FROM hub_friendships WHERE status = 'accepted' AND (requester_id = ? OR addressee_id = ?))",
+  following: `${FOLLOWED})`,
+  favorites: `${FOLLOWED} AND favorite = 1)`,
+};
+
+async function loadPosts(d: D1Like, viewerId: number, pinned: 0 | 1, cursor: number | null, limit: number, scope: FeedScope = "all"): Promise<PostView[]> {
   const { results } = await d.prepare(
     `SELECT p.id, p.body, p.kind, p.pinned, p.created_at, m.id AS author_id, m.display_name AS author_name, m.avatar_key AS author_avatar,
        (SELECT COUNT(*) FROM hub_likes l WHERE l.post_id = p.id) AS like_count,
        (SELECT COUNT(*) FROM hub_comments c WHERE c.post_id = p.id AND c.status = 'visible') AS comment_count,
        EXISTS(SELECT 1 FROM hub_likes l WHERE l.post_id = p.id AND l.member_id = ?) AS liked
-     FROM hub_posts p JOIN hub_members m ON m.id = p.member_id
-     WHERE p.status = 'visible' AND p.pinned = ? AND (? IS NULL OR p.id < ?)
+     FROM hub_posts p ${scope === "all" ? "" : "INDEXED BY idx_hub_posts_member_feed"} JOIN hub_members m ON m.id = p.member_id
+     WHERE p.status = 'visible' AND p.pinned = ? AND (? IS NULL OR p.id < ?) ${SCOPE_SQL[scope]}
      ORDER BY p.id DESC LIMIT ?`,
-  ).bind(viewerId, pinned, cursor, cursor, limit).all<any>();
+  ).bind(viewerId, pinned, cursor, cursor, ...(scope === "friends" ? [viewerId, viewerId, viewerId] : scope === "all" ? [] : [viewerId]), limit).all<any>();
   const posts: PostView[] = results.map(r => ({
     id: r.id, body: r.body, kind: r.kind, pinned: Boolean(r.pinned), created_at: r.created_at,
     author: { id: r.author_id, display_name: r.author_name, avatar_key: r.author_avatar },
@@ -227,10 +239,10 @@ async function loadPosts(d: D1Like, viewerId: number, pinned: 0 | 1, cursor: num
   return posts;
 }
 
-export async function feed(d: D1Like, viewerId: number, cursor: number | null = null, limit = 20) {
+export async function feed(d: D1Like, viewerId: number, cursor: number | null = null, limit = 20, scope: FeedScope = "all") {
   const lim = Math.min(Math.max(Math.trunc(limit) || 20, 1), 50);
   const pinned = cursor == null ? await loadPosts(d, viewerId, 1, null, 5) : [];
-  const rows = await loadPosts(d, viewerId, 0, cursor, lim + 1);
+  const rows = await loadPosts(d, viewerId, 0, cursor, lim + 1, scope);
   const posts = rows.slice(0, lim);
   return { pinned, posts, nextCursor: rows.length > lim ? posts[posts.length - 1].id : null };
 }

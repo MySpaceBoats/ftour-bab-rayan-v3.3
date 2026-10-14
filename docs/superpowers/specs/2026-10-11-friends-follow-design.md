@@ -1,6 +1,6 @@
 # Amis, abonnements et favoris de l'espace bénévole — design
 
-Date : 2026-10-11 · Statut : à relire · Prérequis : espace bénévole (`2026-10-09-volunteer-hub-design.md`). Aucun fichier `market*`, `pro*`, `stay*`, `meetup*`, `messenger*` modifié.
+Date : 2026-10-11 · Statut : implémenté · Prérequis : espace bénévole (`2026-10-09-volunteer-hub-design.md`). Aucun fichier `market*`, `pro*`, `stay*`, `meetup*`, `messenger*` modifié.
 
 ## Objectif
 

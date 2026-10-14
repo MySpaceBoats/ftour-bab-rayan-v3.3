@@ -34,6 +34,7 @@ import MarketPage from "@/features/hub/market/pages/MarketPage";
 import ListingDetailPage from "@/features/hub/market/pages/ListingDetailPage";
 import ListingFormPage from "@/features/hub/market/pages/ListingFormPage";
 import HubProfilePage from "@/features/hub/pages/HubProfilePage";
+import FriendsPage from "@/features/hub/social/FriendsPage";
 import StayPage from "@/features/hub/stay/pages/StayPage";
 import StayDetailPage from "@/features/hub/stay/pages/StayDetailPage";
 import StayFormPage from "@/features/hub/stay/pages/StayFormPage";
@@ -382,6 +383,7 @@ function LocalizedRoutes() {
       <Route path="/:lang/benevole/espace/pro/membre/:id" component={ProMemberPage} />
       <Route path="/:lang/benevole/espace/pro/profil" component={ProProfilePage} />
       <Route path="/:lang/benevole/espace/pro" component={ProFeedPage} />
+      <Route path="/:lang/benevole/espace/amis" component={FriendsPage} />
       <Route path="/:lang/benevole/espace/membre/:id" component={HubProfilePage} />
       <Route path="/:lang/benevole/espace/profil" component={HubProfilePage} />
       <Route path="/:lang/benevole/espace" component={HubPage} />

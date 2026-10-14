@@ -14,6 +14,8 @@ import * as siteDb from "./site-d1";
 import * as electionDb from "./election-d1";
 import * as donationsDb from "./donations-d1";
 import { sendEmail, generateGalleryUploadValidationEmail } from "./email";
+import { notifySupport } from "./support-notify";
+import { checkPublicQuota, decodePublicPhoto } from "./gallery-public";
 import * as XLSX from "xlsx";
 import {
   addDaysToDateString,
@@ -2185,6 +2187,71 @@ const galleryRouter = router({
       return photo;
     }),
 
+  // Anonymous upload from the public gallery page: photos land as drafts (admin moderation), never published directly.
+  publicUpload: publicProcedure
+    .input(
+      z.object({
+        photos: z
+          .array(
+            z.object({
+              fileName: z.string().min(1).max(260),
+              fileType: z.string(),
+              fileData: z.string(),
+              albumId: z.string().uuid().optional(),
+              eventDate: z.string().optional(),
+              title: z.string().max(200).optional(),
+            })
+          )
+          .min(1)
+          .max(GALLERY_MAX_BATCH),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const d1 = galleryDb.db(ctx.env);
+      const bucket = galleryMedia(ctx);
+      const origin = galleryOrigin(ctx);
+      const ip = ctx.req.headers.get("cf-connecting-ip") ?? ctx.req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+
+      await checkPublicQuota(d1, ip, input.photos.length);
+      // Validate everything before writing anything.
+      const decoded = input.photos.map(photo => ({ photo, ...decodePublicPhoto(photo) }));
+
+      let count = 0;
+      for (const { photo, ext, buffer } of decoded) {
+        const key = `gallery/original/${crypto.randomUUID()}.${ext}`;
+        await bucket.put(key, buffer, { httpMetadata: { contentType: photo.fileType } });
+        try {
+          await galleryDb.insertPhoto(
+            d1,
+            {
+              title: photo.title,
+              eventDate: normalizeGalleryEventDate(photo.eventDate),
+              tags: [],
+              albumId: photo.albumId,
+              sortOrder: 0,
+              isFeatured: false,
+              status: "draft",
+              storagePath: key,
+              sizeBytes: buffer.length,
+              mimeType: photo.fileType,
+              uploadedBy: ip,
+              validationEmail: null,
+              validationToken: null,
+              validated: false,
+            },
+            origin
+          );
+        } catch (e) {
+          await bucket.delete(key); // no orphan object if the row failed
+          throw new TRPCError({ code: "BAD_REQUEST", message: e instanceof Error ? e.message : "Insertion impossible" });
+        }
+        count++;
+      }
+
+      await notifySupport(ctx.env, { kind: "photos", title: "Photos envoyées à la galerie (public)", lines: [["Photos", count], ["Statut", "en attente de modération"]] });
+      return { count };
+    }),
+
   uploadPhotos: protectedProcedure
     .input(
       z.object({
@@ -2322,8 +2389,11 @@ const galleryRouter = router({
           subject: emailPayload.subject,
           html: emailPayload.html,
         });
+        await notifySupport(ctx.env, { kind: "photos", title: "Photos envoyées à la galerie", lines: [["Photos", count], ["Membre", ctx.user.email], ["Statut", "validation par e-mail requise"]] });
         return { needsValidation: true, count };
       }
+
+      await notifySupport(ctx.env, { kind: "photos", title: "Photos envoyées à la galerie", lines: [["Photos", count], ["Membre", ctx.user.email]] });
 
       return { needsValidation: false, count };
     }),
@@ -2811,6 +2881,7 @@ const publicRouter = router({
       z
         .object({
           album: z.string().optional(),
+          albumSlug: z.string().optional(), // alias used by the client (Node router parity)
           tag: z.string().optional(),
           page: z.number().int().min(1).default(1),
           pageSize: z.number().int().min(1).max(50).default(18),
@@ -2826,7 +2897,7 @@ const publicRouter = router({
         {
           page,
           pageSize,
-          album: input?.album,
+          album: input?.albumSlug ?? input?.album,
           tag: input?.tag,
           status: "published",
           sort: input?.sort ?? "recent",
@@ -3205,6 +3276,8 @@ const volunteersRouter = router({
         console.error("[Worker] Error sending email:", emailError);
         // Don't throw - registration is still successful
       }
+
+      await notifySupport(ctx.env, { kind: "volunteer", title: "Nouvelle inscription bénévole", lines: [["Nom", `${input.firstName} ${input.lastName}`], ["Email", input.email], ["Téléphone", input.phone], ["Ville", input.city], ["Créneaux", input.volunteerSlots?.join(", ")]] });
 
       return { id: volunteer.id, qrToken };
     }),
@@ -3806,6 +3879,8 @@ const volunteersRouter = router({
           error
         );
       }
+
+      await notifySupport(ctx.env, { kind: "volunteer-group", title: "Nouvelle inscription bénévole (groupe)", lines: [["Groupe", input.groupName], ["Responsable", input.responsibleName], ["Email", input.responsibleEmail], ["Téléphone", input.responsiblePhone], ["Effectif estimé", input.estimatedSize]] });
 
       return {
         success: true,
@@ -5100,6 +5175,7 @@ const ordersRouter = router({
         // Don't throw - order is still successful
       }
 
+      await notifySupport(ctx.env, { kind: "order", title: "Nouvelle commande goodies", lines: [["Référence", orderRef], ["Total", `${totalAmount} MAD`], ["Client", input.customerName], ["Email", input.customerEmail], ["Téléphone", input.customerPhone], ["Paiement", input.paymentMethod]] });
       return { id: order.id, orderReference: orderRef, totalAmount };
     }),
 
@@ -5359,6 +5435,7 @@ const donationsRouter = router({
         // Don't throw - donation is still successful
       }
 
+      await notifySupport(ctx.env, { kind: "donation", title: "Nouveau don", lines: [["Référence", donationRef], ["Montant", `${input.amount} MAD`], ["Mode", input.paymentMethod], ["Donateur", input.isAnonymous ? "Anonyme" : input.donorName], ["Email", input.donorEmail], ["Téléphone", input.donorPhone]] });
       return { id: data.id, donationReference: donationRef };
     }),
 
@@ -5692,6 +5769,8 @@ const pastryOrdersRouter = router({
       } catch (emailError) {
         console.error("[Worker] Pastry order email error:", emailError);
       }
+
+      await notifySupport(ctx.env, { kind: "order", title: "Nouvelle commande pâtisserie", lines: [["Référence", reference], ["Total", `${input.totalAmount} MAD`], ["Client", input.customerName], ["Email", input.email], ["Téléphone", input.phone], ["Paiement", input.paymentMethod]] });
 
       return data;
     }),
@@ -8209,6 +8288,8 @@ const terroirModuleRouter = router({
         }
       }
 
+      await notifySupport(ctx.env, { kind: "order", title: "Nouvelle commande terroir", lines: [["Commande", String((order as { id?: number } | null)?.id ?? "")], ["Total", `${input.items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0)} MAD`], ["Client", input.customerName], ["Email", input.customerEmail], ["Téléphone", input.customerPhone]] });
+
       return order;
     }),
 
@@ -8480,6 +8561,8 @@ const terroirModuleRouter = router({
             .eq("id", item.catalogProductId);
         }
       }
+
+      await notifySupport(ctx.env, { kind: "order", title: "Nouvelle commande boutique", lines: [["Commande", String((order as { id?: number } | null)?.id ?? "")], ["Total", `${input.items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0)} MAD`], ["Client", input.customerName], ["Email", input.customerEmail], ["Téléphone", input.customerPhone]] });
 
       return order;
     }),
@@ -8929,6 +9012,8 @@ const partnerLeadsRouter = router({
       } catch (emailError) {
         console.error("[Worker] Error sending partner lead email:", emailError);
       }
+
+      await notifySupport(ctx.env, { kind: "partnership", title: "Nouvelle demande de partenariat", lines: [["Société", input.companyName], ["Contact", input.contactName], ["Email", input.email], ["Téléphone", input.phone], ["Type", input.partnershipType], ["Budget", input.budgetRange], ["Message", input.message]] });
 
       return { success: true, id };
     }),

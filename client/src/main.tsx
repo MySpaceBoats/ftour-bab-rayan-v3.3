@@ -4,7 +4,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
+import { Router } from "wouter";
 import App from "./App";
+import { isSubdomainSpace, useSubdomainLocation } from "./lib/subdomain-location";
 import {
   clearStoredSession,
   getStoredSession,
@@ -129,7 +131,13 @@ createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
-        <App />
+        {isSubdomainSpace ? (
+          <Router hook={useSubdomainLocation}>
+            <App />
+          </Router>
+        ) : (
+          <App />
+        )}
       </I18nProvider>
     </QueryClientProvider>
   </trpc.Provider>

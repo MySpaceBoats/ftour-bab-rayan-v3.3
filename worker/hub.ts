@@ -9,12 +9,15 @@ import * as A from "./hub-auth-d1";
 import * as N from "./hub-notify";
 import { appBaseUrl, emailField, id, readJson, str } from "./hub-http";
 import { handleMarketRoute } from "./market";
+import { handleSocialRoute } from "./social";
+import * as S from "./social-d1";
 import { handleStayRoute } from "./stay";
 import { handleMeetupRoute } from "./meetup";
 import { handlePro } from "./pro";
 import * as X from "./messenger-d1";
 import { handleAi, SUPPORT_EMAIL as AI_SUPPORT_EMAIL } from "./ai";
 import type { FetchLike } from "./ai-core";
+import { notifySupport } from "./support-notify";
 import { confirmItem, listModeration, moderate, restoreItem } from "./moderation";
 import { notifyModeration, notifyRestored } from "./moderation-notify";
 
@@ -33,7 +36,7 @@ export interface HubDeps {
 const ADMIN_ROLES = new Set(["super_admin", "admin", "admin_ops"]);
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
 const VIDEO_EXT: Record<string, string> = { "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov" };
-const STATUS: Record<H.HubErrorCode, number> = { unauthorized: 401, forbidden: 403, not_found: 404, invalid: 400, rate_limited: 429 };
+const STATUS: Record<H.HubErrorCode, number> = { unauthorized: 401, forbidden: 403, not_found: 404, invalid: 400, rate_limited: 429, conflict: 409 };
 const SIGN_TTL_S = 3600;
 
 export async function handleHubRequest(request: Request, env: HubEnv, cors: Record<string, string>, deps: HubDeps = {}): Promise<Response | null> {
@@ -197,7 +200,13 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     }
     if (match("POST", /^verify$/)) {
       const token = str((await readJson(request)).token);
-      return json(await H.openSession(d, token, now()));
+      let created: H.MemberRow | null = null;
+      const session = await H.openSession(d, token, now(), m => { created = m; });
+      if (created) {
+        const c = created as H.MemberRow;
+        await background("support: new member", () => notifySupport(env, { kind: "hub-signup", title: "Nouvel inscrit sur la Community Space", lines: [["Nom", c.display_name], ["Email", c.email]] }, o => sendMail(o.to, o.subject, o.html)));
+      }
+      return json(session);
     }
     if (match("POST", /^logout$/)) {
       const a = request.headers.get("authorization") ?? "";
@@ -227,7 +236,7 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     }
     if (match("GET", /^notifications\/unread$/)) {
       const me = await member();
-      return json({ unread: await N.unreadCount(d, me.id) });
+      return json({ unread: await N.unreadCount(d, me.id), friend_requests: await S.pendingCount(d, me.id).catch(() => 0) });
     }
     if (match("POST", /^notifications\/read$/)) {
       const me = await member();
@@ -259,7 +268,9 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     if (match("GET", /^feed$/)) {
       const me = await member();
       const c = url.searchParams.get("cursor");
-      const f = await H.feed(d, me.id, c && /^\d+$/.test(c) ? Number(c) : null);
+      const scope = url.searchParams.get("scope") ?? "all";
+      if (!H.FEED_SCOPES.includes(scope as H.FeedScope)) throw new H.HubError("invalid", "Filtre invalide");
+      const f = await H.feed(d, me.id, c && /^\d+$/.test(c) ? Number(c) : null, 20, scope as H.FeedScope);
       return json({ pinned: await Promise.all(f.pinned.map(present)), posts: await Promise.all(f.posts.map(present)), nextCursor: f.nextCursor });
     }
     if (match("POST", /^(?:volunteer\/)?posts$/)) {
@@ -414,6 +425,12 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     if (path.startsWith("market/")) {
       const r = await handleMarketRoute({ d, request, url, path: path.slice("market/".length), now, json, member, admin, sign });
       if (r) { await pushAfterSend(r); return r; }
+    }
+
+    // ---- amis / abonnements ------------------------------------------------
+    if (path.startsWith("social/")) {
+      const r = await handleSocialRoute({ d, request, url, path: path.slice("social/".length), now, json, member, sign });
+      if (r) return r;
     }
 
     // ---- hébergement (façon Airbnb) ----------------------------------------

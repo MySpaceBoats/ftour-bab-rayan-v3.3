@@ -6,6 +6,8 @@ Avatars (avatar-*.png) : illustrations générées localement par generate-avata
 
 Les visuels livres-1, poussette-1, robe-1, robe-2, djellaba-1 et stay-appart-oasis restent des illustrations générées (generate-media.mjs) : pas de photo adaptée trouvée.
 
+Les visuels meetup-*.jpg (Meetup), cartable-1, stay-*-2 (deuxièmes photos d'hébergement) et pro-atelier-stock sont aussi des illustrations générées par generate-media.mjs (emoji sur fond dégradé, mention « Photo de démonstration »), sans source externe.
+
 | Fichier | Auteur | Licence | Source |
 |---|---|---|---|
 | photo-harira.jpg | Miansari66 | CC0 | https://commons.wikimedia.org/wiki/File:Harira..JPG |

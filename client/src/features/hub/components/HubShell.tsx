@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { BedDouble, Briefcase, CalendarDays, Home, LogOut, Mail, Newspaper, Store, User } from "lucide-react";
+import { BedDouble, Briefcase, CalendarDays, Home, LogOut, Mail, Newspaper, Store, User, Users } from "lucide-react";
 import { useI18n } from "@/i18n";
 import {
   DropdownMenu,
@@ -34,10 +34,19 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
   const [aiOpen, setAiOpen] = useState(aiConv !== null);
   const [unread, setUnread] = useState(0);
   const [notifUnread, setNotifUnread] = useState(0);
+  const [friendReq, setFriendReq] = useState(0);
+  const friends = `${base}/amis`;
   const tick = useCallback(() => {
     // one badge: Pro + Marketplace + Séjours messages
     proApi.unreadCount().then(setUnread).catch(() => undefined);
-    hub.unreadNotifications().then(setNotifUnread).catch(() => undefined);
+    // single request per tick: feeds both the bell and the friend-request badge
+    hub.unreadSummary().then(r => { setNotifUnread(r.unread); setFriendReq(r.friend_requests ?? 0); }).catch(() => undefined);
+  }, []);
+  // FriendsPage fires this after accept/decline so the badge updates without extra polling
+  useEffect(() => {
+    const refresh = () => { hub.unreadSummary().then(r => setFriendReq(r.friend_requests ?? 0)).catch(() => undefined); };
+    window.addEventListener("hub:friends-changed", refresh);
+    return () => window.removeEventListener("hub:friends-changed", refresh);
   }, []);
   // the socket pushes new messages instantly; polling every 30 s is the fallback
   useChat(e => { if (e.type === "message") tick(); });
@@ -64,6 +73,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
   // "/pro" is also a prefix of "/profil": require a path boundary.
   const isPro = path === pro || path.startsWith(`${pro}/`);
   const isProfile = path.startsWith(profile);
+  const isFriends = path === friends || path.startsWith(`${friends}/`);
 
   const navLinks = [
     { href: feed, label: "Fil d'actualité", short: "Fil", icon: <Newspaper size={18} aria-hidden />, active: isFeed, badge: 0, badgeLabel: "" },
@@ -72,8 +82,9 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
     { href: stay, label: "Hébergement", short: "Logement", icon: <BedDouble size={18} aria-hidden />, active: isStay, badge: 0, badgeLabel: "" },
     { href: meetup, label: "Meetup", short: "Meetup", icon: <CalendarDays size={18} aria-hidden />, active: isMeetup, badge: 0, badgeLabel: "" },
     { href: messages, label: "Messages", short: "Messages", icon: <Mail size={18} aria-hidden />, active: isMessages, badge: unread, badgeLabel: "messages non lus" },
+    { href: friends, label: "Amis", short: "Amis", icon: <Users size={18} aria-hidden />, active: isFriends, badge: friendReq, badgeLabel: "demandes d'ami", desktopOnly: true },
     { href: profile, label: "Mon profil", short: "Profil", icon: <User size={18} aria-hidden />, active: isProfile, badge: 0, badgeLabel: "" },
-  ];
+  ] as { href: string; label: string; short: string; icon: ReactNode; active: boolean; badge: number; badgeLabel: string; desktopOnly?: boolean }[];
 
   return (
     // The hub is a light app frame (bg-slate-100 + white cards) inside an app themed dark olive.
@@ -107,6 +118,11 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href={profile} className="cursor-pointer">Mon profil</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href={friends} className="cursor-pointer" aria-current={isFriends ? "page" : undefined}>
+                  Mes amis{friendReq > 0 ? ` (${friendReq})` : ""}
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={messages} className="cursor-pointer" aria-current={isMessages ? "page" : undefined}>
@@ -158,7 +174,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
       <AssistantWidget open={aiOpen} onOpenChange={setAiOpen} conversationId={aiConv} />
 
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-7 border-t border-slate-200 bg-white text-[11px] text-slate-700 lg:hidden" aria-label="Navigation mobile">
-        {navLinks.map(l => (
+        {navLinks.filter(l => !l.desktopOnly).map(l => (
           <Link key={l.href} href={l.href} className={l.active ? activeTab : tab} aria-current={l.active ? "page" : undefined}>
             <span className="relative">
               {l.icon}

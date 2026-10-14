@@ -1,5 +1,5 @@
 /**
- * Hermetic check of the volunteer-hub demo seed (Fil, Marketplace, Hébergement, Pro). The generated SQL is replayed
+ * Hermetic check of the volunteer-hub demo seed (Fil, Marketplace, Hébergement, Pro, Meetup). The generated SQL is replayed
  * against the real D1 schema in an in-memory SQLite database, so a broken statement, a missing section or a leaky
  * cleanup fails here instead of halfway through a remote `wrangler d1 execute`. The real data-layer functions
  * (the ones the Worker routes call) are then run over the seeded database to prove the app can read and show it.
@@ -7,11 +7,13 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
-import { DEMO_DOMAIN, DEMO_LABEL, LISTING_MEDIA, POST_MEDIA, cleanupSql, seedSql } from "../scripts/hub-demo/build";
+import { DEMO_DOMAIN, DEMO_MARK, LISTING_MEDIA, POST_MEDIA, cleanupSql, seedSql } from "../scripts/hub-demo/build";
+import { MEETUP_MEDIA } from "../scripts/hub-demo/meetup";
 import { PRO_POST_MEDIA } from "../scripts/hub-demo/pro";
 import { STAY_MEDIA } from "../scripts/hub-demo/stay";
 import type { D1Like, D1Stmt } from "./gallery-d1";
 import * as H from "./hub-d1";
+import * as mt from "./meetup-d1";
 import * as mk from "./market-d1";
 import * as pro from "./pro-d1";
 import * as st from "./stay-d1";
@@ -23,8 +25,10 @@ interface SqliteDb { exec(sql: string): void; prepare(sql: string): SqliteStatem
 const { DatabaseSync } = createRequire(import.meta.url)("node:sqlite") as { DatabaseSync: new (path: string) => SqliteDb };
 
 // order matters: base tables, then the hub/marketplace/stay/pro tables, then the triggers that need them
-const SCHEMA = ["schema.generated.sql", "hub.sql", "marketplace.sql", "stay.sql", "pro.sql", "logic.sql"];
+const SCHEMA = ["schema.generated.sql", "hub.sql", "marketplace.sql", "stay.sql", "pro.sql", "meetup.sql", "social.sql", "logic.sql"];
 const DEMO_LIKE = `'%@${DEMO_DOMAIN}'`;
+/** The long marker the seed used to put in front of every text; it must not come back. */
+const NO_OLD_PREFIX = /🧪|profil test/i;
 
 function freshDb(): SqliteDb {
   const db = new DatabaseSync(":memory:");
@@ -53,6 +57,7 @@ const TABLES = [
   "mk_listings", "mk_listing_media", "mk_comments", "mk_reports", "mk_threads", "mk_messages",
   "st_listings", "st_listing_media", "st_requests", "st_request_messages", "st_reviews", "st_reports",
   "pro_profiles", "pro_posts", "pro_post_media", "pro_likes", "pro_comments", "pro_jobs", "pro_threads", "pro_messages", "pro_reports",
+  "mt_meetups", "mt_participants",
   "t_volunteers",
 ];
 const snapshot = (db: SqliteDb) => TABLES.map(t => [t, count(db, t)] as const);
@@ -88,7 +93,7 @@ describe("hub demo seed: Fil and Marketplace", () => {
     const db = freshDb();
     db.exec(seedSql());
     // fil d'actualité: ~25 posts by all ten authors, nested replies, uneven likes
-    expect(n(db, "SELECT COUNT(*) AS n FROM hub_posts WHERE kind = 'post' AND pinned = 0 AND status = 'visible'")).toBe(26);
+    expect(n(db, "SELECT COUNT(*) AS n FROM hub_posts WHERE kind = 'post' AND pinned = 0 AND status = 'visible'")).toBe(30);
     expect(n(db, "SELECT COUNT(DISTINCT member_id) AS n FROM hub_posts WHERE kind = 'post'")).toBe(10);
     expect(n(db, "SELECT COUNT(*) AS n FROM hub_comments WHERE status = 'visible'")).toBeGreaterThanOrEqual(60);
     expect(n(db, "SELECT COUNT(*) AS n FROM hub_comments WHERE body LIKE '@%'")).toBeGreaterThanOrEqual(10);
@@ -101,14 +106,14 @@ describe("hub demo seed: Fil and Marketplace", () => {
     expect(n(db, "SELECT COUNT(*) AS n FROM hub_reports WHERE target_type = 'comment'")).toBe(1);
     expect(n(db, "SELECT COUNT(*) AS n FROM mk_reports")).toBe(1);
     // marketplace: les sept catégories, un vendu, un don gratuit, une annonce douteuse
-    expect(n(db, "SELECT COUNT(*) AS n FROM mk_listings")).toBe(14);
+    expect(n(db, "SELECT COUNT(*) AS n FROM mk_listings")).toBe(16);
     expect(n(db, "SELECT COUNT(DISTINCT category) AS n FROM mk_listings")).toBe(7);
     expect(n(db, "SELECT COUNT(*) AS n FROM mk_listings WHERE status = 'sold'")).toBeGreaterThanOrEqual(1);
     expect(n(db, "SELECT COUNT(*) AS n FROM mk_listings WHERE price = 0")).toBe(1);
     expect(n(db, "SELECT COUNT(*) AS n FROM mk_listings WHERE contact_phone IS NOT NULL")).toBeGreaterThanOrEqual(3);
     expect(n(db, "SELECT COUNT(*) AS n FROM mk_comments")).toBeGreaterThanOrEqual(20);
     // messagerie: 7 conversations de 3 à 8 messages, dont une sur une annonce vendue et des non-lus
-    expect(n(db, "SELECT COUNT(*) AS n FROM mk_threads")).toBe(7);
+    expect(n(db, "SELECT COUNT(*) AS n FROM mk_threads")).toBe(8);
     const perThread = db.prepare("SELECT COUNT(*) AS c FROM mk_messages GROUP BY thread_id").all() as { c: number }[];
     for (const t of perThread) { expect(t.c).toBeGreaterThanOrEqual(3); expect(t.c).toBeLessThanOrEqual(8); }
     expect(n(db, "SELECT COUNT(*) AS n FROM mk_messages WHERE read_at IS NULL")).toBeGreaterThanOrEqual(3);
@@ -128,7 +133,7 @@ describe("hub demo seed: Fil and Marketplace", () => {
            COALESCE(SUM(CASE WHEN m.position = 0 THEN 1 ELSE 0 END), 0) AS covers
          FROM ${table} l LEFT JOIN ${media} m ON m.listing_id = l.id GROUP BY l.id`,
       ).all() as { id: number; title: string; photos: number; covers: number }[];
-      expect(perListing).toHaveLength(table === "mk_listings" ? 14 : 8);
+      expect(perListing).toHaveLength(table === "mk_listings" ? 16 : 8);
       for (const l of perListing) {
         expect(l.photos, `${l.title} : au moins une photo`).toBeGreaterThanOrEqual(1);
         expect(l.covers, `${l.title} : exactement une couverture (position 0)`).toBe(1);
@@ -167,8 +172,9 @@ describe("hub demo seed: Fil and Marketplace", () => {
     const keys = new Set<string>();
     for (const [table] of [["hub_post_media"], ["pro_post_media"], ["mk_listing_media"], ["st_listing_media"]])
       for (const r of db.prepare(`SELECT r2_key FROM ${table}`).all() as { r2_key: string }[]) keys.add(r.r2_key);
+    for (const r of db.prepare("SELECT photo_key FROM mt_meetups WHERE photo_key IS NOT NULL").all() as { photo_key: string }[]) keys.add(r.photo_key);
     for (const m of members) keys.add(m.avatar_key!);
-    expect(keys.size).toBeGreaterThanOrEqual(50);
+    expect(keys.size).toBeGreaterThanOrEqual(60);
     for (const key of keys) {
       expect(key, key).toMatch(/^demo\/[a-z0-9-]+\.(jpg|png)$/);
       expect(existsSync(new URL(key.slice("demo/".length), mediaDir)), `${key} absent de scripts/hub-demo/media/`).toBe(true);
@@ -182,22 +188,26 @@ describe("hub demo seed: Fil and Marketplace", () => {
     expect(Object.keys(PRO_POST_MEDIA).length).toBeGreaterThanOrEqual(6);
   });
 
-  it("marks every demo profile, post and listing as test data", () => {
+  it("marks every demo member with one discreet suffix, without the old long prefix", () => {
     const db = freshDb();
     db.exec(seedSql());
+    expect(seedSql()).not.toMatch(NO_OLD_PREFIX);
+    expect(seedSql().split(DEMO_MARK)).toHaveLength(11); // exactly one marker per member, nowhere else
     const members = db.prepare("SELECT display_name, bio FROM hub_members").all() as { display_name: string; bio: string }[];
     expect(members).toHaveLength(10);
     for (const m of members) {
-      // le nom est le seul champ visible partout (fil, annonces, messagerie) : le marqueur doit y être
-      expect(m.display_name).toContain("profil test");
-      expect(m.bio).toContain(DEMO_LABEL);
+      // le nom est le seul champ visible partout (fil, annonces, messagerie) : le marqueur discret doit y être, une seule fois
+      expect(m.display_name.endsWith(` ${DEMO_MARK}`), m.display_name).toBe(true);
+      expect(m.display_name.split(DEMO_MARK)).toHaveLength(2);
+      expect(m.display_name.length).toBeLessThanOrEqual(30);
+      expect(m.bio).not.toMatch(NO_OLD_PREFIX);
     }
     const bodies = db.prepare("SELECT body FROM hub_posts").all() as { body: string }[];
-    expect(bodies).toHaveLength(28);
-    for (const b of bodies) expect(b.body.startsWith(DEMO_LABEL), b.body.slice(0, 40)).toBe(true);
+    expect(bodies).toHaveLength(32);
+    for (const b of bodies) expect(b.body, b.body.slice(0, 40)).not.toMatch(NO_OLD_PREFIX);
     const descriptions = db.prepare("SELECT description FROM mk_listings").all() as { description: string }[];
-    expect(descriptions).toHaveLength(14);
-    for (const d of descriptions) expect(d.description.startsWith(DEMO_LABEL)).toBe(true);
+    expect(descriptions).toHaveLength(16);
+    for (const d of descriptions) expect(d.description).not.toMatch(NO_OLD_PREFIX);
 
     // un vrai membre (option --me) ne doit jamais porter le marqueur
     const withMe = freshDb();
@@ -273,7 +283,7 @@ describe("hub demo seed: Hébergement", () => {
     expect(detail.reviews).toHaveLength(2);
     expect(detail.amenities.length).toBeGreaterThanOrEqual(3);
     expect(detail.contact?.phone.startsWith("+2120")).toBe(true);
-    expect(detail.description.startsWith(DEMO_LABEL)).toBe(true);
+    expect(detail.description).not.toMatch(NO_OLD_PREFIX);
 
     // as a host: incoming requests; as a guest: sent requests, request detail and conversation
     const yasmine = demo(db, "yasmine");
@@ -314,15 +324,15 @@ describe("hub demo seed: Pro", () => {
     expect(count(db, "pro_comments")).toBeGreaterThanOrEqual(35);
     expect(count(db, "pro_likes")).toBeGreaterThanOrEqual(60);
     expect(n(db, "SELECT COUNT(*) AS n FROM pro_comments WHERE body LIKE '@%'")).toBeGreaterThanOrEqual(5);
-    expect(count(db, "pro_jobs")).toBe(8);
+    expect(count(db, "pro_jobs")).toBe(10);
     expect(n(db, "SELECT COUNT(DISTINCT type) AS n FROM pro_jobs")).toBe(5);
-    expect(n(db, "SELECT COUNT(*) AS n FROM pro_jobs WHERE status = 'open'")).toBe(6);
+    expect(n(db, "SELECT COUNT(*) AS n FROM pro_jobs WHERE status = 'open'")).toBe(8);
     expect(n(db, "SELECT COUNT(*) AS n FROM pro_jobs WHERE status = 'closed'")).toBe(2);
-    expect(count(db, "pro_threads")).toBe(5);
-    expect(n(db, "SELECT COUNT(*) AS n FROM pro_threads WHERE job_id > 0")).toBe(3);
+    expect(count(db, "pro_threads")).toBe(6);
+    expect(n(db, "SELECT COUNT(*) AS n FROM pro_threads WHERE job_id > 0")).toBe(4);
     expect(n(db, "SELECT COUNT(*) AS n FROM pro_threads WHERE job_id = 0")).toBe(2);
     const perThread = db.prepare("SELECT COUNT(*) AS c FROM pro_messages GROUP BY thread_id").all() as { c: number }[];
-    expect(perThread).toHaveLength(5);
+    expect(perThread).toHaveLength(6);
     for (const t of perThread) { expect(t.c).toBeGreaterThanOrEqual(3); expect(t.c).toBeLessThanOrEqual(7); }
     expect(n(db, "SELECT COUNT(*) AS n FROM pro_messages WHERE read_at IS NULL")).toBeGreaterThanOrEqual(3);
     expect(count(db, "pro_reports")).toBe(2);
@@ -343,7 +353,7 @@ describe("hub demo seed: Pro", () => {
       expect(skills.length, r.display_name).toBeGreaterThanOrEqual(3);
       expect(skills.length).toBeLessThanOrEqual(8);
       expect(skills.every(s => s.length <= 30)).toBe(true);
-      expect(r.headline!.startsWith(DEMO_LABEL), "headline marked").toBe(true);
+      expect(r.headline!, "headline unmarked").not.toMatch(NO_OLD_PREFIX);
       expect(r.company!).toMatch(/\(fictif|fictive\)/);
     }
     expect(n(db, "SELECT COUNT(*) AS n FROM pro_profiles WHERE open_to_work = 1")).toBeGreaterThanOrEqual(3);
@@ -360,7 +370,7 @@ describe("hub demo seed: Pro", () => {
       expect(pro.cleanLink(l)).toBe(l);
     }
     const contacts = (db.prepare("SELECT contact FROM pro_jobs").all() as { contact: string }[]).map(r => r.contact);
-    expect(contacts).toHaveLength(8);
+    expect(contacts).toHaveLength(10);
     for (const c of contacts) expect(c, c).toMatch(/^\+2120000000\d\d$/);
     // no http(s) link anywhere else in the demo text, and no real-looking social or company domain
     const all = [
@@ -380,7 +390,7 @@ describe("hub demo seed: Pro", () => {
     out.push(feed);
     expect(feed.posts).toHaveLength(16);
     expect(feed.posts.filter(p => p.link).length).toBeGreaterThanOrEqual(4);
-    expect(feed.posts.every(p => p.author.headline.startsWith(DEMO_LABEL))).toBe(true);
+    expect(feed.posts.every(p => !NO_OLD_PREFIX.test(p.author.headline))).toBe(true);
     const proPhotos = feed.posts.filter(p => p.media.length > 0);
     expect(proPhotos).toHaveLength(Object.keys(PRO_POST_MEDIA).length);
     expect(proPhotos.flatMap(p => p.media).every(k => /^demo\/[a-z0-9-]+\.jpg$/.test(k))).toBe(true);
@@ -402,7 +412,7 @@ describe("hub demo seed: Pro", () => {
 
     const jobs = await pro.listJobs(d, real.id, { limit: 50 });
     out.push(jobs);
-    expect(jobs.jobs).toHaveLength(6);
+    expect(jobs.jobs).toHaveLength(8);
     for (const j of jobs.jobs) {
       const jd = await pro.getJob(d, real.id, j.id);
       out.push(jd);
@@ -410,7 +420,7 @@ describe("hub demo seed: Pro", () => {
     }
     expect((await pro.listJobs(d, demo(db, "omar").id, { mine: true })).jobs.map(j => j.status)).toEqual(["closed"]);
     expect((await pro.listJobs(d, real.id, { type: "stage" })).jobs).toHaveLength(1);
-    expect(await pro.adminListJobs(d)).toHaveLength(8);
+    expect(await pro.adminListJobs(d)).toHaveLength(10);
 
     // private conversations as a participant
     const imane = demo(db, "imane");
@@ -449,7 +459,7 @@ describe("hub demo seed: Fil and Marketplace through the real data layer", () =>
     const feed = await H.feed(d, real.id, null, 50);
     out.push(feed);
     expect(feed.pinned.length).toBeGreaterThanOrEqual(2);
-    expect(feed.posts).toHaveLength(26);
+    expect(feed.posts).toHaveLength(30);
     const withComments = feed.posts.find(p => p.comment_count >= 4)!;
     out.push(await H.listComments(d, withComments.id));
     expect(feed.posts.some(p => p.like_count === 0)).toBe(true);
@@ -461,7 +471,7 @@ describe("hub demo seed: Fil and Marketplace through the real data layer", () =>
 
     const all = await mk.listListings(d, real.id, { limit: 50 });
     out.push(all);
-    expect(all.listings).toHaveLength(14);
+    expect(all.listings).toHaveLength(16);
     expect(all.listings.every(l => l.cover?.startsWith("demo/"))).toBe(true);
     for (const cat of mk.MK_CATEGORIES) expect((await mk.listListings(d, real.id, { category: cat })).listings.length, cat).toBeGreaterThanOrEqual(1);
     const scooter = all.listings.find(l => l.title.includes("Scooter"))!;
@@ -475,6 +485,142 @@ describe("hub demo seed: Fil and Marketplace through the real data layer", () =>
     out.push(await H.listReports(d), await mk.listMarketReports(d));
     expect(JSON.stringify(out)).not.toMatch(/[\w.+-]+@[\w-]+\.[\w.-]+/);
     expect(JSON.stringify(out)).not.toContain(DEMO_DOMAIN);
+  });
+});
+
+describe("hub demo seed: Meetup", () => {
+  it("populates every state of the meetup tab, coherent with the schema checks", () => {
+    const db = freshDb();
+    db.exec(seedSql()); // the schema CHECKs (lengths, categories, GLOB dates, ends_at > starts_at, capacity) ran on every insert
+    expect(count(db, "mt_meetups")).toBe(12);
+    expect(n(db, "SELECT COUNT(DISTINCT category) AS n FROM mt_meetups")).toBe(4);
+    expect(n(db, "SELECT COUNT(DISTINCT country) AS n FROM mt_meetups")).toBe(4);
+    expect(n(db, "SELECT COUNT(DISTINCT city) AS n FROM mt_meetups")).toBeGreaterThanOrEqual(8);
+    expect(n(db, "SELECT COUNT(*) AS n FROM mt_meetups WHERE status = 'cancelled' AND cancelled_at IS NOT NULL")).toBe(1);
+    expect(n(db, "SELECT COUNT(*) AS n FROM mt_meetups WHERE status = 'hidden'")).toBe(1);
+    expect(n(db, "SELECT COUNT(*) AS n FROM mt_meetups WHERE status = 'active' AND cancelled_at IS NOT NULL")).toBe(0);
+    // finished (past) and upcoming ones, relative to the day the seed runs
+    expect(n(db, "SELECT COUNT(*) AS n FROM mt_meetups WHERE ends_at < strftime('%Y-%m-%dT%H:%M','now','-1 day')")).toBe(3);
+    expect(n(db, "SELECT COUNT(*) AS n FROM mt_meetups WHERE status = 'active' AND starts_at > strftime('%Y-%m-%dT%H:%M','now','+1 day')")).toBe(7);
+    // exactly one full meetup with a waiting list; waiting lists only exist on full meetups; nobody overbooked
+    const stats = db.prepare(
+      `SELECT mt.title, mt.capacity,
+         (SELECT COUNT(*) FROM mt_participants p WHERE p.meetup_id = mt.id AND p.status = 'going') AS going,
+         (SELECT COUNT(*) FROM mt_participants p WHERE p.meetup_id = mt.id AND p.status = 'waitlist') AS waiting
+       FROM mt_meetups mt`,
+    ).all() as { title: string; capacity: number; going: number; waiting: number }[];
+    for (const m of stats) {
+      expect(m.going, m.title).toBeLessThanOrEqual(m.capacity);
+      if (m.waiting > 0) expect(m.going, `${m.title} : liste d'attente seulement si complet`).toBe(m.capacity);
+    }
+    expect(stats.filter(m => m.waiting > 0)).toHaveLength(1);
+    expect(stats.filter(m => m.waiting > 0)[0].waiting).toBe(3);
+    // organisers and participants are demo members, nobody joins their own meetup
+    expect(n(db, `SELECT COUNT(*) AS n FROM mt_meetups mt JOIN hub_members m ON m.id = mt.member_id WHERE m.email NOT LIKE ${DEMO_LIKE}`)).toBe(0);
+    expect(n(db, "SELECT COUNT(*) AS n FROM mt_participants p JOIN mt_meetups mt ON mt.id = p.meetup_id WHERE p.member_id = mt.member_id")).toBe(0);
+    expect(n(db, `SELECT COUNT(*) AS n FROM mt_participants p JOIN hub_members m ON m.id = p.member_id WHERE m.email NOT LIKE ${DEMO_LIKE}`)).toBe(0);
+    expect(n(db, "SELECT COUNT(DISTINCT member_id) AS n FROM mt_participants")).toBe(10);
+    expect(n(db, "SELECT COUNT(DISTINCT member_id) AS n FROM mt_meetups")).toBeGreaterThanOrEqual(7);
+    // descriptions carry no long test prefix (the organiser's name holds the discreet marker)
+    const desc = db.prepare("SELECT description FROM mt_meetups").all() as { description: string }[];
+    for (const r of desc) expect(r.description).not.toMatch(NO_OLD_PREFIX);
+  });
+
+  it("only points to photos that exist on disk and will be uploaded", () => {
+    const db = freshDb();
+    db.exec(seedSql());
+    const mediaDir = new URL("../scripts/hub-demo/media/", import.meta.url);
+    const keys = (db.prepare("SELECT photo_key FROM mt_meetups WHERE photo_key IS NOT NULL").all() as { photo_key: string }[]).map(r => r.photo_key);
+    expect(keys.length).toBe(MEETUP_MEDIA.length);
+    expect(keys.length).toBeGreaterThanOrEqual(8);
+    expect(n(db, "SELECT COUNT(*) AS n FROM mt_meetups WHERE photo_key IS NULL")).toBeGreaterThanOrEqual(1); // the tab also has to show a card without photo
+    for (const key of keys) {
+      expect(key, key).toMatch(/^demo\/meetup-[a-z0-9-]+\.jpg$/);
+      expect(existsSync(new URL(key.slice("demo/".length), mediaDir)), `${key} absent de scripts/hub-demo/media/`).toBe(true);
+    }
+    expect(keys.map(k => k.slice("demo/".length)).sort()).toEqual([...MEETUP_MEDIA].sort());
+  });
+
+  it("serves the meetup tab through the real data layer, without any email", async () => {
+    const db = freshDb();
+    db.exec(seedSql());
+    const real = realMember(db);
+    const d = asD1(db);
+    const now = Date.now();
+    const out: unknown[] = [];
+
+    const upcoming = await mt.listMeetups(d, real.id, { limit: 50 }, now);
+    out.push(upcoming);
+    expect(upcoming.meetups).toHaveLength(7); // no finished, cancelled or hidden meetup in the search
+    expect(upcoming.meetups.every(m => m.status === "active" && !m.ended)).toBe(true);
+    expect(upcoming.meetups.map(m => m.starts_at)).toEqual([...upcoming.meetups.map(m => m.starts_at)].sort());
+    expect((await mt.listMeetups(d, real.id, { country: "France" }, now)).meetups).toHaveLength(2);
+    expect((await mt.listMeetups(d, real.id, { city: "marrakech" }, now)).meetups).toHaveLength(1);
+    expect((await mt.listMeetups(d, real.id, { category: "rencontre" }, now)).meetups.length).toBeGreaterThanOrEqual(3);
+    const places = await mt.listMeetupPlaces(d, now);
+    out.push(places);
+    expect(places.countries.map(c => c.country)).toEqual(["Belgique", "Canada", "France", "Maroc"]);
+
+    // the full workshop: no seat left, three people waiting; the waiting list is private to the organiser
+    const full = upcoming.meetups.find(m => m.title.includes("Atelier cuisine"))!;
+    expect(full.going_count).toBe(full.capacity);
+    expect(full.waitlist_count).toBe(3);
+    const asVisitor = await mt.getMeetup(d, real.id, full.id, now);
+    out.push(asVisitor);
+    expect(asVisitor.spots_left).toBe(0);
+    expect(asVisitor.waitlist).toEqual([]);
+    expect(asVisitor.description).not.toMatch(NO_OLD_PREFIX);
+    const nadia = demo(db, "nadia");
+    const asOrganizer = await mt.getMeetup(d, nadia.id, full.id, now);
+    out.push(asOrganizer);
+    expect(asOrganizer.mine).toBe(true);
+    expect(asOrganizer.waitlist).toHaveLength(3);
+    expect(asOrganizer.participants).toHaveLength(6);
+
+    // joining a full meetup lands on the waiting list; a seat freed by someone leaving goes to the first in line
+    expect((await mt.joinMeetup(d, real, full.id, now)).status).toBe("waitlist");
+    const omar = demo(db, "omar");
+    await mt.leaveMeetup(d, omar, full.id);
+    const after = await mt.getMeetup(d, nadia.id, full.id, now);
+    expect(after.going_count).toBe(6);
+    expect(after.participants.some(p => p.display_name.includes("Mehdi"))).toBe(true);
+    expect(after.waitlist).toHaveLength(3); // salma, reda, the real member
+    // joining one with seats left works, a finished one is refused
+    const paris = upcoming.meetups.find(m => m.city === "Paris")!;
+    expect((await mt.joinMeetup(d, real, paris.id, now)).status).toBe("going");
+    const past = (await mt.listMyMeetups(d, omar.id, "joined", now)).find(m => m.ended)!;
+    expect(past).toBeTruthy();
+    await expect(mt.joinMeetup(d, real, past.id, now)).rejects.toThrow();
+
+    // organiser's view: finished + cancelled ones are listed too; the hidden one is not readable
+    const karim = demo(db, "karim");
+    const organized = await mt.listMyMeetups(d, karim.id, "organized", now);
+    out.push(organized);
+    expect(organized.map(m => m.status).sort()).toEqual(["active", "cancelled"]);
+    expect(organized.some(m => m.ended)).toBe(true);
+    const hiddenId = (db.prepare("SELECT id FROM mt_meetups WHERE status = 'hidden'").get() as { id: number }).id;
+    await expect(mt.getMeetup(d, real.id, hiddenId, now)).rejects.toThrow();
+    const cancelledId = (db.prepare("SELECT id FROM mt_meetups WHERE status = 'cancelled'").get() as { id: number }).id;
+    expect((await mt.getMeetup(d, real.id, cancelledId, now)).status).toBe("cancelled");
+
+    const admin = await mt.adminListMeetups(d);
+    out.push(admin);
+    expect(admin).toHaveLength(12);
+    expect(JSON.stringify(out)).not.toMatch(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+    expect(JSON.stringify(out)).not.toContain(DEMO_DOMAIN);
+  });
+
+  it("gives the demo operator a seat, a waiting-list place and a past meetup, only when that member exists", async () => {
+    const email = "moi@example.org";
+    const db = freshDb();
+    const me = realMember(db, email);
+    db.exec(seedSql(email));
+    const mine = await mt.listMyMeetups(asD1(db), me.id, "joined", Date.now());
+    expect(mine.map(m => m.my_status).sort()).toEqual(["going", "going", "waitlist"]);
+    expect(mine.filter(m => m.ended)).toHaveLength(1);
+    const without = freshDb();
+    without.exec(seedSql("inconnu@example.org"));
+    expect(count(db, "mt_participants")).toBe(count(without, "mt_participants") + 3);
   });
 });
 
@@ -523,6 +669,9 @@ describe("hub demo seed: idempotence and cleanup", () => {
     db.exec(`INSERT INTO pro_threads (member_a, member_b, job_id, created_by, created_at, last_message_at) SELECT min(${me}, j.member_id), max(${me}, j.member_id), j.id, ${me}, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z' FROM pro_jobs j WHERE j.status = 'open' LIMIT 1;`);
     db.exec(`INSERT INTO pro_threads (member_a, member_b, job_id, created_by, created_at, last_message_at) SELECT min(${me}, m.id), max(${me}, m.id), 0, ${me}, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z' FROM hub_members m WHERE m.email LIKE ${DEMO_LIKE} LIMIT 1;`);
     db.exec(`INSERT INTO pro_messages (thread_id, sender_id, body, created_at) SELECT id, ${me}, 'Bonjour', '2026-01-01T00:00:00Z' FROM pro_threads WHERE created_by = ${me};`);
+    // Meetup: a real member signs up to a demo meetup
+    db.exec(`INSERT INTO mt_participants (meetup_id, member_id, status) SELECT id, ${me}, 'going' FROM mt_meetups WHERE status = 'active' AND starts_at > strftime('%Y-%m-%dT%H:%M','now') LIMIT 1;`);
+    expect(n(db, `SELECT COUNT(*) AS n FROM mt_participants WHERE member_id = ${me}`)).toBe(1);
     // sanity: the real member's interactions are really there
     expect(n(db, `SELECT COUNT(*) AS n FROM pro_threads WHERE created_by = ${me}`)).toBe(2);
     expect(n(db, `SELECT COUNT(*) AS n FROM st_reviews WHERE author_id = ${me}`)).toBe(1);
@@ -578,16 +727,16 @@ describe("hub demo seed: personal conversations for the demo operator", () => {
     const without = freshDb();
     without.exec(seedSql());
     expect(snapshot(unknown)).toEqual(snapshot(without));
-    expect(count(without, "mk_threads")).toBe(7);
+    expect(count(without, "mk_threads")).toBe(8);
     expect(count(without, "st_requests")).toBe(11);
-    expect(count(without, "pro_threads")).toBe(5);
+    expect(count(without, "pro_threads")).toBe(6);
     // 3 marketplace + 1 stay + 1 pro on top of the demo ones
-    expect(count(withMe, "mk_threads")).toBe(10);
+    expect(count(withMe, "mk_threads")).toBe(11);
     expect(count(withMe, "st_requests")).toBe(12);
-    expect(count(withMe, "pro_threads")).toBe(6);
+    expect(count(withMe, "pro_threads")).toBe(7);
   });
 
-  it("marks stay and pro content as test data too", () => {
+  it("leaves stay and pro content free of the old long prefix", () => {
     const db = freshDb();
     db.exec(seedSql());
     for (const [sql, label] of [
@@ -598,7 +747,7 @@ describe("hub demo seed: personal conversations for the demo operator", () => {
     ] as const) {
       const rows = db.prepare(sql).all() as { t: string }[];
       expect(rows.length, label).toBeGreaterThan(0);
-      for (const r of rows) expect(r.t.startsWith(DEMO_LABEL), `${label}: ${r.t.slice(0, 40)}`).toBe(true);
+      for (const r of rows) expect(r.t, `${label}: ${r.t.slice(0, 40)}`).not.toMatch(NO_OLD_PREFIX);
     }
   });
 });

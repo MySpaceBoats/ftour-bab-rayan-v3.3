@@ -12,6 +12,7 @@ import Avatar from "../components/Avatar";
 import PresenceDot from "../messenger/PresenceDot";
 import { useChat } from "../messenger/useChat";
 import * as proApi from "../pro/pro-api";
+import RelationBar from "../social/RelationBar";
 
 export default function HubProfilePage() {
   const { lang } = useI18n();
@@ -90,6 +91,7 @@ export default function HubProfilePage() {
               <h1 className="text-xl font-bold text-slate-900">{m.display_name}</h1>
               {m.bio && <p className="whitespace-pre-wrap text-sm text-slate-700">{m.bio}</p>}
               <Button className="bg-blue-700 hover:bg-blue-800" onClick={() => proApi.openThread({ to: m.id }).then(t => setLocation(`/${lang}/benevole/espace/messages/pro/${t.id}`)).catch(e => toast.error((e as Error).message))}>Écrire</Button>
+              <RelationBar memberId={m.id} />
             </div>
           </div>
         )}
