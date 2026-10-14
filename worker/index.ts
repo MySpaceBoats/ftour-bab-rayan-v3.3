@@ -55,7 +55,9 @@ import type { D1Like, R2Like } from './gallery-d1';
 import { editionFilter } from './editions-d1';
 import { handleMediaRequest } from './media-r2';
 import { handleHubRequest } from './hub';
+import { handleSuperAssistantRequest } from './superassistant';
 export { HubChat } from './hub-chat';
+export { Sandbox } from '@cloudflare/sandbox';
 
 const MAX_PROOF_FILE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_PROOF_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
@@ -195,6 +197,9 @@ export default {
     // Volunteer hub REST API (/hub/*)
     const hub = await handleHubRequest(request, env, baseCorsHeaders, { waitUntil: (p) => ctx.waitUntil(p) });
     if (hub) return hub;
+
+    const superAssistant = await handleSuperAssistantRequest(request, env, baseCorsHeaders);
+    if (superAssistant) return superAssistant;
 
     if (url.pathname === '/api/reservations/proof/init' && request.method === 'POST') {
       const supabase = createSupabaseAdmin(env);
