@@ -1,3 +1,4 @@
+import { ADMIN_URL, COMMUNITY_URL } from "@/lib/subdomain-location";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,7 @@ export default function Navbar() {
     },
     { href: localizedHref("/equipe-ftour"), label: t.nav.team, icon: Star },
     { href: localizedHref("/galerie"), label: t.nav.gallery, icon: Images },
+    { href: COMMUNITY_URL, label: "Community Space", icon: Users, external: true },
   ];
 
   const handleLogout = async () => {
@@ -168,13 +170,14 @@ export default function Navbar() {
           </DropdownMenu>
 
           {/* Admin Link - icône cadenas avec tooltip "Privé" */}
-          <Link
-            href={localizedHref("/connexion")}
+          <a
+            href={ADMIN_URL}
             className="text-[#CDBB8A] hover:text-[#F2E9D3] transition-colors"
             title="Privé"
+            aria-label="Administration"
           >
             <Lock className="h-4 w-4" />
-          </Link>
+          </a>
         </div>
       </div>
 
@@ -204,7 +207,17 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-1">
-            {mainLinks.map(link => (
+            {mainLinks.map(link => link.external ? (
+              <a key={link.href} href={link.href}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-sm text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#864654]"
+                >
+                  {link.label}
+                </Button>
+              </a>
+            ) : (
               <Link key={link.href} href={link.href}>
                 <Button
                   variant="ghost"
@@ -309,6 +322,18 @@ export default function Navbar() {
                 <nav className="flex flex-col gap-1">
                   {mainLinks.map(link => {
                     const Icon = link.icon;
+                    if (link.external)
+                      return (
+                        <a key={link.href} href={link.href}>
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start text-[#F2E9D3] hover:text-[#CDBB8A] hover:bg-[#864654]"
+                          >
+                            <Icon className="h-4 w-4 mr-3" />
+                            {link.label}
+                          </Button>
+                        </a>
+                      );
                     return (
                       <Link
                         key={link.href}

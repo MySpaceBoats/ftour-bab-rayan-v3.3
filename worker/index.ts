@@ -155,6 +155,7 @@ export default {
       'https://ftourbabrayan.ma',
       'https://www.ftourbabrayan.ma',
       'https://communityspace.ftourbabrayan.ma',
+      'https://admin.ftourbabrayan.ma',
       'https://ftour-bab-rayan-v2.pages.dev',
     ]);
     const allowOrigin = allowed.has(origin) ? origin : 'https://ftourbabrayan.ma';
