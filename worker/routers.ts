@@ -16,6 +16,7 @@ import * as donationsDb from "./donations-d1";
 import { sendEmail, generateGalleryUploadValidationEmail } from "./email";
 import { notifySupport } from "./support-notify";
 import { completePasswordReset, requestPasswordReset } from "./password-reset";
+import { ensureVolunteerAccount } from "./auto-account";
 import { checkPublicQuota, decodePublicPhoto, resolveUploader } from "./gallery-public";
 import * as XLSX from "xlsx";
 import {
@@ -3303,6 +3304,9 @@ const volunteersRouter = router({
       }
 
       await notifySupport(ctx.env, { kind: "volunteer", title: "Nouvelle inscription bénévole", lines: [["Nom", `${input.firstName} ${input.lastName}`], ["Email", input.email], ["Téléphone", input.phone], ["Ville", input.city], ["Créneaux", input.volunteerSlots?.join(", ")]] });
+
+      // Site account created for the volunteer if there is none yet (never blocks the registration)
+      await ensureVolunteerAccount(supabase, ctx.env, input);
 
       return { id: volunteer.id, qrToken };
     }),
