@@ -721,7 +721,7 @@ export async function notifyModeration(d: D1Like, deps: NotifyDeps, e: Moderatio
     const n: NotifInput = { type: "announcement", title: `${w.article} ${w.noun} a été ${w.masked}`, body: ruleLine(e), link, dedupeKey: `mod:${e.id}:author` };
     await attempt("author bell+mail", () => deliverTo(d, deps.mailer, [{ memberId: e.memberId, n }], nowMs));
     await attempt("author message", () => systemMessage(d, team, e.memberId,
-      `Bonjour, votre ${w.noun} a été ${w.masked} automatiquement car elle ne respecte pas la ${ruleLine(e)}\n\nExtrait : « ${e.excerpt} »\n\nSi vous pensez qu'il s'agit d'une erreur, écrivez à ${deps.adminEmail}. Les contenus de l'espace sont analysés automatiquement.`, nowMs));
+      `Bonjour, votre ${w.noun} a été ${w.masked} automatiquement car ce contenu ne respecte pas la ${ruleLine(e)}\n\nExtrait : « ${e.excerpt} »\n\nSi vous pensez qu'il s'agit d'une erreur, écrivez à ${deps.adminEmail}. Les contenus de l'espace sont analysés automatiquement.`, nowMs));
   }
 
   const adminTitle = e.action === "hidden" ? `Modération IA : ${w.noun} ${w.masked}` : `Modération IA : ${w.noun} à vérifier`;
