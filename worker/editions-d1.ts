@@ -33,6 +33,14 @@ export async function editionFilter(d: D1Like): Promise<number | null> {
   }
 }
 
+/** Columns to add when a day is created by hand: it belongs to the active edition. */
+export async function newDayEdition(d: D1Like): Promise<{ edition?: number }> {
+  const edition = await editionFilter(d);
+  if (edition === null) return {};
+  if (edition < 0) throw new EditionError("Aucune édition active : activez-en une dans la page Éditions");
+  return { edition };
+}
+
 export async function listEditions(d: D1Like): Promise<EditionRow[]> {
   const { results } = await d
     .prepare(

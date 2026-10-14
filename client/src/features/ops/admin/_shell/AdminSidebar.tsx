@@ -3,7 +3,7 @@ import {
   Home, BarChart3, FileText, Calendar, Users, Store,
   ShoppingBag, Package, CakeSlice, Leaf, QrCode, ScanLine,
   Heart, UserCheck, CreditCard, Vote, Images, Camera,
-  CalendarDays, MessageSquare, BookOpen, Star, Edit3, Users2,
+  Archive, CalendarDays, MessageSquare, BookOpen, Star, Edit3, Users2,
   Settings, LayoutDashboard, DollarSign, Warehouse, LogOut,
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -36,6 +36,7 @@ const NAV_ICONS: Record<string, React.ComponentType<{ size?: number; strokeWidth
   galerie: Images,
   'event-photos': Camera,
   jours: CalendarDays,
+  editions: Archive,
   messages: MessageSquare,
   blog: BookOpen,
   feedback: Star,

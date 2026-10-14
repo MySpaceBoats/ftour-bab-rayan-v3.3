@@ -3051,10 +3051,12 @@ const daysRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
+      const editionCol = await editionAction(() => editionsDb.newDayEdition(galleryDb.db(ctx.env)));
 
       const { data, error } = await supabase
         .from("ramadan_days")
         .insert({
+          ...editionCol,
           day_number: input.dayNumber,
           date: input.date,
           capacity: input.capacity,
@@ -3168,6 +3170,7 @@ const daysRouter = router({
       const supabase = createSupabaseAdmin(ctx.env);
       const startDate = new Date(input.startDate);
       const createdIds: number[] = [];
+      const editionCol = await editionAction(() => editionsDb.newDayEdition(galleryDb.db(ctx.env)));
 
       for (let i = 0; i < input.daysCount; i++) {
         const date = new Date(startDate);
@@ -3176,6 +3179,7 @@ const daysRouter = router({
         const { data, error } = await supabase
           .from("ramadan_days")
           .insert({
+            ...editionCol,
             day_number: i + 1,
             date: date.toISOString().split("T")[0],
             capacity: input.capacity,

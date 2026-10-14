@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it } from "vitest";
 import { fakeD1, openDb } from "./test-d1";
-import { activateEdition, activeEdition, archiveEdition, editionFilter, listEditions, setupCalendar, unarchiveEdition } from "./editions-d1";
+import { activateEdition, activeEdition, archiveEdition, editionFilter, listEditions, newDayEdition, setupCalendar, unarchiveEdition } from "./editions-d1";
 
 const MIGRATION = readFileSync(new URL("./d1/editions.sql", import.meta.url), "utf8");
 
@@ -51,6 +51,23 @@ describe("editionFilter", () => {
     await archiveEdition(d, 12);
     expect(await editionFilter(d)).toBe(-1);
     expect(await editionFilter(setup(false).d)).toBeNull();
+  });
+});
+
+describe("newDayEdition", () => {
+  it("tags a manually created day with the active edition", async () => {
+    const { d } = setup();
+    expect(await newDayEdition(d)).toEqual({ edition: 12 });
+    await archiveEdition(d, 12);
+    await setupCalendar(d, 13, CAL);
+    await activateEdition(d, 13);
+    expect(await newDayEdition(d)).toEqual({ edition: 13 });
+  });
+  it("adds nothing before the migration and refuses when no edition is active", async () => {
+    expect(await newDayEdition(setup(false).d)).toEqual({});
+    const { d } = setup();
+    await archiveEdition(d, 12);
+    await expect(newDayEdition(d)).rejects.toThrow(/Aucune édition active/);
   });
 });
 
