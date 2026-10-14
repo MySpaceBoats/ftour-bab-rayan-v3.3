@@ -27,7 +27,7 @@ export function fakeD1(sqlite: Sqlite): D1Like {
 export function openDb(): Sqlite {
   const sqlite = new DatabaseSync(":memory:");
   sqlite.exec("CREATE TABLE t_volunteers (id INTEGER PRIMARY KEY AUTOINCREMENT, first_name TEXT, last_name TEXT, email TEXT, status TEXT);");
-  for (const f of ["hub.sql", "pro.sql", "marketplace.sql", "stay.sql", "ai.sql"]) sqlite.exec(readFileSync(new URL(`./d1/${f}`, import.meta.url), "utf8"));
+  for (const f of ["hub.sql", "pro.sql", "marketplace.sql", "stay.sql", "ai.sql", "moderation.sql"]) sqlite.exec(readFileSync(new URL(`./d1/${f}`, import.meta.url), "utf8"));
   return sqlite;
 }
 
