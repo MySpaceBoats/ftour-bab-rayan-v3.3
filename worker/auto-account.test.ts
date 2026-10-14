@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ensureVolunteerAccount } from "./auto-account";
+import { ensureAccount, ensureVolunteerAccount } from "./auto-account";
 
 const env = { PUBLIC_APP_URL: "https://site.test", RESEND_API_KEY: "k" };
 const vol = { firstName: "Amina", lastName: "Benali", email: "Amina@X.ma ", phone: "0600000000" };
@@ -53,5 +53,19 @@ describe("ensureVolunteerAccount", () => {
     const ok = fakeSb();
     const send = vi.fn().mockRejectedValue(new Error("mail down"));
     expect(await ensureVolunteerAccount(ok.sb, env, vol, "fr", send)).toBe("created");
+  });
+});
+
+describe("ensureAccount (self sign-up by link)", () => {
+  it("works without a phone and uses the given mail copy", async () => {
+    const { sb, createUser, insert } = fakeSb();
+    const send = vi.fn().mockResolvedValue({ success: true });
+    const copy = { subject: "Activez votre compte", intro: "Cliquez pour choisir votre mot de passe :" };
+    expect(await ensureAccount(sb, env, { firstName: "Amina", lastName: "Benali", email: "a@x.ma" }, "en", send, copy)).toBe("created");
+    expect(createUser).toHaveBeenCalledWith({ email: "a@x.ma", email_confirm: true, user_metadata: { name: "Amina Benali", phone: null } });
+    expect(insert).toHaveBeenCalledWith({ open_id: "u1", email: "a@x.ma", name: "Amina Benali", phone: null, role: "user" });
+    const mail = send.mock.calls[0][0];
+    expect(mail.subject).toBe("Activez votre compte");
+    expect(mail.html).toContain("/en/reinitialiser-mot-de-passe?token_hash=HASH");
   });
 });

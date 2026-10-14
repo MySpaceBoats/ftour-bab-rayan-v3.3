@@ -16,7 +16,7 @@ import * as donationsDb from "./donations-d1";
 import { sendEmail, generateGalleryUploadValidationEmail } from "./email";
 import { notifySupport } from "./support-notify";
 import { completePasswordReset, requestPasswordReset } from "./password-reset";
-import { ensureVolunteerAccount } from "./auto-account";
+import { SIGNUP_LINK_COPY, ensureAccount, ensureVolunteerAccount } from "./auto-account";
 import { checkPublicQuota, decodePublicPhoto, resolveUploader } from "./gallery-public";
 import * as XLSX from "xlsx";
 import {
@@ -2735,6 +2735,15 @@ const authRouter = router({
           createdAt: new Date(),
         },
       };
+    }),
+
+  // Self sign-up "by link": no password typed, the account is created and a set-password link is mailed.
+  // Same answer whether or not the address already has an account (no enumeration).
+  signupByLink: publicProcedure
+    .input(z.object({ firstName: z.string().trim().min(2).max(80), lastName: z.string().trim().min(2).max(80), email: z.string().email(), lang: z.string().trim().min(2).max(5).default("fr") }))
+    .mutation(async ({ input, ctx }) => {
+      await ensureAccount(createSupabaseAdmin(ctx.env), ctx.env, input, input.lang, undefined, SIGNUP_LINK_COPY);
+      return { success: true } as const;
     }),
 
   requestPasswordReset: publicProcedure

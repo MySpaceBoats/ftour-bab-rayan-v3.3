@@ -138,7 +138,7 @@ export default function Login() {
               <p className="text-sm text-stone-500 text-center">
                 Pas encore de compte ?{' '}
                 <Link href={`/${lang}/inscription`} className="text-emerald-600 hover:underline">
-                  S'inscrire
+                  Créer un compte
                 </Link>
               </p>
             </CardFooter>
