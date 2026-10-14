@@ -15,6 +15,7 @@ import * as electionDb from "./election-d1";
 import * as donationsDb from "./donations-d1";
 import { sendEmail, generateGalleryUploadValidationEmail } from "./email";
 import { notifySupport } from "./support-notify";
+import { completePasswordReset, requestPasswordReset } from "./password-reset";
 import { checkPublicQuota, decodePublicPhoto } from "./gallery-public";
 import * as XLSX from "xlsx";
 import {
@@ -2732,6 +2733,24 @@ const authRouter = router({
           createdAt: new Date(),
         },
       };
+    }),
+
+  requestPasswordReset: publicProcedure
+    .input(z.object({ email: z.string().email(), lang: z.string().trim().min(2).max(5).default("fr") }))
+    .mutation(async ({ input, ctx }) => {
+      await requestPasswordReset(createSupabaseAdmin(ctx.env), ctx.env, input.email, input.lang);
+      return { success: true } as const;
+    }),
+
+  resetPassword: publicProcedure
+    .input(z.object({ tokenHash: z.string().min(1), newPassword: z.string().min(6) }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        await completePasswordReset(createSupabaseAdmin(ctx.env), input.tokenHash, input.newPassword);
+      } catch (e) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: (e as Error).message });
+      }
+      return { success: true } as const;
     }),
 
   logout: publicProcedure.mutation(async () => {
