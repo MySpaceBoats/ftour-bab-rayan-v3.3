@@ -1,13 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Users, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-// ============================================
-// CURRENT EDITION
-// ============================================
-const CURRENT_EDITION = 13;
+// Same numbering as the gallery: edition 1 = 2015
+const FIRST_EDITION_YEAR = 2015;
+const editionYear = (edition: number) => FIRST_EDITION_YEAR + edition - 1;
 
 // ============================================
 // MEMBER CARD
@@ -81,14 +81,38 @@ function MemberCard({ member, index }: { member: any; index: number }) {
 export default function EquipeFtour() {
   useEffect(() => {
     const prev = document.title;
-    document.title = "L'équipe du Ftour Bab Rayan – 12ᵉ édition";
+    document.title = "L'équipe du Ftour Bab Rayan";
     return () => { document.title = prev; };
   }, []);
 
-  const { data: members = [], isLoading, error } = trpc.team.listPublic.useQuery(
-    { edition: CURRENT_EDITION },
+  const { data: all = [], isLoading, error, refetch } = trpc.team.listPublic.useQuery(
+    {},
     { staleTime: 5 * 60 * 1000 }
   );
+
+  const byEdition = useMemo(() => {
+    const map = new Map<number, typeof all>();
+    for (const m of all) map.set(m.edition, [...(map.get(m.edition) ?? []), m]);
+    return map;
+  }, [all]);
+  const editions = useMemo(() => Array.from(byEdition.keys()).sort((a, b) => b - a), [byEdition]);
+
+  // ?edition=N if valid, else the most recent edition with members
+  const [selected, setSelected] = useState<number | null>(null);
+  useEffect(() => {
+    if (selected !== null || editions.length === 0) return;
+    const wanted = Number(new URLSearchParams(window.location.search).get("edition"));
+    setSelected(editions.includes(wanted) ? wanted : editions[0]);
+  }, [editions, selected]);
+
+  const selectEdition = (edition: number) => {
+    setSelected(edition);
+    const url = new URL(window.location.href);
+    url.searchParams.set("edition", String(edition));
+    window.history.replaceState(null, "", url);
+  };
+
+  const members = selected !== null ? byEdition.get(selected) ?? [] : [];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -101,13 +125,13 @@ export default function EquipeFtour() {
             <div className="max-w-3xl mx-auto text-center space-y-6">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
                 <Users className="h-4 w-4" />
-                12ᵉ édition · Ramadan 2025
+                {selected !== null ? `Édition ${selected} · ${editionYear(selected)}` : "Nos équipes"}
               </div>
               <h1 className="text-4xl md:text-5xl font-bold text-foreground">
-                L'équipe de la{" "}
-                <span className="text-primary">12ᵉ édition</span>
-                <br />
-                du Ftour Bab Rayan
+                L'équipe{selected !== null ? " de la " : " du "}
+                {selected !== null && <span className="text-primary">{selected}ᵉ édition</span>}
+                {selected !== null && <br />}
+                {selected !== null ? "du Ftour Bab Rayan" : "Ftour Bab Rayan"}
               </h1>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
                 Chaque édition du Ftour Bab Rayan est rendue possible grâce à l'engagement de
@@ -121,6 +145,32 @@ export default function EquipeFtour() {
         {/* ── Content ── */}
         <section className="py-16">
           <div className="container">
+            {editions.length > 1 && (
+              <div className="border-b overflow-x-auto mb-10">
+                <div className="flex min-w-max justify-center" role="tablist" aria-label="Éditions">
+                  {editions.map(edition => (
+                    <button
+                      key={edition}
+                      role="tab"
+                      aria-selected={edition === selected}
+                      onClick={() => selectEdition(edition)}
+                      className={cn(
+                        "px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex flex-col items-center leading-tight",
+                        edition === selected
+                          ? "border-primary text-primary"
+                          : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50"
+                      )}
+                    >
+                      <span>{edition}</span>
+                      <span className="text-[11px] font-normal opacity-70">
+                        {editionYear(edition)} · {byEdition.get(edition)?.length}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {isLoading && (
               <div className="flex justify-center py-24">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -130,10 +180,11 @@ export default function EquipeFtour() {
             {error && (
               <div className="text-center py-16 text-muted-foreground">
                 <p>Une erreur est survenue lors du chargement de l'équipe.</p>
+                <button className="underline mt-2" onClick={() => refetch()}>Réessayer</button>
               </div>
             )}
 
-            {!isLoading && !error && members.length === 0 && (
+            {!isLoading && !error && all.length === 0 && (
               <div className="text-center py-24">
                 <Users className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
                 <p className="text-muted-foreground text-lg">
@@ -142,7 +193,7 @@ export default function EquipeFtour() {
               </div>
             )}
 
-            {!isLoading && members.length > 0 && (
+            {!isLoading && !error && members.length > 0 && (
               <>
                 {/* Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 items-start">
