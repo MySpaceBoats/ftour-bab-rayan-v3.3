@@ -15,6 +15,7 @@ import * as electionDb from "./election-d1";
 import * as donationsDb from "./donations-d1";
 import { sendEmail, generateGalleryUploadValidationEmail } from "./email";
 import { notifySupport } from "./support-notify";
+import { checkPublicQuota, decodePublicPhoto } from "./gallery-public";
 import * as XLSX from "xlsx";
 import {
   addDaysToDateString,
@@ -2184,6 +2185,71 @@ const galleryRouter = router({
       );
       if (!photo) throw new TRPCError({ code: "NOT_FOUND", message: "Photo introuvable" });
       return photo;
+    }),
+
+  // Anonymous upload from the public gallery page: photos land as drafts (admin moderation), never published directly.
+  publicUpload: publicProcedure
+    .input(
+      z.object({
+        photos: z
+          .array(
+            z.object({
+              fileName: z.string().min(1).max(260),
+              fileType: z.string(),
+              fileData: z.string(),
+              albumId: z.string().uuid().optional(),
+              eventDate: z.string().optional(),
+              title: z.string().max(200).optional(),
+            })
+          )
+          .min(1)
+          .max(GALLERY_MAX_BATCH),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const d1 = galleryDb.db(ctx.env);
+      const bucket = galleryMedia(ctx);
+      const origin = galleryOrigin(ctx);
+      const ip = ctx.req.headers.get("cf-connecting-ip") ?? ctx.req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+
+      await checkPublicQuota(d1, ip, input.photos.length);
+      // Validate everything before writing anything.
+      const decoded = input.photos.map(photo => ({ photo, ...decodePublicPhoto(photo) }));
+
+      let count = 0;
+      for (const { photo, ext, buffer } of decoded) {
+        const key = `gallery/original/${crypto.randomUUID()}.${ext}`;
+        await bucket.put(key, buffer, { httpMetadata: { contentType: photo.fileType } });
+        try {
+          await galleryDb.insertPhoto(
+            d1,
+            {
+              title: photo.title,
+              eventDate: normalizeGalleryEventDate(photo.eventDate),
+              tags: [],
+              albumId: photo.albumId,
+              sortOrder: 0,
+              isFeatured: false,
+              status: "draft",
+              storagePath: key,
+              sizeBytes: buffer.length,
+              mimeType: photo.fileType,
+              uploadedBy: ip,
+              validationEmail: null,
+              validationToken: null,
+              validated: false,
+            },
+            origin
+          );
+        } catch (e) {
+          await bucket.delete(key); // no orphan object if the row failed
+          throw new TRPCError({ code: "BAD_REQUEST", message: e instanceof Error ? e.message : "Insertion impossible" });
+        }
+        count++;
+      }
+
+      await notifySupport(ctx.env, { kind: "photos", title: "Photos envoyées à la galerie (public)", lines: [["Photos", count], ["Statut", "en attente de modération"]] });
+      return { count };
     }),
 
   uploadPhotos: protectedProcedure
