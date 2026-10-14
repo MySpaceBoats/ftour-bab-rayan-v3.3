@@ -2811,6 +2811,7 @@ const publicRouter = router({
       z
         .object({
           album: z.string().optional(),
+          albumSlug: z.string().optional(), // alias used by the client (Node router parity)
           tag: z.string().optional(),
           page: z.number().int().min(1).default(1),
           pageSize: z.number().int().min(1).max(50).default(18),
@@ -2826,7 +2827,7 @@ const publicRouter = router({
         {
           page,
           pageSize,
-          album: input?.album,
+          album: input?.albumSlug ?? input?.album,
           tag: input?.tag,
           status: "published",
           sort: input?.sort ?? "recent",

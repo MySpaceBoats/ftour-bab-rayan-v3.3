@@ -55,6 +55,21 @@ describe("gallery D1 data layer", () => {
     expect((await g.listPhotos(d, { ...base, search: "%" }, O)).total).toBe(1); // literal %, not wildcard
   });
 
+  it("keeps photos isolated per edition album and counts only published ones", async () => {
+    const a: any = await g.createAlbum(d, { name: "2025", slug: "edition-2025", sortOrder: 0, status: "published" });
+    const b: any = await g.createAlbum(d, { name: "2026", slug: "edition-2026", sortOrder: 1, status: "published" });
+    await g.insertPhoto(d, photo({ albumId: a.id }), O);
+    await g.insertPhoto(d, photo({ albumId: a.id, status: "draft" }), O);
+    await g.insertPhoto(d, photo({ albumId: b.id }), O);
+    await g.insertPhoto(d, photo({ albumId: b.id }), O);
+    const base = { page: 1, pageSize: 10, status: "published" as const };
+    expect((await g.listPhotos(d, { ...base, album: "edition-2025" }, O)).total).toBe(1);
+    expect((await g.listPhotos(d, { ...base, album: "edition-2026" }, O)).total).toBe(2);
+    expect((await g.listPhotos(d, { ...base, album: "edition-1999" }, O)).total).toBe(0);
+    const counts = Object.fromEntries((await g.listAlbums(d) as any[]).map(r => [r.slug, r.photo_count]));
+    expect(counts).toEqual({ "edition-2025": 1, "edition-2026": 2 });
+  });
+
   it("paginates with a correct total", async () => {
     for (let i = 0; i < 5; i++) await g.insertPhoto(d, photo({ sortOrder: i }), O);
     const r = await g.listPhotos(d, { page: 2, pageSize: 2 }, O);

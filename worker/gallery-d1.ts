@@ -67,7 +67,11 @@ const PHOTO_SELECT = `p.*, a.name AS album_name, a.slug AS album_slug
 export async function listAlbums(d: D1Like, opts: { onlyPublished?: boolean } = {}) {
   const where = opts.onlyPublished ? "WHERE status = 'published'" : "";
   const { results } = await d
-    .prepare(`SELECT * FROM gallery_albums ${where} ORDER BY sort_order ASC, created_at DESC`)
+    .prepare(
+      `SELECT gallery_albums.*,
+         (SELECT COUNT(*) FROM gallery_photos p WHERE p.album_id = gallery_albums.id AND p.status = 'published') AS photo_count
+       FROM gallery_albums ${where} ORDER BY sort_order ASC, created_at DESC`
+    )
     .all();
   return results;
 }

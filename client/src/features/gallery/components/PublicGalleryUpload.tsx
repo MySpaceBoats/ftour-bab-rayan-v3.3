@@ -54,9 +54,11 @@ async function compressImage(file: File): Promise<string> {
 
 interface Props {
   onClose?: () => void;
+  /** Edition year pre-selected in the selector (e.g. the tab open on the gallery page). */
+  defaultYear?: number | null;
 }
 
-export default function PublicGalleryUpload({ onClose }: Props) {
+export default function PublicGalleryUpload({ onClose, defaultYear }: Props) {
   const [items, setItems] = useState<FileItem[]>([]);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -78,10 +80,13 @@ export default function PublicGalleryUpload({ onClose }: Props) {
   useEffect(() => {
     if (!selectedYear && yearAlbums.length > 0) {
       const now = new Date().getFullYear();
-      const cur = yearAlbums.find(a => a.year === now) ?? yearAlbums[0];
+      const cur =
+        yearAlbums.find(a => a.year === defaultYear) ??
+        yearAlbums.find(a => a.year === now) ??
+        yearAlbums[0];
       setSelectedYear(cur.year);
     }
-  }, [yearAlbums, selectedYear]);
+  }, [yearAlbums, selectedYear, defaultYear]);
 
   const upload = trpc.gallery.publicUpload.useMutation({
     onSuccess: () => setDone(true),
