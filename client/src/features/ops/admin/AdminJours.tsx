@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
+import { EditionFrame, useEdition } from "./EditionTabs";
 import { toast } from "sonner";
 import { 
   ArrowLeft, Calendar, Plus, Loader2, Users, CheckCircle, XCircle, Edit, Trash2
@@ -37,7 +38,9 @@ export default function AdminJours() {
     iftarTime: "18:30",
   });
 
-  const { data: days, isLoading, refetch } = trpc.days.list.useQuery();
+  const ed = useEdition();
+  // days.list takes an optional edition on the Worker (the client types come from the Node router, hence the cast)
+  const { data: days, isLoading, refetch } = trpc.days.list.useQuery({ edition: ed.edition } as unknown as void);
 
   const createMutation = trpc.days.create.useMutation({
     onSuccess: () => {
@@ -139,6 +142,7 @@ export default function AdminJours() {
   };
 
   return (
+    <EditionFrame ed={ed}>
     <div className="min-h-screen bg-muted/30">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background border-b">
@@ -426,5 +430,6 @@ export default function AdminJours() {
         </Card>
       </main>
     </div>
+    </EditionFrame>
   );
 }

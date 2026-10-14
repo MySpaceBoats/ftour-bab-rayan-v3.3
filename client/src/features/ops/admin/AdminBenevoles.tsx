@@ -1,6 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { EditionFrame, useEdition } from "./EditionTabs";
 import { toast } from "sonner";
 import { useAdminPage } from "./_shell/AdminFrame";
 import AdminBadge from "@/components/admin/AdminBadge";
@@ -364,13 +365,17 @@ export default function AdminBenevoles() {
   >([]);
 
   /* ─── tRPC ─── */
-  const { data: days } = trpc.days.list.useQuery();
+  const ed = useEdition();
+  // a day of the previous edition is meaningless in the new one
+  useEffect(() => setSelectedDay("all"), [ed.edition]);
+  // both queries take an optional edition on the Worker (the client types come from the Node router, hence the casts)
+  const { data: days } = trpc.days.list.useQuery({ edition: ed.edition } as unknown as void);
   const {
     data: volunteers,
     isLoading,
     refetch,
   } = trpc.volunteers.listByDay.useQuery(
-    { dayId: selectedDay === "all" ? undefined : parseInt(selectedDay) },
+    { dayId: selectedDay === "all" ? undefined : parseInt(selectedDay), edition: ed.edition } as { dayId?: number },
     {
       enabled: true,
       refetchInterval: 30000,
@@ -700,6 +705,7 @@ export default function AdminBenevoles() {
 
   /* ─────────── render ─────────── */
   return (
+    <EditionFrame ed={ed}>
     <div
       style={{
         display: "flex",
@@ -2243,5 +2249,6 @@ export default function AdminBenevoles() {
         )}
       </Modal>
     </div>
+    </EditionFrame>
   );
 }

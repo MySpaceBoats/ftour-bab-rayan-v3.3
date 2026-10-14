@@ -3484,9 +3484,14 @@ const volunteersRouter = router({
     }),
 
   listByDay: adminProcedure
-    .input(z.object({ dayId: z.number().optional() }))
+    .input(z.object({ dayId: z.number().optional(), edition: z.number().int().optional() }))
     .query(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
+
+      // Edition scope: the one asked for, else the active one (null = editions migration not applied: no scope)
+      const edition = input.edition ?? (ctx.env.DB ? await editionsDb.editionFilter(ctx.env.DB) : null);
+      const editionDayIds: number[] | null =
+        edition === null ? null : ((await supabase.from("ramadan_days").select("id").eq("edition", edition)).data ?? []).map((r: any) => r.id);
 
       // Paginate through all volunteers to bypass the 1000-row default limit
       const fetchAllVolunteers = async () => {
@@ -3505,6 +3510,9 @@ const volunteersRouter = router({
 
           if (input.dayId) {
             query = query.eq("day_id", input.dayId);
+          } else if (editionDayIds) {
+            if (editionDayIds.length === 0) return allRows;
+            query = query.in("day_id", editionDayIds);
           }
 
           const { data, error } = await query;
@@ -3588,10 +3596,9 @@ const volunteersRouter = router({
       }
 
       // Get all days for the dropdown
-      const { data: daysData } = await supabase
-        .from("ramadan_days")
-        .select("*")
-        .order("day_number", { ascending: true });
+      let daysQuery = supabase.from("ramadan_days").select("*");
+      if (edition !== null) daysQuery = daysQuery.eq("edition", edition);
+      const { data: daysData } = await daysQuery.order("day_number", { ascending: true });
 
       const volunteers = (data || []).map((v: any) => ({
         id: v.id,
