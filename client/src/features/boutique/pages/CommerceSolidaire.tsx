@@ -13,6 +13,8 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import MondeShop from "../components/MondeShop";
 
 export default function CommerceSolidaire() {
   const { t, dir, lang } = useI18n();
@@ -72,6 +74,32 @@ export default function CommerceSolidaire() {
           </div>
         </section>
 
+        <Tabs
+          defaultValue={new URLSearchParams(window.location.search).has("monde") ? "monde" : "casablanca"}
+          className="gap-0"
+        >
+          <div className="bg-[#864654] pt-10 flex justify-center">
+            <TabsList className="bg-[#6B3643] h-auto p-1">
+              <TabsTrigger value="casablanca" className="px-6 py-2 text-[#F2E9D3] data-[state=active]:bg-[#CDBB8A] data-[state=active]:text-[#6B3643]">
+                {t.boutique.tabCasablanca}
+              </TabsTrigger>
+              <TabsTrigger value="monde" className="px-6 py-2 text-[#F2E9D3] data-[state=active]:bg-[#CDBB8A] data-[state=active]:text-[#6B3643]">
+                {t.boutique.tabMonde}
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+        <TabsContent value="monde" className="bg-[#864654] py-16">
+          <div className="container">
+            <h2 className="text-2xl md:text-3xl font-bold text-[#F2E9D3] mb-3 text-center" style={{ fontFamily: "Caveat, cursive" }}>
+              {t.boutique.mondeTitle}
+            </h2>
+            <p className="text-[#E6DCC3] text-center mb-10">{t.boutique.mondeSubtitle}</p>
+            <MondeShop />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="casablanca">
         {/* Boutique Solidaire section */}
         <section className="py-16 bg-[#864654]">
           <div className="container">
@@ -162,6 +190,8 @@ export default function CommerceSolidaire() {
             </Card>
           </div>
         </section>
+        </TabsContent>
+        </Tabs>
 
         {/* Info Banner */}
         <section className="py-12 bg-[#6B3643]">
