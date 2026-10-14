@@ -1305,7 +1305,8 @@
    "location": "text",
    "notes": "text",
    "created_at": "text",
-   "updated_at": "text"
+   "updated_at": "text",
+   "edition": "int"
   },
   "pk": [
    "id"

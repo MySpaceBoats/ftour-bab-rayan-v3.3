@@ -689,9 +689,10 @@ CREATE TABLE IF NOT EXISTS "t_ramadan_days" (
   "location" TEXT,
   "notes" TEXT,
   "created_at" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-  "updated_at" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  "updated_at" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  "edition" INTEGER NOT NULL DEFAULT 12
 );
-CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_ramadan_days_1" ON "t_ramadan_days"(day_number);
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_ramadan_days_edition_day" ON "t_ramadan_days"(edition, day_number);
 CREATE UNIQUE INDEX IF NOT EXISTS "uq_t_ramadan_days_2" ON "t_ramadan_days"(date);
 CREATE TABLE IF NOT EXISTS "t_feedback_answers" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,

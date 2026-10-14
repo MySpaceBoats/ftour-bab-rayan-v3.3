@@ -52,6 +52,7 @@ export interface Env {
 }
 
 import type { D1Like, R2Like } from './gallery-d1';
+import { editionFilter } from './editions-d1';
 import { handleMediaRequest } from './media-r2';
 import { handleHubRequest } from './hub';
 export { HubChat } from './hub-chat';
@@ -87,9 +88,11 @@ const OPEN_WINDOW_SIZE = 3;
 async function ensureRollingOpenDays(env: Env): Promise<void> {
   const supabase = createSupabaseAdmin(env);
 
+  // only the active edition's days may be open (null = editions migration not applied yet: no distinction)
+  const edition = env.DB ? await editionFilter(env.DB) : null;
   const { data: days, error } = await supabase
     .from('ramadan_days')
-    .select('id, date, is_open')
+    .select(edition === null ? 'id, date, is_open' : 'id, date, is_open, edition')
     .order('date', { ascending: true });
 
   if (error || !days) {
@@ -100,7 +103,7 @@ async function ensureRollingOpenDays(env: Env): Promise<void> {
   const todayStr = getDateStringInTimeZone(new Date(), DEFAULT_RAMADAN_TIMEZONE);
 
   // Days whose date >= today, in chronological order
-  const upcomingDays = days.filter((d: any) => String(d.date).slice(0, 10) >= todayStr);
+  const upcomingDays = days.filter((d: any) => String(d.date).slice(0, 10) >= todayStr && (edition === null || d.edition === edition));
   const targetOpenIds = new Set(
     upcomingDays.slice(0, OPEN_WINDOW_SIZE).map((d: any) => d.id)
   );

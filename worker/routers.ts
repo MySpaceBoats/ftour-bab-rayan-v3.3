@@ -8,6 +8,7 @@ import superjson from "superjson";
 import type { WorkerContext, WorkerUser } from "./context";
 import { createSupabaseAdmin } from "./supabase";
 import * as galleryDb from "./gallery-d1";
+import * as editionsDb from "./editions-d1";
 import * as hubNotify from "./hub-notify";
 import * as blogDb from "./blog-d1";
 import * as siteDb from "./site-d1";
@@ -2947,14 +2948,45 @@ const publicRouter = router({
 // DAYS ROUTER
 // ============================================
 
+// ============================================
+// EDITIONS (archive an edition, prepare and activate the next one)
+// ============================================
+
+const editionAdminProcedure = adminProcedure.use(({ ctx, next }) => {
+  if (!["admin", "super_admin"].includes(ctx.user!.role)) throw new TRPCError({ code: "FORBIDDEN", message: "Réservé aux administrateurs" });
+  return next();
+});
+const editionAction = async <T>(fn: () => Promise<T>): Promise<T> => {
+  try {
+    return await fn();
+  } catch (e) {
+    if (e instanceof editionsDb.EditionError) throw new TRPCError({ code: "BAD_REQUEST", message: e.message });
+    throw e;
+  }
+};
+const editionInput = z.object({ edition: z.number().int().min(1) });
+
+const editionsRouter = router({
+  list: editionAdminProcedure.query(({ ctx }) => editionsDb.listEditions(galleryDb.db(ctx.env))),
+  archive: editionAdminProcedure.input(editionInput).mutation(({ input, ctx }) => editionAction(async () => { await editionsDb.archiveEdition(galleryDb.db(ctx.env), input.edition); return { success: true } as const; })),
+  unarchive: editionAdminProcedure.input(editionInput).mutation(({ input, ctx }) => editionAction(async () => { await editionsDb.unarchiveEdition(galleryDb.db(ctx.env), input.edition); return { success: true } as const; })),
+  activate: editionAdminProcedure.input(editionInput).mutation(({ input, ctx }) => editionAction(async () => { await editionsDb.activateEdition(galleryDb.db(ctx.env), input.edition); return { success: true } as const; })),
+  setupCalendar: editionAdminProcedure
+    .input(editionInput.extend({ startDate: z.string(), endDate: z.string(), capacity: z.number().int().min(1).max(5000), iftarTime: z.string().max(5).optional(), location: z.string().max(200).optional() }))
+    .mutation(({ input, ctx }) => editionAction(async () => ({ created: await editionsDb.setupCalendar(galleryDb.db(ctx.env), input.edition, input) }))),
+});
+
 const daysRouter = router({
-  list: publicProcedure.query(async ({ ctx }) => {
+  // Public: the active edition only. An admin may ask for another one (archive consultation).
+  list: publicProcedure.input(z.object({ edition: z.number().int().optional() }).optional()).query(async ({ input, ctx }) => {
     const supabase = createSupabaseAdmin(ctx.env);
 
-    const { data, error } = await supabase
-      .from("ramadan_days")
-      .select("*")
-      .order("day_number", { ascending: true });
+    const isAdmin = ctx.user && !ctx.user.isDemo && ["admin", "super_admin", "admin_operations", "admin_ops"].includes(ctx.user.role);
+    const edition = input?.edition !== undefined && isAdmin ? input.edition : ctx.env.DB ? await editionsDb.editionFilter(ctx.env.DB) : null;
+
+    let query = supabase.from("ramadan_days").select("*");
+    if (edition !== null) query = query.eq("edition", edition);
+    const { data, error } = await query.order("day_number", { ascending: true });
 
     if (error) {
       console.error("[Worker] Error fetching days:", error);
@@ -2972,6 +3004,7 @@ const daysRouter = router({
       iftarTime: d.iftar_time,
       location: d.location,
       notes: d.notes,
+      edition: d.edition ?? 12,
     }));
   }),
 
@@ -11164,6 +11197,7 @@ export const appRouter = router({
   system: systemRouter,
   auth: authRouter,
   days: daysRouter,
+  editions: editionsRouter,
   volunteers: volunteersRouter,
   checkin: checkinRouter,
   goodies: goodiesRouter,
