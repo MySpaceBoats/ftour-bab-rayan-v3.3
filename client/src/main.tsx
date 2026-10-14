@@ -109,9 +109,8 @@ async function authHeaders(): Promise<Record<string, string>> {
     return demoAccess ? { "x-demo-access": "1" } : {};
   }
 
-  return demoAccess
-    ? { Authorization: `Bearer ${accessToken}`, "x-demo-access": "1" }
-    : { Authorization: `Bearer ${accessToken}` };
+  // A real session always wins: the demo header would override it on the Worker (and is refused by its CORS).
+  return { Authorization: `Bearer ${accessToken}` };
 }
 
 const trpcClient = trpc.createClient({
