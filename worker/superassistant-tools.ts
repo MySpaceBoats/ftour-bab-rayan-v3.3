@@ -2,11 +2,13 @@
 // Auth : secret GITHUB_TOKEN (PAT fin : Contents, Pull requests, Actions en lecture/écriture) sinon l'installation GitHub App (GITHUB_APP_*).
 // Garde-fous serveur : merge, deploy et commit sur la branche par défaut exigent allow=true ; .env/.git/node_modules illisibles ; .github/workflows jamais modifiable.
 import { getInstallationToken } from "./github-app";
+import type { D1Like } from "./gallery-d1";
 
 export type GhEnv = {
   GITHUB_TOKEN?: string; GITHUB_REPO?: string; GITHUB_BRANCH?: string; GITHUB_DEPLOY_WORKFLOW?: string;
   GITHUB_APP_ID?: string; GITHUB_APP_INSTALLATION_ID?: string; GITHUB_APP_PRIVATE_KEY?: string;
   CLOUDFLARE_API_TOKEN?: string; CLOUDFLARE_ACCOUNT_ID?: string;
+  DB?: Pick<D1Like, "prepare">;
 };
 /** Terminal du conteneur Cloudflare (Sandbox.exec). */
 export type Shell = { exec(cmd: string, o?: { cwd?: string; env?: Record<string, string>; timeout?: number }): Promise<{ stdout: string; stderr: string; exitCode: number }> };
@@ -38,6 +40,16 @@ const enc = encodeURIComponent;
 async function sha(env: GhEnv, path: string, ref: string) {
   try { return (await gh(env, `/repos/${repo(env)}/contents/${encodeURI(path)}?ref=${enc(ref)}`)).sha as string; } catch (e) { if (/ 404/.test((e as Error).message)) return undefined; throw e; }
 }
+
+// Lecture seule : une seule instruction SELECT/WITH, aucun mot-clé d'écriture (D1 n'a pas de mode read-only natif).
+// ponytail: un mot-clé dans un littéral ('update') est refusé aussi — plus strict que nécessaire, reformuler la requête.
+const SQL_WRITE = /\b(insert|update|delete|drop|alter|create|attach|detach|pragma|vacuum|reindex)\b/i;
+export function readOnlySql(q: unknown): string {
+  const s = String(q ?? "").trim().replace(/;+\s*$/, "");
+  if (!/^(select|with)\b/i.test(s) || s.includes(";") || SQL_WRITE.test(s)) throw new Error("requête refusée : une seule instruction SELECT (ou WITH … SELECT) en lecture seule");
+  return s;
+}
+const DB_ROWS = 200;
 
 const DIR = "/workspace/repo", BRANCH = /^[\w./-]{1,100}$/;
 
@@ -101,6 +113,10 @@ export function tools(env: GhEnv, allow: boolean, shell?: Shell): Tool[] {
         run: async (a: Record<string, any>) => { const b = branchArg(a.branch); return run(`git fetch origin ${b} && git checkout -B ${b} FETCH_HEAD`, { env: await gitEnv() }); } },
       { name: "push_branch", description: `Pousse HEAD du conteneur vers une branche distante (${M} seulement si autorisé). Commit d'abord avec sh.`, parameters: obj({ branch: str("branche cible") }, ["branch"]),
         run: async (a: Record<string, any>) => { const b = branchArg(a.branch); if (b === M && !allow) throw new Error(`push sur ${M} désactivé : pousse une branche et ouvre une PR`); return run(`git push origin HEAD:refs/heads/${b}`, { env: await gitEnv() }); } },
+    ] as Tool[] : []),
+    ...(env.DB ? [
+      { name: "query_db", description: `Interroge la base de données de production (Cloudflare D1, SQLite) en lecture seule : ventes, dons, réservations, bénévoles… Une seule instruction SELECT/WITH, ${DB_ROWS} lignes max (agrège avec SUM/COUNT/GROUP BY plutôt que lister).`, parameters: obj({ sql: str("requête SQLite SELECT") }, ["sql"]),
+        run: async (a: Record<string, any>) => { const { results } = await env.DB!.prepare(readOnlySql(a.sql)).all(); return JSON.stringify(results.slice(0, DB_ROWS)) + (results.length > DB_ROWS ? `\n… ${results.length - DB_ROWS} lignes de plus : agrège ou filtre` : ""); } },
     ] as Tool[] : []),
     { name: "list_runs", description: "Derniers runs GitHub Actions (CI / déploiement).", parameters: obj({}),
       run: async () => (await gh(env, `/repos/${R}/actions/runs?per_page=6`)).workflow_runs.map((x: any) => `${x.name} · ${x.head_branch} · ${x.status}/${x.conclusion ?? "-"} · ${x.html_url}`).join("\n") || "aucun run" },

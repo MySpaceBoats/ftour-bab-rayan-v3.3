@@ -43,6 +43,34 @@ describe("superassistant shell", () => {
   });
 });
 
+describe("superassistant query_db", () => {
+  const mk = (rows: unknown[] = [{ n: 1 }]) => {
+    const sql: string[] = [];
+    const DB = { prepare: (q: string) => (sql.push(q), { all: async () => ({ results: rows }) }) } as any;
+    return { sql, t: tools({ GITHUB_TOKEN: "t", DB }, false).find(x => x.name === "query_db") };
+  };
+
+  it("absent sans DB", () => {
+    expect(tools({ GITHUB_TOKEN: "t" }, false).find(x => x.name === "query_db")).toBeUndefined();
+  });
+
+  it("n'accepte qu'un SELECT/WITH unique", async () => {
+    const { t, sql } = mk();
+    await expect(t!.run({ sql: "SELECT SUM(total_amount) FROM t_orders;" })).resolves.toBe('[{"n":1}]');
+    await t!.run({ sql: "WITH a AS (SELECT 1) SELECT * FROM a" });
+    expect(sql).toEqual(["SELECT SUM(total_amount) FROM t_orders", "WITH a AS (SELECT 1) SELECT * FROM a"]);
+    for (const bad of ["DELETE FROM t_orders", "SELECT 1; DROP TABLE t_orders", "PRAGMA table_info(t_orders)", "WITH a AS (SELECT 1) DELETE FROM t_orders", "UPDATE t_orders SET status='x'", ""])
+      await expect(t!.run({ sql: bad })).rejects.toThrow(/refusée/);
+    expect(sql).toHaveLength(2);
+  });
+
+  it("plafonne à 200 lignes", async () => {
+    const out = String(await mk(Array.from({ length: 250 }, (_, i) => ({ i }))).t!.run({ sql: "SELECT i FROM x" }));
+    expect(JSON.parse(out.split("\n")[0])).toHaveLength(200);
+    expect(out).toMatch(/50 lignes de plus/);
+  });
+});
+
 describe("superassistant tools", () => {
   const find = (name: string, allow: boolean) => tools({ GITHUB_TOKEN: "t" }, allow).find(t => t.name === name);
 
