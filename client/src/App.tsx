@@ -439,7 +439,7 @@ function LocalizedRoutes() {
         component={CompanyBookingSpace}
       />
 
-      {/* Commerce Solidaire (hub unifié boutique + restaurant) */}
+      {/* Commerce Solidaire (hub boutique) */}
       <Route path="/:lang/commerce-solidaire" component={CommerceSolidaire} />
 
       {/* Boutique Solidaire (hub) */}

@@ -20,6 +20,7 @@ import {
   Baby,
 } from "lucide-react";
 import RamadanImpactLive from "@/components/RamadanImpactLive";
+import HomeGallerySlider from "../components/HomeGallerySlider";
 
 export default function Home() {
   const { t, dir, lang } = useI18n();
@@ -236,10 +237,14 @@ export default function Home() {
 
               <div className="relative">
                 <div className="aspect-square rounded-2xl overflow-hidden border border-[#F2E9D3]/10">
-                  <img
-                    src={mediaUrl("Images siteweb/WhatsApp Image 2026-02-16 at 10.17.55.jpeg")}
-                    alt="Ftour Bab Rayan"
-                    className="w-full h-full object-cover"
+                  <HomeGallerySlider
+                    fallback={
+                      <img
+                        src={mediaUrl("Images siteweb/WhatsApp Image 2026-02-16 at 10.17.55.jpeg")}
+                        alt="Ftour Bab Rayan"
+                        className="w-full h-full object-cover"
+                      />
+                    }
                   />
                 </div>
                 <div className="absolute -bottom-6 -left-6 bg-[#6B3643] rounded-xl shadow-lg p-4 border border-[#F2E9D3]/10">

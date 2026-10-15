@@ -109,3 +109,4 @@ Resume file: None
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 261010-n27 | Onglet Mes photos bénévole (partage Hub + proposition galerie) | 2026-10-10 | 7b3c6be | [261010-n27-onglet-mes-photos-b-n-vole-upload-profil](./quick/261010-n27-onglet-mes-photos-b-n-vole-upload-profil/) |
+| 261015-1jp | Superassistant: outil query_db lecture seule sur D1 | 2026-10-15 | 593289e | [261015-1jp-superassistant-query-db-read-only-d1-too](./quick/261015-1jp-superassistant-query-db-read-only-d1-too/) |

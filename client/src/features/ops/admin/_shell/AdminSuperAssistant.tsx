@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getStoredSession } from '@/_core/authSession';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
@@ -24,6 +24,15 @@ async function readSse(res: Response, onDelta: (t: string) => void) {
       try { onDelta(JSON.parse(d).choices?.[0]?.delta?.content ?? ''); } catch { /* ligne partielle ou keep-alive */ }
     }
   }
+}
+
+const WAIT = ['Réflexion', 'Analyse', 'Recherche', 'Exploration', 'Vérification', 'Calcul', 'Rédaction'];
+
+/** Message d'attente à la Claude : verbe qui tourne + secondes écoulées, tant que la réponse n'a pas commencé. */
+function Waiting() {
+  const [s, setS] = useState(0);
+  useEffect(() => { const t = setInterval(() => setS(x => x + 1), 1000); return () => clearInterval(t); }, []);
+  return <span style={{ opacity: 0.7 }}>✦ {WAIT[Math.floor(s / 3) % WAIT.length]}… {s}s</span>;
 }
 
 export default function AdminSuperAssistant({ page }: { page: string }) {
@@ -91,10 +100,10 @@ export default function AdminSuperAssistant({ page }: { page: string }) {
             <input type="checkbox" checked={allow} onChange={e => setAllow(e.target.checked)} /> Autoriser merge, déploiement et commit sur main
           </label>
           <div ref={logRef} role="log" aria-live="polite" style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 10, fontSize: 14 }}>
-            {!chat.length && <p style={{ opacity: 0.7 }}>Je peux lire et modifier le code (branches, commits, PR), et avec l'autorisation merger et déployer. Pas de shell : je ne lance ni tests ni build. Je n'accède pas aux données Supabase. Les réponses peuvent être fausses : vérifie les PR avant de merger.</p>}
+            {!chat.length && <p style={{ opacity: 0.7 }}>Je peux lire et modifier le code (branches, commits, PR), et avec l'autorisation merger et déployer. Je peux aussi interroger les données du site (ventes, dons, réservations) en lecture seule. Les réponses peuvent être fausses : vérifie les PR avant de merger.</p>}
             {chat.map((m, i) => (
               <div key={i} style={{ alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '90%', whiteSpace: 'pre-wrap', padding: '8px 12px', borderRadius: 10, background: m.role === 'user' ? '#864654' : 'rgba(0,0,0,.06)', color: m.role === 'user' ? '#fff' : 'inherit' }}>
-                {m.content || '…'}
+                {m.content || (busy && i === chat.length - 1 ? <Waiting /> : '…')}
               </div>
             ))}
             {error && <p role="alert" style={{ color: '#b00020' }}>{error}</p>}
