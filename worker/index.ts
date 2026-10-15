@@ -10,6 +10,7 @@ import { createSupabaseAdmin } from './supabase';
 import { DEFAULT_RAMADAN_TIMEZONE, getDateStringInTimeZone, getRamadanDay } from '../shared/ramadan';
 import { handleCashOrderRequest } from './cash-orders';
 import { handleMemberCardRequest } from './member-cards';
+import { handleMondeRequest } from './monde';
 import { sendEmail } from './email';
 import * as hubNotify from './hub-notify';
 import * as aiD1 from './ai-d1';
@@ -473,6 +474,15 @@ ${proofLink}
         statusText: response.statusText,
         headers: newHeaders,
       });
+    }
+
+    if (url.pathname.startsWith('/api/monde/')) {
+      const response = await handleMondeRequest(request, env);
+      if (response) {
+        const newHeaders = new Headers(response.headers);
+        Object.entries(baseCorsHeaders).forEach(([key, value]) => newHeaders.set(key, value));
+        return new Response(response.body, { status: response.status, headers: newHeaders });
+      }
     }
 
     if (url.pathname === '/api/catalog' || url.pathname.startsWith('/api/orders') || url.pathname.startsWith('/api/proof/')) {
