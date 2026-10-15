@@ -135,12 +135,6 @@ export default function Login() {
                 )}
               </Button>
               
-              <p className="text-sm text-stone-500 text-center">
-                Pas encore de compte ?{' '}
-                <Link href={`/${lang}/inscription`} className="text-emerald-600 hover:underline">
-                  Créer un compte
-                </Link>
-              </p>
             </CardFooter>
           </form>
         </Card>
