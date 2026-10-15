@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import AssistantWidget from "../assistant/AssistantWidget";
 import * as hub from "../api";
 import Avatar from "./Avatar";
 import NotificationBell from "./NotificationBell";
@@ -28,6 +29,9 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
   const stay = `${base}/hebergement`;
   const meetup = `${base}/meetup`;
   const pro = `${base}/pro`;
+  // ?assistant=<conversation id> (bell notification link) opens the assistant on that conversation
+  const [aiConv] = useState(() => Number(new URLSearchParams(window.location.search).get("assistant")) || null);
+  const [aiOpen, setAiOpen] = useState(aiConv !== null);
   const [unread, setUnread] = useState(0);
   const [notifUnread, setNotifUnread] = useState(0);
   const [friendReq, setFriendReq] = useState(0);
@@ -125,6 +129,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
                   Mes messages{unread > 0 ? ` (${unread})` : ""}
                 </Link>
               </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setAiOpen(true)} className="cursor-pointer">Assistant IA</DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={`/${lang}`} className="cursor-pointer">Retour au site</Link>
               </DropdownMenuItem>
@@ -165,6 +170,8 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
 
         {right && <aside className="hidden xl:block"><div className="sticky top-[72px] space-y-3">{right}</div></aside>}
       </div>
+
+      <AssistantWidget open={aiOpen} onOpenChange={setAiOpen} conversationId={aiConv} />
 
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-7 border-t border-slate-200 bg-white text-[11px] text-slate-700 lg:hidden" aria-label="Navigation mobile">
         {navLinks.filter(l => !l.desktopOnly).map(l => (

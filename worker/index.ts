@@ -13,6 +13,7 @@ import { handleMemberCardRequest } from './member-cards';
 import { handleMondeRequest } from './monde';
 import { sendEmail } from './email';
 import * as hubNotify from './hub-notify';
+import * as aiD1 from './ai-d1';
 
 export interface Env {
   SUPABASE_URL: string;
@@ -38,6 +39,10 @@ export interface Env {
   DB?: D1Like;
   /** Hub realtime chat (presence + push). Absent: /hub/ws answers 503 and the hub falls back to polling. */
   HUB_CHAT?: import('./hub').ChatNamespace;
+  SUPPORT_NOTIFY_EMAIL?: string;
+  OPENROUTER_API_KEY?: string;
+  AI_MODELS?: string;
+  MODERATION_ADMIN_EMAIL?: string;
   /** Overrides d1-tables.ts: comma list of Supabase tables served from D1, or "none" (instant rollback lever). */
   D1_TABLES?: string;
   /** Overrides d1-tables.ts R2_BUCKETS: Supabase Storage buckets served from R2, or "none". */
@@ -48,6 +53,7 @@ export interface Env {
 }
 
 import type { D1Like, R2Like } from './gallery-d1';
+import { editionFilter } from './editions-d1';
 import { handleMediaRequest } from './media-r2';
 import { handleHubRequest } from './hub';
 import { handleSuperAssistantRequest } from './superassistant';
@@ -85,9 +91,11 @@ const OPEN_WINDOW_SIZE = 3;
 async function ensureRollingOpenDays(env: Env): Promise<void> {
   const supabase = createSupabaseAdmin(env);
 
+  // only the active edition's days may be open (null = editions migration not applied yet: no distinction)
+  const edition = env.DB ? await editionFilter(env.DB) : null;
   const { data: days, error } = await supabase
     .from('ramadan_days')
-    .select('id, date, is_open')
+    .select(edition === null ? 'id, date, is_open' : 'id, date, is_open, edition')
     .order('date', { ascending: true });
 
   if (error || !days) {
@@ -98,7 +106,7 @@ async function ensureRollingOpenDays(env: Env): Promise<void> {
   const todayStr = getDateStringInTimeZone(new Date(), DEFAULT_RAMADAN_TIMEZONE);
 
   // Days whose date >= today, in chronological order
-  const upcomingDays = days.filter((d: any) => String(d.date).slice(0, 10) >= todayStr);
+  const upcomingDays = days.filter((d: any) => String(d.date).slice(0, 10) >= todayStr && (edition === null || d.edition === edition));
   const targetOpenIds = new Set(
     upcomingDays.slice(0, OPEN_WINDOW_SIZE).map((d: any) => d.id)
   );
@@ -147,6 +155,11 @@ export default {
     } catch (e) {
       console.error('[cron] hub reminders failed', e);
     }
+    try {
+      if (env.DB) await aiD1.purge(env.DB, Date.now());
+    } catch (e) {
+      console.error('[cron] ai purge failed', e);
+    }
   },
 
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -166,7 +179,7 @@ export default {
     const baseCorsHeaders: Record<string, string> = {
   'Access-Control-Allow-Origin': allowOrigin,
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-hub-token',
   'Access-Control-Allow-Credentials': 'true',
   'Access-Control-Max-Age': '86400',
   'Vary': 'Origin',

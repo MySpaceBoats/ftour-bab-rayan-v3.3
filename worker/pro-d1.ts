@@ -3,7 +3,7 @@
  * No HTTP / Supabase imports: testable with a fake D1. Time is always passed in (nowMs).
  */
 import type { D1Like } from "./gallery-d1";
-import { HOUR_MS, HubError, cleanBody, iso, isOwnPath, type MemberRow } from "./hub-d1";
+import { HOUR_MS, HubError, TEAM_EMAIL, cleanBody, iso, isOwnPath, checkMedia, type MemberRow } from "./hub-d1";
 import { normalizePhone } from "./market-d1";
 
 export const JOB_TYPES = ["cdi", "cdd", "stage", "freelance", "benevolat"] as const;
@@ -17,6 +17,8 @@ const DAY_MS = 24 * HOUR_MS;
 /** A member whose hub account is suspended, or whose volunteer is no longer confirmed/present, vanishes. a = hub_members alias. */
 export const memberOk = (a: string) =>
   `${a}.status = 'active' AND EXISTS (SELECT 1 FROM t_volunteers v WHERE lower(v.email) = ${a}.email AND v.status IN ('confirmed','present'))`;
+/** Reading side of a thread: eligible members, plus the read-only Équipe account (moderation notices). Writes keep memberOk. */
+export const viewOk = (a: string) => `(${memberOk(a)} OR (${a}.status = 'active' AND ${a}.email = '${TEAM_EMAIL}'))`;
 const AUTHOR_OK = memberOk("m");
 
 export interface Person { id: number; display_name: string; avatar_key: string | null; headline?: string }
@@ -114,7 +116,7 @@ export async function createPost(d: D1Like, member: MemberRow, input: { body: st
   const body = cleanBody(input.body, PRO_LIMITS.post, "Message");
   const link = cleanLink(input.link);
   const media = input.mediaPaths ?? [];
-  if (media.length > PRO_LIMITS.media || !media.every(p => isOwnPath(member.id, p))) throw new HubError("invalid", "Photos invalides (4 max)");
+  checkMedia(member.id, media, PRO_LIMITS.media);
   if ((await recent(d, "pro_posts", "member_id", member.id, nowMs - HOUR_MS)) >= PRO_LIMITS.postsPerHour) throw new HubError("rate_limited", "Trop de publications, réessayez plus tard");
   // ponytail: post then media are two statements (not atomic); a failed media insert leaves a text-only post
   const row = await d.prepare("INSERT INTO pro_posts (member_id, body, link, created_at) VALUES (?,?,?,?) RETURNING id").bind(member.id, body, link, iso(nowMs)).first<{ id: number }>();
@@ -397,7 +399,7 @@ export async function listThreads(d: D1Like, memberId: number): Promise<ThreadSu
      FROM pro_threads t
      JOIN hub_members o ON o.id = CASE WHEN t.member_a = ? THEN t.member_b ELSE t.member_a END
      LEFT JOIN pro_jobs j ON j.id = t.job_id
-     WHERE (t.member_a = ? OR t.member_b = ?) AND ${memberOk("o")}
+     WHERE (t.member_a = ? OR t.member_b = ?) AND ${viewOk("o")}
        AND (t.created_by = ? OR EXISTS (SELECT 1 FROM pro_messages WHERE thread_id = t.id))
      ORDER BY t.last_message_at DESC, t.id DESC LIMIT 100`,
   ).bind(memberId, memberId, memberId, memberId, memberId).all<any>();
@@ -415,7 +417,7 @@ export async function listMessages(d: D1Like, me: MemberRow, threadId: number, b
   ).bind(threadId, before, before).all<MessageView>();
   const page = results.slice(0, 50).reverse();
   const otherId = t.member_a === me.id ? t.member_b : t.member_a;
-  const o = await d.prepare(`SELECT o.id, o.display_name, o.avatar_key FROM hub_members o WHERE o.id = ? AND ${memberOk("o")}`).bind(otherId).first<Person>();
+  const o = await d.prepare(`SELECT o.id, o.display_name, o.avatar_key FROM hub_members o WHERE o.id = ? AND ${viewOk("o")}`).bind(otherId).first<Person>();
   if (!o) throw new HubError("not_found", "Conversation introuvable");
   const j = t.job_id > 0
     ? await d.prepare("SELECT id, title FROM pro_jobs WHERE id = ? AND status <> 'hidden'").bind(t.job_id).first<{ id: number; title: string }>()
@@ -432,7 +434,7 @@ export async function unreadTotal(d: D1Like, memberId: number): Promise<number> 
   const r = await d.prepare(
     `SELECT COUNT(*) AS n FROM pro_messages x JOIN pro_threads t ON t.id = x.thread_id
      JOIN hub_members o ON o.id = CASE WHEN t.member_a = ? THEN t.member_b ELSE t.member_a END
-     WHERE (t.member_a = ? OR t.member_b = ?) AND x.sender_id <> ? AND x.read_at IS NULL AND ${memberOk("o")}`,
+     WHERE (t.member_a = ? OR t.member_b = ?) AND x.sender_id <> ? AND x.read_at IS NULL AND ${viewOk("o")}`,
   ).bind(memberId, memberId, memberId, memberId).first<{ n: number }>();
   return r?.n ?? 0;
 }

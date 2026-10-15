@@ -15,10 +15,16 @@ import { handleStayRoute } from "./stay";
 import { handleMeetupRoute } from "./meetup";
 import { handlePro } from "./pro";
 import * as X from "./messenger-d1";
+import { handleAi, SUPPORT_EMAIL as AI_SUPPORT_EMAIL } from "./ai";
+import type { FetchLike } from "./ai-core";
+import { notifySupport } from "./support-notify";
+import { confirmItem, listModeration, moderate, restoreItem } from "./moderation";
+import { notifyModeration, notifyRestored } from "./moderation-notify";
 
 export interface ChatNamespace { idFromName(n: string): unknown; get(id: unknown): { fetch(input: string, init?: RequestInit): Promise<Response> } }
-export interface HubEnv extends MediaEnv { DB?: D1Like; HUB_CHAT?: ChatNamespace; RESEND_API_KEY?: string; EMAIL_PROVIDER_KEY?: string; PUBLIC_APP_URL?: string }
+export interface HubEnv extends MediaEnv { DB?: D1Like; HUB_CHAT?: ChatNamespace; RESEND_API_KEY?: string; EMAIL_PROVIDER_KEY?: string; PUBLIC_APP_URL?: string; OPENROUTER_API_KEY?: string; AI_MODELS?: string; MODERATION_ADMIN_EMAIL?: string }
 export interface HubDeps {
+  aiFetch?: FetchLike;
   now?: () => number;
   sendMail?: (to: string, subject: string, html: string) => Promise<unknown>;
   sendBatch?: (msgs: { to: string; subject: string; html: string }[]) => Promise<unknown>;
@@ -29,6 +35,7 @@ export interface HubDeps {
 // mirrors client ROUTE_ROLES for '/admin/benevoles' (ADMIN_BASE + admin_ops)
 const ADMIN_ROLES = new Set(["super_admin", "admin", "admin_ops"]);
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
+const VIDEO_EXT: Record<string, string> = { "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov" };
 const STATUS: Record<H.HubErrorCode, number> = { unauthorized: 401, forbidden: 403, not_found: 404, invalid: 400, rate_limited: 429, conflict: 409 };
 const SIGN_TTL_S = 3600;
 
@@ -71,6 +78,14 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       if (deps.waitUntil) deps.waitUntil(p);
       else return p;
     };
+    // AI moderation of the feed: runs after the response (waitUntil) and never blocks or fails the request.
+    const moderateAfter = (type: "post" | "comment", targetId: number) => background(`moderate ${type}`, () => moderate(d, {
+      fetch: deps.aiFetch ?? ((u, i) => fetch(u, i)),
+      apiKey: env.OPENROUTER_API_KEY,
+      models: env.AI_MODELS,
+      nowMs: now(),
+      notify: e => notifyModeration(d, { mailer, adminEmail: env.MODERATION_ADMIN_EMAIL || AI_SUPPORT_EMAIL }, e, now()),
+    }, type, targetId));
 
     // Realtime push: after a message was stored, tell the Durable Object who to wake up. Best effort, never fails the request.
     const SENT = /^pro\/threads\/(\d+)\/messages$|^market\/threads\/(\d+)\/messages$|^stay\/requests\/(\d+)\/messages$/;
@@ -114,6 +129,7 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     const admin = async () => {
       const u = await siteUser();
       if (!u || u.isDemo || !ADMIN_ROLES.has(u.role)) throw new H.HubError("forbidden", "Réservé aux administrateurs");
+      return u;
     };
 
     let m: RegExpExecArray | null;
@@ -184,7 +200,13 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     }
     if (match("POST", /^verify$/)) {
       const token = str((await readJson(request)).token);
-      return json(await H.openSession(d, token, now()));
+      let created: H.MemberRow | null = null;
+      const session = await H.openSession(d, token, now(), m => { created = m; });
+      if (created) {
+        const c = created as H.MemberRow;
+        await background("support: new member", () => notifySupport(env, { kind: "hub-signup", title: "Nouvel inscrit sur la Community Space", lines: [["Nom", c.display_name], ["Email", c.email]] }, o => sendMail(o.to, o.subject, o.html)));
+      }
+      return json(session);
     }
     if (match("POST", /^logout$/)) {
       const a = request.headers.get("authorization") ?? "";
@@ -255,7 +277,9 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       const me = await who();
       const b = await readJson(request);
       const media = Array.isArray(b.media) ? b.media.filter((x): x is string => typeof x === "string") : [];
-      return json(await H.createPost(d, me, { body: str(b.body), mediaPaths: media }, now()));
+      const created = await H.createPost(d, me, { body: str(b.body), mediaPaths: media }, now());
+      await moderateAfter("post", created.id);
+      return json(created);
     }
     if ((m = match("DELETE", /^posts\/(\d+)$/))) {
       await H.removeContent(d, await member(), "post", id(m[1]));
@@ -279,6 +303,7 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       const text = str((await readJson(request)).body);
       const r = await H.addComment(d, me, postId, text, now());
       await background("notify comment", () => N.onComment(d, mailer, me, postId, r.id, text.trim(), now()));
+      await moderateAfter("comment", r.id);
       return json(r);
     }
     if ((m = match("DELETE", /^comments\/(\d+)$/))) {
@@ -289,8 +314,9 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     // ---- media / report ----------------------------------------------------
     if (match("POST", /^(?:volunteer\/)?media$/)) {
       const me = await who();
-      const ext = EXT[str((await readJson(request)).contentType)];
-      if (!ext) throw new H.HubError("invalid", "Format d'image non supporté (jpeg, png, webp, gif)");
+      const ct = str((await readJson(request)).contentType);
+      const ext = EXT[ct] ?? VIDEO_EXT[ct];
+      if (!ext) throw new H.HubError("invalid", "Format non supporté (photos jpeg, png, webp, gif ; vidéos mp4, webm, mov)");
       await H.recordUpload(d, me.id, now());
       const p = `${me.id}/${crypto.randomUUID()}.${ext}`;
       const r = await storage.createSignedUploadUrl(p);
@@ -352,6 +378,25 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
       await H.hideContent(d, b.type as "post" | "comment", id(b.id));
       return json({ ok: true });
     }
+    // ---- admin: AI moderation review --------------------------------------
+    if (match("GET", /^admin\/moderation$/)) {
+      await admin();
+      return json({ items: await listModeration(d, url.searchParams.get("filter") === "all" ? "all" : "review") });
+    }
+    if ((m = match("POST", /^admin\/moderation\/(\d+)\/restore$/))) {
+      const u = await admin();
+      const r = await restoreItem(d, id(m[1]), (u as { email?: string }).email ?? "admin", now());
+      if (!r) throw new H.HubError("not_found", "Décision introuvable");
+      if (r.wasHidden) await background("notify restored", () => notifyRestored(d, { mailer, adminEmail: env.MODERATION_ADMIN_EMAIL || AI_SUPPORT_EMAIL }, r.event, now()));
+      return json({ ok: true });
+    }
+    if ((m = match("POST", /^admin\/moderation\/(\d+)\/confirm$/))) {
+      await admin();
+      const r = await confirmItem(d, id(m[1]), now());
+      if (!r) throw new H.HubError("not_found", "Décision introuvable");
+      if (r.newlyHidden) await background("notify confirmed", () => notifyModeration(d, { mailer, adminEmail: env.MODERATION_ADMIN_EMAIL || AI_SUPPORT_EMAIL }, r.event, now()));
+      return json({ ok: true });
+    }
     if (match("GET", /^admin\/members$/)) { await admin(); return json({ members: await H.listMembers(d) }); }
     if ((m = match("PUT", /^admin\/members\/(\d+)$/))) {
       await admin();
@@ -404,6 +449,17 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     if (path.startsWith("pro/")) {
       const r = await handlePro({ d, request, url, path: path.slice("pro/".length), now, json, member, admin, sign });
       if (r) { await pushAfterSend(r); return r; }
+    }
+
+    // ---- assistant IA ------------------------------------------------------
+    if (path.startsWith("ai/")) {
+      const r = await handleAi({
+        d, request, url, path: path.slice("ai/".length), now, json, member, admin,
+        ip: request.headers.get("cf-connecting-ip") ?? "unknown", env, fetchFn: deps.aiFetch ?? ((u, i) => fetch(u, i)),
+        baseUrl: base,
+        mailSupport: async (subject, html) => { await background("ai support mail", () => sendMail(AI_SUPPORT_EMAIL, subject, html)); },
+      });
+      if (r) return r;
     }
 
     return json({ error: "not_found", message: "Route inconnue" }, 404);

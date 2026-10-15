@@ -84,7 +84,9 @@ export default function AdminFrame({
   }
 
   if (!user) {
-    window.location.href = getLoginUrl();
+    // getLoginUrl() is '#' when no OAuth portal is configured (production): fall back to the site's own login page.
+    const oauthUrl = getLoginUrl();
+    window.location.href = oauthUrl === '#' ? '/fr/connexion' : oauthUrl;
     return null;
   }
 

@@ -16,6 +16,7 @@ import { useI18n } from "@/i18n";
 import { EmptyPanel, ErrorPanel, LoadingPanel } from "../components/StatePanel";
 
 const EMAIL_KEY = "hub_login_email";
+const VOLUNTEER_FORM_URL = "https://www.ftourbabrayan.ma/fr/benevole";
 const SCOPE_KEY = "hub.feedScope";
 const SCOPES: { id: FeedScope; label: string }[] = [
   { id: "all", label: "Tous" }, { id: "friends", label: "Amis" }, { id: "following", label: "Abonnements" }, { id: "favorites", label: "Favoris" },
@@ -50,6 +51,8 @@ export default function HubPage() {
   const [busy, setBusy] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [loginError, setLoginError] = useState<string | null>(null); // expired or already-used link
+  const [loginTab, setLoginTab] = useState("connexion");
+  const [method, setMethod] = useState<"link" | "password">("link");
   const [notice, setNotice] = useState<string | null>(null); // e.g. session expired mid-visit
   const [resetToken, setResetToken] = useState<string | null>(null);
   const [pinned, setPinned] = useState<hub.Post[]>([]);
@@ -192,12 +195,14 @@ export default function HubPage() {
             <p role="status" className="rounded-lg bg-blue-50 p-4 text-sm text-blue-900">{notice}</p>
           )}
 
-          <Tabs defaultValue="lien" className="gap-4">
+          <Tabs value={loginTab} onValueChange={setLoginTab} className="gap-4">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="lien">Lien par email</TabsTrigger>
-              <TabsTrigger value="motdepasse">Mot de passe</TabsTrigger>
+              <TabsTrigger value="connexion">Se connecter</TabsTrigger>
+              <TabsTrigger value="creer">Créer un compte</TabsTrigger>
             </TabsList>
-            <TabsContent value="lien">
+            <TabsContent value="connexion" className="space-y-4">
+            {method === "link" ? (
+            <>
             {sent ? (
               <div className="space-y-4">
                 <div role="status" className="flex items-start gap-3 rounded-lg bg-emerald-50 p-4 text-sm text-emerald-900">
@@ -251,8 +256,8 @@ export default function HubPage() {
                 <p id="hub-email-hint" className="text-center text-xs text-slate-500">Un lien sécurisé, valable 15 minutes, vous est envoyé par email.</p>
               </form>
             )}
-            </TabsContent>
-            <TabsContent value="motdepasse">
+            </>
+            ) : (
               <PasswordTab
                 initialEmail={email}
                 onSession={r => {
@@ -263,6 +268,28 @@ export default function HubPage() {
                   setMe(r.member);
                 }}
               />
+            )}
+            {!sent && (
+              <button type="button" className="block w-full text-center text-sm text-blue-700 underline" onClick={() => setMethod(method === "link" ? "password" : "link")}>
+                {method === "link" ? "Se connecter avec un mot de passe" : "Recevoir un lien de connexion par email"}
+              </button>
+            )}
+            </TabsContent>
+            <TabsContent value="creer">
+              <div className="space-y-4 text-sm text-slate-700">
+                <p>Le compte de l'espace bénévole se crée à votre première connexion, une fois votre inscription bénévole confirmée par l'équipe.</p>
+                <ol className="list-decimal space-y-1.5 pl-5">
+                  <li>Inscrivez-vous comme bénévole avec le formulaire du site.</li>
+                  <li>L'équipe confirme votre inscription.</li>
+                  <li>Recevez votre lien de connexion par email : votre compte est alors créé. Vous pourrez ensuite choisir un mot de passe dans les réglages de votre compte.</li>
+                </ol>
+                <Button asChild className="h-11 w-full bg-blue-700 hover:bg-blue-800">
+                  <a href={VOLUNTEER_FORM_URL}>S'inscrire comme bénévole</a>
+                </Button>
+                <button type="button" className="block w-full text-center text-xs text-blue-700 underline" onClick={() => { setMethod("link"); setLoginTab("connexion"); }}>
+                  Mon inscription est déjà confirmée : recevoir mon lien
+                </button>
+              </div>
             </TabsContent>
           </Tabs>
       </AuthFrame>

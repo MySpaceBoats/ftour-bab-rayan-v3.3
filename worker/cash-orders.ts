@@ -1,3 +1,4 @@
+import { notifySupport } from './support-notify';
 import { z } from 'zod';
 import { createSupabaseAdmin } from './supabase';
 import { sendEmail } from './email';
@@ -304,6 +305,8 @@ export async function handleCashOrderRequest(request: Request, env: Env): Promis
       apiKey: env.RESEND_API_KEY || env.EMAIL_PROVIDER_KEY || "",
       ...(env.CASH_ORDER_ADMIN_CC_EMAIL ? { cc: [env.CASH_ORDER_ADMIN_CC_EMAIL] } : {}),
     });
+
+    await notifySupport(env, { kind: "order", title: "Nouvelle commande (espèces)", lines: [["Référence", reference], ["Total", `${totalMad} MAD`], ["Client", `${customer.firstName} ${customer.lastName}`], ["Email", customer.email], ["Articles", items.map((i) => `${i.name} x${i.qty}`).join(", ")]] });
 
     return jsonResponse({ reference, orderId, proofToken });
   }

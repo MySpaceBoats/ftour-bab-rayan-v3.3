@@ -5,6 +5,7 @@ const templateRoot = path.resolve(import.meta.dirname);
 
 export default defineConfig({
   root: templateRoot,
+  esbuild: { jsx: "automatic" },
   resolve: {
     alias: {
       "@": path.resolve(templateRoot, "client", "src"),
@@ -14,6 +15,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["server/**/*.test.ts", "server/**/*.spec.ts", "worker/**/*.test.ts"],
+    server: { deps: { inline: [/streamdown/, /katex/] } },
+    include: ["server/**/*.test.ts", "server/**/*.spec.ts", "worker/**/*.test.ts", "client/src/**/*.test.ts"],
   },
 });

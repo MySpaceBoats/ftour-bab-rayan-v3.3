@@ -8,12 +8,17 @@ import superjson from "superjson";
 import type { WorkerContext, WorkerUser } from "./context";
 import { createSupabaseAdmin } from "./supabase";
 import * as galleryDb from "./gallery-d1";
+import * as editionsDb from "./editions-d1";
 import * as hubNotify from "./hub-notify";
 import * as blogDb from "./blog-d1";
 import * as siteDb from "./site-d1";
 import * as electionDb from "./election-d1";
 import * as donationsDb from "./donations-d1";
 import { sendEmail, generateGalleryUploadValidationEmail } from "./email";
+import { notifySupport } from "./support-notify";
+import { completePasswordReset, requestPasswordReset } from "./password-reset";
+import { SIGNUP_LINK_COPY, ensureAccount, ensureVolunteerAccount } from "./auto-account";
+import { checkPublicQuota, decodePublicPhoto, resolveUploader } from "./gallery-public";
 import * as XLSX from "xlsx";
 import {
   addDaysToDateString,
@@ -25,6 +30,11 @@ import {
 // Initialize tRPC
 const t = initTRPC.context<WorkerContext>().create({
   transformer: superjson,
+  // Never expose stack traces (internal paths) to API clients.
+  errorFormatter({ shape }) {
+    const { stack: _stack, ...data } = shape.data;
+    return { ...shape, data };
+  },
 });
 
 export const router = t.router;
@@ -2185,6 +2195,72 @@ const galleryRouter = router({
       return photo;
     }),
 
+  // Anonymous upload from the public gallery page: photos land as drafts (admin moderation), never published directly.
+  publicUpload: publicProcedure
+    .input(
+      z.object({
+        photos: z
+          .array(
+            z.object({
+              fileName: z.string().min(1).max(260),
+              fileType: z.string(),
+              fileData: z.string(),
+              albumId: z.string().uuid().optional(),
+              eventDate: z.string().optional(),
+              title: z.string().max(200).optional(),
+            })
+          )
+          .min(1)
+          .max(GALLERY_MAX_BATCH),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const d1 = galleryDb.db(ctx.env);
+      const bucket = galleryMedia(ctx);
+      const origin = galleryOrigin(ctx);
+      const ip = ctx.req.headers.get("cf-connecting-ip") ?? ctx.req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+
+      await checkPublicQuota(d1, ip, input.photos.length);
+      const who = await resolveUploader(d1, ctx.req.headers.get("x-hub-token"), ip, Date.now());
+      // Validate everything before writing anything.
+      const decoded = input.photos.map(photo => ({ photo, ...decodePublicPhoto(photo) }));
+
+      let count = 0;
+      for (const { photo, ext, buffer } of decoded) {
+        const key = `gallery/original/${crypto.randomUUID()}.${ext}`;
+        await bucket.put(key, buffer, { httpMetadata: { contentType: photo.fileType } });
+        try {
+          await galleryDb.insertPhoto(
+            d1,
+            {
+              title: photo.title,
+              eventDate: normalizeGalleryEventDate(photo.eventDate),
+              tags: [],
+              albumId: photo.albumId,
+              sortOrder: 0,
+              isFeatured: false,
+              status: who.status,
+              storagePath: key,
+              sizeBytes: buffer.length,
+              mimeType: photo.fileType,
+              uploadedBy: who.uploadedBy,
+              validationEmail: null,
+              validationToken: null,
+              validated: false,
+            },
+            origin
+          );
+        } catch (e) {
+          await bucket.delete(key); // no orphan object if the row failed
+          throw new TRPCError({ code: "BAD_REQUEST", message: e instanceof Error ? e.message : "Insertion impossible" });
+        }
+        count++;
+      }
+
+      await notifySupport(ctx.env, { kind: "photos", title: "Photos envoyées à la galerie (public)", lines: [["Photos", count], ["Statut", who.status === "published" ? "publiée (membre bénévole)" : "en attente de modération"]] });
+      return { count, published: who.status === "published" };
+    }),
+
   uploadPhotos: protectedProcedure
     .input(
       z.object({
@@ -2322,8 +2398,11 @@ const galleryRouter = router({
           subject: emailPayload.subject,
           html: emailPayload.html,
         });
+        await notifySupport(ctx.env, { kind: "photos", title: "Photos envoyées à la galerie", lines: [["Photos", count], ["Membre", ctx.user.email], ["Statut", "validation par e-mail requise"]] });
         return { needsValidation: true, count };
       }
+
+      await notifySupport(ctx.env, { kind: "photos", title: "Photos envoyées à la galerie", lines: [["Photos", count], ["Membre", ctx.user.email]] });
 
       return { needsValidation: false, count };
     }),
@@ -2659,6 +2738,33 @@ const authRouter = router({
       };
     }),
 
+  // Self sign-up "by link": no password typed, the account is created and a set-password link is mailed.
+  // Same answer whether or not the address already has an account (no enumeration).
+  signupByLink: publicProcedure
+    .input(z.object({ firstName: z.string().trim().min(2).max(80), lastName: z.string().trim().min(2).max(80), email: z.string().email(), lang: z.string().trim().min(2).max(5).default("fr") }))
+    .mutation(async ({ input, ctx }) => {
+      await ensureAccount(createSupabaseAdmin(ctx.env), ctx.env, input, input.lang, undefined, SIGNUP_LINK_COPY);
+      return { success: true } as const;
+    }),
+
+  requestPasswordReset: publicProcedure
+    .input(z.object({ email: z.string().email(), lang: z.string().trim().min(2).max(5).default("fr") }))
+    .mutation(async ({ input, ctx }) => {
+      await requestPasswordReset(createSupabaseAdmin(ctx.env), ctx.env, input.email, input.lang);
+      return { success: true } as const;
+    }),
+
+  resetPassword: publicProcedure
+    .input(z.object({ tokenHash: z.string().min(1), newPassword: z.string().min(6) }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        await completePasswordReset(createSupabaseAdmin(ctx.env), input.tokenHash, input.newPassword);
+      } catch (e) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: (e as Error).message });
+      }
+      return { success: true } as const;
+    }),
+
   logout: publicProcedure.mutation(async () => {
     return { success: true };
   }),
@@ -2842,14 +2948,45 @@ const publicRouter = router({
 // DAYS ROUTER
 // ============================================
 
+// ============================================
+// EDITIONS (archive an edition, prepare and activate the next one)
+// ============================================
+
+const editionAdminProcedure = adminProcedure.use(({ ctx, next }) => {
+  if (!["admin", "super_admin"].includes(ctx.user!.role)) throw new TRPCError({ code: "FORBIDDEN", message: "Réservé aux administrateurs" });
+  return next();
+});
+const editionAction = async <T>(fn: () => Promise<T>): Promise<T> => {
+  try {
+    return await fn();
+  } catch (e) {
+    if (e instanceof editionsDb.EditionError) throw new TRPCError({ code: "BAD_REQUEST", message: e.message });
+    throw e;
+  }
+};
+const editionInput = z.object({ edition: z.number().int().min(1) });
+
+const editionsRouter = router({
+  list: editionAdminProcedure.query(({ ctx }) => editionsDb.listEditions(galleryDb.db(ctx.env))),
+  archive: editionAdminProcedure.input(editionInput).mutation(({ input, ctx }) => editionAction(async () => { await editionsDb.archiveEdition(galleryDb.db(ctx.env), input.edition); return { success: true } as const; })),
+  unarchive: editionAdminProcedure.input(editionInput).mutation(({ input, ctx }) => editionAction(async () => { await editionsDb.unarchiveEdition(galleryDb.db(ctx.env), input.edition); return { success: true } as const; })),
+  activate: editionAdminProcedure.input(editionInput).mutation(({ input, ctx }) => editionAction(async () => { await editionsDb.activateEdition(galleryDb.db(ctx.env), input.edition); return { success: true } as const; })),
+  setupCalendar: editionAdminProcedure
+    .input(editionInput.extend({ startDate: z.string(), endDate: z.string(), capacity: z.number().int().min(1).max(5000), iftarTime: z.string().max(5).optional(), location: z.string().max(200).optional() }))
+    .mutation(({ input, ctx }) => editionAction(async () => ({ created: await editionsDb.setupCalendar(galleryDb.db(ctx.env), input.edition, input) }))),
+});
+
 const daysRouter = router({
-  list: publicProcedure.query(async ({ ctx }) => {
+  // Public: the active edition only. An admin may ask for another one (archive consultation).
+  list: publicProcedure.input(z.object({ edition: z.number().int().optional() }).optional()).query(async ({ input, ctx }) => {
     const supabase = createSupabaseAdmin(ctx.env);
 
-    const { data, error } = await supabase
-      .from("ramadan_days")
-      .select("*")
-      .order("day_number", { ascending: true });
+    const isAdmin = ctx.user && !ctx.user.isDemo && ["admin", "super_admin", "admin_operations", "admin_ops"].includes(ctx.user.role);
+    const edition = input?.edition !== undefined && isAdmin ? input.edition : ctx.env.DB ? await editionsDb.editionFilter(ctx.env.DB) : null;
+
+    let query = supabase.from("ramadan_days").select("*");
+    if (edition !== null) query = query.eq("edition", edition);
+    const { data, error } = await query.order("day_number", { ascending: true });
 
     if (error) {
       console.error("[Worker] Error fetching days:", error);
@@ -2867,6 +3004,7 @@ const daysRouter = router({
       iftarTime: d.iftar_time,
       location: d.location,
       notes: d.notes,
+      edition: d.edition ?? 12,
     }));
   }),
 
@@ -2913,10 +3051,12 @@ const daysRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
+      const editionCol = await editionAction(() => editionsDb.newDayEdition(galleryDb.db(ctx.env)));
 
       const { data, error } = await supabase
         .from("ramadan_days")
         .insert({
+          ...editionCol,
           day_number: input.dayNumber,
           date: input.date,
           capacity: input.capacity,
@@ -3030,6 +3170,7 @@ const daysRouter = router({
       const supabase = createSupabaseAdmin(ctx.env);
       const startDate = new Date(input.startDate);
       const createdIds: number[] = [];
+      const editionCol = await editionAction(() => editionsDb.newDayEdition(galleryDb.db(ctx.env)));
 
       for (let i = 0; i < input.daysCount; i++) {
         const date = new Date(startDate);
@@ -3038,6 +3179,7 @@ const daysRouter = router({
         const { data, error } = await supabase
           .from("ramadan_days")
           .insert({
+            ...editionCol,
             day_number: i + 1,
             date: date.toISOString().split("T")[0],
             capacity: input.capacity,
@@ -3207,6 +3349,11 @@ const volunteersRouter = router({
         // Don't throw - registration is still successful
       }
 
+      await notifySupport(ctx.env, { kind: "volunteer", title: "Nouvelle inscription bénévole", lines: [["Nom", `${input.firstName} ${input.lastName}`], ["Email", input.email], ["Téléphone", input.phone], ["Ville", input.city], ["Créneaux", input.volunteerSlots?.join(", ")]] });
+
+      // Site account created for the volunteer if there is none yet (never blocks the registration)
+      await ensureVolunteerAccount(supabase, ctx.env, input);
+
       return { id: volunteer.id, qrToken };
     }),
 
@@ -3337,9 +3484,14 @@ const volunteersRouter = router({
     }),
 
   listByDay: adminProcedure
-    .input(z.object({ dayId: z.number().optional() }))
+    .input(z.object({ dayId: z.number().optional(), edition: z.number().int().optional() }))
     .query(async ({ input, ctx }) => {
       const supabase = createSupabaseAdmin(ctx.env);
+
+      // Edition scope: the one asked for, else the active one (null = editions migration not applied: no scope)
+      const edition = input.edition ?? (ctx.env.DB ? await editionsDb.editionFilter(ctx.env.DB) : null);
+      const editionDayIds: number[] | null =
+        edition === null ? null : ((await supabase.from("ramadan_days").select("id").eq("edition", edition)).data ?? []).map((r: any) => r.id);
 
       // Paginate through all volunteers to bypass the 1000-row default limit
       const fetchAllVolunteers = async () => {
@@ -3358,6 +3510,9 @@ const volunteersRouter = router({
 
           if (input.dayId) {
             query = query.eq("day_id", input.dayId);
+          } else if (editionDayIds) {
+            if (editionDayIds.length === 0) return allRows;
+            query = query.in("day_id", editionDayIds);
           }
 
           const { data, error } = await query;
@@ -3441,10 +3596,9 @@ const volunteersRouter = router({
       }
 
       // Get all days for the dropdown
-      const { data: daysData } = await supabase
-        .from("ramadan_days")
-        .select("*")
-        .order("day_number", { ascending: true });
+      let daysQuery = supabase.from("ramadan_days").select("*");
+      if (edition !== null) daysQuery = daysQuery.eq("edition", edition);
+      const { data: daysData } = await daysQuery.order("day_number", { ascending: true });
 
       const volunteers = (data || []).map((v: any) => ({
         id: v.id,
@@ -3807,6 +3961,8 @@ const volunteersRouter = router({
           error
         );
       }
+
+      await notifySupport(ctx.env, { kind: "volunteer-group", title: "Nouvelle inscription bénévole (groupe)", lines: [["Groupe", input.groupName], ["Responsable", input.responsibleName], ["Email", input.responsibleEmail], ["Téléphone", input.responsiblePhone], ["Effectif estimé", input.estimatedSize]] });
 
       return {
         success: true,
@@ -5101,6 +5257,7 @@ const ordersRouter = router({
         // Don't throw - order is still successful
       }
 
+      await notifySupport(ctx.env, { kind: "order", title: "Nouvelle commande goodies", lines: [["Référence", orderRef], ["Total", `${totalAmount} MAD`], ["Client", input.customerName], ["Email", input.customerEmail], ["Téléphone", input.customerPhone], ["Paiement", input.paymentMethod]] });
       return { id: order.id, orderReference: orderRef, totalAmount };
     }),
 
@@ -5360,6 +5517,7 @@ const donationsRouter = router({
         // Don't throw - donation is still successful
       }
 
+      await notifySupport(ctx.env, { kind: "donation", title: "Nouveau don", lines: [["Référence", donationRef], ["Montant", `${input.amount} MAD`], ["Mode", input.paymentMethod], ["Donateur", input.isAnonymous ? "Anonyme" : input.donorName], ["Email", input.donorEmail], ["Téléphone", input.donorPhone]] });
       return { id: data.id, donationReference: donationRef };
     }),
 
@@ -5693,6 +5851,8 @@ const pastryOrdersRouter = router({
       } catch (emailError) {
         console.error("[Worker] Pastry order email error:", emailError);
       }
+
+      await notifySupport(ctx.env, { kind: "order", title: "Nouvelle commande pâtisserie", lines: [["Référence", reference], ["Total", `${input.totalAmount} MAD`], ["Client", input.customerName], ["Email", input.email], ["Téléphone", input.phone], ["Paiement", input.paymentMethod]] });
 
       return data;
     }),
@@ -8210,6 +8370,8 @@ const terroirModuleRouter = router({
         }
       }
 
+      await notifySupport(ctx.env, { kind: "order", title: "Nouvelle commande terroir", lines: [["Commande", String((order as { id?: number } | null)?.id ?? "")], ["Total", `${input.items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0)} MAD`], ["Client", input.customerName], ["Email", input.customerEmail], ["Téléphone", input.customerPhone]] });
+
       return order;
     }),
 
@@ -8481,6 +8643,8 @@ const terroirModuleRouter = router({
             .eq("id", item.catalogProductId);
         }
       }
+
+      await notifySupport(ctx.env, { kind: "order", title: "Nouvelle commande boutique", lines: [["Commande", String((order as { id?: number } | null)?.id ?? "")], ["Total", `${input.items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0)} MAD`], ["Client", input.customerName], ["Email", input.customerEmail], ["Téléphone", input.customerPhone]] });
 
       return order;
     }),
@@ -8930,6 +9094,8 @@ const partnerLeadsRouter = router({
       } catch (emailError) {
         console.error("[Worker] Error sending partner lead email:", emailError);
       }
+
+      await notifySupport(ctx.env, { kind: "partnership", title: "Nouvelle demande de partenariat", lines: [["Société", input.companyName], ["Contact", input.contactName], ["Email", input.email], ["Téléphone", input.phone], ["Type", input.partnershipType], ["Budget", input.budgetRange], ["Message", input.message]] });
 
       return { success: true, id };
     }),
@@ -11042,6 +11208,7 @@ export const appRouter = router({
   system: systemRouter,
   auth: authRouter,
   days: daysRouter,
+  editions: editionsRouter,
   volunteers: volunteersRouter,
   checkin: checkinRouter,
   goodies: goodiesRouter,

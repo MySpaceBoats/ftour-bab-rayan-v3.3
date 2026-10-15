@@ -109,3 +109,6 @@ supabase/.temp/
 
 # Wrangler local state (miniflare D1/R2, temp bundles)
 .wrangler/
+
+# wrangler local secrets
+.dev.vars

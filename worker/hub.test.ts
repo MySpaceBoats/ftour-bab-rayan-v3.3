@@ -54,7 +54,8 @@ async function call(method: string, path: string, o: { token?: string; admin?: s
   const res = await handleHubRequest(new Request(`https://w.test${path}`, { method, headers, body: o.body === undefined ? undefined : JSON.stringify(o.body) }), env, CORS, deps());
   return res!;
 }
-const tokenFromMail = () => /token=([a-f0-9]{64})/.exec(mails[mails.length - 1].html)![1];
+// support notifications may follow the login mail: take the last mail that carries a token
+const tokenFromMail = () => /token=([a-f0-9]{64})/.exec([...mails].reverse().find(m => /token=[a-f0-9]{64}/.test(m.html))!.html)![1];
 
 async function signIn(email = "a@x.ma") {
   sqlite.prepare("INSERT INTO t_volunteers (first_name,last_name,email,status) VALUES ('Amina','Benali',?, 'confirmed')").run(email);

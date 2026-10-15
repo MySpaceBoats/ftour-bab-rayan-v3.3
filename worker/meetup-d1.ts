@@ -4,7 +4,7 @@
  */
 import { z } from "zod";
 import type { D1Like } from "./gallery-d1";
-import { HubError, iso, isOwnPath, HOUR_MS, type MemberRow } from "./hub-d1";
+import { HubError, iso, isOwnImage, HOUR_MS, type MemberRow } from "./hub-d1";
 import { HOST_OK, isIsoDate, nightsBetween } from "./stay-d1";
 
 export const MT_CATEGORIES = ["sortie", "evenement", "rencontre", "autre"] as const;
@@ -88,7 +88,7 @@ export function parseMeetupInput(raw: unknown): MeetupInput {
 
 function checkPhoto(member: MemberRow, photo: string | null | undefined): string | null {
   if (photo == null || photo === "") return null;
-  if (!isOwnPath(member.id, photo)) throw new HubError("invalid", "Photo invalide");
+  if (!isOwnImage(member.id, photo)) throw new HubError("invalid", "Photo invalide");
   return photo;
 }
 

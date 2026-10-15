@@ -3,7 +3,7 @@
  * No HTTP / Supabase imports: testable with a fake D1. Time is always passed in (nowMs).
  */
 import type { D1Like } from "./gallery-d1";
-import { HOUR_MS, HubError, cleanBody, iso, isOwnPath, type MemberRow } from "./hub-d1";
+import { HOUR_MS, HubError, cleanBody, iso, isOwnImage, type MemberRow } from "./hub-d1";
 
 export const MK_CATEGORIES = ["maison", "mode", "high-tech", "enfants", "livres", "vehicules", "autre"] as const;
 export const MK_CONDITIONS = ["neuf", "bon", "correct"] as const;
@@ -47,7 +47,7 @@ function clean(member: MemberRow, i: ListingInput): Clean {
   const whatsapp = i.whatsapp === true && phone !== null;
   if (whatsapp && !phone!.startsWith("+")) throw new HubError("invalid", "Pour WhatsApp, saisissez le numéro au format international (+212…)");
   const media = i.mediaPaths ?? [];
-  if (media.length > MK_LIMITS.photos || !media.every(p => isOwnPath(member.id, p))) throw new HubError("invalid", "Photos invalides (4 max)");
+  if (media.length > MK_LIMITS.photos || !media.every(p => isOwnImage(member.id, p))) throw new HubError("invalid", "Photos invalides (4 max)");
   return { title, description, price: i.price, category: i.category, condition: i.condition, city, phone, whatsapp, media };
 }
 

@@ -16,8 +16,9 @@ export interface D1Like {
   batch(stmts: D1Stmt[]): Promise<unknown[]>;
 }
 export interface R2Like {
-  put(key: string, value: ArrayBuffer | Uint8Array, opts?: { httpMetadata?: { contentType?: string } }): Promise<unknown>;
-  get(key: string): Promise<{ body: ReadableStream; httpEtag: string; httpMetadata?: { contentType?: string } } | null>;
+  put(key: string, value: ArrayBuffer | Uint8Array | ReadableStream, opts?: { httpMetadata?: { contentType?: string } }): Promise<unknown>;
+  get(key: string, opts?: { range?: { offset: number; length: number } }): Promise<{ body: ReadableStream; httpEtag: string; size?: number; httpMetadata?: { contentType?: string } } | null>;
+  head?(key: string): Promise<{ size: number } | null>;
   delete(keys: string | string[]): Promise<void>;
 }
 

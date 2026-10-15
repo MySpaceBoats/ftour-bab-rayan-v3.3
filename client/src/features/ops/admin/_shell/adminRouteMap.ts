@@ -55,6 +55,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       { id: 'galerie',          label: 'Galerie',           route: '/admin/galerie'           },
       { id: 'event-photos',     label: 'Photos événement',  route: '/admin/event-photos'      },
       { id: 'jours',            label: 'Jours Ramadan',     route: '/admin/jours'             },
+      { id: 'editions',         label: 'Éditions',          route: '/admin/editions'          },
     ],
   },
   {
@@ -111,6 +112,7 @@ export const ROUTE_TO_NAV_ID: Record<string, string> = {
   '/admin/galerie': 'galerie',
   '/admin/event-photos': 'event-photos',
   '/admin/jours': 'jours',
+  '/admin/editions': 'editions',
   '/admin/messages': 'messages',
   '/admin/blog': 'blog',
   '/admin/feedback': 'feedback',
@@ -159,6 +161,7 @@ export const ROUTE_TO_TITLE: Record<string, string> = {
   '/admin/galerie': 'Galerie',
   '/admin/event-photos': 'Photos Événement',
   '/admin/jours': 'Jours Ramadan',
+  '/admin/editions': 'Éditions',
   '/admin/messages': 'Messages',
   '/admin/blog': 'Blog',
   '/admin/feedback': 'Feedback',
