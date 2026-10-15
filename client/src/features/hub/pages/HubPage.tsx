@@ -286,9 +286,6 @@ export default function HubPage() {
                 <Button asChild className="h-11 w-full bg-blue-700 hover:bg-blue-800">
                   <a href={VOLUNTEER_FORM_URL}>S'inscrire comme bénévole</a>
                 </Button>
-                <button type="button" className="block w-full text-center text-xs text-blue-700 underline" onClick={() => { setMethod("link"); setLoginTab("connexion"); }}>
-                  Mon inscription est déjà confirmée : recevoir mon lien
-                </button>
               </div>
             </TabsContent>
           </Tabs>

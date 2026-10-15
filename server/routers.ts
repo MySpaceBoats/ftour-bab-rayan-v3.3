@@ -6328,12 +6328,9 @@ export const appRouter = router({
           phone: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => {
-        const result = await signUpUser(input);
-        if (result.error) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: result.error });
-        }
-        return { user: result.user };
+      .mutation(async () => {
+        // Public signup disabled: accounts are created by admins only (users.create).
+        throw new TRPCError({ code: "FORBIDDEN", message: "Les comptes sont créés par un administrateur." });
       }),
 
     refreshSession: publicProcedure
@@ -7307,12 +7304,9 @@ export const appRouterUpdated = router({
           phone: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => {
-        const result = await signUpUser(input);
-        if (result.error) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: result.error });
-        }
-        return { user: result.user };
+      .mutation(async () => {
+        // Public signup disabled: accounts are created by admins only (users.create).
+        throw new TRPCError({ code: "FORBIDDEN", message: "Les comptes sont créés par un administrateur." });
       }),
 
     refreshSession: publicProcedure

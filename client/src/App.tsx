@@ -58,7 +58,6 @@ import GalerieValidationUpload from "@/features/gallery/pages/GalerieValidationU
 // AUTH — features/auth
 // ============================================
 import Login from "@/features/auth/pages/Login";
-import Signup from "@/features/auth/pages/Signup";
 import ForgotPassword from "@/features/auth/pages/ForgotPassword";
 import DemoAccess from "@/features/auth/pages/DemoAccess";
 
@@ -396,7 +395,6 @@ function LocalizedRoutes() {
       <Route path="/:lang/RIB" component={RibDownload} />
       <Route path="/:lang/galerie" component={Galerie} />
       <Route path="/:lang/connexion" component={Login} />
-      <Route path="/:lang/inscription" component={Signup} />
       <Route
         path="/:lang/reinitialiser-mot-de-passe"
         component={ForgotPassword}
@@ -510,9 +508,6 @@ function LocalizedRoutes() {
       </Route>
       <Route path="/connexion">
         {() => <Redirect to={`/${lang}/connexion`} />}
-      </Route>
-      <Route path="/inscription">
-        {() => <Redirect to={`/${lang}/inscription`} />}
       </Route>
       <Route path="/reinitialiser-mot-de-passe">
         {() => <Redirect to={`/${lang}/reinitialiser-mot-de-passe`} />}

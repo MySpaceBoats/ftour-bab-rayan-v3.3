@@ -17,7 +17,7 @@ import * as donationsDb from "./donations-d1";
 import { sendEmail, generateGalleryUploadValidationEmail } from "./email";
 import { notifySupport } from "./support-notify";
 import { completePasswordReset, requestPasswordReset } from "./password-reset";
-import { SIGNUP_LINK_COPY, ensureAccount, ensureVolunteerAccount } from "./auto-account";
+import { ensureVolunteerAccount } from "./auto-account";
 import { checkPublicQuota, decodePublicPhoto, resolveUploader } from "./gallery-public";
 import * as XLSX from "xlsx";
 import {
@@ -2670,81 +2670,17 @@ const authRouter = router({
       };
     }),
 
+  // Public signup disabled: accounts are created by admins only (users.create).
   signup: publicProcedure
-    .input(
-      z.object({
-        email: z.string().email(),
-        password: z.string().min(6),
-        name: z.string().optional(),
-        phone: z.string().optional(),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      const supabase = createSupabaseAdmin(ctx.env);
-
-      // Create user in Supabase Auth
-      const { data: authData, error: authError } =
-        await supabase.auth.admin.createUser({
-          email: input.email,
-          password: input.password,
-          email_confirm: true,
-          user_metadata: {
-            name: input.name,
-            phone: input.phone,
-          },
-        });
-
-      if (authError) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: authError.message,
-        });
-      }
-
-      if (!authData.user) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Erreur lors de la création du compte",
-        });
-      }
-
-      // Create entry in users table
-      const { error: dbError } = await supabase.from("users").insert({
-        open_id: authData.user.id,
-        email: input.email,
-        name: input.name || null,
-        phone: input.phone || null,
-        role: "user",
-      });
-
-      if (dbError) {
-        // Rollback: delete auth user
-        await supabase.auth.admin.deleteUser(authData.user.id);
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Erreur lors de la création du profil",
-        });
-      }
-
-      return {
-        user: {
-          id: authData.user.id,
-          email: input.email,
-          role: "user" as const,
-          name: input.name,
-          phone: input.phone,
-          createdAt: new Date(),
-        },
-      };
+    .input(z.object({ email: z.string(), password: z.string(), name: z.string().optional(), phone: z.string().optional() }))
+    .mutation(async () => {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Les comptes sont créés par un administrateur." });
     }),
 
-  // Self sign-up "by link": no password typed, the account is created and a set-password link is mailed.
-  // Same answer whether or not the address already has an account (no enumeration).
   signupByLink: publicProcedure
-    .input(z.object({ firstName: z.string().trim().min(2).max(80), lastName: z.string().trim().min(2).max(80), email: z.string().email(), lang: z.string().trim().min(2).max(5).default("fr") }))
-    .mutation(async ({ input, ctx }) => {
-      await ensureAccount(createSupabaseAdmin(ctx.env), ctx.env, input, input.lang, undefined, SIGNUP_LINK_COPY);
-      return { success: true } as const;
+    .input(z.object({ email: z.string() }).passthrough())
+    .mutation(async () => {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Les comptes sont créés par un administrateur." });
     }),
 
   requestPasswordReset: publicProcedure
