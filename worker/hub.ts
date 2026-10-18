@@ -13,6 +13,7 @@ import { handleSocialRoute } from "./social";
 import * as S from "./social-d1";
 import { handleStayRoute } from "./stay";
 import { handleMeetupRoute } from "./meetup";
+import { handleSalonRoute } from "./salon";
 import { handlePro } from "./pro";
 import * as X from "./messenger-d1";
 import { handleAi, SUPPORT_EMAIL as AI_SUPPORT_EMAIL } from "./ai";
@@ -442,6 +443,12 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
     // ---- meetup entre bénévoles --------------------------------------------
     if (path.startsWith("meetup/")) {
       const r = await handleMeetupRoute({ d, request, url, path: path.slice("meetup/".length), now, json, member, admin, sign });
+      if (r) return r;
+    }
+
+    // ---- salons thématiques ------------------------------------------------
+    if (path.startsWith("salon/")) {
+      const r = await handleSalonRoute({ d, request, url, path: path.slice("salon/".length), now, json, member, admin, sign });
       if (r) return r;
     }
 
