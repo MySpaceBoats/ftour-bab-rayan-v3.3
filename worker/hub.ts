@@ -23,7 +23,7 @@ import { confirmItem, listModeration, moderate, restoreItem } from "./moderation
 import { notifyModeration, notifyRestored } from "./moderation-notify";
 
 export interface ChatNamespace { idFromName(n: string): unknown; get(id: unknown): { fetch(input: string, init?: RequestInit): Promise<Response> } }
-export interface HubEnv extends MediaEnv { DB?: D1Like; HUB_CHAT?: ChatNamespace; RESEND_API_KEY?: string; EMAIL_PROVIDER_KEY?: string; PUBLIC_APP_URL?: string; OPENROUTER_API_KEY?: string; AI_MODELS?: string; MODERATION_ADMIN_EMAIL?: string }
+export interface HubEnv extends MediaEnv { DB?: D1Like; HUB_CHAT?: ChatNamespace; RESEND_API_KEY?: string; EMAIL_PROVIDER_KEY?: string; PUBLIC_APP_URL?: string; OPENROUTER_API_KEY?: string; AI_MODELS?: string; MODERATION_ADMIN_EMAIL?: string; JAAS_APP_ID?: string; JAAS_KEY_ID?: string; JAAS_PRIVATE_KEY?: string }
 export interface HubDeps {
   aiFetch?: FetchLike;
   now?: () => number;
@@ -448,7 +448,7 @@ export async function handleHubRequest(request: Request, env: HubEnv, cors: Reco
 
     // ---- salons thématiques ------------------------------------------------
     if (path.startsWith("salon/")) {
-      const r = await handleSalonRoute({ d, request, url, path: path.slice("salon/".length), now, json, member, admin, sign });
+      const r = await handleSalonRoute({ d, request, url, path: path.slice("salon/".length), now, json, member, admin, sign, env });
       if (r) return r;
     }
 

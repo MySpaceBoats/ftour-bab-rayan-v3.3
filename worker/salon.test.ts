@@ -92,3 +92,43 @@ describe("salon http", () => {
     await bad("POST", "/hub/salon/admin/hide", { token: v.session, admin: "admin", body: {} }, 400, "invalid");
   });
 });
+
+describe("salon jitsi url", () => {
+  const mk = async () => {
+    const a = await h.signIn("a@x.ma");
+    const b = await h.signIn("b@x.ma");
+    const { id } = (await (await h.call("POST", "/hub/salon/salons", { token: a.session, body: { title: "T", topic: "S" } })).json()) as { id: number };
+    return { a, b, id };
+  };
+
+  it("needs auth; falls back to the public server without JaaS secrets", async () => {
+    const { b, id } = await mk();
+    expect((await h.call("GET", `/hub/salon/salons/${id}/jitsi`)).status).toBe(401);
+    const r = await get<{ url: string; provider: string }>(`/hub/salon/salons/${id}/jitsi`, b.session);
+    expect(r.provider).toBe("public");
+    expect(r.url).toMatch(/^https:\/\/meet\.jit\.si\/babrayan-[a-f0-9]{32}#/);
+  });
+
+  it("returns a JaaS url with a jwt that marks only the creator as moderator", async () => {
+    const k = await crypto.subtle.generateKey({ name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, true, ["sign", "verify"]);
+    const der = Buffer.from(await crypto.subtle.exportKey("pkcs8", k.privateKey)).toString("base64");
+    Object.assign(h.env, { JAAS_APP_ID: "vpaas-magic-cookie-t", JAAS_KEY_ID: "vpaas-magic-cookie-t/k1", JAAS_PRIVATE_KEY: `-----BEGIN PRIVATE KEY-----\n${der}\n-----END PRIVATE KEY-----` });
+    const { a, b, id } = await mk();
+    const claims = async (token: string) => {
+      const r = await get<{ url: string; provider: string }>(`/hub/salon/salons/${id}/jitsi`, token);
+      expect(r.provider).toBe("jaas");
+      expect(r.url).toMatch(/^https:\/\/8x8\.vc\/vpaas-magic-cookie-t\/babrayan-[a-f0-9]{32}\?jwt=/);
+      return JSON.parse(Buffer.from(r.url.split("jwt=")[1].split("#")[0].split(".")[1], "base64url").toString());
+    };
+    expect((await claims(a.session)).context.user).toMatchObject({ name: "Amina B.", moderator: true });
+    expect((await claims(b.session)).context.user.moderator).toBe(false);
+  });
+
+  it("refuses an archived salon (409) and a hidden/unknown one (404)", async () => {
+    const { a, b, id } = await mk();
+    await bad("GET", "/hub/salon/salons/9999/jitsi", { token: b.session }, 404, "not_found");
+    await bad("GET", "/hub/salon/salons/abc/jitsi", { token: b.session }, 400, "invalid");
+    await h.call("POST", `/hub/salon/salons/${id}/archive`, { token: a.session });
+    await bad("GET", `/hub/salon/salons/${id}/jitsi`, { token: b.session }, 409, "conflict");
+  });
+});
