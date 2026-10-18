@@ -12,6 +12,7 @@ import { useHubMember } from "../../useHubMember";
 import { HubApiError } from "../../api";
 import * as sl from "../salon-api";
 import JitsiPanel from "../components/JitsiPanel";
+import { appendOlder, mergeFirstPage } from "../merge-posts";
 
 const POLL_MS = 10_000;
 const when = (iso: string) => new Date(iso).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -24,8 +25,8 @@ export default function SalonPage() {
   const back = `/${lang}/benevole/espace/salons`;
   const [salon, setSalon] = useState<sl.SalonDetail | null | undefined>(undefined);
   const [loadError, setLoadError] = useState("");
-  const [posts, setPosts] = useState<sl.SalonPost[]>([]);
-  const [next, setNext] = useState<string | null>(null);
+  const [feed, setFeed] = useState<{ posts: sl.SalonPost[]; next: string | null }>({ posts: [], next: null });
+  const { posts, next } = feed;
   const [loadingMore, setLoadingMore] = useState(false);
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
@@ -43,19 +44,14 @@ export default function SalonPage() {
   const refresh = useCallback(async () => {
     try {
       const r = await sl.listPosts(salonId);
-      setPosts(prev => {
-        const known = new Set(r.posts.map(p => p.id));
-        const oldest = r.posts[r.posts.length - 1]?.id ?? 0;
-        return [...r.posts, ...prev.filter(p => p.id < oldest && !known.has(p.id))];
-      });
-      setNext(n => (n === null && r.nextCursor === null ? null : n ?? r.nextCursor));
+      setFeed(f => mergeFirstPage(f.posts, f.next, r.posts, r.nextCursor));
     } catch { /* ponytail: un échec de polling est silencieux, le prochain tick réessaie */ }
   }, [salonId]);
 
   useEffect(() => {
     if (!me || !Number.isSafeInteger(salonId)) return;
     void loadSalon();
-    void sl.listPosts(salonId).then(r => { setPosts(r.posts); setNext(r.nextCursor); }).catch(() => undefined);
+    void sl.listPosts(salonId).then(r => setFeed({ posts: r.posts, next: r.nextCursor })).catch(() => undefined);
   }, [me, salonId, loadSalon]);
 
   useEffect(() => {
@@ -86,8 +82,7 @@ export default function SalonPage() {
     setLoadingMore(true);
     try {
       const r = await sl.listPosts(salonId, next);
-      setPosts(prev => [...prev, ...r.posts]);
-      setNext(r.nextCursor);
+      setFeed(f => ({ posts: appendOlder(f.posts, r.posts), next: r.nextCursor }));
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -98,7 +93,7 @@ export default function SalonPage() {
   async function remove(p: sl.SalonPost) {
     try {
       await sl.deletePost(salonId, p.id);
-      setPosts(prev => prev.filter(x => x.id !== p.id));
+      setFeed(f => ({ ...f, posts: f.posts.filter(x => x.id !== p.id) }));
     } catch (err) {
       toast.error((err as Error).message);
     }
