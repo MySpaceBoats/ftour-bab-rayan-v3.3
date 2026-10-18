@@ -137,3 +137,93 @@ describe("salon archive / admin", () => {
     await rejects(s.deleteSalon(d, id), "not_found");
   });
 });
+
+describe("salon posts", () => {
+  const mk = async () => {
+    const a = await member("a@x.ma");
+    const b = await member("b@x.ma", "Bilal");
+    const id = (await s.createSalon(d, a, input(), T0)).id;
+    return { a, b, id };
+  };
+
+  it("rejects empty, whitespace-only and too long bodies", async () => {
+    const { a, id } = await mk();
+    for (const body of ["", "   \n\t ", "x".repeat(2001), 5, undefined]) await rejects(s.createPost(d, a, id, { body }, T0), "invalid");
+    await rejects(s.createPost(d, a, id, null, T0), "invalid");
+    expect((sqlite.prepare("SELECT COUNT(*) AS n FROM sl_posts").get() as { n: number }).n).toBe(0);
+    await s.createPost(d, a, id, { body: "x".repeat(2000) }, T0);
+  });
+
+  it("stores html as plain text, trims, bumps last_post_at and the salon order", async () => {
+    const { a, b, id } = await mk();
+    const other = (await s.createSalon(d, b, input({ title: "Autre" }), T0 + MIN)).id;
+    expect((await s.listSalons(d, a.id)).salons.map(x => x.id)).toEqual([other, id]);
+    await s.createPost(d, a, id, { body: '  <img src=x onerror=alert(1)>  ' }, T0 + 2 * MIN);
+    const { posts } = await s.listPosts(d, b.id, id);
+    expect(posts[0].body).toBe("<img src=x onerror=alert(1)>");
+    expect((await s.listSalons(d, a.id)).salons.map(x => x.id)).toEqual([id, other]);
+    expect((await s.getSalon(d, a.id, id)).last_post_at).toBe(h.iso(T0 + 2 * MIN));
+    expect((await s.getSalon(d, a.id, id)).post_count).toBe(1);
+  });
+
+  it("lists newest first, paginated by id, with mine flag and author", async () => {
+    const { a, b, id } = await mk();
+    const ids: number[] = [];
+    for (let i = 0; i < 5; i++) ids.push((await s.createPost(d, i % 2 ? b : a, id, { body: `m${i}` }, T0 + i)).id);
+    const p1 = await s.listPosts(d, a.id, id, { limit: 2 });
+    expect(p1.posts.map(p => p.body)).toEqual(["m4", "m3"]);
+    expect(p1.posts[0]).toMatchObject({ mine: true, author: { id: a.id } });
+    expect(p1.posts[1]).toMatchObject({ mine: false, author: { id: b.id } });
+    const p2 = await s.listPosts(d, a.id, id, { limit: 2, cursor: p1.nextCursor });
+    expect(p2.posts.map(p => p.body)).toEqual(["m2", "m1"]);
+    const p3 = await s.listPosts(d, a.id, id, { limit: 2, cursor: p2.nextCursor });
+    expect(p3.posts.map(p => p.body)).toEqual(["m0"]);
+    expect(p3.nextCursor).toBeNull();
+    await rejects(s.listPosts(d, a.id, id, { cursor: "abc" }), "invalid");
+    expect(ids).toHaveLength(5);
+  });
+
+  it("an empty salon lists no post", async () => {
+    const { a, id } = await mk();
+    expect(await s.listPosts(d, a.id, id)).toEqual({ posts: [], nextCursor: null });
+  });
+
+  it("limits to 20 posts per minute and per member", async () => {
+    const { a, b, id } = await mk();
+    for (let i = 0; i < 20; i++) await s.createPost(d, a, id, { body: `m${i}` }, T0 + i);
+    await rejects(s.createPost(d, a, id, { body: "trop" }, T0 + 30), "rate_limited");
+    await s.createPost(d, b, id, { body: "autre membre ok" }, T0 + 30);
+    await s.createPost(d, a, id, { body: "une minute plus tard" }, T0 + MIN + 1000);
+  });
+
+  it("archived salon refuses posts (conflict) but stays readable; hidden is not found", async () => {
+    const { a, id } = await mk();
+    await s.createPost(d, a, id, { body: "avant" }, T0);
+    await s.archiveSalon(d, a, id);
+    await rejects(s.createPost(d, a, id, { body: "après" }, T0 + MIN), "conflict");
+    expect((await s.listPosts(d, a.id, id)).posts).toHaveLength(1);
+    sqlite.prepare("UPDATE sl_salons SET status='hidden' WHERE id = ?").run(id);
+    await rejects(s.listPosts(d, a.id, id), "not_found");
+    await rejects(s.createPost(d, a, id, { body: "x" }, T0 + MIN), "not_found");
+    await rejects(s.createPost(d, a, 9999, { body: "x" }, T0), "not_found");
+  });
+
+  it("only the author deletes (soft); the post leaves the list and the count", async () => {
+    const { a, b, id } = await mk();
+    const { id: pid } = await s.createPost(d, a, id, { body: "à supprimer" }, T0);
+    await rejects(s.deletePost(d, b, id, pid), "forbidden");
+    await s.deletePost(d, a, id, pid);
+    expect((await s.listPosts(d, a.id, id)).posts).toEqual([]);
+    expect((await s.getSalon(d, a.id, id)).post_count).toBe(0);
+    expect((sqlite.prepare("SELECT deleted_at FROM sl_posts WHERE id = ?").get(pid) as any).deleted_at).not.toBeNull();
+    await rejects(s.deletePost(d, a, id, pid), "not_found");
+    await rejects(s.deletePost(d, a, id + 1, pid), "not_found");
+  });
+
+  it("hides the posts of a suspended author", async () => {
+    const { a, b, id } = await mk();
+    await s.createPost(d, b, id, { body: "de Bilal" }, T0);
+    sqlite.prepare("UPDATE hub_members SET status='suspended' WHERE id = ?").run(b.id);
+    expect((await s.listPosts(d, a.id, id)).posts).toEqual([]);
+  });
+});

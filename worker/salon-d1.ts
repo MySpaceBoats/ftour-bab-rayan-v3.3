@@ -125,3 +125,60 @@ export async function deleteSalon(d: D1Like, id: number): Promise<void> {
     d.prepare("DELETE FROM sl_salons WHERE id = ?").bind(id),
   ]);
 }
+
+// ---- posts ----------------------------------------------------------------
+
+export interface SalonPost { id: number; body: string; created_at: string; mine: boolean; author: SalonPerson }
+
+const postSchema = z.object({ body: text("Message", SL_LIMITS.body) });
+
+/** Statut d'un salon lisible (actif ou archivé, créateur valide) ; sinon 404. */
+async function readableStatus(d: D1Like, salonId: number): Promise<SalonStatus> {
+  const r = await d.prepare(
+    `SELECT s.status FROM sl_salons s JOIN hub_members m ON m.id = s.member_id
+     WHERE s.id = ? AND s.status IN ('active','archived') AND ${HOST_OK}`,
+  ).bind(salonId).first<{ status: SalonStatus }>();
+  if (!r) throw new HubError("not_found", "Salon introuvable");
+  return r.status;
+}
+
+export async function createPost(d: D1Like, member: MemberRow, salonId: number, raw: unknown, nowMs: number): Promise<{ id: number }> {
+  const c = parse(postSchema, raw);
+  if ((await readableStatus(d, salonId)) !== "active") throw new HubError("conflict", "Ce salon est archivé");
+  const n = await d.prepare("SELECT COUNT(*) AS n FROM sl_posts WHERE member_id = ? AND created_at > ?").bind(member.id, iso(nowMs - MINUTE_MS)).first<{ n: number }>();
+  if ((n?.n ?? 0) >= SL_LIMITS.postsPerMinute) throw new HubError("rate_limited", `Limite de ${SL_LIMITS.postsPerMinute} messages par minute atteinte`);
+  const row = await d.prepare("INSERT INTO sl_posts (salon_id, member_id, body, created_at) VALUES (?,?,?,?) RETURNING id")
+    .bind(salonId, member.id, c.body, iso(nowMs)).first<{ id: number }>();
+  // ponytail: deux requêtes, pas de transaction ; au pire last_post_at retarde d'un message
+  await d.prepare("UPDATE sl_salons SET last_post_at = ? WHERE id = ?").bind(iso(nowMs), salonId).run();
+  return { id: row!.id };
+}
+
+/** Messages non supprimés, plus récents d'abord ; curseur = id du dernier message renvoyé. */
+export async function listPosts(d: D1Like, viewerId: number, salonId: number, o: { cursor?: string | null; limit?: number } = {}): Promise<{ posts: SalonPost[]; nextCursor: string | null }> {
+  await readableStatus(d, salonId);
+  const lim = Math.min(Math.max(Math.trunc(o.limit ?? SL_LIMITS.pageSize) || SL_LIMITS.pageSize, 1), 50);
+  if (o.cursor && !/^\d{1,15}$/.test(o.cursor)) throw new HubError("invalid", "Curseur invalide");
+  const { results } = await d.prepare(
+    `SELECT p.id, p.body, p.created_at, p.member_id, m.id AS au_id, m.display_name AS au_name, m.avatar_key AS au_avatar
+     FROM sl_posts p JOIN hub_members m ON m.id = p.member_id
+     WHERE p.salon_id = ? AND p.deleted_at IS NULL AND ${HOST_OK}${o.cursor ? " AND p.id < ?" : ""}
+     ORDER BY p.id DESC LIMIT ?`,
+  ).bind(salonId, ...(o.cursor ? [Number(o.cursor)] : []), lim + 1).all<any>();
+  const page = results.slice(0, lim);
+  const last = page[page.length - 1];
+  return {
+    posts: page.map(r => ({
+      id: r.id, body: r.body, created_at: r.created_at, mine: r.member_id === viewerId,
+      author: { id: r.au_id, display_name: r.au_name, avatar_key: r.au_avatar },
+    })),
+    nextCursor: results.length > lim && last ? String(last.id) : null,
+  };
+}
+
+export async function deletePost(d: D1Like, member: MemberRow, salonId: number, postId: number): Promise<void> {
+  const p = await d.prepare("SELECT member_id, deleted_at FROM sl_posts WHERE id = ? AND salon_id = ?").bind(postId, salonId).first<{ member_id: number; deleted_at: string | null }>();
+  if (!p || p.deleted_at) throw new HubError("not_found", "Message introuvable");
+  if (p.member_id !== member.id) throw new HubError("forbidden", "Seul l'auteur peut supprimer son message");
+  await d.prepare("UPDATE sl_posts SET deleted_at = ? WHERE id = ?").bind(iso(Date.now()), postId).run();
+}
