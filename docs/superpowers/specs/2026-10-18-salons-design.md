@@ -65,7 +65,7 @@ Erreurs : `HubError` (`invalid`, `not_found`, `forbidden`, `rate_limited`), comm
 
 ## Visio — Jitsi
 - Iframe vers `https://<JITSI_DOMAIN>/babrayan-<room>#userInfo.displayName="<nom>"&config.prejoinPageEnabled=false` avec `allow="camera; microphone; display-capture; fullscreen"`. Aucun média avant le clic.
-- `JITSI_DOMAIN` : variable publique côté client (`VITE_JITSI_DOMAIN`), défaut `meet.jit.si`.
+- **Mise à jour (JaaS)** : l'URL vient de `GET salon/salons/:id/jitsi`. Avec les secrets Worker `JAAS_APP_ID`, `JAAS_KEY_ID`, `JAAS_PRIVATE_KEY` (PKCS#8), elle pointe vers `https://8x8.vc/<AppID>/babrayan-<room>?jwt=…` (JWT RS256, 2 h, créateur = modérateur). Sans secrets : repli sur `meet.jit.si`. `VITE_JITSI_DOMAIN` n'existe plus.
 - Le nom de salle contient le jeton `room` : seuls les membres du Hub qui ouvrent le salon le connaissent.
 - **Risque connu, à vérifier avant livraison** : le serveur public `meet.jit.si` limite l'usage en iframe (durée, connexion modérateur). Test réel obligatoire. Si bloquant : Jitsi as a Service (8x8.vc, domaine + JWT) ou serveur Jitsi à Reda, ce qui ajouterait un secret Worker et une génération de JWT (hors de cette spec, nouvelle itération).
 

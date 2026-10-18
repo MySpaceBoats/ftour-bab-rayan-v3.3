@@ -133,7 +133,7 @@ export default function SalonPage() {
               </p>
             </header>
 
-            {salon.status === "active" && <JitsiPanel room={salon.room} displayName={me.display_name} />}
+            {salon.status === "active" && <JitsiPanel salonId={salonId} />}
 
             <section aria-label="Messages du salon" className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               {salon.status === "active" ? (
