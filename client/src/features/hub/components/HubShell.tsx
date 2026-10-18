@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { BedDouble, Briefcase, CalendarDays, Home, LogOut, Mail, Newspaper, Store, User, Users } from "lucide-react";
+import { BedDouble, Briefcase, CalendarDays, Home, LogOut, Mail, MessagesSquare, Newspaper, Store, User, Users } from "lucide-react";
 import { useI18n } from "@/i18n";
 import {
   DropdownMenu,
@@ -28,6 +28,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
   const profile = `${base}/profil`;
   const stay = `${base}/hebergement`;
   const meetup = `${base}/meetup`;
+  const salons = `${base}/salons`;
   const pro = `${base}/pro`;
   // ?assistant=<conversation id> (bell notification link) opens the assistant on that conversation
   const [aiConv] = useState(() => Number(new URLSearchParams(window.location.search).get("assistant")) || null);
@@ -70,6 +71,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
   const isMarket = path.startsWith(market);
   const isStay = path.startsWith(stay);
   const isMeetup = path === meetup || path.startsWith(`${meetup}/`);
+  const isSalon = path === salons || path.startsWith(`${salons}/`);
   // "/pro" is also a prefix of "/profil": require a path boundary.
   const isPro = path === pro || path.startsWith(`${pro}/`);
   const isProfile = path.startsWith(profile);
@@ -81,6 +83,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
     { href: pro, label: "Offre d'emploi", short: "Emplois", icon: <Briefcase size={18} aria-hidden />, active: isPro, badge: 0, badgeLabel: "" },
     { href: stay, label: "Hébergement", short: "Logement", icon: <BedDouble size={18} aria-hidden />, active: isStay, badge: 0, badgeLabel: "" },
     { href: meetup, label: "Meetup", short: "Meetup", icon: <CalendarDays size={18} aria-hidden />, active: isMeetup, badge: 0, badgeLabel: "" },
+    { href: salons, label: "Salons", short: "Salons", icon: <MessagesSquare size={18} aria-hidden />, active: isSalon, badge: 0, badgeLabel: "" },
     { href: messages, label: "Messages", short: "Messages", icon: <Mail size={18} aria-hidden />, active: isMessages, badge: unread, badgeLabel: "messages non lus" },
     { href: friends, label: "Amis", short: "Amis", icon: <Users size={18} aria-hidden />, active: isFriends, badge: friendReq, badgeLabel: "demandes d'ami", desktopOnly: true },
     { href: profile, label: "Mon profil", short: "Profil", icon: <User size={18} aria-hidden />, active: isProfile, badge: 0, badgeLabel: "" },
@@ -173,7 +176,7 @@ export default function HubShell({ me, right, children }: { me: hub.Member; righ
 
       <AssistantWidget open={aiOpen} onOpenChange={setAiOpen} conversationId={aiConv} />
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-7 border-t border-slate-200 bg-white text-[11px] text-slate-700 lg:hidden" aria-label="Navigation mobile">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-8 border-t border-slate-200 bg-white text-[11px] text-slate-700 lg:hidden" aria-label="Navigation mobile">
         {navLinks.filter(l => !l.desktopOnly).map(l => (
           <Link key={l.href} href={l.href} className={l.active ? activeTab : tab} aria-current={l.active ? "page" : undefined}>
             <span className="relative">
